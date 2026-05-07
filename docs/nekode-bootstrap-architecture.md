@@ -73,6 +73,20 @@ implementation should follow that document for:
 6. Implement runtime start queue, token file injection, and status reporting.
 7. Wire the frontend console against stable REST/gRPC gateway endpoints.
 
+## Reference Projects
+
+Two local reference projects are available for architecture comparison:
+
+- `/home/czyt/code/go/references/open-agent-room`: useful for a compact Go
+  server plus local daemon bridge, SSE/WebSocket event flow, and deterministic
+  demo runtime fallback.
+- `/home/czyt/code/go/references/zano`: useful for product information
+  architecture around channels, DMs, threads, task board, local bridge, CLI, and
+  per-agent workspace memory.
+
+Nekode should borrow ideas at the architecture level only. Do not copy project
+code blindly; keep the protocol and implementation independent.
+
 ## Verification Baseline
 
 Bootstrap commits should pass:

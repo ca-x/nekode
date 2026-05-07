@@ -13,6 +13,9 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - Implementation design: `docs/slock-style-daemon-runtime.md`
 - Logo asset: `assets/brand.png`
 - Container bootstrap: `Dockerfile` and `docker-compose.yml`
+- Local references for future design comparison:
+  `/home/czyt/code/go/references/open-agent-room` and
+  `/home/czyt/code/go/references/zano`
 
 ## Run Locally
 

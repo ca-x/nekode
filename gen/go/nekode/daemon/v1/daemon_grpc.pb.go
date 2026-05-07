@@ -19,55 +19,56 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DaemonControlService_RegisterComputer_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
-	DaemonControlService_HeartbeatComputer_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
-	DaemonControlService_FetchAssignedRuns_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
-	DaemonControlService_UpdateRunStatus_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
-	DaemonControlService_AppendRunStep_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
-	DaemonControlService_ListRuns_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/ListRuns"
-	DaemonControlService_GetRun_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/GetRun"
-	DaemonControlService_ListWorkspaceTree_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/ListWorkspaceTree"
-	DaemonControlService_ReadWorkspaceFile_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/ReadWorkspaceFile"
-	DaemonControlService_ListChannels_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListChannels"
-	DaemonControlService_ListThreads_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListThreads"
-	DaemonControlService_GetThread_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/GetThread"
-	DaemonControlService_ReadMessages_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ReadMessages"
-	DaemonControlService_SendMessage_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/SendMessage"
-	DaemonControlService_SaveMessage_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/SaveMessage"
-	DaemonControlService_UnsaveMessage_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UnsaveMessage"
-	DaemonControlService_ListSavedMessages_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/ListSavedMessages"
-	DaemonControlService_FollowThread_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/FollowThread"
-	DaemonControlService_UnfollowThread_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UnfollowThread"
-	DaemonControlService_CreateCollaborationTask_FullMethodName = "/nekode.daemon.v1.DaemonControlService/CreateCollaborationTask"
-	DaemonControlService_ListCollaborationTasks_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/ListCollaborationTasks"
-	DaemonControlService_ListTaskBoard_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListTaskBoard"
-	DaemonControlService_ClaimCollaborationTask_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/ClaimCollaborationTask"
-	DaemonControlService_ProposeTaskSplit_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ProposeTaskSplit"
-	DaemonControlService_ApplyTaskSplit_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ApplyTaskSplit"
-	DaemonControlService_CreateTaskGraph_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/CreateTaskGraph"
-	DaemonControlService_ListTaskGraph_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListTaskGraph"
-	DaemonControlService_UpdateTaskGraph_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UpdateTaskGraph"
-	DaemonControlService_GetServerInfo_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/GetServerInfo"
-	DaemonControlService_GetAgentProfile_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/GetAgentProfile"
-	DaemonControlService_UpdateAgentProfile_FullMethodName      = "/nekode.daemon.v1.DaemonControlService/UpdateAgentProfile"
-	DaemonControlService_SetAgentEnv_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/SetAgentEnv"
-	DaemonControlService_ListAgentProfiles_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/ListAgentProfiles"
-	DaemonControlService_ListAgentDMs_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListAgentDMs"
-	DaemonControlService_ControlAgent_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ControlAgent"
-	DaemonControlService_SendAgentDirectMessage_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/SendAgentDirectMessage"
-	DaemonControlService_UpdateAgentStatus_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/UpdateAgentStatus"
-	DaemonControlService_ListAgentStatuses_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/ListAgentStatuses"
-	DaemonControlService_ScheduleReminder_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ScheduleReminder"
-	DaemonControlService_ListReminders_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListReminders"
-	DaemonControlService_CancelReminder_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/CancelReminder"
-	DaemonControlService_SnoozeReminder_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/SnoozeReminder"
-	DaemonControlService_UpdateReminder_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UpdateReminder"
-	DaemonControlService_GetReminderLog_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/GetReminderLog"
-	DaemonControlService_UploadAttachment_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/UploadAttachment"
-	DaemonControlService_GetAttachment_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/GetAttachment"
-	DaemonControlService_LogActivity_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/LogActivity"
-	DaemonControlService_ListActivity_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListActivity"
-	DaemonControlService_ListEventsSince_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListEventsSince"
+	DaemonControlService_RegisterComputer_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
+	DaemonControlService_HeartbeatComputer_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
+	DaemonControlService_FetchAssignedRuns_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
+	DaemonControlService_UpdateRunStatus_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
+	DaemonControlService_AppendRunStep_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
+	DaemonControlService_ListRuns_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ListRuns"
+	DaemonControlService_GetRun_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/GetRun"
+	DaemonControlService_ListWorkspaceTree_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListWorkspaceTree"
+	DaemonControlService_ReadWorkspaceFile_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ReadWorkspaceFile"
+	DaemonControlService_ListChannels_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListChannels"
+	DaemonControlService_ListInteractionEndpoints_FullMethodName = "/nekode.daemon.v1.DaemonControlService/ListInteractionEndpoints"
+	DaemonControlService_ListThreads_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListThreads"
+	DaemonControlService_GetThread_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/GetThread"
+	DaemonControlService_ReadMessages_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ReadMessages"
+	DaemonControlService_SendMessage_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/SendMessage"
+	DaemonControlService_SaveMessage_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/SaveMessage"
+	DaemonControlService_UnsaveMessage_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UnsaveMessage"
+	DaemonControlService_ListSavedMessages_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListSavedMessages"
+	DaemonControlService_FollowThread_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/FollowThread"
+	DaemonControlService_UnfollowThread_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UnfollowThread"
+	DaemonControlService_CreateCollaborationTask_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/CreateCollaborationTask"
+	DaemonControlService_ListCollaborationTasks_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/ListCollaborationTasks"
+	DaemonControlService_ListTaskBoard_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListTaskBoard"
+	DaemonControlService_ClaimCollaborationTask_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/ClaimCollaborationTask"
+	DaemonControlService_ProposeTaskSplit_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ProposeTaskSplit"
+	DaemonControlService_ApplyTaskSplit_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ApplyTaskSplit"
+	DaemonControlService_CreateTaskGraph_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/CreateTaskGraph"
+	DaemonControlService_ListTaskGraph_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListTaskGraph"
+	DaemonControlService_UpdateTaskGraph_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UpdateTaskGraph"
+	DaemonControlService_GetServerInfo_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/GetServerInfo"
+	DaemonControlService_GetAgentProfile_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/GetAgentProfile"
+	DaemonControlService_UpdateAgentProfile_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/UpdateAgentProfile"
+	DaemonControlService_SetAgentEnv_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/SetAgentEnv"
+	DaemonControlService_ListAgentProfiles_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListAgentProfiles"
+	DaemonControlService_ListAgentDMs_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListAgentDMs"
+	DaemonControlService_ControlAgent_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ControlAgent"
+	DaemonControlService_SendAgentDirectMessage_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/SendAgentDirectMessage"
+	DaemonControlService_UpdateAgentStatus_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/UpdateAgentStatus"
+	DaemonControlService_ListAgentStatuses_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListAgentStatuses"
+	DaemonControlService_ScheduleReminder_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ScheduleReminder"
+	DaemonControlService_ListReminders_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListReminders"
+	DaemonControlService_CancelReminder_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/CancelReminder"
+	DaemonControlService_SnoozeReminder_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/SnoozeReminder"
+	DaemonControlService_UpdateReminder_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UpdateReminder"
+	DaemonControlService_GetReminderLog_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/GetReminderLog"
+	DaemonControlService_UploadAttachment_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UploadAttachment"
+	DaemonControlService_GetAttachment_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/GetAttachment"
+	DaemonControlService_LogActivity_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/LogActivity"
+	DaemonControlService_ListActivity_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListActivity"
+	DaemonControlService_ListEventsSince_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ListEventsSince"
 )
 
 // DaemonControlServiceClient is the client API for DaemonControlService service.
@@ -84,6 +85,7 @@ type DaemonControlServiceClient interface {
 	ListWorkspaceTree(ctx context.Context, in *ListWorkspaceTreeRequest, opts ...grpc.CallOption) (*ListWorkspaceTreeResponse, error)
 	ReadWorkspaceFile(ctx context.Context, in *ReadWorkspaceFileRequest, opts ...grpc.CallOption) (*ReadWorkspaceFileResponse, error)
 	ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, error)
+	ListInteractionEndpoints(ctx context.Context, in *ListInteractionEndpointsRequest, opts ...grpc.CallOption) (*ListInteractionEndpointsResponse, error)
 	ListThreads(ctx context.Context, in *ListThreadsRequest, opts ...grpc.CallOption) (*ListThreadsResponse, error)
 	GetThread(ctx context.Context, in *GetThreadRequest, opts ...grpc.CallOption) (*GetThreadResponse, error)
 	ReadMessages(ctx context.Context, in *ReadMessagesRequest, opts ...grpc.CallOption) (*ReadMessagesResponse, error)
@@ -227,6 +229,16 @@ func (c *daemonControlServiceClient) ListChannels(ctx context.Context, in *ListC
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListChannelsResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_ListChannels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ListInteractionEndpoints(ctx context.Context, in *ListInteractionEndpointsRequest, opts ...grpc.CallOption) (*ListInteractionEndpointsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInteractionEndpointsResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ListInteractionEndpoints_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -637,6 +649,7 @@ type DaemonControlServiceServer interface {
 	ListWorkspaceTree(context.Context, *ListWorkspaceTreeRequest) (*ListWorkspaceTreeResponse, error)
 	ReadWorkspaceFile(context.Context, *ReadWorkspaceFileRequest) (*ReadWorkspaceFileResponse, error)
 	ListChannels(context.Context, *ListChannelsRequest) (*ListChannelsResponse, error)
+	ListInteractionEndpoints(context.Context, *ListInteractionEndpointsRequest) (*ListInteractionEndpointsResponse, error)
 	ListThreads(context.Context, *ListThreadsRequest) (*ListThreadsResponse, error)
 	GetThread(context.Context, *GetThreadRequest) (*GetThreadResponse, error)
 	ReadMessages(context.Context, *ReadMessagesRequest) (*ReadMessagesResponse, error)
@@ -715,6 +728,9 @@ func (UnimplementedDaemonControlServiceServer) ReadWorkspaceFile(context.Context
 }
 func (UnimplementedDaemonControlServiceServer) ListChannels(context.Context, *ListChannelsRequest) (*ListChannelsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListChannels not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ListInteractionEndpoints(context.Context, *ListInteractionEndpointsRequest) (*ListInteractionEndpointsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInteractionEndpoints not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) ListThreads(context.Context, *ListThreadsRequest) (*ListThreadsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListThreads not implemented")
@@ -1030,6 +1046,24 @@ func _DaemonControlService_ListChannels_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).ListChannels(ctx, req.(*ListChannelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ListInteractionEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInteractionEndpointsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ListInteractionEndpoints(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ListInteractionEndpoints_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ListInteractionEndpoints(ctx, req.(*ListInteractionEndpointsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1782,6 +1816,10 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListChannels",
 			Handler:    _DaemonControlService_ListChannels_Handler,
+		},
+		{
+			MethodName: "ListInteractionEndpoints",
+			Handler:    _DaemonControlService_ListInteractionEndpoints_Handler,
 		},
 		{
 			MethodName: "ListThreads",

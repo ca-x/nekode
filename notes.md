@@ -18,12 +18,31 @@
 - Initial content before bootstrap: `.gitignore`, `LICENSE`
 - Current bootstrap adds backend, proto, docs, Docker files, and tests.
 
+### Reference: open-agent-room
+- Local clone: `/home/czyt/code/go/references/open-agent-room`
+- Stack: single Go binary with embedded frontend assets, local daemon bridge over WebSocket, SSE browser updates.
+- Useful ideas:
+  - humans and agents share channel history and task assignment semantics;
+  - daemon protocol has explicit envelope/event types;
+  - local daemon can run Codex, Claude, or deterministic demo runtime;
+  - demo fallback is useful for development without real runtime credentials.
+
+### Reference: Zano
+- Local clone: `/home/czyt/code/go/references/zano`
+- Stack: Next.js web app, Supabase DB/Auth/Realtime, local Node bridge, CLI for agents.
+- Useful ideas:
+  - bridge process is the local-machine boundary that spawns agents;
+  - agents use CLI commands for message/task operations;
+  - workspace memory is per-agent `MEMORY.md` plus notes;
+  - channels, DMs, threads, and task board are first-class product objects.
+
 ## Synthesized Findings
 
 ### First backend boundary
 - Start with health/version/protocol metadata endpoints so the frontend can connect early.
 - Keep database and runtime supervisor implementation out of the first bootstrap commit.
 - Generate Go protobuf stubs now so later daemon/server work can compile against the contract.
+- Keep interaction endpoints transport-neutral so Web, CLI, API, webhook, MCP, IM, mobile, and IDE clients can all reuse the same message/task/DM core.
 
 ### Work split
 - task #91: architecture, repo bootstrap, protocol files, backend skeleton, verification.
@@ -57,4 +76,3 @@
 2. Task #92: Frontend console (React, real-time, task board, agent management)
 3. Task #93: Deployment guide, operations, acceptance testing
 4. Future: Bridge for local agents, CLI, webhook/MCP support, IM integrations
-

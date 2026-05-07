@@ -60,6 +60,17 @@ should remain transport-neutral.
 | `GET` | `/api/version` | Build metadata. |
 | `GET` | `/api/protocol` | Protocol document and proto path. |
 
+## Reference Inputs
+
+The following repositories were cloned locally for architecture comparison:
+
+| Project | Local path | What to study |
+| --- | --- | --- |
+| open-agent-room | `/home/czyt/code/go/references/open-agent-room` | Go single-binary shape, daemon WebSocket bridge, SSE updates, demo runtime fallback. |
+| Zano | `/home/czyt/code/go/references/zano` | Web/bridge/CLI split, channels/DMs/tasks product model, per-agent workspace memory. |
+
+Use these as design references, not source-code templates.
+
 ## Follow-Up Backend Phases
 
 1. Add persistent storage and migrations for users, memberships, endpoints,

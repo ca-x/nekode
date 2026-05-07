@@ -2921,14 +2921,18 @@ func (x *ReadWorkspaceFileResponse) GetSizeBytes() int64 {
 }
 
 type ChannelRecord struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	ChannelId     string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	ChannelType   string                 `protobuf:"bytes,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"`
-	Enabled       bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Target                string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	ChannelId             string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	DisplayName           string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	ChannelType           string                 `protobuf:"bytes,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"`
+	Enabled               bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	InteractionEndpointId string                 `protobuf:"bytes,6,opt,name=interaction_endpoint_id,json=interactionEndpointId,proto3" json:"interaction_endpoint_id,omitempty"`
+	SourceKind            string                 `protobuf:"bytes,7,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	ExternalId            string                 `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	Capabilities          []*Capability          `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ChannelRecord) Reset() {
@@ -2996,6 +3000,238 @@ func (x *ChannelRecord) GetEnabled() bool {
 	return false
 }
 
+func (x *ChannelRecord) GetInteractionEndpointId() string {
+	if x != nil {
+		return x.InteractionEndpointId
+	}
+	return ""
+}
+
+func (x *ChannelRecord) GetSourceKind() string {
+	if x != nil {
+		return x.SourceKind
+	}
+	return ""
+}
+
+func (x *ChannelRecord) GetExternalId() string {
+	if x != nil {
+		return x.ExternalId
+	}
+	return ""
+}
+
+func (x *ChannelRecord) GetCapabilities() []*Capability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+type InteractionEndpoint struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EndpointId      string                 `protobuf:"bytes,1,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	Kind            string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`         // web | cli | api | webhook | mcp | im | custom
+	Provider        string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"` // browser | mobile | wechat | slack | openapi | custom
+	DisplayName     string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	TargetPrefix    string                 `protobuf:"bytes,5,opt,name=target_prefix,json=targetPrefix,proto3" json:"target_prefix,omitempty"`
+	InboundEnabled  bool                   `protobuf:"varint,6,opt,name=inbound_enabled,json=inboundEnabled,proto3" json:"inbound_enabled,omitempty"`
+	OutboundEnabled bool                   `protobuf:"varint,7,opt,name=outbound_enabled,json=outboundEnabled,proto3" json:"outbound_enabled,omitempty"`
+	AuthMode        string                 `protobuf:"bytes,8,opt,name=auth_mode,json=authMode,proto3" json:"auth_mode,omitempty"`       // cookie | bearer | webhook_signature | mcp_token | none
+	ConfigJson      string                 `protobuf:"bytes,9,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"` // non-secret endpoint configuration
+	Capabilities    []*Capability          `protobuf:"bytes,10,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *InteractionEndpoint) Reset() {
+	*x = InteractionEndpoint{}
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InteractionEndpoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InteractionEndpoint) ProtoMessage() {}
+
+func (x *InteractionEndpoint) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InteractionEndpoint.ProtoReflect.Descriptor instead.
+func (*InteractionEndpoint) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *InteractionEndpoint) GetEndpointId() string {
+	if x != nil {
+		return x.EndpointId
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetTargetPrefix() string {
+	if x != nil {
+		return x.TargetPrefix
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetInboundEnabled() bool {
+	if x != nil {
+		return x.InboundEnabled
+	}
+	return false
+}
+
+func (x *InteractionEndpoint) GetOutboundEnabled() bool {
+	if x != nil {
+		return x.OutboundEnabled
+	}
+	return false
+}
+
+func (x *InteractionEndpoint) GetAuthMode() string {
+	if x != nil {
+		return x.AuthMode
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetConfigJson() string {
+	if x != nil {
+		return x.ConfigJson
+	}
+	return ""
+}
+
+func (x *InteractionEndpoint) GetCapabilities() []*Capability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+type ListInteractionEndpointsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInteractionEndpointsRequest) Reset() {
+	*x = ListInteractionEndpointsRequest{}
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInteractionEndpointsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInteractionEndpointsRequest) ProtoMessage() {}
+
+func (x *ListInteractionEndpointsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInteractionEndpointsRequest.ProtoReflect.Descriptor instead.
+func (*ListInteractionEndpointsRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ListInteractionEndpointsRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListInteractionEndpointsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Endpoints     []*InteractionEndpoint `protobuf:"bytes,1,rep,name=endpoints,proto3" json:"endpoints,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInteractionEndpointsResponse) Reset() {
+	*x = ListInteractionEndpointsResponse{}
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInteractionEndpointsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInteractionEndpointsResponse) ProtoMessage() {}
+
+func (x *ListInteractionEndpointsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInteractionEndpointsResponse.ProtoReflect.Descriptor instead.
+func (*ListInteractionEndpointsResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ListInteractionEndpointsResponse) GetEndpoints() []*InteractionEndpoint {
+	if x != nil {
+		return x.Endpoints
+	}
+	return nil
+}
+
 type ListChannelsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
@@ -3005,7 +3241,7 @@ type ListChannelsRequest struct {
 
 func (x *ListChannelsRequest) Reset() {
 	*x = ListChannelsRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[33]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3017,7 +3253,7 @@ func (x *ListChannelsRequest) String() string {
 func (*ListChannelsRequest) ProtoMessage() {}
 
 func (x *ListChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[33]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3030,7 +3266,7 @@ func (x *ListChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ListChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{33}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListChannelsRequest) GetLimit() uint32 {
@@ -3049,7 +3285,7 @@ type ListChannelsResponse struct {
 
 func (x *ListChannelsResponse) Reset() {
 	*x = ListChannelsResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[34]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3061,7 +3297,7 @@ func (x *ListChannelsResponse) String() string {
 func (*ListChannelsResponse) ProtoMessage() {}
 
 func (x *ListChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[34]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3074,7 +3310,7 @@ func (x *ListChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ListChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{34}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListChannelsResponse) GetChannels() []*ChannelRecord {
@@ -3101,7 +3337,7 @@ type ThreadRecord struct {
 
 func (x *ThreadRecord) Reset() {
 	*x = ThreadRecord{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[35]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3113,7 +3349,7 @@ func (x *ThreadRecord) String() string {
 func (*ThreadRecord) ProtoMessage() {}
 
 func (x *ThreadRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[35]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3126,7 +3362,7 @@ func (x *ThreadRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadRecord.ProtoReflect.Descriptor instead.
 func (*ThreadRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{35}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ThreadRecord) GetTarget() string {
@@ -3202,7 +3438,7 @@ type ListThreadsRequest struct {
 
 func (x *ListThreadsRequest) Reset() {
 	*x = ListThreadsRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[36]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3214,7 +3450,7 @@ func (x *ListThreadsRequest) String() string {
 func (*ListThreadsRequest) ProtoMessage() {}
 
 func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[36]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3227,7 +3463,7 @@ func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListThreadsRequest.ProtoReflect.Descriptor instead.
 func (*ListThreadsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{36}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListThreadsRequest) GetTargetPrefix() string {
@@ -3253,7 +3489,7 @@ type ListThreadsResponse struct {
 
 func (x *ListThreadsResponse) Reset() {
 	*x = ListThreadsResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[37]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3265,7 +3501,7 @@ func (x *ListThreadsResponse) String() string {
 func (*ListThreadsResponse) ProtoMessage() {}
 
 func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[37]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3278,7 +3514,7 @@ func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListThreadsResponse.ProtoReflect.Descriptor instead.
 func (*ListThreadsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{37}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListThreadsResponse) GetThreads() []*ThreadRecord {
@@ -3297,7 +3533,7 @@ type GetThreadRequest struct {
 
 func (x *GetThreadRequest) Reset() {
 	*x = GetThreadRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[38]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3309,7 +3545,7 @@ func (x *GetThreadRequest) String() string {
 func (*GetThreadRequest) ProtoMessage() {}
 
 func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[38]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3322,7 +3558,7 @@ func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetThreadRequest.ProtoReflect.Descriptor instead.
 func (*GetThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{38}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *GetThreadRequest) GetTarget() string {
@@ -3341,7 +3577,7 @@ type GetThreadResponse struct {
 
 func (x *GetThreadResponse) Reset() {
 	*x = GetThreadResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[39]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3353,7 +3589,7 @@ func (x *GetThreadResponse) String() string {
 func (*GetThreadResponse) ProtoMessage() {}
 
 func (x *GetThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[39]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3366,7 +3602,7 @@ func (x *GetThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetThreadResponse.ProtoReflect.Descriptor instead.
 func (*GetThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{39}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *GetThreadResponse) GetThread() *ThreadRecord {
@@ -3390,13 +3626,16 @@ type CollaborationMessage struct {
 	SenderKind        string                 `protobuf:"bytes,10,opt,name=sender_kind,json=senderKind,proto3" json:"sender_kind,omitempty"`
 	Attachments       []*AttachmentRecord    `protobuf:"bytes,11,rep,name=attachments,proto3" json:"attachments,omitempty"`
 	RequestId         string                 `protobuf:"bytes,12,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	SourceEndpointId  string                 `protobuf:"bytes,13,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
+	ExternalMessageId string                 `protobuf:"bytes,14,opt,name=external_message_id,json=externalMessageId,proto3" json:"external_message_id,omitempty"`
+	MetadataJson      string                 `protobuf:"bytes,15,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CollaborationMessage) Reset() {
 	*x = CollaborationMessage{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[40]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3408,7 +3647,7 @@ func (x *CollaborationMessage) String() string {
 func (*CollaborationMessage) ProtoMessage() {}
 
 func (x *CollaborationMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[40]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3421,7 +3660,7 @@ func (x *CollaborationMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CollaborationMessage.ProtoReflect.Descriptor instead.
 func (*CollaborationMessage) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{40}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *CollaborationMessage) GetMessageId() string {
@@ -3508,6 +3747,27 @@ func (x *CollaborationMessage) GetRequestId() string {
 	return ""
 }
 
+func (x *CollaborationMessage) GetSourceEndpointId() string {
+	if x != nil {
+		return x.SourceEndpointId
+	}
+	return ""
+}
+
+func (x *CollaborationMessage) GetExternalMessageId() string {
+	if x != nil {
+		return x.ExternalMessageId
+	}
+	return ""
+}
+
+func (x *CollaborationMessage) GetMetadataJson() string {
+	if x != nil {
+		return x.MetadataJson
+	}
+	return ""
+}
+
 type ReadMessagesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
@@ -3518,7 +3778,7 @@ type ReadMessagesRequest struct {
 
 func (x *ReadMessagesRequest) Reset() {
 	*x = ReadMessagesRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[41]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3530,7 +3790,7 @@ func (x *ReadMessagesRequest) String() string {
 func (*ReadMessagesRequest) ProtoMessage() {}
 
 func (x *ReadMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[41]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3543,7 +3803,7 @@ func (x *ReadMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ReadMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{41}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ReadMessagesRequest) GetTarget() string {
@@ -3569,7 +3829,7 @@ type ReadMessagesResponse struct {
 
 func (x *ReadMessagesResponse) Reset() {
 	*x = ReadMessagesResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[42]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3581,7 +3841,7 @@ func (x *ReadMessagesResponse) String() string {
 func (*ReadMessagesResponse) ProtoMessage() {}
 
 func (x *ReadMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[42]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3594,7 +3854,7 @@ func (x *ReadMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ReadMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{42}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ReadMessagesResponse) GetMessages() []*CollaborationMessage {
@@ -3615,13 +3875,16 @@ type SendMessageRequest struct {
 	EmitOutbound      bool                   `protobuf:"varint,7,opt,name=emit_outbound,json=emitOutbound,proto3" json:"emit_outbound,omitempty"`
 	RequestId         string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	AttachmentIds     []string               `protobuf:"bytes,9,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
+	SourceEndpointId  string                 `protobuf:"bytes,10,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
+	SenderUserId      string                 `protobuf:"bytes,11,opt,name=sender_user_id,json=senderUserId,proto3" json:"sender_user_id,omitempty"`
+	MetadataJson      string                 `protobuf:"bytes,12,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[43]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3633,7 +3896,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[43]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3646,7 +3909,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{43}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *SendMessageRequest) GetTarget() string {
@@ -3712,6 +3975,27 @@ func (x *SendMessageRequest) GetAttachmentIds() []string {
 	return nil
 }
 
+func (x *SendMessageRequest) GetSourceEndpointId() string {
+	if x != nil {
+		return x.SourceEndpointId
+	}
+	return ""
+}
+
+func (x *SendMessageRequest) GetSenderUserId() string {
+	if x != nil {
+		return x.SenderUserId
+	}
+	return ""
+}
+
+func (x *SendMessageRequest) GetMetadataJson() string {
+	if x != nil {
+		return x.MetadataJson
+	}
+	return ""
+}
+
 type SendMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
@@ -3722,7 +4006,7 @@ type SendMessageResponse struct {
 
 func (x *SendMessageResponse) Reset() {
 	*x = SendMessageResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[44]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3734,7 +4018,7 @@ func (x *SendMessageResponse) String() string {
 func (*SendMessageResponse) ProtoMessage() {}
 
 func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[44]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3747,7 +4031,7 @@ func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{44}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *SendMessageResponse) GetAccepted() bool {
@@ -3780,7 +4064,7 @@ type SavedMessageRecord struct {
 
 func (x *SavedMessageRecord) Reset() {
 	*x = SavedMessageRecord{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[45]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3792,7 +4076,7 @@ func (x *SavedMessageRecord) String() string {
 func (*SavedMessageRecord) ProtoMessage() {}
 
 func (x *SavedMessageRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[45]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3805,7 +4089,7 @@ func (x *SavedMessageRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavedMessageRecord.ProtoReflect.Descriptor instead.
 func (*SavedMessageRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{45}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *SavedMessageRecord) GetSavedMessageId() string {
@@ -3877,7 +4161,7 @@ type SaveMessageRequest struct {
 
 func (x *SaveMessageRequest) Reset() {
 	*x = SaveMessageRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[46]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3889,7 +4173,7 @@ func (x *SaveMessageRequest) String() string {
 func (*SaveMessageRequest) ProtoMessage() {}
 
 func (x *SaveMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[46]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3902,7 +4186,7 @@ func (x *SaveMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveMessageRequest.ProtoReflect.Descriptor instead.
 func (*SaveMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{46}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *SaveMessageRequest) GetTarget() string {
@@ -3950,7 +4234,7 @@ type SaveMessageResponse struct {
 
 func (x *SaveMessageResponse) Reset() {
 	*x = SaveMessageResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[47]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3962,7 +4246,7 @@ func (x *SaveMessageResponse) String() string {
 func (*SaveMessageResponse) ProtoMessage() {}
 
 func (x *SaveMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[47]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3975,7 +4259,7 @@ func (x *SaveMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveMessageResponse.ProtoReflect.Descriptor instead.
 func (*SaveMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{47}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *SaveMessageResponse) GetSaved() bool {
@@ -4005,7 +4289,7 @@ type UnsaveMessageRequest struct {
 
 func (x *UnsaveMessageRequest) Reset() {
 	*x = UnsaveMessageRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[48]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4017,7 +4301,7 @@ func (x *UnsaveMessageRequest) String() string {
 func (*UnsaveMessageRequest) ProtoMessage() {}
 
 func (x *UnsaveMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[48]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4030,7 +4314,7 @@ func (x *UnsaveMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnsaveMessageRequest.ProtoReflect.Descriptor instead.
 func (*UnsaveMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{48}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *UnsaveMessageRequest) GetTarget() string {
@@ -4078,7 +4362,7 @@ type UnsaveMessageResponse struct {
 
 func (x *UnsaveMessageResponse) Reset() {
 	*x = UnsaveMessageResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[49]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4090,7 +4374,7 @@ func (x *UnsaveMessageResponse) String() string {
 func (*UnsaveMessageResponse) ProtoMessage() {}
 
 func (x *UnsaveMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[49]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4103,7 +4387,7 @@ func (x *UnsaveMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnsaveMessageResponse.ProtoReflect.Descriptor instead.
 func (*UnsaveMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{49}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *UnsaveMessageResponse) GetRemoved() bool {
@@ -4132,7 +4416,7 @@ type ListSavedMessagesRequest struct {
 
 func (x *ListSavedMessagesRequest) Reset() {
 	*x = ListSavedMessagesRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[50]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4144,7 +4428,7 @@ func (x *ListSavedMessagesRequest) String() string {
 func (*ListSavedMessagesRequest) ProtoMessage() {}
 
 func (x *ListSavedMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[50]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4157,7 +4441,7 @@ func (x *ListSavedMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSavedMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListSavedMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{50}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ListSavedMessagesRequest) GetTarget() string {
@@ -4197,7 +4481,7 @@ type ListSavedMessagesResponse struct {
 
 func (x *ListSavedMessagesResponse) Reset() {
 	*x = ListSavedMessagesResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[51]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4209,7 +4493,7 @@ func (x *ListSavedMessagesResponse) String() string {
 func (*ListSavedMessagesResponse) ProtoMessage() {}
 
 func (x *ListSavedMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[51]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4222,7 +4506,7 @@ func (x *ListSavedMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSavedMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListSavedMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{51}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ListSavedMessagesResponse) GetSavedMessages() []*SavedMessageRecord {
@@ -4243,7 +4527,7 @@ type FollowThreadRequest struct {
 
 func (x *FollowThreadRequest) Reset() {
 	*x = FollowThreadRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[52]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4255,7 +4539,7 @@ func (x *FollowThreadRequest) String() string {
 func (*FollowThreadRequest) ProtoMessage() {}
 
 func (x *FollowThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[52]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4268,7 +4552,7 @@ func (x *FollowThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FollowThreadRequest.ProtoReflect.Descriptor instead.
 func (*FollowThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{52}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *FollowThreadRequest) GetTarget() string {
@@ -4301,7 +4585,7 @@ type FollowThreadResponse struct {
 
 func (x *FollowThreadResponse) Reset() {
 	*x = FollowThreadResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[53]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4313,7 +4597,7 @@ func (x *FollowThreadResponse) String() string {
 func (*FollowThreadResponse) ProtoMessage() {}
 
 func (x *FollowThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[53]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4326,7 +4610,7 @@ func (x *FollowThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FollowThreadResponse.ProtoReflect.Descriptor instead.
 func (*FollowThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{53}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *FollowThreadResponse) GetAccepted() bool {
@@ -4347,7 +4631,7 @@ type UnfollowThreadRequest struct {
 
 func (x *UnfollowThreadRequest) Reset() {
 	*x = UnfollowThreadRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[54]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4359,7 +4643,7 @@ func (x *UnfollowThreadRequest) String() string {
 func (*UnfollowThreadRequest) ProtoMessage() {}
 
 func (x *UnfollowThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[54]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4372,7 +4656,7 @@ func (x *UnfollowThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnfollowThreadRequest.ProtoReflect.Descriptor instead.
 func (*UnfollowThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{54}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *UnfollowThreadRequest) GetTarget() string {
@@ -4405,7 +4689,7 @@ type UnfollowThreadResponse struct {
 
 func (x *UnfollowThreadResponse) Reset() {
 	*x = UnfollowThreadResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[55]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4417,7 +4701,7 @@ func (x *UnfollowThreadResponse) String() string {
 func (*UnfollowThreadResponse) ProtoMessage() {}
 
 func (x *UnfollowThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[55]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4430,7 +4714,7 @@ func (x *UnfollowThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnfollowThreadResponse.ProtoReflect.Descriptor instead.
 func (*UnfollowThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{55}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *UnfollowThreadResponse) GetAccepted() bool {
@@ -4453,7 +4737,7 @@ type CreateCollaborationTaskRequest struct {
 
 func (x *CreateCollaborationTaskRequest) Reset() {
 	*x = CreateCollaborationTaskRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[56]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4465,7 +4749,7 @@ func (x *CreateCollaborationTaskRequest) String() string {
 func (*CreateCollaborationTaskRequest) ProtoMessage() {}
 
 func (x *CreateCollaborationTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[56]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4478,7 +4762,7 @@ func (x *CreateCollaborationTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCollaborationTaskRequest.ProtoReflect.Descriptor instead.
 func (*CreateCollaborationTaskRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{56}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *CreateCollaborationTaskRequest) GetTarget() string {
@@ -4525,7 +4809,7 @@ type CreateCollaborationTaskResponse struct {
 
 func (x *CreateCollaborationTaskResponse) Reset() {
 	*x = CreateCollaborationTaskResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[57]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4537,7 +4821,7 @@ func (x *CreateCollaborationTaskResponse) String() string {
 func (*CreateCollaborationTaskResponse) ProtoMessage() {}
 
 func (x *CreateCollaborationTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[57]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4550,7 +4834,7 @@ func (x *CreateCollaborationTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCollaborationTaskResponse.ProtoReflect.Descriptor instead.
 func (*CreateCollaborationTaskResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{57}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *CreateCollaborationTaskResponse) GetTask() *Task {
@@ -4571,7 +4855,7 @@ type ListCollaborationTasksRequest struct {
 
 func (x *ListCollaborationTasksRequest) Reset() {
 	*x = ListCollaborationTasksRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[58]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4583,7 +4867,7 @@ func (x *ListCollaborationTasksRequest) String() string {
 func (*ListCollaborationTasksRequest) ProtoMessage() {}
 
 func (x *ListCollaborationTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[58]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4596,7 +4880,7 @@ func (x *ListCollaborationTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCollaborationTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListCollaborationTasksRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{58}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListCollaborationTasksRequest) GetTarget() string {
@@ -4629,7 +4913,7 @@ type ListCollaborationTasksResponse struct {
 
 func (x *ListCollaborationTasksResponse) Reset() {
 	*x = ListCollaborationTasksResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[59]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4641,7 +4925,7 @@ func (x *ListCollaborationTasksResponse) String() string {
 func (*ListCollaborationTasksResponse) ProtoMessage() {}
 
 func (x *ListCollaborationTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[59]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4654,7 +4938,7 @@ func (x *ListCollaborationTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCollaborationTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListCollaborationTasksResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{59}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListCollaborationTasksResponse) GetTasks() []*Task {
@@ -4675,7 +4959,7 @@ type TaskBoardColumn struct {
 
 func (x *TaskBoardColumn) Reset() {
 	*x = TaskBoardColumn{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[60]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4687,7 +4971,7 @@ func (x *TaskBoardColumn) String() string {
 func (*TaskBoardColumn) ProtoMessage() {}
 
 func (x *TaskBoardColumn) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[60]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4700,7 +4984,7 @@ func (x *TaskBoardColumn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskBoardColumn.ProtoReflect.Descriptor instead.
 func (*TaskBoardColumn) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{60}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *TaskBoardColumn) GetColumn() string {
@@ -4735,7 +5019,7 @@ type TaskBoardSnapshot struct {
 
 func (x *TaskBoardSnapshot) Reset() {
 	*x = TaskBoardSnapshot{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[61]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4747,7 +5031,7 @@ func (x *TaskBoardSnapshot) String() string {
 func (*TaskBoardSnapshot) ProtoMessage() {}
 
 func (x *TaskBoardSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[61]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4760,7 +5044,7 @@ func (x *TaskBoardSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskBoardSnapshot.ProtoReflect.Descriptor instead.
 func (*TaskBoardSnapshot) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{61}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *TaskBoardSnapshot) GetColumns() []*TaskBoardColumn {
@@ -4799,7 +5083,7 @@ type ListTaskBoardRequest struct {
 
 func (x *ListTaskBoardRequest) Reset() {
 	*x = ListTaskBoardRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[62]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4811,7 +5095,7 @@ func (x *ListTaskBoardRequest) String() string {
 func (*ListTaskBoardRequest) ProtoMessage() {}
 
 func (x *ListTaskBoardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[62]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4824,7 +5108,7 @@ func (x *ListTaskBoardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskBoardRequest.ProtoReflect.Descriptor instead.
 func (*ListTaskBoardRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{62}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ListTaskBoardRequest) GetTarget() string {
@@ -4885,7 +5169,7 @@ type ListTaskBoardResponse struct {
 
 func (x *ListTaskBoardResponse) Reset() {
 	*x = ListTaskBoardResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[63]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4897,7 +5181,7 @@ func (x *ListTaskBoardResponse) String() string {
 func (*ListTaskBoardResponse) ProtoMessage() {}
 
 func (x *ListTaskBoardResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[63]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4910,7 +5194,7 @@ func (x *ListTaskBoardResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskBoardResponse.ProtoReflect.Descriptor instead.
 func (*ListTaskBoardResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{63}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *ListTaskBoardResponse) GetBoard() *TaskBoardSnapshot {
@@ -4931,7 +5215,7 @@ type ClaimCollaborationTaskRequest struct {
 
 func (x *ClaimCollaborationTaskRequest) Reset() {
 	*x = ClaimCollaborationTaskRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[64]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4943,7 +5227,7 @@ func (x *ClaimCollaborationTaskRequest) String() string {
 func (*ClaimCollaborationTaskRequest) ProtoMessage() {}
 
 func (x *ClaimCollaborationTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[64]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4956,7 +5240,7 @@ func (x *ClaimCollaborationTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimCollaborationTaskRequest.ProtoReflect.Descriptor instead.
 func (*ClaimCollaborationTaskRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{64}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ClaimCollaborationTaskRequest) GetTaskId() string {
@@ -4989,7 +5273,7 @@ type ClaimCollaborationTaskResponse struct {
 
 func (x *ClaimCollaborationTaskResponse) Reset() {
 	*x = ClaimCollaborationTaskResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[65]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5001,7 +5285,7 @@ func (x *ClaimCollaborationTaskResponse) String() string {
 func (*ClaimCollaborationTaskResponse) ProtoMessage() {}
 
 func (x *ClaimCollaborationTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[65]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5014,7 +5298,7 @@ func (x *ClaimCollaborationTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimCollaborationTaskResponse.ProtoReflect.Descriptor instead.
 func (*ClaimCollaborationTaskResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{65}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ClaimCollaborationTaskResponse) GetTask() *Task {
@@ -5035,7 +5319,7 @@ type TaskEdge struct {
 
 func (x *TaskEdge) Reset() {
 	*x = TaskEdge{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[66]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5047,7 +5331,7 @@ func (x *TaskEdge) String() string {
 func (*TaskEdge) ProtoMessage() {}
 
 func (x *TaskEdge) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[66]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5060,7 +5344,7 @@ func (x *TaskEdge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskEdge.ProtoReflect.Descriptor instead.
 func (*TaskEdge) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{66}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *TaskEdge) GetFromTaskId() string {
@@ -5096,7 +5380,7 @@ type TaskGraphSnapshot struct {
 
 func (x *TaskGraphSnapshot) Reset() {
 	*x = TaskGraphSnapshot{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[67]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5108,7 +5392,7 @@ func (x *TaskGraphSnapshot) String() string {
 func (*TaskGraphSnapshot) ProtoMessage() {}
 
 func (x *TaskGraphSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[67]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5121,7 +5405,7 @@ func (x *TaskGraphSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskGraphSnapshot.ProtoReflect.Descriptor instead.
 func (*TaskGraphSnapshot) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{67}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *TaskGraphSnapshot) GetRootTaskId() string {
@@ -5165,7 +5449,7 @@ type ProposedSubtask struct {
 
 func (x *ProposedSubtask) Reset() {
 	*x = ProposedSubtask{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[68]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5177,7 +5461,7 @@ func (x *ProposedSubtask) String() string {
 func (*ProposedSubtask) ProtoMessage() {}
 
 func (x *ProposedSubtask) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[68]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5190,7 +5474,7 @@ func (x *ProposedSubtask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposedSubtask.ProtoReflect.Descriptor instead.
 func (*ProposedSubtask) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{68}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ProposedSubtask) GetClientProposedId() string {
@@ -5239,7 +5523,7 @@ type ProposeTaskSplitRequest struct {
 
 func (x *ProposeTaskSplitRequest) Reset() {
 	*x = ProposeTaskSplitRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[69]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5251,7 +5535,7 @@ func (x *ProposeTaskSplitRequest) String() string {
 func (*ProposeTaskSplitRequest) ProtoMessage() {}
 
 func (x *ProposeTaskSplitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[69]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5264,7 +5548,7 @@ func (x *ProposeTaskSplitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeTaskSplitRequest.ProtoReflect.Descriptor instead.
 func (*ProposeTaskSplitRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{69}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ProposeTaskSplitRequest) GetParentTaskId() string {
@@ -5301,7 +5585,7 @@ type ProposeTaskSplitResponse struct {
 
 func (x *ProposeTaskSplitResponse) Reset() {
 	*x = ProposeTaskSplitResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[70]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5313,7 +5597,7 @@ func (x *ProposeTaskSplitResponse) String() string {
 func (*ProposeTaskSplitResponse) ProtoMessage() {}
 
 func (x *ProposeTaskSplitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[70]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5326,7 +5610,7 @@ func (x *ProposeTaskSplitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeTaskSplitResponse.ProtoReflect.Descriptor instead.
 func (*ProposeTaskSplitResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{70}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ProposeTaskSplitResponse) GetProposalId() string {
@@ -5376,7 +5660,7 @@ type ApplyTaskSplitRequest struct {
 
 func (x *ApplyTaskSplitRequest) Reset() {
 	*x = ApplyTaskSplitRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[71]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5388,7 +5672,7 @@ func (x *ApplyTaskSplitRequest) String() string {
 func (*ApplyTaskSplitRequest) ProtoMessage() {}
 
 func (x *ApplyTaskSplitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[71]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5401,7 +5685,7 @@ func (x *ApplyTaskSplitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyTaskSplitRequest.ProtoReflect.Descriptor instead.
 func (*ApplyTaskSplitRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{71}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ApplyTaskSplitRequest) GetParentTaskId() string {
@@ -5443,7 +5727,7 @@ type ApplyTaskSplitResponse struct {
 
 func (x *ApplyTaskSplitResponse) Reset() {
 	*x = ApplyTaskSplitResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[72]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5455,7 +5739,7 @@ func (x *ApplyTaskSplitResponse) String() string {
 func (*ApplyTaskSplitResponse) ProtoMessage() {}
 
 func (x *ApplyTaskSplitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[72]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5468,7 +5752,7 @@ func (x *ApplyTaskSplitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyTaskSplitResponse.ProtoReflect.Descriptor instead.
 func (*ApplyTaskSplitResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{72}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ApplyTaskSplitResponse) GetParentTask() *Task {
@@ -5504,7 +5788,7 @@ type CreateTaskGraphRequest struct {
 
 func (x *CreateTaskGraphRequest) Reset() {
 	*x = CreateTaskGraphRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[73]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5516,7 +5800,7 @@ func (x *CreateTaskGraphRequest) String() string {
 func (*CreateTaskGraphRequest) ProtoMessage() {}
 
 func (x *CreateTaskGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[73]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5529,7 +5813,7 @@ func (x *CreateTaskGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskGraphRequest.ProtoReflect.Descriptor instead.
 func (*CreateTaskGraphRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{73}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *CreateTaskGraphRequest) GetRootTask() *Task {
@@ -5569,7 +5853,7 @@ type CreateTaskGraphResponse struct {
 
 func (x *CreateTaskGraphResponse) Reset() {
 	*x = CreateTaskGraphResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[74]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5581,7 +5865,7 @@ func (x *CreateTaskGraphResponse) String() string {
 func (*CreateTaskGraphResponse) ProtoMessage() {}
 
 func (x *CreateTaskGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[74]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5594,7 +5878,7 @@ func (x *CreateTaskGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskGraphResponse.ProtoReflect.Descriptor instead.
 func (*CreateTaskGraphResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{74}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *CreateTaskGraphResponse) GetGraph() *TaskGraphSnapshot {
@@ -5614,7 +5898,7 @@ type ListTaskGraphRequest struct {
 
 func (x *ListTaskGraphRequest) Reset() {
 	*x = ListTaskGraphRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[75]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5626,7 +5910,7 @@ func (x *ListTaskGraphRequest) String() string {
 func (*ListTaskGraphRequest) ProtoMessage() {}
 
 func (x *ListTaskGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[75]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5639,7 +5923,7 @@ func (x *ListTaskGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskGraphRequest.ProtoReflect.Descriptor instead.
 func (*ListTaskGraphRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{75}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *ListTaskGraphRequest) GetRootTaskId() string {
@@ -5665,7 +5949,7 @@ type ListTaskGraphResponse struct {
 
 func (x *ListTaskGraphResponse) Reset() {
 	*x = ListTaskGraphResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[76]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5677,7 +5961,7 @@ func (x *ListTaskGraphResponse) String() string {
 func (*ListTaskGraphResponse) ProtoMessage() {}
 
 func (x *ListTaskGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[76]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5690,7 +5974,7 @@ func (x *ListTaskGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskGraphResponse.ProtoReflect.Descriptor instead.
 func (*ListTaskGraphResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{76}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ListTaskGraphResponse) GetGraph() *TaskGraphSnapshot {
@@ -5714,7 +5998,7 @@ type UpdateTaskGraphRequest struct {
 
 func (x *UpdateTaskGraphRequest) Reset() {
 	*x = UpdateTaskGraphRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[77]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5726,7 +6010,7 @@ func (x *UpdateTaskGraphRequest) String() string {
 func (*UpdateTaskGraphRequest) ProtoMessage() {}
 
 func (x *UpdateTaskGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[77]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5739,7 +6023,7 @@ func (x *UpdateTaskGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskGraphRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTaskGraphRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{77}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *UpdateTaskGraphRequest) GetTaskId() string {
@@ -5794,7 +6078,7 @@ type UpdateTaskGraphResponse struct {
 
 func (x *UpdateTaskGraphResponse) Reset() {
 	*x = UpdateTaskGraphResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[78]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5806,7 +6090,7 @@ func (x *UpdateTaskGraphResponse) String() string {
 func (*UpdateTaskGraphResponse) ProtoMessage() {}
 
 func (x *UpdateTaskGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[78]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5819,7 +6103,7 @@ func (x *UpdateTaskGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskGraphResponse.ProtoReflect.Descriptor instead.
 func (*UpdateTaskGraphResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{78}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *UpdateTaskGraphResponse) GetTask() *Task {
@@ -5844,7 +6128,7 @@ type GetServerInfoRequest struct {
 
 func (x *GetServerInfoRequest) Reset() {
 	*x = GetServerInfoRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[79]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5856,7 +6140,7 @@ func (x *GetServerInfoRequest) String() string {
 func (*GetServerInfoRequest) ProtoMessage() {}
 
 func (x *GetServerInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[79]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5869,22 +6153,23 @@ func (x *GetServerInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetServerInfoRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{79}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{82}
 }
 
 type GetServerInfoResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ServerName    string                 `protobuf:"bytes,1,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
-	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	Channels      []*ChannelRecord       `protobuf:"bytes,3,rep,name=channels,proto3" json:"channels,omitempty"`
-	Agents        []*AgentProfile        `protobuf:"bytes,4,rep,name=agents,proto3" json:"agents,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ServerName           string                 `protobuf:"bytes,1,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	Version              string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Channels             []*ChannelRecord       `protobuf:"bytes,3,rep,name=channels,proto3" json:"channels,omitempty"`
+	Agents               []*AgentProfile        `protobuf:"bytes,4,rep,name=agents,proto3" json:"agents,omitempty"`
+	InteractionEndpoints []*InteractionEndpoint `protobuf:"bytes,5,rep,name=interaction_endpoints,json=interactionEndpoints,proto3" json:"interaction_endpoints,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *GetServerInfoResponse) Reset() {
 	*x = GetServerInfoResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[80]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5896,7 +6181,7 @@ func (x *GetServerInfoResponse) String() string {
 func (*GetServerInfoResponse) ProtoMessage() {}
 
 func (x *GetServerInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[80]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5909,7 +6194,7 @@ func (x *GetServerInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetServerInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetServerInfoResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{80}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *GetServerInfoResponse) GetServerName() string {
@@ -5940,6 +6225,13 @@ func (x *GetServerInfoResponse) GetAgents() []*AgentProfile {
 	return nil
 }
 
+func (x *GetServerInfoResponse) GetInteractionEndpoints() []*InteractionEndpoint {
+	if x != nil {
+		return x.InteractionEndpoints
+	}
+	return nil
+}
+
 type EnvVar struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -5951,7 +6243,7 @@ type EnvVar struct {
 
 func (x *EnvVar) Reset() {
 	*x = EnvVar{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[81]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5963,7 +6255,7 @@ func (x *EnvVar) String() string {
 func (*EnvVar) ProtoMessage() {}
 
 func (x *EnvVar) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[81]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5976,7 +6268,7 @@ func (x *EnvVar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvVar.ProtoReflect.Descriptor instead.
 func (*EnvVar) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{81}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *EnvVar) GetName() string {
@@ -6016,7 +6308,7 @@ type SkillRecord struct {
 
 func (x *SkillRecord) Reset() {
 	*x = SkillRecord{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[82]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6028,7 +6320,7 @@ func (x *SkillRecord) String() string {
 func (*SkillRecord) ProtoMessage() {}
 
 func (x *SkillRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[82]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6041,7 +6333,7 @@ func (x *SkillRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillRecord.ProtoReflect.Descriptor instead.
 func (*SkillRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{82}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *SkillRecord) GetId() string {
@@ -6130,7 +6422,7 @@ type AgentProfile struct {
 
 func (x *AgentProfile) Reset() {
 	*x = AgentProfile{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[83]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6142,7 +6434,7 @@ func (x *AgentProfile) String() string {
 func (*AgentProfile) ProtoMessage() {}
 
 func (x *AgentProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[83]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6155,7 +6447,7 @@ func (x *AgentProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentProfile.ProtoReflect.Descriptor instead.
 func (*AgentProfile) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{83}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *AgentProfile) GetAgentId() string {
@@ -6321,7 +6613,7 @@ type GetAgentProfileRequest struct {
 
 func (x *GetAgentProfileRequest) Reset() {
 	*x = GetAgentProfileRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[84]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6333,7 +6625,7 @@ func (x *GetAgentProfileRequest) String() string {
 func (*GetAgentProfileRequest) ProtoMessage() {}
 
 func (x *GetAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[84]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6346,7 +6638,7 @@ func (x *GetAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*GetAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{84}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *GetAgentProfileRequest) GetAgentId() string {
@@ -6365,7 +6657,7 @@ type GetAgentProfileResponse struct {
 
 func (x *GetAgentProfileResponse) Reset() {
 	*x = GetAgentProfileResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[85]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6377,7 +6669,7 @@ func (x *GetAgentProfileResponse) String() string {
 func (*GetAgentProfileResponse) ProtoMessage() {}
 
 func (x *GetAgentProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[85]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6390,7 +6682,7 @@ func (x *GetAgentProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentProfileResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentProfileResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{85}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *GetAgentProfileResponse) GetProfile() *AgentProfile {
@@ -6415,7 +6707,7 @@ type UpdateAgentProfileRequest struct {
 
 func (x *UpdateAgentProfileRequest) Reset() {
 	*x = UpdateAgentProfileRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[86]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6427,7 +6719,7 @@ func (x *UpdateAgentProfileRequest) String() string {
 func (*UpdateAgentProfileRequest) ProtoMessage() {}
 
 func (x *UpdateAgentProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[86]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6440,7 +6732,7 @@ func (x *UpdateAgentProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentProfileRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgentProfileRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{86}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *UpdateAgentProfileRequest) GetAgentId() string {
@@ -6501,7 +6793,7 @@ type UpdateAgentProfileResponse struct {
 
 func (x *UpdateAgentProfileResponse) Reset() {
 	*x = UpdateAgentProfileResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[87]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6513,7 +6805,7 @@ func (x *UpdateAgentProfileResponse) String() string {
 func (*UpdateAgentProfileResponse) ProtoMessage() {}
 
 func (x *UpdateAgentProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[87]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6526,7 +6818,7 @@ func (x *UpdateAgentProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentProfileResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAgentProfileResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{87}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *UpdateAgentProfileResponse) GetProfile() *AgentProfile {
@@ -6547,7 +6839,7 @@ type SetAgentEnvRequest struct {
 
 func (x *SetAgentEnvRequest) Reset() {
 	*x = SetAgentEnvRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[88]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6559,7 +6851,7 @@ func (x *SetAgentEnvRequest) String() string {
 func (*SetAgentEnvRequest) ProtoMessage() {}
 
 func (x *SetAgentEnvRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[88]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6572,7 +6864,7 @@ func (x *SetAgentEnvRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentEnvRequest.ProtoReflect.Descriptor instead.
 func (*SetAgentEnvRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{88}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *SetAgentEnvRequest) GetAgentId() string {
@@ -6605,7 +6897,7 @@ type SetAgentEnvResponse struct {
 
 func (x *SetAgentEnvResponse) Reset() {
 	*x = SetAgentEnvResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[89]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6617,7 +6909,7 @@ func (x *SetAgentEnvResponse) String() string {
 func (*SetAgentEnvResponse) ProtoMessage() {}
 
 func (x *SetAgentEnvResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[89]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6630,7 +6922,7 @@ func (x *SetAgentEnvResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAgentEnvResponse.ProtoReflect.Descriptor instead.
 func (*SetAgentEnvResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{89}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *SetAgentEnvResponse) GetProfile() *AgentProfile {
@@ -6649,7 +6941,7 @@ type ListAgentProfilesRequest struct {
 
 func (x *ListAgentProfilesRequest) Reset() {
 	*x = ListAgentProfilesRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[90]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6661,7 +6953,7 @@ func (x *ListAgentProfilesRequest) String() string {
 func (*ListAgentProfilesRequest) ProtoMessage() {}
 
 func (x *ListAgentProfilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[90]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6674,7 +6966,7 @@ func (x *ListAgentProfilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentProfilesRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentProfilesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{90}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *ListAgentProfilesRequest) GetLimit() uint32 {
@@ -6693,7 +6985,7 @@ type ListAgentProfilesResponse struct {
 
 func (x *ListAgentProfilesResponse) Reset() {
 	*x = ListAgentProfilesResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[91]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6705,7 +6997,7 @@ func (x *ListAgentProfilesResponse) String() string {
 func (*ListAgentProfilesResponse) ProtoMessage() {}
 
 func (x *ListAgentProfilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[91]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6718,7 +7010,7 @@ func (x *ListAgentProfilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentProfilesResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentProfilesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{91}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *ListAgentProfilesResponse) GetProfiles() []*AgentProfile {
@@ -6738,7 +7030,7 @@ type ListAgentDMsRequest struct {
 
 func (x *ListAgentDMsRequest) Reset() {
 	*x = ListAgentDMsRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[92]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6750,7 +7042,7 @@ func (x *ListAgentDMsRequest) String() string {
 func (*ListAgentDMsRequest) ProtoMessage() {}
 
 func (x *ListAgentDMsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[92]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6763,7 +7055,7 @@ func (x *ListAgentDMsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentDMsRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentDMsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{92}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *ListAgentDMsRequest) GetAgentId() string {
@@ -6789,7 +7081,7 @@ type ListAgentDMsResponse struct {
 
 func (x *ListAgentDMsResponse) Reset() {
 	*x = ListAgentDMsResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[93]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6801,7 +7093,7 @@ func (x *ListAgentDMsResponse) String() string {
 func (*ListAgentDMsResponse) ProtoMessage() {}
 
 func (x *ListAgentDMsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[93]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6814,7 +7106,7 @@ func (x *ListAgentDMsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentDMsResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentDMsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{93}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *ListAgentDMsResponse) GetDms() []*ChannelRecord {
@@ -6842,7 +7134,7 @@ type AgentControlOperation struct {
 
 func (x *AgentControlOperation) Reset() {
 	*x = AgentControlOperation{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[94]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6854,7 +7146,7 @@ func (x *AgentControlOperation) String() string {
 func (*AgentControlOperation) ProtoMessage() {}
 
 func (x *AgentControlOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[94]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6867,7 +7159,7 @@ func (x *AgentControlOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentControlOperation.ProtoReflect.Descriptor instead.
 func (*AgentControlOperation) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{94}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *AgentControlOperation) GetOperationId() string {
@@ -6955,7 +7247,7 @@ type ControlAgentRequest struct {
 
 func (x *ControlAgentRequest) Reset() {
 	*x = ControlAgentRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[95]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6967,7 +7259,7 @@ func (x *ControlAgentRequest) String() string {
 func (*ControlAgentRequest) ProtoMessage() {}
 
 func (x *ControlAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[95]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6980,7 +7272,7 @@ func (x *ControlAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlAgentRequest.ProtoReflect.Descriptor instead.
 func (*ControlAgentRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{95}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *ControlAgentRequest) GetAgentId() string {
@@ -7043,7 +7335,7 @@ type ControlAgentResponse struct {
 
 func (x *ControlAgentResponse) Reset() {
 	*x = ControlAgentResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[96]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7055,7 +7347,7 @@ func (x *ControlAgentResponse) String() string {
 func (*ControlAgentResponse) ProtoMessage() {}
 
 func (x *ControlAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[96]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7068,7 +7360,7 @@ func (x *ControlAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ControlAgentResponse.ProtoReflect.Descriptor instead.
 func (*ControlAgentResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{96}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *ControlAgentResponse) GetAccepted() bool {
@@ -7107,7 +7399,7 @@ type SendAgentDirectMessageRequest struct {
 
 func (x *SendAgentDirectMessageRequest) Reset() {
 	*x = SendAgentDirectMessageRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[97]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7119,7 +7411,7 @@ func (x *SendAgentDirectMessageRequest) String() string {
 func (*SendAgentDirectMessageRequest) ProtoMessage() {}
 
 func (x *SendAgentDirectMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[97]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7132,7 +7424,7 @@ func (x *SendAgentDirectMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendAgentDirectMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendAgentDirectMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{97}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *SendAgentDirectMessageRequest) GetAgentId() string {
@@ -7194,7 +7486,7 @@ type SendAgentDirectMessageResponse struct {
 
 func (x *SendAgentDirectMessageResponse) Reset() {
 	*x = SendAgentDirectMessageResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[98]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7206,7 +7498,7 @@ func (x *SendAgentDirectMessageResponse) String() string {
 func (*SendAgentDirectMessageResponse) ProtoMessage() {}
 
 func (x *SendAgentDirectMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[98]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7219,7 +7511,7 @@ func (x *SendAgentDirectMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendAgentDirectMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendAgentDirectMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{98}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *SendAgentDirectMessageResponse) GetAccepted() bool {
@@ -7262,7 +7554,7 @@ type AgentStatusSnapshot struct {
 
 func (x *AgentStatusSnapshot) Reset() {
 	*x = AgentStatusSnapshot{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[99]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7274,7 +7566,7 @@ func (x *AgentStatusSnapshot) String() string {
 func (*AgentStatusSnapshot) ProtoMessage() {}
 
 func (x *AgentStatusSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[99]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7287,7 +7579,7 @@ func (x *AgentStatusSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentStatusSnapshot.ProtoReflect.Descriptor instead.
 func (*AgentStatusSnapshot) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{99}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *AgentStatusSnapshot) GetAgentId() string {
@@ -7426,7 +7718,7 @@ type UpdateAgentStatusRequest struct {
 
 func (x *UpdateAgentStatusRequest) Reset() {
 	*x = UpdateAgentStatusRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[100]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7438,7 +7730,7 @@ func (x *UpdateAgentStatusRequest) String() string {
 func (*UpdateAgentStatusRequest) ProtoMessage() {}
 
 func (x *UpdateAgentStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[100]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7451,7 +7743,7 @@ func (x *UpdateAgentStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentStatusRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAgentStatusRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{100}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *UpdateAgentStatusRequest) GetStatus() *AgentStatusSnapshot {
@@ -7477,7 +7769,7 @@ type UpdateAgentStatusResponse struct {
 
 func (x *UpdateAgentStatusResponse) Reset() {
 	*x = UpdateAgentStatusResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[101]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7489,7 +7781,7 @@ func (x *UpdateAgentStatusResponse) String() string {
 func (*UpdateAgentStatusResponse) ProtoMessage() {}
 
 func (x *UpdateAgentStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[101]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7502,7 +7794,7 @@ func (x *UpdateAgentStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAgentStatusResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAgentStatusResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{101}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *UpdateAgentStatusResponse) GetStatus() *AgentStatusSnapshot {
@@ -7523,7 +7815,7 @@ type ListAgentStatusesRequest struct {
 
 func (x *ListAgentStatusesRequest) Reset() {
 	*x = ListAgentStatusesRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[102]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7535,7 +7827,7 @@ func (x *ListAgentStatusesRequest) String() string {
 func (*ListAgentStatusesRequest) ProtoMessage() {}
 
 func (x *ListAgentStatusesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[102]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7548,7 +7840,7 @@ func (x *ListAgentStatusesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentStatusesRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentStatusesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{102}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ListAgentStatusesRequest) GetAgentId() string {
@@ -7581,7 +7873,7 @@ type ListAgentStatusesResponse struct {
 
 func (x *ListAgentStatusesResponse) Reset() {
 	*x = ListAgentStatusesResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[103]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7593,7 +7885,7 @@ func (x *ListAgentStatusesResponse) String() string {
 func (*ListAgentStatusesResponse) ProtoMessage() {}
 
 func (x *ListAgentStatusesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[103]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7606,7 +7898,7 @@ func (x *ListAgentStatusesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentStatusesResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentStatusesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{103}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *ListAgentStatusesResponse) GetStatuses() []*AgentStatusSnapshot {
@@ -7640,7 +7932,7 @@ type ReminderRecord struct {
 
 func (x *ReminderRecord) Reset() {
 	*x = ReminderRecord{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[104]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7652,7 +7944,7 @@ func (x *ReminderRecord) String() string {
 func (*ReminderRecord) ProtoMessage() {}
 
 func (x *ReminderRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[104]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7665,7 +7957,7 @@ func (x *ReminderRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReminderRecord.ProtoReflect.Descriptor instead.
 func (*ReminderRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{104}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *ReminderRecord) GetReminderId() string {
@@ -7791,7 +8083,7 @@ type ReminderRecurrence struct {
 
 func (x *ReminderRecurrence) Reset() {
 	*x = ReminderRecurrence{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[105]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7803,7 +8095,7 @@ func (x *ReminderRecurrence) String() string {
 func (*ReminderRecurrence) ProtoMessage() {}
 
 func (x *ReminderRecurrence) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[105]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7816,7 +8108,7 @@ func (x *ReminderRecurrence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReminderRecurrence.ProtoReflect.Descriptor instead.
 func (*ReminderRecurrence) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{105}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *ReminderRecurrence) GetRule() string {
@@ -7856,7 +8148,7 @@ type ReminderEvent struct {
 
 func (x *ReminderEvent) Reset() {
 	*x = ReminderEvent{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[106]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7868,7 +8160,7 @@ func (x *ReminderEvent) String() string {
 func (*ReminderEvent) ProtoMessage() {}
 
 func (x *ReminderEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[106]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7881,7 +8173,7 @@ func (x *ReminderEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReminderEvent.ProtoReflect.Descriptor instead.
 func (*ReminderEvent) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{106}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *ReminderEvent) GetEventId() string {
@@ -7962,7 +8254,7 @@ type ScheduleReminderRequest struct {
 
 func (x *ScheduleReminderRequest) Reset() {
 	*x = ScheduleReminderRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[107]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7974,7 +8266,7 @@ func (x *ScheduleReminderRequest) String() string {
 func (*ScheduleReminderRequest) ProtoMessage() {}
 
 func (x *ScheduleReminderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[107]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7987,7 +8279,7 @@ func (x *ScheduleReminderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleReminderRequest.ProtoReflect.Descriptor instead.
 func (*ScheduleReminderRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{107}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *ScheduleReminderRequest) GetTarget() string {
@@ -8097,7 +8389,7 @@ type ScheduleReminderResponse struct {
 
 func (x *ScheduleReminderResponse) Reset() {
 	*x = ScheduleReminderResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[108]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8109,7 +8401,7 @@ func (x *ScheduleReminderResponse) String() string {
 func (*ScheduleReminderResponse) ProtoMessage() {}
 
 func (x *ScheduleReminderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[108]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8122,7 +8414,7 @@ func (x *ScheduleReminderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleReminderResponse.ProtoReflect.Descriptor instead.
 func (*ScheduleReminderResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{108}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *ScheduleReminderResponse) GetReminder() *ReminderRecord {
@@ -8144,7 +8436,7 @@ type ListRemindersRequest struct {
 
 func (x *ListRemindersRequest) Reset() {
 	*x = ListRemindersRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[109]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8156,7 +8448,7 @@ func (x *ListRemindersRequest) String() string {
 func (*ListRemindersRequest) ProtoMessage() {}
 
 func (x *ListRemindersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[109]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8169,7 +8461,7 @@ func (x *ListRemindersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRemindersRequest.ProtoReflect.Descriptor instead.
 func (*ListRemindersRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{109}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *ListRemindersRequest) GetTarget() string {
@@ -8209,7 +8501,7 @@ type ListRemindersResponse struct {
 
 func (x *ListRemindersResponse) Reset() {
 	*x = ListRemindersResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[110]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8221,7 +8513,7 @@ func (x *ListRemindersResponse) String() string {
 func (*ListRemindersResponse) ProtoMessage() {}
 
 func (x *ListRemindersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[110]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8234,7 +8526,7 @@ func (x *ListRemindersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRemindersResponse.ProtoReflect.Descriptor instead.
 func (*ListRemindersResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{110}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *ListRemindersResponse) GetReminders() []*ReminderRecord {
@@ -8254,7 +8546,7 @@ type CancelReminderRequest struct {
 
 func (x *CancelReminderRequest) Reset() {
 	*x = CancelReminderRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[111]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8266,7 +8558,7 @@ func (x *CancelReminderRequest) String() string {
 func (*CancelReminderRequest) ProtoMessage() {}
 
 func (x *CancelReminderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[111]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8279,7 +8571,7 @@ func (x *CancelReminderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelReminderRequest.ProtoReflect.Descriptor instead.
 func (*CancelReminderRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{111}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *CancelReminderRequest) GetReminderId() string {
@@ -8306,7 +8598,7 @@ type CancelReminderResponse struct {
 
 func (x *CancelReminderResponse) Reset() {
 	*x = CancelReminderResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[112]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8318,7 +8610,7 @@ func (x *CancelReminderResponse) String() string {
 func (*CancelReminderResponse) ProtoMessage() {}
 
 func (x *CancelReminderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[112]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8331,7 +8623,7 @@ func (x *CancelReminderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelReminderResponse.ProtoReflect.Descriptor instead.
 func (*CancelReminderResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{112}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *CancelReminderResponse) GetAccepted() bool {
@@ -8359,7 +8651,7 @@ type SnoozeReminderRequest struct {
 
 func (x *SnoozeReminderRequest) Reset() {
 	*x = SnoozeReminderRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[113]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8371,7 +8663,7 @@ func (x *SnoozeReminderRequest) String() string {
 func (*SnoozeReminderRequest) ProtoMessage() {}
 
 func (x *SnoozeReminderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[113]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8384,7 +8676,7 @@ func (x *SnoozeReminderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SnoozeReminderRequest.ProtoReflect.Descriptor instead.
 func (*SnoozeReminderRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{113}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *SnoozeReminderRequest) GetReminderId() string {
@@ -8417,7 +8709,7 @@ type SnoozeReminderResponse struct {
 
 func (x *SnoozeReminderResponse) Reset() {
 	*x = SnoozeReminderResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[114]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8429,7 +8721,7 @@ func (x *SnoozeReminderResponse) String() string {
 func (*SnoozeReminderResponse) ProtoMessage() {}
 
 func (x *SnoozeReminderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[114]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8442,7 +8734,7 @@ func (x *SnoozeReminderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SnoozeReminderResponse.ProtoReflect.Descriptor instead.
 func (*SnoozeReminderResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{114}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *SnoozeReminderResponse) GetReminder() *ReminderRecord {
@@ -8467,7 +8759,7 @@ type UpdateReminderRequest struct {
 
 func (x *UpdateReminderRequest) Reset() {
 	*x = UpdateReminderRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[115]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8479,7 +8771,7 @@ func (x *UpdateReminderRequest) String() string {
 func (*UpdateReminderRequest) ProtoMessage() {}
 
 func (x *UpdateReminderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[115]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8492,7 +8784,7 @@ func (x *UpdateReminderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReminderRequest.ProtoReflect.Descriptor instead.
 func (*UpdateReminderRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{115}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *UpdateReminderRequest) GetReminderId() string {
@@ -8553,7 +8845,7 @@ type UpdateReminderResponse struct {
 
 func (x *UpdateReminderResponse) Reset() {
 	*x = UpdateReminderResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[116]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8565,7 +8857,7 @@ func (x *UpdateReminderResponse) String() string {
 func (*UpdateReminderResponse) ProtoMessage() {}
 
 func (x *UpdateReminderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[116]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8578,7 +8870,7 @@ func (x *UpdateReminderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateReminderResponse.ProtoReflect.Descriptor instead.
 func (*UpdateReminderResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{116}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *UpdateReminderResponse) GetReminder() *ReminderRecord {
@@ -8598,7 +8890,7 @@ type GetReminderLogRequest struct {
 
 func (x *GetReminderLogRequest) Reset() {
 	*x = GetReminderLogRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[117]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8610,7 +8902,7 @@ func (x *GetReminderLogRequest) String() string {
 func (*GetReminderLogRequest) ProtoMessage() {}
 
 func (x *GetReminderLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[117]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8623,7 +8915,7 @@ func (x *GetReminderLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReminderLogRequest.ProtoReflect.Descriptor instead.
 func (*GetReminderLogRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{117}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *GetReminderLogRequest) GetReminderId() string {
@@ -8649,7 +8941,7 @@ type GetReminderLogResponse struct {
 
 func (x *GetReminderLogResponse) Reset() {
 	*x = GetReminderLogResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[118]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8661,7 +8953,7 @@ func (x *GetReminderLogResponse) String() string {
 func (*GetReminderLogResponse) ProtoMessage() {}
 
 func (x *GetReminderLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[118]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8674,7 +8966,7 @@ func (x *GetReminderLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReminderLogResponse.ProtoReflect.Descriptor instead.
 func (*GetReminderLogResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{118}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *GetReminderLogResponse) GetEvents() []*ReminderEvent {
@@ -8701,7 +8993,7 @@ type ActivityRecord struct {
 
 func (x *ActivityRecord) Reset() {
 	*x = ActivityRecord{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[119]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8713,7 +9005,7 @@ func (x *ActivityRecord) String() string {
 func (*ActivityRecord) ProtoMessage() {}
 
 func (x *ActivityRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[119]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8726,7 +9018,7 @@ func (x *ActivityRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivityRecord.ProtoReflect.Descriptor instead.
 func (*ActivityRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{119}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *ActivityRecord) GetActivityId() string {
@@ -8808,7 +9100,7 @@ type LogActivityRequest struct {
 
 func (x *LogActivityRequest) Reset() {
 	*x = LogActivityRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[120]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8820,7 +9112,7 @@ func (x *LogActivityRequest) String() string {
 func (*LogActivityRequest) ProtoMessage() {}
 
 func (x *LogActivityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[120]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8833,7 +9125,7 @@ func (x *LogActivityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogActivityRequest.ProtoReflect.Descriptor instead.
 func (*LogActivityRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{120}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *LogActivityRequest) GetTarget() string {
@@ -8901,7 +9193,7 @@ type LogActivityResponse struct {
 
 func (x *LogActivityResponse) Reset() {
 	*x = LogActivityResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[121]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8913,7 +9205,7 @@ func (x *LogActivityResponse) String() string {
 func (*LogActivityResponse) ProtoMessage() {}
 
 func (x *LogActivityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[121]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8926,7 +9218,7 @@ func (x *LogActivityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogActivityResponse.ProtoReflect.Descriptor instead.
 func (*LogActivityResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{121}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *LogActivityResponse) GetActivity() *ActivityRecord {
@@ -8948,7 +9240,7 @@ type ListActivityRequest struct {
 
 func (x *ListActivityRequest) Reset() {
 	*x = ListActivityRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[122]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8960,7 +9252,7 @@ func (x *ListActivityRequest) String() string {
 func (*ListActivityRequest) ProtoMessage() {}
 
 func (x *ListActivityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[122]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8973,7 +9265,7 @@ func (x *ListActivityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActivityRequest.ProtoReflect.Descriptor instead.
 func (*ListActivityRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{122}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *ListActivityRequest) GetTarget() string {
@@ -9014,7 +9306,7 @@ type ListActivityResponse struct {
 
 func (x *ListActivityResponse) Reset() {
 	*x = ListActivityResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[123]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9026,7 +9318,7 @@ func (x *ListActivityResponse) String() string {
 func (*ListActivityResponse) ProtoMessage() {}
 
 func (x *ListActivityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[123]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9039,7 +9331,7 @@ func (x *ListActivityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActivityResponse.ProtoReflect.Descriptor instead.
 func (*ListActivityResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{123}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *ListActivityResponse) GetActivities() []*ActivityRecord {
@@ -9070,7 +9362,7 @@ type UploadAttachmentRequest struct {
 
 func (x *UploadAttachmentRequest) Reset() {
 	*x = UploadAttachmentRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[124]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9082,7 +9374,7 @@ func (x *UploadAttachmentRequest) String() string {
 func (*UploadAttachmentRequest) ProtoMessage() {}
 
 func (x *UploadAttachmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[124]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9095,7 +9387,7 @@ func (x *UploadAttachmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadAttachmentRequest.ProtoReflect.Descriptor instead.
 func (*UploadAttachmentRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{124}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *UploadAttachmentRequest) GetTarget() string {
@@ -9149,7 +9441,7 @@ type UploadAttachmentResponse struct {
 
 func (x *UploadAttachmentResponse) Reset() {
 	*x = UploadAttachmentResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[125]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9161,7 +9453,7 @@ func (x *UploadAttachmentResponse) String() string {
 func (*UploadAttachmentResponse) ProtoMessage() {}
 
 func (x *UploadAttachmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[125]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9174,7 +9466,7 @@ func (x *UploadAttachmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadAttachmentResponse.ProtoReflect.Descriptor instead.
 func (*UploadAttachmentResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{125}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *UploadAttachmentResponse) GetAttachment() *AttachmentRecord {
@@ -9195,7 +9487,7 @@ type GetAttachmentRequest struct {
 
 func (x *GetAttachmentRequest) Reset() {
 	*x = GetAttachmentRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[126]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9207,7 +9499,7 @@ func (x *GetAttachmentRequest) String() string {
 func (*GetAttachmentRequest) ProtoMessage() {}
 
 func (x *GetAttachmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[126]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9220,7 +9512,7 @@ func (x *GetAttachmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttachmentRequest.ProtoReflect.Descriptor instead.
 func (*GetAttachmentRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{126}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *GetAttachmentRequest) GetAttachmentId() string {
@@ -9254,7 +9546,7 @@ type GetAttachmentResponse struct {
 
 func (x *GetAttachmentResponse) Reset() {
 	*x = GetAttachmentResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[127]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9266,7 +9558,7 @@ func (x *GetAttachmentResponse) String() string {
 func (*GetAttachmentResponse) ProtoMessage() {}
 
 func (x *GetAttachmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[127]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9279,7 +9571,7 @@ func (x *GetAttachmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAttachmentResponse.ProtoReflect.Descriptor instead.
 func (*GetAttachmentResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{127}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *GetAttachmentResponse) GetAttachment() *AttachmentRecord {
@@ -9306,7 +9598,7 @@ type ListEventsSinceRequest struct {
 
 func (x *ListEventsSinceRequest) Reset() {
 	*x = ListEventsSinceRequest{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[128]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9318,7 +9610,7 @@ func (x *ListEventsSinceRequest) String() string {
 func (*ListEventsSinceRequest) ProtoMessage() {}
 
 func (x *ListEventsSinceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[128]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9331,7 +9623,7 @@ func (x *ListEventsSinceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventsSinceRequest.ProtoReflect.Descriptor instead.
 func (*ListEventsSinceRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{128}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *ListEventsSinceRequest) GetCursor() *EventCursor {
@@ -9365,7 +9657,7 @@ type CollaborationEvent struct {
 
 func (x *CollaborationEvent) Reset() {
 	*x = CollaborationEvent{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[129]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9377,7 +9669,7 @@ func (x *CollaborationEvent) String() string {
 func (*CollaborationEvent) ProtoMessage() {}
 
 func (x *CollaborationEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[129]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9390,7 +9682,7 @@ func (x *CollaborationEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CollaborationEvent.ProtoReflect.Descriptor instead.
 func (*CollaborationEvent) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{129}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *CollaborationEvent) GetEventId() string {
@@ -9466,7 +9758,7 @@ type ListEventsSinceResponse struct {
 
 func (x *ListEventsSinceResponse) Reset() {
 	*x = ListEventsSinceResponse{}
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[130]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9478,7 +9770,7 @@ func (x *ListEventsSinceResponse) String() string {
 func (*ListEventsSinceResponse) ProtoMessage() {}
 
 func (x *ListEventsSinceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[130]
+	mi := &file_nekode_daemon_v1_daemon_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9491,7 +9783,7 @@ func (x *ListEventsSinceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventsSinceResponse.ProtoReflect.Descriptor instead.
 func (*ListEventsSinceResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{130}
+	return file_nekode_daemon_v1_daemon_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *ListEventsSinceResponse) GetEvents() []*CollaborationEvent {
@@ -9764,14 +10056,38 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1c\n" +
 	"\ttruncated\x18\x04 \x01(\bR\ttruncated\x12\x1d\n" +
 	"\n" +
-	"size_bytes\x18\x05 \x01(\x03R\tsizeBytes\"\xa6\x01\n" +
+	"size_bytes\x18\x05 \x01(\x03R\tsizeBytes\"\xe2\x02\n" +
 	"\rChannelRecord\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12!\n" +
 	"\fchannel_type\x18\x04 \x01(\tR\vchannelType\x12\x18\n" +
-	"\aenabled\x18\x05 \x01(\bR\aenabled\"+\n" +
+	"\aenabled\x18\x05 \x01(\bR\aenabled\x126\n" +
+	"\x17interaction_endpoint_id\x18\x06 \x01(\tR\x15interactionEndpointId\x12\x1f\n" +
+	"\vsource_kind\x18\a \x01(\tR\n" +
+	"sourceKind\x12\x1f\n" +
+	"\vexternal_id\x18\b \x01(\tR\n" +
+	"externalId\x12@\n" +
+	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\"\x82\x03\n" +
+	"\x13InteractionEndpoint\x12\x1f\n" +
+	"\vendpoint_id\x18\x01 \x01(\tR\n" +
+	"endpointId\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12#\n" +
+	"\rtarget_prefix\x18\x05 \x01(\tR\ftargetPrefix\x12'\n" +
+	"\x0finbound_enabled\x18\x06 \x01(\bR\x0einboundEnabled\x12)\n" +
+	"\x10outbound_enabled\x18\a \x01(\bR\x0foutboundEnabled\x12\x1b\n" +
+	"\tauth_mode\x18\b \x01(\tR\bauthMode\x12\x1f\n" +
+	"\vconfig_json\x18\t \x01(\tR\n" +
+	"configJson\x12@\n" +
+	"\fcapabilities\x18\n" +
+	" \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\"7\n" +
+	"\x1fListInteractionEndpointsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\"g\n" +
+	" ListInteractionEndpointsResponse\x12C\n" +
+	"\tendpoints\x18\x01 \x03(\v2%.nekode.daemon.v1.InteractionEndpointR\tendpoints\"+\n" +
 	"\x13ListChannelsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\"S\n" +
 	"\x14ListChannelsResponse\x12;\n" +
@@ -9795,7 +10111,7 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"\x10GetThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\"K\n" +
 	"\x11GetThreadResponse\x126\n" +
-	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xd1\x03\n" +
+	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xd4\x04\n" +
 	"\x14CollaborationMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
@@ -9812,12 +10128,15 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"senderKind\x12D\n" +
 	"\vattachments\x18\v \x03(\v2\".nekode.daemon.v1.AttachmentRecordR\vattachments\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\f \x01(\tR\trequestId\"C\n" +
+	"request_id\x18\f \x01(\tR\trequestId\x12,\n" +
+	"\x12source_endpoint_id\x18\r \x01(\tR\x10sourceEndpointId\x12.\n" +
+	"\x13external_message_id\x18\x0e \x01(\tR\x11externalMessageId\x12#\n" +
+	"\rmetadata_json\x18\x0f \x01(\tR\fmetadataJson\"C\n" +
 	"\x13ReadMessagesRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\rR\x05limit\"Z\n" +
 	"\x14ReadMessagesResponse\x12B\n" +
-	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\"\xcc\x02\n" +
+	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\"\xc5\x03\n" +
 	"\x12SendMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
@@ -9828,7 +10147,11 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"\remit_outbound\x18\a \x01(\bR\femitOutbound\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\b \x01(\tR\trequestId\x12%\n" +
-	"\x0eattachment_ids\x18\t \x03(\tR\rattachmentIds\"s\n" +
+	"\x0eattachment_ids\x18\t \x03(\tR\rattachmentIds\x12,\n" +
+	"\x12source_endpoint_id\x18\n" +
+	" \x01(\tR\x10sourceEndpointId\x12$\n" +
+	"\x0esender_user_id\x18\v \x01(\tR\fsenderUserId\x12#\n" +
+	"\rmetadata_json\x18\f \x01(\tR\fmetadataJson\"s\n" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
 	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xd0\x02\n" +
@@ -10002,13 +10325,14 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"\x17UpdateTaskGraphResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12*\n" +
 	"\x11new_graph_version\x18\x02 \x01(\x03R\x0fnewGraphVersion\"\x16\n" +
-	"\x14GetServerInfoRequest\"\xc7\x01\n" +
+	"\x14GetServerInfoRequest\"\xa3\x02\n" +
 	"\x15GetServerInfoResponse\x12\x1f\n" +
 	"\vserver_name\x18\x01 \x01(\tR\n" +
 	"serverName\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12;\n" +
 	"\bchannels\x18\x03 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\bchannels\x126\n" +
-	"\x06agents\x18\x04 \x03(\v2\x1e.nekode.daemon.v1.AgentProfileR\x06agents\"J\n" +
+	"\x06agents\x18\x04 \x03(\v2\x1e.nekode.daemon.v1.AgentProfileR\x06agents\x12Z\n" +
+	"\x15interaction_endpoints\x18\x05 \x03(\v2%.nekode.daemon.v1.InteractionEndpointR\x14interactionEndpoints\"J\n" +
 	"\x06EnvVar\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
@@ -10372,7 +10696,7 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"\x18AGENT_HEALTH_TEST_FAILED\x10\x04\x12\x1e\n" +
 	"\x1aAGENT_HEALTH_AUTH_REQUIRED\x10\x05\x12\x1e\n" +
 	"\x1aAGENT_HEALTH_RUNTIME_ERROR\x10\x06\x12\x18\n" +
-	"\x14AGENT_HEALTH_OFFLINE\x10\a2\xaa'\n" +
+	"\x14AGENT_HEALTH_OFFLINE\x10\a2\xae(\n" +
 	"\x14DaemonControlService\x12i\n" +
 	"\x10RegisterComputer\x12).nekode.daemon.v1.RegisterComputerRequest\x1a*.nekode.daemon.v1.RegisterComputerResponse\x12l\n" +
 	"\x11HeartbeatComputer\x12*.nekode.daemon.v1.HeartbeatComputerRequest\x1a+.nekode.daemon.v1.HeartbeatComputerResponse\x12l\n" +
@@ -10383,7 +10707,8 @@ const file_nekode_daemon_v1_daemon_proto_rawDesc = "" +
 	"\x06GetRun\x12\x1f.nekode.daemon.v1.GetRunRequest\x1a .nekode.daemon.v1.GetRunResponse\x12l\n" +
 	"\x11ListWorkspaceTree\x12*.nekode.daemon.v1.ListWorkspaceTreeRequest\x1a+.nekode.daemon.v1.ListWorkspaceTreeResponse\x12l\n" +
 	"\x11ReadWorkspaceFile\x12*.nekode.daemon.v1.ReadWorkspaceFileRequest\x1a+.nekode.daemon.v1.ReadWorkspaceFileResponse\x12]\n" +
-	"\fListChannels\x12%.nekode.daemon.v1.ListChannelsRequest\x1a&.nekode.daemon.v1.ListChannelsResponse\x12Z\n" +
+	"\fListChannels\x12%.nekode.daemon.v1.ListChannelsRequest\x1a&.nekode.daemon.v1.ListChannelsResponse\x12\x81\x01\n" +
+	"\x18ListInteractionEndpoints\x121.nekode.daemon.v1.ListInteractionEndpointsRequest\x1a2.nekode.daemon.v1.ListInteractionEndpointsResponse\x12Z\n" +
 	"\vListThreads\x12$.nekode.daemon.v1.ListThreadsRequest\x1a%.nekode.daemon.v1.ListThreadsResponse\x12T\n" +
 	"\tGetThread\x12\".nekode.daemon.v1.GetThreadRequest\x1a#.nekode.daemon.v1.GetThreadResponse\x12]\n" +
 	"\fReadMessages\x12%.nekode.daemon.v1.ReadMessagesRequest\x1a&.nekode.daemon.v1.ReadMessagesResponse\x12Z\n" +
@@ -10437,154 +10762,157 @@ func file_nekode_daemon_v1_daemon_proto_rawDescGZIP() []byte {
 }
 
 var file_nekode_daemon_v1_daemon_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_nekode_daemon_v1_daemon_proto_msgTypes = make([]protoimpl.MessageInfo, 132)
+var file_nekode_daemon_v1_daemon_proto_msgTypes = make([]protoimpl.MessageInfo, 135)
 var file_nekode_daemon_v1_daemon_proto_goTypes = []any{
-	(AgentControlAction)(0),                 // 0: nekode.daemon.v1.AgentControlAction
-	(AgentPresence)(0),                      // 1: nekode.daemon.v1.AgentPresence
-	(AgentActivityState)(0),                 // 2: nekode.daemon.v1.AgentActivityState
-	(AgentHealth)(0),                        // 3: nekode.daemon.v1.AgentHealth
-	(*Capability)(nil),                      // 4: nekode.daemon.v1.Capability
-	(*Permission)(nil),                      // 5: nekode.daemon.v1.Permission
-	(*Lease)(nil),                           // 6: nekode.daemon.v1.Lease
-	(*EventCursor)(nil),                     // 7: nekode.daemon.v1.EventCursor
-	(*AttachmentRecord)(nil),                // 8: nekode.daemon.v1.AttachmentRecord
-	(*Workspace)(nil),                       // 9: nekode.daemon.v1.Workspace
-	(*RuntimeProfile)(nil),                  // 10: nekode.daemon.v1.RuntimeProfile
-	(*Runtime)(nil),                         // 11: nekode.daemon.v1.Runtime
-	(*ComputerInventory)(nil),               // 12: nekode.daemon.v1.ComputerInventory
-	(*ComputerInfo)(nil),                    // 13: nekode.daemon.v1.ComputerInfo
-	(*RegisterComputerRequest)(nil),         // 14: nekode.daemon.v1.RegisterComputerRequest
-	(*RegisterComputerResponse)(nil),        // 15: nekode.daemon.v1.RegisterComputerResponse
-	(*HeartbeatComputerRequest)(nil),        // 16: nekode.daemon.v1.HeartbeatComputerRequest
-	(*HeartbeatComputerResponse)(nil),       // 17: nekode.daemon.v1.HeartbeatComputerResponse
-	(*Task)(nil),                            // 18: nekode.daemon.v1.Task
-	(*Run)(nil),                             // 19: nekode.daemon.v1.Run
-	(*RunStep)(nil),                         // 20: nekode.daemon.v1.RunStep
-	(*FetchAssignedRunsRequest)(nil),        // 21: nekode.daemon.v1.FetchAssignedRunsRequest
-	(*FetchAssignedRunsResponse)(nil),       // 22: nekode.daemon.v1.FetchAssignedRunsResponse
-	(*UpdateRunStatusRequest)(nil),          // 23: nekode.daemon.v1.UpdateRunStatusRequest
-	(*UpdateRunStatusResponse)(nil),         // 24: nekode.daemon.v1.UpdateRunStatusResponse
-	(*AppendRunStepRequest)(nil),            // 25: nekode.daemon.v1.AppendRunStepRequest
-	(*AppendRunStepResponse)(nil),           // 26: nekode.daemon.v1.AppendRunStepResponse
-	(*ListRunsRequest)(nil),                 // 27: nekode.daemon.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),                // 28: nekode.daemon.v1.ListRunsResponse
-	(*GetRunRequest)(nil),                   // 29: nekode.daemon.v1.GetRunRequest
-	(*GetRunResponse)(nil),                  // 30: nekode.daemon.v1.GetRunResponse
-	(*WorkspaceTreeEntry)(nil),              // 31: nekode.daemon.v1.WorkspaceTreeEntry
-	(*ListWorkspaceTreeRequest)(nil),        // 32: nekode.daemon.v1.ListWorkspaceTreeRequest
-	(*ListWorkspaceTreeResponse)(nil),       // 33: nekode.daemon.v1.ListWorkspaceTreeResponse
-	(*ReadWorkspaceFileRequest)(nil),        // 34: nekode.daemon.v1.ReadWorkspaceFileRequest
-	(*ReadWorkspaceFileResponse)(nil),       // 35: nekode.daemon.v1.ReadWorkspaceFileResponse
-	(*ChannelRecord)(nil),                   // 36: nekode.daemon.v1.ChannelRecord
-	(*ListChannelsRequest)(nil),             // 37: nekode.daemon.v1.ListChannelsRequest
-	(*ListChannelsResponse)(nil),            // 38: nekode.daemon.v1.ListChannelsResponse
-	(*ThreadRecord)(nil),                    // 39: nekode.daemon.v1.ThreadRecord
-	(*ListThreadsRequest)(nil),              // 40: nekode.daemon.v1.ListThreadsRequest
-	(*ListThreadsResponse)(nil),             // 41: nekode.daemon.v1.ListThreadsResponse
-	(*GetThreadRequest)(nil),                // 42: nekode.daemon.v1.GetThreadRequest
-	(*GetThreadResponse)(nil),               // 43: nekode.daemon.v1.GetThreadResponse
-	(*CollaborationMessage)(nil),            // 44: nekode.daemon.v1.CollaborationMessage
-	(*ReadMessagesRequest)(nil),             // 45: nekode.daemon.v1.ReadMessagesRequest
-	(*ReadMessagesResponse)(nil),            // 46: nekode.daemon.v1.ReadMessagesResponse
-	(*SendMessageRequest)(nil),              // 47: nekode.daemon.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),             // 48: nekode.daemon.v1.SendMessageResponse
-	(*SavedMessageRecord)(nil),              // 49: nekode.daemon.v1.SavedMessageRecord
-	(*SaveMessageRequest)(nil),              // 50: nekode.daemon.v1.SaveMessageRequest
-	(*SaveMessageResponse)(nil),             // 51: nekode.daemon.v1.SaveMessageResponse
-	(*UnsaveMessageRequest)(nil),            // 52: nekode.daemon.v1.UnsaveMessageRequest
-	(*UnsaveMessageResponse)(nil),           // 53: nekode.daemon.v1.UnsaveMessageResponse
-	(*ListSavedMessagesRequest)(nil),        // 54: nekode.daemon.v1.ListSavedMessagesRequest
-	(*ListSavedMessagesResponse)(nil),       // 55: nekode.daemon.v1.ListSavedMessagesResponse
-	(*FollowThreadRequest)(nil),             // 56: nekode.daemon.v1.FollowThreadRequest
-	(*FollowThreadResponse)(nil),            // 57: nekode.daemon.v1.FollowThreadResponse
-	(*UnfollowThreadRequest)(nil),           // 58: nekode.daemon.v1.UnfollowThreadRequest
-	(*UnfollowThreadResponse)(nil),          // 59: nekode.daemon.v1.UnfollowThreadResponse
-	(*CreateCollaborationTaskRequest)(nil),  // 60: nekode.daemon.v1.CreateCollaborationTaskRequest
-	(*CreateCollaborationTaskResponse)(nil), // 61: nekode.daemon.v1.CreateCollaborationTaskResponse
-	(*ListCollaborationTasksRequest)(nil),   // 62: nekode.daemon.v1.ListCollaborationTasksRequest
-	(*ListCollaborationTasksResponse)(nil),  // 63: nekode.daemon.v1.ListCollaborationTasksResponse
-	(*TaskBoardColumn)(nil),                 // 64: nekode.daemon.v1.TaskBoardColumn
-	(*TaskBoardSnapshot)(nil),               // 65: nekode.daemon.v1.TaskBoardSnapshot
-	(*ListTaskBoardRequest)(nil),            // 66: nekode.daemon.v1.ListTaskBoardRequest
-	(*ListTaskBoardResponse)(nil),           // 67: nekode.daemon.v1.ListTaskBoardResponse
-	(*ClaimCollaborationTaskRequest)(nil),   // 68: nekode.daemon.v1.ClaimCollaborationTaskRequest
-	(*ClaimCollaborationTaskResponse)(nil),  // 69: nekode.daemon.v1.ClaimCollaborationTaskResponse
-	(*TaskEdge)(nil),                        // 70: nekode.daemon.v1.TaskEdge
-	(*TaskGraphSnapshot)(nil),               // 71: nekode.daemon.v1.TaskGraphSnapshot
-	(*ProposedSubtask)(nil),                 // 72: nekode.daemon.v1.ProposedSubtask
-	(*ProposeTaskSplitRequest)(nil),         // 73: nekode.daemon.v1.ProposeTaskSplitRequest
-	(*ProposeTaskSplitResponse)(nil),        // 74: nekode.daemon.v1.ProposeTaskSplitResponse
-	(*ApplyTaskSplitRequest)(nil),           // 75: nekode.daemon.v1.ApplyTaskSplitRequest
-	(*ApplyTaskSplitResponse)(nil),          // 76: nekode.daemon.v1.ApplyTaskSplitResponse
-	(*CreateTaskGraphRequest)(nil),          // 77: nekode.daemon.v1.CreateTaskGraphRequest
-	(*CreateTaskGraphResponse)(nil),         // 78: nekode.daemon.v1.CreateTaskGraphResponse
-	(*ListTaskGraphRequest)(nil),            // 79: nekode.daemon.v1.ListTaskGraphRequest
-	(*ListTaskGraphResponse)(nil),           // 80: nekode.daemon.v1.ListTaskGraphResponse
-	(*UpdateTaskGraphRequest)(nil),          // 81: nekode.daemon.v1.UpdateTaskGraphRequest
-	(*UpdateTaskGraphResponse)(nil),         // 82: nekode.daemon.v1.UpdateTaskGraphResponse
-	(*GetServerInfoRequest)(nil),            // 83: nekode.daemon.v1.GetServerInfoRequest
-	(*GetServerInfoResponse)(nil),           // 84: nekode.daemon.v1.GetServerInfoResponse
-	(*EnvVar)(nil),                          // 85: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil),                     // 86: nekode.daemon.v1.SkillRecord
-	(*AgentProfile)(nil),                    // 87: nekode.daemon.v1.AgentProfile
-	(*GetAgentProfileRequest)(nil),          // 88: nekode.daemon.v1.GetAgentProfileRequest
-	(*GetAgentProfileResponse)(nil),         // 89: nekode.daemon.v1.GetAgentProfileResponse
-	(*UpdateAgentProfileRequest)(nil),       // 90: nekode.daemon.v1.UpdateAgentProfileRequest
-	(*UpdateAgentProfileResponse)(nil),      // 91: nekode.daemon.v1.UpdateAgentProfileResponse
-	(*SetAgentEnvRequest)(nil),              // 92: nekode.daemon.v1.SetAgentEnvRequest
-	(*SetAgentEnvResponse)(nil),             // 93: nekode.daemon.v1.SetAgentEnvResponse
-	(*ListAgentProfilesRequest)(nil),        // 94: nekode.daemon.v1.ListAgentProfilesRequest
-	(*ListAgentProfilesResponse)(nil),       // 95: nekode.daemon.v1.ListAgentProfilesResponse
-	(*ListAgentDMsRequest)(nil),             // 96: nekode.daemon.v1.ListAgentDMsRequest
-	(*ListAgentDMsResponse)(nil),            // 97: nekode.daemon.v1.ListAgentDMsResponse
-	(*AgentControlOperation)(nil),           // 98: nekode.daemon.v1.AgentControlOperation
-	(*ControlAgentRequest)(nil),             // 99: nekode.daemon.v1.ControlAgentRequest
-	(*ControlAgentResponse)(nil),            // 100: nekode.daemon.v1.ControlAgentResponse
-	(*SendAgentDirectMessageRequest)(nil),   // 101: nekode.daemon.v1.SendAgentDirectMessageRequest
-	(*SendAgentDirectMessageResponse)(nil),  // 102: nekode.daemon.v1.SendAgentDirectMessageResponse
-	(*AgentStatusSnapshot)(nil),             // 103: nekode.daemon.v1.AgentStatusSnapshot
-	(*UpdateAgentStatusRequest)(nil),        // 104: nekode.daemon.v1.UpdateAgentStatusRequest
-	(*UpdateAgentStatusResponse)(nil),       // 105: nekode.daemon.v1.UpdateAgentStatusResponse
-	(*ListAgentStatusesRequest)(nil),        // 106: nekode.daemon.v1.ListAgentStatusesRequest
-	(*ListAgentStatusesResponse)(nil),       // 107: nekode.daemon.v1.ListAgentStatusesResponse
-	(*ReminderRecord)(nil),                  // 108: nekode.daemon.v1.ReminderRecord
-	(*ReminderRecurrence)(nil),              // 109: nekode.daemon.v1.ReminderRecurrence
-	(*ReminderEvent)(nil),                   // 110: nekode.daemon.v1.ReminderEvent
-	(*ScheduleReminderRequest)(nil),         // 111: nekode.daemon.v1.ScheduleReminderRequest
-	(*ScheduleReminderResponse)(nil),        // 112: nekode.daemon.v1.ScheduleReminderResponse
-	(*ListRemindersRequest)(nil),            // 113: nekode.daemon.v1.ListRemindersRequest
-	(*ListRemindersResponse)(nil),           // 114: nekode.daemon.v1.ListRemindersResponse
-	(*CancelReminderRequest)(nil),           // 115: nekode.daemon.v1.CancelReminderRequest
-	(*CancelReminderResponse)(nil),          // 116: nekode.daemon.v1.CancelReminderResponse
-	(*SnoozeReminderRequest)(nil),           // 117: nekode.daemon.v1.SnoozeReminderRequest
-	(*SnoozeReminderResponse)(nil),          // 118: nekode.daemon.v1.SnoozeReminderResponse
-	(*UpdateReminderRequest)(nil),           // 119: nekode.daemon.v1.UpdateReminderRequest
-	(*UpdateReminderResponse)(nil),          // 120: nekode.daemon.v1.UpdateReminderResponse
-	(*GetReminderLogRequest)(nil),           // 121: nekode.daemon.v1.GetReminderLogRequest
-	(*GetReminderLogResponse)(nil),          // 122: nekode.daemon.v1.GetReminderLogResponse
-	(*ActivityRecord)(nil),                  // 123: nekode.daemon.v1.ActivityRecord
-	(*LogActivityRequest)(nil),              // 124: nekode.daemon.v1.LogActivityRequest
-	(*LogActivityResponse)(nil),             // 125: nekode.daemon.v1.LogActivityResponse
-	(*ListActivityRequest)(nil),             // 126: nekode.daemon.v1.ListActivityRequest
-	(*ListActivityResponse)(nil),            // 127: nekode.daemon.v1.ListActivityResponse
-	(*UploadAttachmentRequest)(nil),         // 128: nekode.daemon.v1.UploadAttachmentRequest
-	(*UploadAttachmentResponse)(nil),        // 129: nekode.daemon.v1.UploadAttachmentResponse
-	(*GetAttachmentRequest)(nil),            // 130: nekode.daemon.v1.GetAttachmentRequest
-	(*GetAttachmentResponse)(nil),           // 131: nekode.daemon.v1.GetAttachmentResponse
-	(*ListEventsSinceRequest)(nil),          // 132: nekode.daemon.v1.ListEventsSinceRequest
-	(*CollaborationEvent)(nil),              // 133: nekode.daemon.v1.CollaborationEvent
-	(*ListEventsSinceResponse)(nil),         // 134: nekode.daemon.v1.ListEventsSinceResponse
-	nil,                                     // 135: nekode.daemon.v1.TaskBoardSnapshot.CountsEntry
+	(AgentControlAction)(0),                  // 0: nekode.daemon.v1.AgentControlAction
+	(AgentPresence)(0),                       // 1: nekode.daemon.v1.AgentPresence
+	(AgentActivityState)(0),                  // 2: nekode.daemon.v1.AgentActivityState
+	(AgentHealth)(0),                         // 3: nekode.daemon.v1.AgentHealth
+	(*Capability)(nil),                       // 4: nekode.daemon.v1.Capability
+	(*Permission)(nil),                       // 5: nekode.daemon.v1.Permission
+	(*Lease)(nil),                            // 6: nekode.daemon.v1.Lease
+	(*EventCursor)(nil),                      // 7: nekode.daemon.v1.EventCursor
+	(*AttachmentRecord)(nil),                 // 8: nekode.daemon.v1.AttachmentRecord
+	(*Workspace)(nil),                        // 9: nekode.daemon.v1.Workspace
+	(*RuntimeProfile)(nil),                   // 10: nekode.daemon.v1.RuntimeProfile
+	(*Runtime)(nil),                          // 11: nekode.daemon.v1.Runtime
+	(*ComputerInventory)(nil),                // 12: nekode.daemon.v1.ComputerInventory
+	(*ComputerInfo)(nil),                     // 13: nekode.daemon.v1.ComputerInfo
+	(*RegisterComputerRequest)(nil),          // 14: nekode.daemon.v1.RegisterComputerRequest
+	(*RegisterComputerResponse)(nil),         // 15: nekode.daemon.v1.RegisterComputerResponse
+	(*HeartbeatComputerRequest)(nil),         // 16: nekode.daemon.v1.HeartbeatComputerRequest
+	(*HeartbeatComputerResponse)(nil),        // 17: nekode.daemon.v1.HeartbeatComputerResponse
+	(*Task)(nil),                             // 18: nekode.daemon.v1.Task
+	(*Run)(nil),                              // 19: nekode.daemon.v1.Run
+	(*RunStep)(nil),                          // 20: nekode.daemon.v1.RunStep
+	(*FetchAssignedRunsRequest)(nil),         // 21: nekode.daemon.v1.FetchAssignedRunsRequest
+	(*FetchAssignedRunsResponse)(nil),        // 22: nekode.daemon.v1.FetchAssignedRunsResponse
+	(*UpdateRunStatusRequest)(nil),           // 23: nekode.daemon.v1.UpdateRunStatusRequest
+	(*UpdateRunStatusResponse)(nil),          // 24: nekode.daemon.v1.UpdateRunStatusResponse
+	(*AppendRunStepRequest)(nil),             // 25: nekode.daemon.v1.AppendRunStepRequest
+	(*AppendRunStepResponse)(nil),            // 26: nekode.daemon.v1.AppendRunStepResponse
+	(*ListRunsRequest)(nil),                  // 27: nekode.daemon.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),                 // 28: nekode.daemon.v1.ListRunsResponse
+	(*GetRunRequest)(nil),                    // 29: nekode.daemon.v1.GetRunRequest
+	(*GetRunResponse)(nil),                   // 30: nekode.daemon.v1.GetRunResponse
+	(*WorkspaceTreeEntry)(nil),               // 31: nekode.daemon.v1.WorkspaceTreeEntry
+	(*ListWorkspaceTreeRequest)(nil),         // 32: nekode.daemon.v1.ListWorkspaceTreeRequest
+	(*ListWorkspaceTreeResponse)(nil),        // 33: nekode.daemon.v1.ListWorkspaceTreeResponse
+	(*ReadWorkspaceFileRequest)(nil),         // 34: nekode.daemon.v1.ReadWorkspaceFileRequest
+	(*ReadWorkspaceFileResponse)(nil),        // 35: nekode.daemon.v1.ReadWorkspaceFileResponse
+	(*ChannelRecord)(nil),                    // 36: nekode.daemon.v1.ChannelRecord
+	(*InteractionEndpoint)(nil),              // 37: nekode.daemon.v1.InteractionEndpoint
+	(*ListInteractionEndpointsRequest)(nil),  // 38: nekode.daemon.v1.ListInteractionEndpointsRequest
+	(*ListInteractionEndpointsResponse)(nil), // 39: nekode.daemon.v1.ListInteractionEndpointsResponse
+	(*ListChannelsRequest)(nil),              // 40: nekode.daemon.v1.ListChannelsRequest
+	(*ListChannelsResponse)(nil),             // 41: nekode.daemon.v1.ListChannelsResponse
+	(*ThreadRecord)(nil),                     // 42: nekode.daemon.v1.ThreadRecord
+	(*ListThreadsRequest)(nil),               // 43: nekode.daemon.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),              // 44: nekode.daemon.v1.ListThreadsResponse
+	(*GetThreadRequest)(nil),                 // 45: nekode.daemon.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),                // 46: nekode.daemon.v1.GetThreadResponse
+	(*CollaborationMessage)(nil),             // 47: nekode.daemon.v1.CollaborationMessage
+	(*ReadMessagesRequest)(nil),              // 48: nekode.daemon.v1.ReadMessagesRequest
+	(*ReadMessagesResponse)(nil),             // 49: nekode.daemon.v1.ReadMessagesResponse
+	(*SendMessageRequest)(nil),               // 50: nekode.daemon.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),              // 51: nekode.daemon.v1.SendMessageResponse
+	(*SavedMessageRecord)(nil),               // 52: nekode.daemon.v1.SavedMessageRecord
+	(*SaveMessageRequest)(nil),               // 53: nekode.daemon.v1.SaveMessageRequest
+	(*SaveMessageResponse)(nil),              // 54: nekode.daemon.v1.SaveMessageResponse
+	(*UnsaveMessageRequest)(nil),             // 55: nekode.daemon.v1.UnsaveMessageRequest
+	(*UnsaveMessageResponse)(nil),            // 56: nekode.daemon.v1.UnsaveMessageResponse
+	(*ListSavedMessagesRequest)(nil),         // 57: nekode.daemon.v1.ListSavedMessagesRequest
+	(*ListSavedMessagesResponse)(nil),        // 58: nekode.daemon.v1.ListSavedMessagesResponse
+	(*FollowThreadRequest)(nil),              // 59: nekode.daemon.v1.FollowThreadRequest
+	(*FollowThreadResponse)(nil),             // 60: nekode.daemon.v1.FollowThreadResponse
+	(*UnfollowThreadRequest)(nil),            // 61: nekode.daemon.v1.UnfollowThreadRequest
+	(*UnfollowThreadResponse)(nil),           // 62: nekode.daemon.v1.UnfollowThreadResponse
+	(*CreateCollaborationTaskRequest)(nil),   // 63: nekode.daemon.v1.CreateCollaborationTaskRequest
+	(*CreateCollaborationTaskResponse)(nil),  // 64: nekode.daemon.v1.CreateCollaborationTaskResponse
+	(*ListCollaborationTasksRequest)(nil),    // 65: nekode.daemon.v1.ListCollaborationTasksRequest
+	(*ListCollaborationTasksResponse)(nil),   // 66: nekode.daemon.v1.ListCollaborationTasksResponse
+	(*TaskBoardColumn)(nil),                  // 67: nekode.daemon.v1.TaskBoardColumn
+	(*TaskBoardSnapshot)(nil),                // 68: nekode.daemon.v1.TaskBoardSnapshot
+	(*ListTaskBoardRequest)(nil),             // 69: nekode.daemon.v1.ListTaskBoardRequest
+	(*ListTaskBoardResponse)(nil),            // 70: nekode.daemon.v1.ListTaskBoardResponse
+	(*ClaimCollaborationTaskRequest)(nil),    // 71: nekode.daemon.v1.ClaimCollaborationTaskRequest
+	(*ClaimCollaborationTaskResponse)(nil),   // 72: nekode.daemon.v1.ClaimCollaborationTaskResponse
+	(*TaskEdge)(nil),                         // 73: nekode.daemon.v1.TaskEdge
+	(*TaskGraphSnapshot)(nil),                // 74: nekode.daemon.v1.TaskGraphSnapshot
+	(*ProposedSubtask)(nil),                  // 75: nekode.daemon.v1.ProposedSubtask
+	(*ProposeTaskSplitRequest)(nil),          // 76: nekode.daemon.v1.ProposeTaskSplitRequest
+	(*ProposeTaskSplitResponse)(nil),         // 77: nekode.daemon.v1.ProposeTaskSplitResponse
+	(*ApplyTaskSplitRequest)(nil),            // 78: nekode.daemon.v1.ApplyTaskSplitRequest
+	(*ApplyTaskSplitResponse)(nil),           // 79: nekode.daemon.v1.ApplyTaskSplitResponse
+	(*CreateTaskGraphRequest)(nil),           // 80: nekode.daemon.v1.CreateTaskGraphRequest
+	(*CreateTaskGraphResponse)(nil),          // 81: nekode.daemon.v1.CreateTaskGraphResponse
+	(*ListTaskGraphRequest)(nil),             // 82: nekode.daemon.v1.ListTaskGraphRequest
+	(*ListTaskGraphResponse)(nil),            // 83: nekode.daemon.v1.ListTaskGraphResponse
+	(*UpdateTaskGraphRequest)(nil),           // 84: nekode.daemon.v1.UpdateTaskGraphRequest
+	(*UpdateTaskGraphResponse)(nil),          // 85: nekode.daemon.v1.UpdateTaskGraphResponse
+	(*GetServerInfoRequest)(nil),             // 86: nekode.daemon.v1.GetServerInfoRequest
+	(*GetServerInfoResponse)(nil),            // 87: nekode.daemon.v1.GetServerInfoResponse
+	(*EnvVar)(nil),                           // 88: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),                      // 89: nekode.daemon.v1.SkillRecord
+	(*AgentProfile)(nil),                     // 90: nekode.daemon.v1.AgentProfile
+	(*GetAgentProfileRequest)(nil),           // 91: nekode.daemon.v1.GetAgentProfileRequest
+	(*GetAgentProfileResponse)(nil),          // 92: nekode.daemon.v1.GetAgentProfileResponse
+	(*UpdateAgentProfileRequest)(nil),        // 93: nekode.daemon.v1.UpdateAgentProfileRequest
+	(*UpdateAgentProfileResponse)(nil),       // 94: nekode.daemon.v1.UpdateAgentProfileResponse
+	(*SetAgentEnvRequest)(nil),               // 95: nekode.daemon.v1.SetAgentEnvRequest
+	(*SetAgentEnvResponse)(nil),              // 96: nekode.daemon.v1.SetAgentEnvResponse
+	(*ListAgentProfilesRequest)(nil),         // 97: nekode.daemon.v1.ListAgentProfilesRequest
+	(*ListAgentProfilesResponse)(nil),        // 98: nekode.daemon.v1.ListAgentProfilesResponse
+	(*ListAgentDMsRequest)(nil),              // 99: nekode.daemon.v1.ListAgentDMsRequest
+	(*ListAgentDMsResponse)(nil),             // 100: nekode.daemon.v1.ListAgentDMsResponse
+	(*AgentControlOperation)(nil),            // 101: nekode.daemon.v1.AgentControlOperation
+	(*ControlAgentRequest)(nil),              // 102: nekode.daemon.v1.ControlAgentRequest
+	(*ControlAgentResponse)(nil),             // 103: nekode.daemon.v1.ControlAgentResponse
+	(*SendAgentDirectMessageRequest)(nil),    // 104: nekode.daemon.v1.SendAgentDirectMessageRequest
+	(*SendAgentDirectMessageResponse)(nil),   // 105: nekode.daemon.v1.SendAgentDirectMessageResponse
+	(*AgentStatusSnapshot)(nil),              // 106: nekode.daemon.v1.AgentStatusSnapshot
+	(*UpdateAgentStatusRequest)(nil),         // 107: nekode.daemon.v1.UpdateAgentStatusRequest
+	(*UpdateAgentStatusResponse)(nil),        // 108: nekode.daemon.v1.UpdateAgentStatusResponse
+	(*ListAgentStatusesRequest)(nil),         // 109: nekode.daemon.v1.ListAgentStatusesRequest
+	(*ListAgentStatusesResponse)(nil),        // 110: nekode.daemon.v1.ListAgentStatusesResponse
+	(*ReminderRecord)(nil),                   // 111: nekode.daemon.v1.ReminderRecord
+	(*ReminderRecurrence)(nil),               // 112: nekode.daemon.v1.ReminderRecurrence
+	(*ReminderEvent)(nil),                    // 113: nekode.daemon.v1.ReminderEvent
+	(*ScheduleReminderRequest)(nil),          // 114: nekode.daemon.v1.ScheduleReminderRequest
+	(*ScheduleReminderResponse)(nil),         // 115: nekode.daemon.v1.ScheduleReminderResponse
+	(*ListRemindersRequest)(nil),             // 116: nekode.daemon.v1.ListRemindersRequest
+	(*ListRemindersResponse)(nil),            // 117: nekode.daemon.v1.ListRemindersResponse
+	(*CancelReminderRequest)(nil),            // 118: nekode.daemon.v1.CancelReminderRequest
+	(*CancelReminderResponse)(nil),           // 119: nekode.daemon.v1.CancelReminderResponse
+	(*SnoozeReminderRequest)(nil),            // 120: nekode.daemon.v1.SnoozeReminderRequest
+	(*SnoozeReminderResponse)(nil),           // 121: nekode.daemon.v1.SnoozeReminderResponse
+	(*UpdateReminderRequest)(nil),            // 122: nekode.daemon.v1.UpdateReminderRequest
+	(*UpdateReminderResponse)(nil),           // 123: nekode.daemon.v1.UpdateReminderResponse
+	(*GetReminderLogRequest)(nil),            // 124: nekode.daemon.v1.GetReminderLogRequest
+	(*GetReminderLogResponse)(nil),           // 125: nekode.daemon.v1.GetReminderLogResponse
+	(*ActivityRecord)(nil),                   // 126: nekode.daemon.v1.ActivityRecord
+	(*LogActivityRequest)(nil),               // 127: nekode.daemon.v1.LogActivityRequest
+	(*LogActivityResponse)(nil),              // 128: nekode.daemon.v1.LogActivityResponse
+	(*ListActivityRequest)(nil),              // 129: nekode.daemon.v1.ListActivityRequest
+	(*ListActivityResponse)(nil),             // 130: nekode.daemon.v1.ListActivityResponse
+	(*UploadAttachmentRequest)(nil),          // 131: nekode.daemon.v1.UploadAttachmentRequest
+	(*UploadAttachmentResponse)(nil),         // 132: nekode.daemon.v1.UploadAttachmentResponse
+	(*GetAttachmentRequest)(nil),             // 133: nekode.daemon.v1.GetAttachmentRequest
+	(*GetAttachmentResponse)(nil),            // 134: nekode.daemon.v1.GetAttachmentResponse
+	(*ListEventsSinceRequest)(nil),           // 135: nekode.daemon.v1.ListEventsSinceRequest
+	(*CollaborationEvent)(nil),               // 136: nekode.daemon.v1.CollaborationEvent
+	(*ListEventsSinceResponse)(nil),          // 137: nekode.daemon.v1.ListEventsSinceResponse
+	nil,                                      // 138: nekode.daemon.v1.TaskBoardSnapshot.CountsEntry
 }
 var file_nekode_daemon_v1_daemon_proto_depIdxs = []int32{
-	85,  // 0: nekode.daemon.v1.RuntimeProfile.env:type_name -> nekode.daemon.v1.EnvVar
-	86,  // 1: nekode.daemon.v1.RuntimeProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
+	88,  // 0: nekode.daemon.v1.RuntimeProfile.env:type_name -> nekode.daemon.v1.EnvVar
+	89,  // 1: nekode.daemon.v1.RuntimeProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
 	4,   // 2: nekode.daemon.v1.RuntimeProfile.capabilities:type_name -> nekode.daemon.v1.Capability
 	4,   // 3: nekode.daemon.v1.Runtime.capabilities:type_name -> nekode.daemon.v1.Capability
 	10,  // 4: nekode.daemon.v1.Runtime.runtime_profile:type_name -> nekode.daemon.v1.RuntimeProfile
 	9,   // 5: nekode.daemon.v1.ComputerInventory.workspaces:type_name -> nekode.daemon.v1.Workspace
 	11,  // 6: nekode.daemon.v1.ComputerInventory.runtimes:type_name -> nekode.daemon.v1.Runtime
-	87,  // 7: nekode.daemon.v1.ComputerInventory.agents:type_name -> nekode.daemon.v1.AgentProfile
+	90,  // 7: nekode.daemon.v1.ComputerInventory.agents:type_name -> nekode.daemon.v1.AgentProfile
 	10,  // 8: nekode.daemon.v1.ComputerInventory.runtime_profiles:type_name -> nekode.daemon.v1.RuntimeProfile
 	4,   // 9: nekode.daemon.v1.ComputerInfo.capabilities:type_name -> nekode.daemon.v1.Capability
 	13,  // 10: nekode.daemon.v1.RegisterComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
@@ -10600,181 +10928,187 @@ var file_nekode_daemon_v1_daemon_proto_depIdxs = []int32{
 	19,  // 20: nekode.daemon.v1.GetRunResponse.run:type_name -> nekode.daemon.v1.Run
 	20,  // 21: nekode.daemon.v1.GetRunResponse.steps:type_name -> nekode.daemon.v1.RunStep
 	31,  // 22: nekode.daemon.v1.ListWorkspaceTreeResponse.entries:type_name -> nekode.daemon.v1.WorkspaceTreeEntry
-	36,  // 23: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
-	39,  // 24: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
-	39,  // 25: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
-	8,   // 26: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
-	44,  // 27: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	44,  // 28: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	44,  // 29: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	49,  // 30: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	49,  // 31: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	49,  // 32: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
-	18,  // 33: nekode.daemon.v1.CreateCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	18,  // 34: nekode.daemon.v1.ListCollaborationTasksResponse.tasks:type_name -> nekode.daemon.v1.Task
-	18,  // 35: nekode.daemon.v1.TaskBoardColumn.tasks:type_name -> nekode.daemon.v1.Task
-	64,  // 36: nekode.daemon.v1.TaskBoardSnapshot.columns:type_name -> nekode.daemon.v1.TaskBoardColumn
-	135, // 37: nekode.daemon.v1.TaskBoardSnapshot.counts:type_name -> nekode.daemon.v1.TaskBoardSnapshot.CountsEntry
-	7,   // 38: nekode.daemon.v1.TaskBoardSnapshot.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	7,   // 39: nekode.daemon.v1.ListTaskBoardRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	65,  // 40: nekode.daemon.v1.ListTaskBoardResponse.board:type_name -> nekode.daemon.v1.TaskBoardSnapshot
-	18,  // 41: nekode.daemon.v1.ClaimCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	18,  // 42: nekode.daemon.v1.TaskGraphSnapshot.nodes:type_name -> nekode.daemon.v1.Task
-	70,  // 43: nekode.daemon.v1.TaskGraphSnapshot.edges:type_name -> nekode.daemon.v1.TaskEdge
-	72,  // 44: nekode.daemon.v1.ProposeTaskSplitRequest.proposed_tasks:type_name -> nekode.daemon.v1.ProposedSubtask
-	18,  // 45: nekode.daemon.v1.ProposeTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
-	18,  // 46: nekode.daemon.v1.ProposeTaskSplitResponse.proposed_tasks:type_name -> nekode.daemon.v1.Task
-	18,  // 47: nekode.daemon.v1.ApplyTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
-	18,  // 48: nekode.daemon.v1.ApplyTaskSplitResponse.created_subtasks:type_name -> nekode.daemon.v1.Task
-	18,  // 49: nekode.daemon.v1.CreateTaskGraphRequest.root_task:type_name -> nekode.daemon.v1.Task
-	18,  // 50: nekode.daemon.v1.CreateTaskGraphRequest.subtasks:type_name -> nekode.daemon.v1.Task
-	70,  // 51: nekode.daemon.v1.CreateTaskGraphRequest.dependencies:type_name -> nekode.daemon.v1.TaskEdge
-	71,  // 52: nekode.daemon.v1.CreateTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
-	71,  // 53: nekode.daemon.v1.ListTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
-	18,  // 54: nekode.daemon.v1.UpdateTaskGraphResponse.task:type_name -> nekode.daemon.v1.Task
-	36,  // 55: nekode.daemon.v1.GetServerInfoResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
-	87,  // 56: nekode.daemon.v1.GetServerInfoResponse.agents:type_name -> nekode.daemon.v1.AgentProfile
-	85,  // 57: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
-	86,  // 58: nekode.daemon.v1.AgentProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
-	4,   // 59: nekode.daemon.v1.AgentProfile.capabilities:type_name -> nekode.daemon.v1.Capability
-	5,   // 60: nekode.daemon.v1.AgentProfile.permissions:type_name -> nekode.daemon.v1.Permission
-	103, // 61: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	87,  // 62: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	87,  // 63: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	85,  // 64: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
-	87,  // 65: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	87,  // 66: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
-	36,  // 67: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
-	0,   // 68: nekode.daemon.v1.AgentControlOperation.action:type_name -> nekode.daemon.v1.AgentControlAction
-	0,   // 69: nekode.daemon.v1.ControlAgentRequest.action:type_name -> nekode.daemon.v1.AgentControlAction
-	98,  // 70: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
-	87,  // 71: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	44,  // 72: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	1,   // 73: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
-	2,   // 74: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
-	3,   // 75: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
-	103, // 76: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	103, // 77: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	103, // 78: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	109, // 79: nekode.daemon.v1.ReminderRecord.recurrence:type_name -> nekode.daemon.v1.ReminderRecurrence
-	108, // 80: nekode.daemon.v1.ScheduleReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	108, // 81: nekode.daemon.v1.ListRemindersResponse.reminders:type_name -> nekode.daemon.v1.ReminderRecord
-	108, // 82: nekode.daemon.v1.CancelReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	108, // 83: nekode.daemon.v1.SnoozeReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	108, // 84: nekode.daemon.v1.UpdateReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	110, // 85: nekode.daemon.v1.GetReminderLogResponse.events:type_name -> nekode.daemon.v1.ReminderEvent
-	123, // 86: nekode.daemon.v1.LogActivityResponse.activity:type_name -> nekode.daemon.v1.ActivityRecord
-	7,   // 87: nekode.daemon.v1.ListActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	123, // 88: nekode.daemon.v1.ListActivityResponse.activities:type_name -> nekode.daemon.v1.ActivityRecord
-	7,   // 89: nekode.daemon.v1.ListActivityResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	8,   // 90: nekode.daemon.v1.UploadAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
-	8,   // 91: nekode.daemon.v1.GetAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
-	7,   // 92: nekode.daemon.v1.ListEventsSinceRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	133, // 93: nekode.daemon.v1.ListEventsSinceResponse.events:type_name -> nekode.daemon.v1.CollaborationEvent
-	7,   // 94: nekode.daemon.v1.ListEventsSinceResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	14,  // 95: nekode.daemon.v1.DaemonControlService.RegisterComputer:input_type -> nekode.daemon.v1.RegisterComputerRequest
-	16,  // 96: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:input_type -> nekode.daemon.v1.HeartbeatComputerRequest
-	21,  // 97: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:input_type -> nekode.daemon.v1.FetchAssignedRunsRequest
-	23,  // 98: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:input_type -> nekode.daemon.v1.UpdateRunStatusRequest
-	25,  // 99: nekode.daemon.v1.DaemonControlService.AppendRunStep:input_type -> nekode.daemon.v1.AppendRunStepRequest
-	27,  // 100: nekode.daemon.v1.DaemonControlService.ListRuns:input_type -> nekode.daemon.v1.ListRunsRequest
-	29,  // 101: nekode.daemon.v1.DaemonControlService.GetRun:input_type -> nekode.daemon.v1.GetRunRequest
-	32,  // 102: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:input_type -> nekode.daemon.v1.ListWorkspaceTreeRequest
-	34,  // 103: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:input_type -> nekode.daemon.v1.ReadWorkspaceFileRequest
-	37,  // 104: nekode.daemon.v1.DaemonControlService.ListChannels:input_type -> nekode.daemon.v1.ListChannelsRequest
-	40,  // 105: nekode.daemon.v1.DaemonControlService.ListThreads:input_type -> nekode.daemon.v1.ListThreadsRequest
-	42,  // 106: nekode.daemon.v1.DaemonControlService.GetThread:input_type -> nekode.daemon.v1.GetThreadRequest
-	45,  // 107: nekode.daemon.v1.DaemonControlService.ReadMessages:input_type -> nekode.daemon.v1.ReadMessagesRequest
-	47,  // 108: nekode.daemon.v1.DaemonControlService.SendMessage:input_type -> nekode.daemon.v1.SendMessageRequest
-	50,  // 109: nekode.daemon.v1.DaemonControlService.SaveMessage:input_type -> nekode.daemon.v1.SaveMessageRequest
-	52,  // 110: nekode.daemon.v1.DaemonControlService.UnsaveMessage:input_type -> nekode.daemon.v1.UnsaveMessageRequest
-	54,  // 111: nekode.daemon.v1.DaemonControlService.ListSavedMessages:input_type -> nekode.daemon.v1.ListSavedMessagesRequest
-	56,  // 112: nekode.daemon.v1.DaemonControlService.FollowThread:input_type -> nekode.daemon.v1.FollowThreadRequest
-	58,  // 113: nekode.daemon.v1.DaemonControlService.UnfollowThread:input_type -> nekode.daemon.v1.UnfollowThreadRequest
-	60,  // 114: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:input_type -> nekode.daemon.v1.CreateCollaborationTaskRequest
-	62,  // 115: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:input_type -> nekode.daemon.v1.ListCollaborationTasksRequest
-	66,  // 116: nekode.daemon.v1.DaemonControlService.ListTaskBoard:input_type -> nekode.daemon.v1.ListTaskBoardRequest
-	68,  // 117: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:input_type -> nekode.daemon.v1.ClaimCollaborationTaskRequest
-	73,  // 118: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:input_type -> nekode.daemon.v1.ProposeTaskSplitRequest
-	75,  // 119: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:input_type -> nekode.daemon.v1.ApplyTaskSplitRequest
-	77,  // 120: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:input_type -> nekode.daemon.v1.CreateTaskGraphRequest
-	79,  // 121: nekode.daemon.v1.DaemonControlService.ListTaskGraph:input_type -> nekode.daemon.v1.ListTaskGraphRequest
-	81,  // 122: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:input_type -> nekode.daemon.v1.UpdateTaskGraphRequest
-	83,  // 123: nekode.daemon.v1.DaemonControlService.GetServerInfo:input_type -> nekode.daemon.v1.GetServerInfoRequest
-	88,  // 124: nekode.daemon.v1.DaemonControlService.GetAgentProfile:input_type -> nekode.daemon.v1.GetAgentProfileRequest
-	90,  // 125: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:input_type -> nekode.daemon.v1.UpdateAgentProfileRequest
-	92,  // 126: nekode.daemon.v1.DaemonControlService.SetAgentEnv:input_type -> nekode.daemon.v1.SetAgentEnvRequest
-	94,  // 127: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:input_type -> nekode.daemon.v1.ListAgentProfilesRequest
-	96,  // 128: nekode.daemon.v1.DaemonControlService.ListAgentDMs:input_type -> nekode.daemon.v1.ListAgentDMsRequest
-	99,  // 129: nekode.daemon.v1.DaemonControlService.ControlAgent:input_type -> nekode.daemon.v1.ControlAgentRequest
-	101, // 130: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:input_type -> nekode.daemon.v1.SendAgentDirectMessageRequest
-	104, // 131: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:input_type -> nekode.daemon.v1.UpdateAgentStatusRequest
-	106, // 132: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:input_type -> nekode.daemon.v1.ListAgentStatusesRequest
-	111, // 133: nekode.daemon.v1.DaemonControlService.ScheduleReminder:input_type -> nekode.daemon.v1.ScheduleReminderRequest
-	113, // 134: nekode.daemon.v1.DaemonControlService.ListReminders:input_type -> nekode.daemon.v1.ListRemindersRequest
-	115, // 135: nekode.daemon.v1.DaemonControlService.CancelReminder:input_type -> nekode.daemon.v1.CancelReminderRequest
-	117, // 136: nekode.daemon.v1.DaemonControlService.SnoozeReminder:input_type -> nekode.daemon.v1.SnoozeReminderRequest
-	119, // 137: nekode.daemon.v1.DaemonControlService.UpdateReminder:input_type -> nekode.daemon.v1.UpdateReminderRequest
-	121, // 138: nekode.daemon.v1.DaemonControlService.GetReminderLog:input_type -> nekode.daemon.v1.GetReminderLogRequest
-	128, // 139: nekode.daemon.v1.DaemonControlService.UploadAttachment:input_type -> nekode.daemon.v1.UploadAttachmentRequest
-	130, // 140: nekode.daemon.v1.DaemonControlService.GetAttachment:input_type -> nekode.daemon.v1.GetAttachmentRequest
-	124, // 141: nekode.daemon.v1.DaemonControlService.LogActivity:input_type -> nekode.daemon.v1.LogActivityRequest
-	126, // 142: nekode.daemon.v1.DaemonControlService.ListActivity:input_type -> nekode.daemon.v1.ListActivityRequest
-	132, // 143: nekode.daemon.v1.DaemonControlService.ListEventsSince:input_type -> nekode.daemon.v1.ListEventsSinceRequest
-	15,  // 144: nekode.daemon.v1.DaemonControlService.RegisterComputer:output_type -> nekode.daemon.v1.RegisterComputerResponse
-	17,  // 145: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:output_type -> nekode.daemon.v1.HeartbeatComputerResponse
-	22,  // 146: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:output_type -> nekode.daemon.v1.FetchAssignedRunsResponse
-	24,  // 147: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:output_type -> nekode.daemon.v1.UpdateRunStatusResponse
-	26,  // 148: nekode.daemon.v1.DaemonControlService.AppendRunStep:output_type -> nekode.daemon.v1.AppendRunStepResponse
-	28,  // 149: nekode.daemon.v1.DaemonControlService.ListRuns:output_type -> nekode.daemon.v1.ListRunsResponse
-	30,  // 150: nekode.daemon.v1.DaemonControlService.GetRun:output_type -> nekode.daemon.v1.GetRunResponse
-	33,  // 151: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:output_type -> nekode.daemon.v1.ListWorkspaceTreeResponse
-	35,  // 152: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:output_type -> nekode.daemon.v1.ReadWorkspaceFileResponse
-	38,  // 153: nekode.daemon.v1.DaemonControlService.ListChannels:output_type -> nekode.daemon.v1.ListChannelsResponse
-	41,  // 154: nekode.daemon.v1.DaemonControlService.ListThreads:output_type -> nekode.daemon.v1.ListThreadsResponse
-	43,  // 155: nekode.daemon.v1.DaemonControlService.GetThread:output_type -> nekode.daemon.v1.GetThreadResponse
-	46,  // 156: nekode.daemon.v1.DaemonControlService.ReadMessages:output_type -> nekode.daemon.v1.ReadMessagesResponse
-	48,  // 157: nekode.daemon.v1.DaemonControlService.SendMessage:output_type -> nekode.daemon.v1.SendMessageResponse
-	51,  // 158: nekode.daemon.v1.DaemonControlService.SaveMessage:output_type -> nekode.daemon.v1.SaveMessageResponse
-	53,  // 159: nekode.daemon.v1.DaemonControlService.UnsaveMessage:output_type -> nekode.daemon.v1.UnsaveMessageResponse
-	55,  // 160: nekode.daemon.v1.DaemonControlService.ListSavedMessages:output_type -> nekode.daemon.v1.ListSavedMessagesResponse
-	57,  // 161: nekode.daemon.v1.DaemonControlService.FollowThread:output_type -> nekode.daemon.v1.FollowThreadResponse
-	59,  // 162: nekode.daemon.v1.DaemonControlService.UnfollowThread:output_type -> nekode.daemon.v1.UnfollowThreadResponse
-	61,  // 163: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:output_type -> nekode.daemon.v1.CreateCollaborationTaskResponse
-	63,  // 164: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:output_type -> nekode.daemon.v1.ListCollaborationTasksResponse
-	67,  // 165: nekode.daemon.v1.DaemonControlService.ListTaskBoard:output_type -> nekode.daemon.v1.ListTaskBoardResponse
-	69,  // 166: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:output_type -> nekode.daemon.v1.ClaimCollaborationTaskResponse
-	74,  // 167: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:output_type -> nekode.daemon.v1.ProposeTaskSplitResponse
-	76,  // 168: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:output_type -> nekode.daemon.v1.ApplyTaskSplitResponse
-	78,  // 169: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:output_type -> nekode.daemon.v1.CreateTaskGraphResponse
-	80,  // 170: nekode.daemon.v1.DaemonControlService.ListTaskGraph:output_type -> nekode.daemon.v1.ListTaskGraphResponse
-	82,  // 171: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:output_type -> nekode.daemon.v1.UpdateTaskGraphResponse
-	84,  // 172: nekode.daemon.v1.DaemonControlService.GetServerInfo:output_type -> nekode.daemon.v1.GetServerInfoResponse
-	89,  // 173: nekode.daemon.v1.DaemonControlService.GetAgentProfile:output_type -> nekode.daemon.v1.GetAgentProfileResponse
-	91,  // 174: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:output_type -> nekode.daemon.v1.UpdateAgentProfileResponse
-	93,  // 175: nekode.daemon.v1.DaemonControlService.SetAgentEnv:output_type -> nekode.daemon.v1.SetAgentEnvResponse
-	95,  // 176: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:output_type -> nekode.daemon.v1.ListAgentProfilesResponse
-	97,  // 177: nekode.daemon.v1.DaemonControlService.ListAgentDMs:output_type -> nekode.daemon.v1.ListAgentDMsResponse
-	100, // 178: nekode.daemon.v1.DaemonControlService.ControlAgent:output_type -> nekode.daemon.v1.ControlAgentResponse
-	102, // 179: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:output_type -> nekode.daemon.v1.SendAgentDirectMessageResponse
-	105, // 180: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:output_type -> nekode.daemon.v1.UpdateAgentStatusResponse
-	107, // 181: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:output_type -> nekode.daemon.v1.ListAgentStatusesResponse
-	112, // 182: nekode.daemon.v1.DaemonControlService.ScheduleReminder:output_type -> nekode.daemon.v1.ScheduleReminderResponse
-	114, // 183: nekode.daemon.v1.DaemonControlService.ListReminders:output_type -> nekode.daemon.v1.ListRemindersResponse
-	116, // 184: nekode.daemon.v1.DaemonControlService.CancelReminder:output_type -> nekode.daemon.v1.CancelReminderResponse
-	118, // 185: nekode.daemon.v1.DaemonControlService.SnoozeReminder:output_type -> nekode.daemon.v1.SnoozeReminderResponse
-	120, // 186: nekode.daemon.v1.DaemonControlService.UpdateReminder:output_type -> nekode.daemon.v1.UpdateReminderResponse
-	122, // 187: nekode.daemon.v1.DaemonControlService.GetReminderLog:output_type -> nekode.daemon.v1.GetReminderLogResponse
-	129, // 188: nekode.daemon.v1.DaemonControlService.UploadAttachment:output_type -> nekode.daemon.v1.UploadAttachmentResponse
-	131, // 189: nekode.daemon.v1.DaemonControlService.GetAttachment:output_type -> nekode.daemon.v1.GetAttachmentResponse
-	125, // 190: nekode.daemon.v1.DaemonControlService.LogActivity:output_type -> nekode.daemon.v1.LogActivityResponse
-	127, // 191: nekode.daemon.v1.DaemonControlService.ListActivity:output_type -> nekode.daemon.v1.ListActivityResponse
-	134, // 192: nekode.daemon.v1.DaemonControlService.ListEventsSince:output_type -> nekode.daemon.v1.ListEventsSinceResponse
-	144, // [144:193] is the sub-list for method output_type
-	95,  // [95:144] is the sub-list for method input_type
-	95,  // [95:95] is the sub-list for extension type_name
-	95,  // [95:95] is the sub-list for extension extendee
-	0,   // [0:95] is the sub-list for field type_name
+	4,   // 23: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
+	4,   // 24: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
+	37,  // 25: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
+	36,  // 26: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
+	42,  // 27: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
+	42,  // 28: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
+	8,   // 29: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
+	47,  // 30: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	47,  // 31: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	47,  // 32: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	52,  // 33: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	52,  // 34: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	52,  // 35: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
+	18,  // 36: nekode.daemon.v1.CreateCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	18,  // 37: nekode.daemon.v1.ListCollaborationTasksResponse.tasks:type_name -> nekode.daemon.v1.Task
+	18,  // 38: nekode.daemon.v1.TaskBoardColumn.tasks:type_name -> nekode.daemon.v1.Task
+	67,  // 39: nekode.daemon.v1.TaskBoardSnapshot.columns:type_name -> nekode.daemon.v1.TaskBoardColumn
+	138, // 40: nekode.daemon.v1.TaskBoardSnapshot.counts:type_name -> nekode.daemon.v1.TaskBoardSnapshot.CountsEntry
+	7,   // 41: nekode.daemon.v1.TaskBoardSnapshot.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	7,   // 42: nekode.daemon.v1.ListTaskBoardRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	68,  // 43: nekode.daemon.v1.ListTaskBoardResponse.board:type_name -> nekode.daemon.v1.TaskBoardSnapshot
+	18,  // 44: nekode.daemon.v1.ClaimCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	18,  // 45: nekode.daemon.v1.TaskGraphSnapshot.nodes:type_name -> nekode.daemon.v1.Task
+	73,  // 46: nekode.daemon.v1.TaskGraphSnapshot.edges:type_name -> nekode.daemon.v1.TaskEdge
+	75,  // 47: nekode.daemon.v1.ProposeTaskSplitRequest.proposed_tasks:type_name -> nekode.daemon.v1.ProposedSubtask
+	18,  // 48: nekode.daemon.v1.ProposeTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
+	18,  // 49: nekode.daemon.v1.ProposeTaskSplitResponse.proposed_tasks:type_name -> nekode.daemon.v1.Task
+	18,  // 50: nekode.daemon.v1.ApplyTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
+	18,  // 51: nekode.daemon.v1.ApplyTaskSplitResponse.created_subtasks:type_name -> nekode.daemon.v1.Task
+	18,  // 52: nekode.daemon.v1.CreateTaskGraphRequest.root_task:type_name -> nekode.daemon.v1.Task
+	18,  // 53: nekode.daemon.v1.CreateTaskGraphRequest.subtasks:type_name -> nekode.daemon.v1.Task
+	73,  // 54: nekode.daemon.v1.CreateTaskGraphRequest.dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	74,  // 55: nekode.daemon.v1.CreateTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
+	74,  // 56: nekode.daemon.v1.ListTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
+	18,  // 57: nekode.daemon.v1.UpdateTaskGraphResponse.task:type_name -> nekode.daemon.v1.Task
+	36,  // 58: nekode.daemon.v1.GetServerInfoResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
+	90,  // 59: nekode.daemon.v1.GetServerInfoResponse.agents:type_name -> nekode.daemon.v1.AgentProfile
+	37,  // 60: nekode.daemon.v1.GetServerInfoResponse.interaction_endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
+	88,  // 61: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
+	89,  // 62: nekode.daemon.v1.AgentProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
+	4,   // 63: nekode.daemon.v1.AgentProfile.capabilities:type_name -> nekode.daemon.v1.Capability
+	5,   // 64: nekode.daemon.v1.AgentProfile.permissions:type_name -> nekode.daemon.v1.Permission
+	106, // 65: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	90,  // 66: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	90,  // 67: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	88,  // 68: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
+	90,  // 69: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	90,  // 70: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
+	36,  // 71: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
+	0,   // 72: nekode.daemon.v1.AgentControlOperation.action:type_name -> nekode.daemon.v1.AgentControlAction
+	0,   // 73: nekode.daemon.v1.ControlAgentRequest.action:type_name -> nekode.daemon.v1.AgentControlAction
+	101, // 74: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
+	90,  // 75: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	47,  // 76: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	1,   // 77: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
+	2,   // 78: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
+	3,   // 79: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
+	106, // 80: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	106, // 81: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	106, // 82: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	112, // 83: nekode.daemon.v1.ReminderRecord.recurrence:type_name -> nekode.daemon.v1.ReminderRecurrence
+	111, // 84: nekode.daemon.v1.ScheduleReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	111, // 85: nekode.daemon.v1.ListRemindersResponse.reminders:type_name -> nekode.daemon.v1.ReminderRecord
+	111, // 86: nekode.daemon.v1.CancelReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	111, // 87: nekode.daemon.v1.SnoozeReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	111, // 88: nekode.daemon.v1.UpdateReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	113, // 89: nekode.daemon.v1.GetReminderLogResponse.events:type_name -> nekode.daemon.v1.ReminderEvent
+	126, // 90: nekode.daemon.v1.LogActivityResponse.activity:type_name -> nekode.daemon.v1.ActivityRecord
+	7,   // 91: nekode.daemon.v1.ListActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	126, // 92: nekode.daemon.v1.ListActivityResponse.activities:type_name -> nekode.daemon.v1.ActivityRecord
+	7,   // 93: nekode.daemon.v1.ListActivityResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	8,   // 94: nekode.daemon.v1.UploadAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
+	8,   // 95: nekode.daemon.v1.GetAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
+	7,   // 96: nekode.daemon.v1.ListEventsSinceRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	136, // 97: nekode.daemon.v1.ListEventsSinceResponse.events:type_name -> nekode.daemon.v1.CollaborationEvent
+	7,   // 98: nekode.daemon.v1.ListEventsSinceResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	14,  // 99: nekode.daemon.v1.DaemonControlService.RegisterComputer:input_type -> nekode.daemon.v1.RegisterComputerRequest
+	16,  // 100: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:input_type -> nekode.daemon.v1.HeartbeatComputerRequest
+	21,  // 101: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:input_type -> nekode.daemon.v1.FetchAssignedRunsRequest
+	23,  // 102: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:input_type -> nekode.daemon.v1.UpdateRunStatusRequest
+	25,  // 103: nekode.daemon.v1.DaemonControlService.AppendRunStep:input_type -> nekode.daemon.v1.AppendRunStepRequest
+	27,  // 104: nekode.daemon.v1.DaemonControlService.ListRuns:input_type -> nekode.daemon.v1.ListRunsRequest
+	29,  // 105: nekode.daemon.v1.DaemonControlService.GetRun:input_type -> nekode.daemon.v1.GetRunRequest
+	32,  // 106: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:input_type -> nekode.daemon.v1.ListWorkspaceTreeRequest
+	34,  // 107: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:input_type -> nekode.daemon.v1.ReadWorkspaceFileRequest
+	40,  // 108: nekode.daemon.v1.DaemonControlService.ListChannels:input_type -> nekode.daemon.v1.ListChannelsRequest
+	38,  // 109: nekode.daemon.v1.DaemonControlService.ListInteractionEndpoints:input_type -> nekode.daemon.v1.ListInteractionEndpointsRequest
+	43,  // 110: nekode.daemon.v1.DaemonControlService.ListThreads:input_type -> nekode.daemon.v1.ListThreadsRequest
+	45,  // 111: nekode.daemon.v1.DaemonControlService.GetThread:input_type -> nekode.daemon.v1.GetThreadRequest
+	48,  // 112: nekode.daemon.v1.DaemonControlService.ReadMessages:input_type -> nekode.daemon.v1.ReadMessagesRequest
+	50,  // 113: nekode.daemon.v1.DaemonControlService.SendMessage:input_type -> nekode.daemon.v1.SendMessageRequest
+	53,  // 114: nekode.daemon.v1.DaemonControlService.SaveMessage:input_type -> nekode.daemon.v1.SaveMessageRequest
+	55,  // 115: nekode.daemon.v1.DaemonControlService.UnsaveMessage:input_type -> nekode.daemon.v1.UnsaveMessageRequest
+	57,  // 116: nekode.daemon.v1.DaemonControlService.ListSavedMessages:input_type -> nekode.daemon.v1.ListSavedMessagesRequest
+	59,  // 117: nekode.daemon.v1.DaemonControlService.FollowThread:input_type -> nekode.daemon.v1.FollowThreadRequest
+	61,  // 118: nekode.daemon.v1.DaemonControlService.UnfollowThread:input_type -> nekode.daemon.v1.UnfollowThreadRequest
+	63,  // 119: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:input_type -> nekode.daemon.v1.CreateCollaborationTaskRequest
+	65,  // 120: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:input_type -> nekode.daemon.v1.ListCollaborationTasksRequest
+	69,  // 121: nekode.daemon.v1.DaemonControlService.ListTaskBoard:input_type -> nekode.daemon.v1.ListTaskBoardRequest
+	71,  // 122: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:input_type -> nekode.daemon.v1.ClaimCollaborationTaskRequest
+	76,  // 123: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:input_type -> nekode.daemon.v1.ProposeTaskSplitRequest
+	78,  // 124: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:input_type -> nekode.daemon.v1.ApplyTaskSplitRequest
+	80,  // 125: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:input_type -> nekode.daemon.v1.CreateTaskGraphRequest
+	82,  // 126: nekode.daemon.v1.DaemonControlService.ListTaskGraph:input_type -> nekode.daemon.v1.ListTaskGraphRequest
+	84,  // 127: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:input_type -> nekode.daemon.v1.UpdateTaskGraphRequest
+	86,  // 128: nekode.daemon.v1.DaemonControlService.GetServerInfo:input_type -> nekode.daemon.v1.GetServerInfoRequest
+	91,  // 129: nekode.daemon.v1.DaemonControlService.GetAgentProfile:input_type -> nekode.daemon.v1.GetAgentProfileRequest
+	93,  // 130: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:input_type -> nekode.daemon.v1.UpdateAgentProfileRequest
+	95,  // 131: nekode.daemon.v1.DaemonControlService.SetAgentEnv:input_type -> nekode.daemon.v1.SetAgentEnvRequest
+	97,  // 132: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:input_type -> nekode.daemon.v1.ListAgentProfilesRequest
+	99,  // 133: nekode.daemon.v1.DaemonControlService.ListAgentDMs:input_type -> nekode.daemon.v1.ListAgentDMsRequest
+	102, // 134: nekode.daemon.v1.DaemonControlService.ControlAgent:input_type -> nekode.daemon.v1.ControlAgentRequest
+	104, // 135: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:input_type -> nekode.daemon.v1.SendAgentDirectMessageRequest
+	107, // 136: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:input_type -> nekode.daemon.v1.UpdateAgentStatusRequest
+	109, // 137: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:input_type -> nekode.daemon.v1.ListAgentStatusesRequest
+	114, // 138: nekode.daemon.v1.DaemonControlService.ScheduleReminder:input_type -> nekode.daemon.v1.ScheduleReminderRequest
+	116, // 139: nekode.daemon.v1.DaemonControlService.ListReminders:input_type -> nekode.daemon.v1.ListRemindersRequest
+	118, // 140: nekode.daemon.v1.DaemonControlService.CancelReminder:input_type -> nekode.daemon.v1.CancelReminderRequest
+	120, // 141: nekode.daemon.v1.DaemonControlService.SnoozeReminder:input_type -> nekode.daemon.v1.SnoozeReminderRequest
+	122, // 142: nekode.daemon.v1.DaemonControlService.UpdateReminder:input_type -> nekode.daemon.v1.UpdateReminderRequest
+	124, // 143: nekode.daemon.v1.DaemonControlService.GetReminderLog:input_type -> nekode.daemon.v1.GetReminderLogRequest
+	131, // 144: nekode.daemon.v1.DaemonControlService.UploadAttachment:input_type -> nekode.daemon.v1.UploadAttachmentRequest
+	133, // 145: nekode.daemon.v1.DaemonControlService.GetAttachment:input_type -> nekode.daemon.v1.GetAttachmentRequest
+	127, // 146: nekode.daemon.v1.DaemonControlService.LogActivity:input_type -> nekode.daemon.v1.LogActivityRequest
+	129, // 147: nekode.daemon.v1.DaemonControlService.ListActivity:input_type -> nekode.daemon.v1.ListActivityRequest
+	135, // 148: nekode.daemon.v1.DaemonControlService.ListEventsSince:input_type -> nekode.daemon.v1.ListEventsSinceRequest
+	15,  // 149: nekode.daemon.v1.DaemonControlService.RegisterComputer:output_type -> nekode.daemon.v1.RegisterComputerResponse
+	17,  // 150: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:output_type -> nekode.daemon.v1.HeartbeatComputerResponse
+	22,  // 151: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:output_type -> nekode.daemon.v1.FetchAssignedRunsResponse
+	24,  // 152: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:output_type -> nekode.daemon.v1.UpdateRunStatusResponse
+	26,  // 153: nekode.daemon.v1.DaemonControlService.AppendRunStep:output_type -> nekode.daemon.v1.AppendRunStepResponse
+	28,  // 154: nekode.daemon.v1.DaemonControlService.ListRuns:output_type -> nekode.daemon.v1.ListRunsResponse
+	30,  // 155: nekode.daemon.v1.DaemonControlService.GetRun:output_type -> nekode.daemon.v1.GetRunResponse
+	33,  // 156: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:output_type -> nekode.daemon.v1.ListWorkspaceTreeResponse
+	35,  // 157: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:output_type -> nekode.daemon.v1.ReadWorkspaceFileResponse
+	41,  // 158: nekode.daemon.v1.DaemonControlService.ListChannels:output_type -> nekode.daemon.v1.ListChannelsResponse
+	39,  // 159: nekode.daemon.v1.DaemonControlService.ListInteractionEndpoints:output_type -> nekode.daemon.v1.ListInteractionEndpointsResponse
+	44,  // 160: nekode.daemon.v1.DaemonControlService.ListThreads:output_type -> nekode.daemon.v1.ListThreadsResponse
+	46,  // 161: nekode.daemon.v1.DaemonControlService.GetThread:output_type -> nekode.daemon.v1.GetThreadResponse
+	49,  // 162: nekode.daemon.v1.DaemonControlService.ReadMessages:output_type -> nekode.daemon.v1.ReadMessagesResponse
+	51,  // 163: nekode.daemon.v1.DaemonControlService.SendMessage:output_type -> nekode.daemon.v1.SendMessageResponse
+	54,  // 164: nekode.daemon.v1.DaemonControlService.SaveMessage:output_type -> nekode.daemon.v1.SaveMessageResponse
+	56,  // 165: nekode.daemon.v1.DaemonControlService.UnsaveMessage:output_type -> nekode.daemon.v1.UnsaveMessageResponse
+	58,  // 166: nekode.daemon.v1.DaemonControlService.ListSavedMessages:output_type -> nekode.daemon.v1.ListSavedMessagesResponse
+	60,  // 167: nekode.daemon.v1.DaemonControlService.FollowThread:output_type -> nekode.daemon.v1.FollowThreadResponse
+	62,  // 168: nekode.daemon.v1.DaemonControlService.UnfollowThread:output_type -> nekode.daemon.v1.UnfollowThreadResponse
+	64,  // 169: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:output_type -> nekode.daemon.v1.CreateCollaborationTaskResponse
+	66,  // 170: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:output_type -> nekode.daemon.v1.ListCollaborationTasksResponse
+	70,  // 171: nekode.daemon.v1.DaemonControlService.ListTaskBoard:output_type -> nekode.daemon.v1.ListTaskBoardResponse
+	72,  // 172: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:output_type -> nekode.daemon.v1.ClaimCollaborationTaskResponse
+	77,  // 173: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:output_type -> nekode.daemon.v1.ProposeTaskSplitResponse
+	79,  // 174: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:output_type -> nekode.daemon.v1.ApplyTaskSplitResponse
+	81,  // 175: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:output_type -> nekode.daemon.v1.CreateTaskGraphResponse
+	83,  // 176: nekode.daemon.v1.DaemonControlService.ListTaskGraph:output_type -> nekode.daemon.v1.ListTaskGraphResponse
+	85,  // 177: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:output_type -> nekode.daemon.v1.UpdateTaskGraphResponse
+	87,  // 178: nekode.daemon.v1.DaemonControlService.GetServerInfo:output_type -> nekode.daemon.v1.GetServerInfoResponse
+	92,  // 179: nekode.daemon.v1.DaemonControlService.GetAgentProfile:output_type -> nekode.daemon.v1.GetAgentProfileResponse
+	94,  // 180: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:output_type -> nekode.daemon.v1.UpdateAgentProfileResponse
+	96,  // 181: nekode.daemon.v1.DaemonControlService.SetAgentEnv:output_type -> nekode.daemon.v1.SetAgentEnvResponse
+	98,  // 182: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:output_type -> nekode.daemon.v1.ListAgentProfilesResponse
+	100, // 183: nekode.daemon.v1.DaemonControlService.ListAgentDMs:output_type -> nekode.daemon.v1.ListAgentDMsResponse
+	103, // 184: nekode.daemon.v1.DaemonControlService.ControlAgent:output_type -> nekode.daemon.v1.ControlAgentResponse
+	105, // 185: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:output_type -> nekode.daemon.v1.SendAgentDirectMessageResponse
+	108, // 186: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:output_type -> nekode.daemon.v1.UpdateAgentStatusResponse
+	110, // 187: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:output_type -> nekode.daemon.v1.ListAgentStatusesResponse
+	115, // 188: nekode.daemon.v1.DaemonControlService.ScheduleReminder:output_type -> nekode.daemon.v1.ScheduleReminderResponse
+	117, // 189: nekode.daemon.v1.DaemonControlService.ListReminders:output_type -> nekode.daemon.v1.ListRemindersResponse
+	119, // 190: nekode.daemon.v1.DaemonControlService.CancelReminder:output_type -> nekode.daemon.v1.CancelReminderResponse
+	121, // 191: nekode.daemon.v1.DaemonControlService.SnoozeReminder:output_type -> nekode.daemon.v1.SnoozeReminderResponse
+	123, // 192: nekode.daemon.v1.DaemonControlService.UpdateReminder:output_type -> nekode.daemon.v1.UpdateReminderResponse
+	125, // 193: nekode.daemon.v1.DaemonControlService.GetReminderLog:output_type -> nekode.daemon.v1.GetReminderLogResponse
+	132, // 194: nekode.daemon.v1.DaemonControlService.UploadAttachment:output_type -> nekode.daemon.v1.UploadAttachmentResponse
+	134, // 195: nekode.daemon.v1.DaemonControlService.GetAttachment:output_type -> nekode.daemon.v1.GetAttachmentResponse
+	128, // 196: nekode.daemon.v1.DaemonControlService.LogActivity:output_type -> nekode.daemon.v1.LogActivityResponse
+	130, // 197: nekode.daemon.v1.DaemonControlService.ListActivity:output_type -> nekode.daemon.v1.ListActivityResponse
+	137, // 198: nekode.daemon.v1.DaemonControlService.ListEventsSince:output_type -> nekode.daemon.v1.ListEventsSinceResponse
+	149, // [149:199] is the sub-list for method output_type
+	99,  // [99:149] is the sub-list for method input_type
+	99,  // [99:99] is the sub-list for extension type_name
+	99,  // [99:99] is the sub-list for extension extendee
+	0,   // [0:99] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_daemon_proto_init() }
@@ -10782,16 +11116,16 @@ func file_nekode_daemon_v1_daemon_proto_init() {
 	if File_nekode_daemon_v1_daemon_proto != nil {
 		return
 	}
-	file_nekode_daemon_v1_daemon_proto_msgTypes[77].OneofWrappers = []any{}
-	file_nekode_daemon_v1_daemon_proto_msgTypes[86].OneofWrappers = []any{}
-	file_nekode_daemon_v1_daemon_proto_msgTypes[115].OneofWrappers = []any{}
+	file_nekode_daemon_v1_daemon_proto_msgTypes[80].OneofWrappers = []any{}
+	file_nekode_daemon_v1_daemon_proto_msgTypes[89].OneofWrappers = []any{}
+	file_nekode_daemon_v1_daemon_proto_msgTypes[118].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_daemon_proto_rawDesc), len(file_nekode_daemon_v1_daemon_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   132,
+			NumMessages:   135,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
