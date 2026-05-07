@@ -36,8 +36,10 @@ type MemoryRecord struct {
 	SourceMessageIds []string               `protobuf:"bytes,11,rep,name=source_message_ids,json=sourceMessageIds,proto3" json:"source_message_ids,omitempty"`
 	CreatedTimeUnix  int64                  `protobuf:"varint,12,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
 	UpdatedTimeUnix  int64                  `protobuf:"varint,13,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
-	Checksum         string                 `protobuf:"bytes,14,opt,name=checksum,proto3" json:"checksum,omitempty"`
-	LocalOnly        bool                   `protobuf:"varint,15,opt,name=local_only,json=localOnly,proto3" json:"local_only,omitempty"`
+	// Formatted as "sha256:<hex>" when present.
+	Checksum         string `protobuf:"bytes,14,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	LocalOnly        bool   `protobuf:"varint,15,opt,name=local_only,json=localOnly,proto3" json:"local_only,omitempty"`
+	ContentSizeBytes uint32 `protobuf:"varint,16,opt,name=content_size_bytes,json=contentSizeBytes,proto3" json:"content_size_bytes,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -177,6 +179,13 @@ func (x *MemoryRecord) GetLocalOnly() bool {
 	return false
 }
 
+func (x *MemoryRecord) GetContentSizeBytes() uint32 {
+	if x != nil {
+		return x.ContentSizeBytes
+	}
+	return 0
+}
+
 type ListAgentMemoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -306,13 +315,14 @@ func (x *ListAgentMemoryResponse) GetNextCursor() *EventCursor {
 }
 
 type UpsertAgentMemoryRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Record         *MemoryRecord          `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
-	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context        *RequestContext        `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Record          *MemoryRecord          `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	RequestId       string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey  string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context         *RequestContext        `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,5,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpsertAgentMemoryRequest) Reset() {
@@ -373,11 +383,20 @@ func (x *UpsertAgentMemoryRequest) GetContext() *RequestContext {
 	return nil
 }
 
+func (x *UpsertAgentMemoryRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
 type UpsertAgentMemoryResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Record        *MemoryRecord          `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Record          *MemoryRecord          `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	Accepted        bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	RejectionReason string                 `protobuf:"bytes,3,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpsertAgentMemoryResponse) Reset() {
@@ -417,11 +436,25 @@ func (x *UpsertAgentMemoryResponse) GetRecord() *MemoryRecord {
 	return nil
 }
 
+func (x *UpsertAgentMemoryResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *UpsertAgentMemoryResponse) GetRejectionReason() string {
+	if x != nil {
+		return x.RejectionReason
+	}
+	return ""
+}
+
 var File_nekode_daemon_v1_memory_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\n" +
-	"\x1dnekode/daemon/v1/memory.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xd6\x03\n" +
+	"\x1dnekode/daemon/v1/memory.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\x84\x04\n" +
 	"\fMemoryRecord\x12\x1b\n" +
 	"\tmemory_id\x18\x01 \x01(\tR\bmemoryId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x16\n" +
@@ -439,7 +472,8 @@ const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\x11updated_time_unix\x18\r \x01(\x03R\x0fupdatedTimeUnix\x12\x1a\n" +
 	"\bchecksum\x18\x0e \x01(\tR\bchecksum\x12\x1d\n" +
 	"\n" +
-	"local_only\x18\x0f \x01(\bR\tlocalOnlyJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x01\n" +
+	"local_only\x18\x0f \x01(\bR\tlocalOnly\x12,\n" +
+	"\x12content_size_bytes\x18\x10 \x01(\rR\x10contentSizeBytesJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x01\n" +
 	"\x16ListAgentMemoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x14\n" +
@@ -449,15 +483,18 @@ const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\x17ListAgentMemoryResponse\x128\n" +
 	"\arecords\x18\x01 \x03(\v2\x1e.nekode.daemon.v1.MemoryRecordR\arecords\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"\xd6\x01\n" +
+	"nextCursor\"\x81\x02\n" +
 	"\x18UpsertAgentMemoryRequest\x126\n" +
 	"\x06record\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.MemoryRecordR\x06record\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x02 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"S\n" +
+	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12)\n" +
+	"\x10expected_version\x18\x05 \x01(\x03R\x0fexpectedVersion\"\x9a\x01\n" +
 	"\x19UpsertAgentMemoryResponse\x126\n" +
-	"\x06record\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.MemoryRecordR\x06recordB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x06record\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.MemoryRecordR\x06record\x12\x1a\n" +
+	"\baccepted\x18\x02 \x01(\bR\baccepted\x12)\n" +
+	"\x10rejection_reason\x18\x03 \x01(\tR\x0frejectionReasonB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_memory_proto_rawDescOnce sync.Once

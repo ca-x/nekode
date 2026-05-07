@@ -8,6 +8,8 @@ option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message ReminderRecord {
   reserved 1000 to 1999;
+  reserved 13, 14;
+  reserved "fire_time_unix", "fired_time_unix";
 
   string reminder_id = 1;
   string target = 2;
@@ -21,8 +23,6 @@ message ReminderRecord {
   string last_error = 10;
   string title = 11;
   string status = 12;
-  int64 fire_time_unix = 13;
-  int64 fired_time_unix = 14;
   string msg_ref = 15;
   ReminderRecurrence recurrence = 16;
   string cancel_token = 17;
@@ -32,6 +32,13 @@ message ReminderRecurrence {
 
   string rule = 1;
   string description = 2;
+  string timezone = 3;
+}
+message ReminderSchedule {
+  reserved 1000 to 1999;
+
+  string kind = 1; // cron | every | at | rrule | natural
+  string expression = 2;
   string timezone = 3;
 }
 message ReminderEvent {
@@ -47,17 +54,20 @@ message ReminderEvent {
   string detail = 8;
 }
 message ScheduleReminderRequest {
+  reserved 3, 4, 11;
+  reserved "schedule_kind", "schedule", "repeat";
+
   string target = 1;
   string name = 2;
-  string schedule_kind = 3;
-  string schedule = 4;
   string prompt = 5;
   repeated string skills = 6;
   string request_id = 7;
   string title = 8;
-  uint32 delay_seconds = 9;
-  string fire_at = 10;
-  string repeat = 11;
+  oneof schedule_spec {
+    uint32 delay_seconds = 9;
+    string fire_at = 10;
+    ReminderSchedule recurring = 17;
+  }
   string timezone = 12;
   string channel = 13;
   string msg_id = 14;
@@ -72,9 +82,11 @@ message ListRemindersRequest {
   uint32 limit = 2;
   repeated string statuses = 3;
   bool include_canceled = 4;
+  EventCursor cursor = 5;
 }
 message ListRemindersResponse {
   repeated ReminderRecord reminders = 1;
+  EventCursor next_cursor = 2;
 }
 message CancelReminderRequest {
   string reminder_id = 1;
@@ -98,11 +110,16 @@ message SnoozeReminderResponse {
   ReminderRecord reminder = 1;
 }
 message UpdateReminderRequest {
+  reserved 5;
+  reserved "repeat";
+
   string reminder_id = 1;
   optional string title = 2;
-  optional string fire_at = 3;
-  optional uint32 delay_seconds = 4;
-  optional string repeat = 5;
+  oneof schedule_update {
+    string fire_at = 3;
+    uint32 delay_seconds = 4;
+    ReminderSchedule recurring = 10;
+  }
   optional string timezone = 6;
   string request_id = 7;
   string idempotency_key = 8;
@@ -112,8 +129,10 @@ message UpdateReminderResponse {
   ReminderRecord reminder = 1;
 }
 message GetReminderLogRequest {
+  reserved 2;
+  reserved "request_id";
+
   string reminder_id = 1;
-  string request_id = 2;
 }
 message GetReminderLogResponse {
   repeated ReminderEvent events = 1;

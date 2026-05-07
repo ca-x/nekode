@@ -286,6 +286,11 @@ Do not confuse runtime session with memory:
 Observed logs show `max=1` and `interval=500ms`. A compatible daemon should
 implement a bounded start scheduler.
 
+The daemon must acquire a server-visible start permit before launching a
+runtime. The protobuf surface models this with `AcquireStartPermit` and
+`ReleaseStartPermit`; the returned `Lease` is the proof that later run status
+and run-step updates should carry.
+
 Minimum algorithm:
 
 ```text
@@ -328,16 +333,30 @@ assigned runs, agent lifecycle controls, token-injection work, reminders, and
 ping/reconnect signals. Polling may exist as a degraded fallback, but it must
 preserve the same cursor and idempotency semantics.
 
+Authentication is part of the transport contract, not a caller-provided identity
+field. gRPC deployments should use bearer/mTLS metadata. `RequestContext.actor`
+is attribution metadata only; the server must derive the canonical actor from
+the authenticated principal and reject mismatches.
+
 The required contract is:
 
 1. daemon authenticates;
 2. daemon registers or resumes the computer;
 3. daemon sends heartbeat and inventory updates;
 4. server sends events;
-5. daemon acknowledges accepted side effects;
+5. daemon acknowledges consumed stream events with `AcknowledgeServerEvents`;
 6. daemon reports agent status and run/activity progress;
 7. daemon reconnects and replays missed events from a cursor, sequence, and
    aggregate id.
+
+Heartbeats are liveness and status updates, not mandatory full inventory syncs.
+`HeartbeatComputerRequest.inventory` is applied only when
+`inventory_full_snapshot` is true; otherwise omitted inventory means unchanged.
+Inventory changes should use `SyncComputerInventory`.
+
+`GetServerInfoResponse.server_id` is the stable identity for cursor validity.
+If it changes between connections, the daemon must treat cached cursors as
+invalid and perform a fresh replay/sync from the server.
 
 ### Event Types
 
@@ -365,6 +384,16 @@ Event payloads should include:
 - request id or idempotency key when applicable;
 - payload message.
 
+Stream delivery is at-least-once. A daemon must persist the last accepted
+`EventCursor` only after either applying the side effect or intentionally
+rejecting an event as unsupported. The server may replay any unacknowledged
+event after reconnect; handlers therefore still need idempotency checks keyed by
+event id, sequence, and request id.
+
+Activity subscriptions follow the same rule through `AcknowledgeActivityEvents`.
+List and subscribe APIs use `EventCursor` as the single resume shape; callers
+should not maintain parallel page tokens or top-level sequence fields.
+
 ### Idempotency
 
 All side-effecting operations should be idempotent by:
@@ -375,6 +404,8 @@ All side-effecting operations should be idempotent by:
 
 Required behavior:
 
+- `request_id` and `idempotency_key` live on the RPC request, not in
+  `RequestContext`;
 - same request id and same body replays the same response;
 - same request id and different body returns conflict;
 - in-progress duplicate returns unavailable or equivalent retryable status;

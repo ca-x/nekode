@@ -1,6 +1,6 @@
 # Protocol Capability Review
 
-Status: review passed with additive fixes
+Status: adversarial review hardening complete
 Date: 2026-05-08
 
 ## Purpose
@@ -42,10 +42,10 @@ All files keep package `nekode.daemon.v1` and Go package
 | Capability | Current protocol support |
 | --- | --- |
 | Multiple runtime products, including OpenCode | `Runtime.kind`, `RuntimeProfile.kind`, and agent runtime fields remain strings instead of closed enums. |
-| Server connection, machine lock, registration, heartbeat | `RegisterComputer`, `HeartbeatComputer`, `Lease`, `ComputerInfo`, and `ComputerInventory`. |
+| Server connection, machine lock, registration, heartbeat | `RegisterComputer`, `HeartbeatComputer`, `SyncComputerInventory`, `Lease`, `ComputerInfo`, and `ComputerInventory`. |
 | Server-to-daemon command/event delivery | `SubscribeServerEvents` streams `ServerEvent` envelopes for assigned runs, agent controls, messages, tasks, reminders, activity, MCP resource updates, and pings. |
-| Runtime discovery and launch queue visibility | `Runtime`, `AgentStatusSnapshot`, `Run`, `RunStep`, and activity records can report queued/running/blocked states. |
-| Agent-scoped token/CLI bridge injection | Represented by `RuntimeProfile`, `EnvVar.secret`, `Workspace`, and memory/workspace boundaries. |
+| Runtime discovery and launch queue visibility | `Runtime`, `AcquireStartPermit`, `ReleaseStartPermit`, `AgentStatusSnapshot`, `Run`, `RunStep`, and activity records can report queued/running/blocked states. |
+| Agent-scoped token/CLI bridge injection | Represented by `RuntimeProfile`, redacted `EnvVar` records, `Workspace`, and memory/workspace boundaries. |
 | Public join-to-write and permission checks | `Permission`, `ChannelRecord`, `InteractionEndpoint`, and task/message mutation requests carry actor and endpoint ids. |
 | Profile update for display name, description, avatar | `UpdateAgentProfileRequest` keeps these additive fields. |
 | Reminder snooze/update/log | `SnoozeReminder`, `UpdateReminder`, `GetReminderLog`, `ReminderEvent`, and recurrence fields. |
@@ -62,10 +62,11 @@ timezone), but the following real gaps were fixed additively:
 | Review concern | Protocol resolution |
 | --- | --- |
 | Server push / daemon pull missing | Added `SubscribeServerEvents` and `ServerEvent` in `service.proto`. |
-| Idempotency naming inconsistent | Added `idempotency_key` and `RequestContext` to state-changing requests while keeping existing `request_id`. |
+| Stream ack semantics unclear | Added `AcknowledgeServerEvents`; stream delivery is at-least-once and cursor advancement happens after ack. |
+| Idempotency naming inconsistent | Mutating requests carry top-level `request_id`/`idempotency_key`; `RequestContext` is trace/actor metadata only. |
 | Agent start/control needs lease semantics | `ControlAgentRequest` now carries lease id and TTL; `ControlAgentResponse` returns a `Lease`. |
 | Event replay needs sequence and version | `EventCursor`, `ActivityRecord`, and `CollaborationEvent` now include protocol version, sequence, and aggregate id fields. |
-| Message/activity pagination needs cursor semantics | Message, activity, coordination, and run list requests/responses now expose cursor/page token fields. |
+| Message/activity pagination needs cursor semantics | Message, activity, coordination, task, catalog, and run list requests/responses use `EventCursor` without parallel page-token aliases. |
 | Release gate needs release confirmation | Added `ReleaseTask` and release fields on `Task`. |
 | Webhook/IM outbound delivery needs tracking | Added `OutboundDeliveryRecord`, list, and retry RPCs. |
 | MCP needs resource subscription semantics | Added MCP resource subscription/update messages and RPCs. |
@@ -74,6 +75,40 @@ timezone), but the following real gaps were fixed additively:
 | Handoff needs richer context | Added context task ids, file paths, and task graph references to `RoleHandoff`. |
 | Large attachments need URL flow | Added presigned upload/download URL fields while keeping bytes for small payloads. |
 | Future field reuse needs visible guardrails | Added `reserved 1000 to 1999` ranges to long-lived messages for extension discipline. |
+
+## Adversarial Hardening Pass
+
+After the first external review fix, a cross-model adversarial pass found
+additional protocol risks. The following findings were accepted before daemon
+implementation:
+
+| Finding | Resolution |
+| --- | --- |
+| Server stream needed explicit processing acknowledgement | Added `AcknowledgeServerEvents`; the server advances delivery cursors only after ack. |
+| Request identity was duplicated in `RequestContext` and top-level fields | Removed request/idempotency fields from `RequestContext`; top-level request fields are canonical. |
+| Cursor and page-token pagination overlapped | Removed page-token aliases and kept `EventCursor` as the only pagination/resume shape. |
+| `GetServerInfo` could force huge catalog payloads | Catalogs are opt-in and paged; scalar server/protocol metadata remains cheap. |
+| Heartbeat inventory was full and ambiguous | Heartbeat inventory is applied only when `inventory_full_snapshot` is true; `SyncComputerInventory` handles inventory changes. |
+| Run mutation lacked lease proof | `UpdateRunStatus` and `AppendRunStep` now carry `lease_id`. |
+| `Run.status` and `Run.state` were ambiguous | `Run.state` is canonical at field 7; the old duplicate name/field is reserved. |
+| Task graph topology was duplicated on `Task` | Inline child/dependency lists were removed; `TaskGraphSnapshot` is authoritative. |
+| Release state was duplicated on `Task` and `ReleaseGate` | `Task` keeps only `release_gate_id`; release version/environment/state live on `ReleaseGate`. |
+| Secret env values could leak through agent profiles and heartbeats | `EnvVar` now supports `secret_ref`/`redacted`; secret values must be empty in read/list/heartbeat responses. |
+| Start queue permit existed only in docs | Added `AcquireStartPermit` and `ReleaseStartPermit`. |
+| MCP subscriptions lacked a cancellation path | Added `CancelMcpResourceSubscription`. |
+| Handoff and release gate needed direct lookup/response actions | Added `RespondRoleHandoff` and `GetReleaseGate`. |
+| Memory writes could clobber concurrent updates | Added `expected_version` and structured rejection on `UpsertAgentMemory`. |
+| Sender identity was represented twice | `Actor` is now the canonical sender shape for message requests and message records. |
+| Reminder scheduling had overlapping fields | CLI compatibility time fields are encoded as `oneof` schedule inputs. |
+| Task graph updates could clobber concurrent topology edits | Added `expected_graph_version` CAS to `UpdateTaskGraph`. |
+| Server cursor validity needed a stable identity | Added `server_id` to `GetServerInfoResponse`. |
+| Claim lease renewal failure needed structured handling | Added `rejection_reason` to `RenewTaskClaimLeaseResponse`. |
+| Task graph edge updates lost direction/kind | `UpdateTaskGraph` now uses `TaskEdge` for add/remove operations. |
+| Activity stream replay lacked ack symmetry | Added `AcknowledgeActivityEvents`; activity subscriptions use cursor-only resume. |
+| Run leases had no renewal path | Added `RenewRunLease`. |
+| Bare task references were not resolvable | Added `GetTask`. |
+| Reminder records had duplicate time fields | `next_run_unix`/`last_run_unix` are canonical; duplicate fire/fired fields are reserved. |
+| Final gate residuals | Added `UpdateTask`, task list state/column filters, server stream `idempotency_key`, `duplicate_of` task edge kind, run/run-step activity payloads, and `ReleaseTaskResponse.release_gate`. |
 
 ## Collaboration Semantics Check
 

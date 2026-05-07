@@ -248,6 +248,7 @@ func (x *InteractionEndpoint) GetCapabilities() []*Capability {
 type ListInteractionEndpointsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -289,9 +290,17 @@ func (x *ListInteractionEndpointsRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListInteractionEndpointsRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListInteractionEndpointsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Endpoints     []*InteractionEndpoint `protobuf:"bytes,1,rep,name=endpoints,proto3" json:"endpoints,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -333,9 +342,17 @@ func (x *ListInteractionEndpointsResponse) GetEndpoints() []*InteractionEndpoint
 	return nil
 }
 
+func (x *ListInteractionEndpointsResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
 type ListChannelsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -377,9 +394,17 @@ func (x *ListChannelsRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListChannelsRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListChannelsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Channels      []*ChannelRecord       `protobuf:"bytes,1,rep,name=channels,proto3" json:"channels,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -417,6 +442,13 @@ func (*ListChannelsResponse) Descriptor() ([]byte, []int) {
 func (x *ListChannelsResponse) GetChannels() []*ChannelRecord {
 	if x != nil {
 		return x.Channels
+	}
+	return nil
+}
+
+func (x *ListChannelsResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
 	}
 	return nil
 }
@@ -533,6 +565,7 @@ type ListThreadsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TargetPrefix  string                 `protobuf:"bytes,1,opt,name=target_prefix,json=targetPrefix,proto3" json:"target_prefix,omitempty"`
 	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -581,9 +614,17 @@ func (x *ListThreadsRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListThreadsRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListThreadsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Threads       []*ThreadRecord        `protobuf:"bytes,1,rep,name=threads,proto3" json:"threads,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -621,6 +662,13 @@ func (*ListThreadsResponse) Descriptor() ([]byte, []int) {
 func (x *ListThreadsResponse) GetThreads() []*ThreadRecord {
 	if x != nil {
 		return x.Threads
+	}
+	return nil
+}
+
+func (x *ListThreadsResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
 	}
 	return nil
 }
@@ -720,11 +768,8 @@ type CollaborationMessage struct {
 	ThreadId             string                 `protobuf:"bytes,3,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
 	Role                 string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
 	Content              string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
-	SenderAgentId        string                 `protobuf:"bytes,6,opt,name=sender_agent_id,json=senderAgentId,proto3" json:"sender_agent_id,omitempty"`
-	SenderDisplayName    string                 `protobuf:"bytes,7,opt,name=sender_display_name,json=senderDisplayName,proto3" json:"sender_display_name,omitempty"`
 	ReplyToMessageId     string                 `protobuf:"bytes,8,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
 	CreatedTimeUnix      int64                  `protobuf:"varint,9,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	SenderKind           string                 `protobuf:"bytes,10,opt,name=sender_kind,json=senderKind,proto3" json:"sender_kind,omitempty"`
 	Attachments          []*AttachmentRecord    `protobuf:"bytes,11,rep,name=attachments,proto3" json:"attachments,omitempty"`
 	RequestId            string                 `protobuf:"bytes,12,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	SourceEndpointId     string                 `protobuf:"bytes,13,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
@@ -804,20 +849,6 @@ func (x *CollaborationMessage) GetContent() string {
 	return ""
 }
 
-func (x *CollaborationMessage) GetSenderAgentId() string {
-	if x != nil {
-		return x.SenderAgentId
-	}
-	return ""
-}
-
-func (x *CollaborationMessage) GetSenderDisplayName() string {
-	if x != nil {
-		return x.SenderDisplayName
-	}
-	return ""
-}
-
 func (x *CollaborationMessage) GetReplyToMessageId() string {
 	if x != nil {
 		return x.ReplyToMessageId
@@ -830,13 +861,6 @@ func (x *CollaborationMessage) GetCreatedTimeUnix() int64 {
 		return x.CreatedTimeUnix
 	}
 	return 0
-}
-
-func (x *CollaborationMessage) GetSenderKind() string {
-	if x != nil {
-		return x.SenderKind
-	}
-	return ""
 }
 
 func (x *CollaborationMessage) GetAttachments() []*AttachmentRecord {
@@ -914,9 +938,6 @@ type ReadMessagesRequest struct {
 	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        *EventCursor           `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	PageToken     string                 `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	PageSize      uint32                 `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	AfterSequence int64                  `protobuf:"varint,6,opt,name=after_sequence,json=afterSequence,proto3" json:"after_sequence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -972,32 +993,10 @@ func (x *ReadMessagesRequest) GetCursor() *EventCursor {
 	return nil
 }
 
-func (x *ReadMessagesRequest) GetPageToken() string {
-	if x != nil {
-		return x.PageToken
-	}
-	return ""
-}
-
-func (x *ReadMessagesRequest) GetPageSize() uint32 {
-	if x != nil {
-		return x.PageSize
-	}
-	return 0
-}
-
-func (x *ReadMessagesRequest) GetAfterSequence() int64 {
-	if x != nil {
-		return x.AfterSequence
-	}
-	return 0
-}
-
 type ReadMessagesResponse struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
 	Messages      []*CollaborationMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
 	NextCursor    *EventCursor            `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	NextPageToken string                  `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1046,32 +1045,23 @@ func (x *ReadMessagesResponse) GetNextCursor() *EventCursor {
 	return nil
 }
 
-func (x *ReadMessagesResponse) GetNextPageToken() string {
-	if x != nil {
-		return x.NextPageToken
-	}
-	return ""
-}
-
 type SendMessageRequest struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Target               string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	Role                 string                 `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
 	Content              string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	SenderAgentId        string                 `protobuf:"bytes,4,opt,name=sender_agent_id,json=senderAgentId,proto3" json:"sender_agent_id,omitempty"`
-	SenderDisplayName    string                 `protobuf:"bytes,5,opt,name=sender_display_name,json=senderDisplayName,proto3" json:"sender_display_name,omitempty"`
 	ReplyToMessageId     string                 `protobuf:"bytes,6,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
 	EmitOutbound         bool                   `protobuf:"varint,7,opt,name=emit_outbound,json=emitOutbound,proto3" json:"emit_outbound,omitempty"`
 	RequestId            string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	AttachmentIds        []string               `protobuf:"bytes,9,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
 	SourceEndpointId     string                 `protobuf:"bytes,10,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
-	SenderUserId         string                 `protobuf:"bytes,11,opt,name=sender_user_id,json=senderUserId,proto3" json:"sender_user_id,omitempty"`
 	MetadataJson         string                 `protobuf:"bytes,12,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
 	CoordinationRecordId string                 `protobuf:"bytes,13,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
 	MemoryRecordId       string                 `protobuf:"bytes,14,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
 	IdempotencyKey       string                 `protobuf:"bytes,15,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	Context              *RequestContext        `protobuf:"bytes,16,opt,name=context,proto3" json:"context,omitempty"`
 	OutboundPolicy       string                 `protobuf:"bytes,17,opt,name=outbound_policy,json=outboundPolicy,proto3" json:"outbound_policy,omitempty"` // none | source_only | all_bound_endpoints | selected_endpoints
+	Sender               *Actor                 `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1127,20 +1117,6 @@ func (x *SendMessageRequest) GetContent() string {
 	return ""
 }
 
-func (x *SendMessageRequest) GetSenderAgentId() string {
-	if x != nil {
-		return x.SenderAgentId
-	}
-	return ""
-}
-
-func (x *SendMessageRequest) GetSenderDisplayName() string {
-	if x != nil {
-		return x.SenderDisplayName
-	}
-	return ""
-}
-
 func (x *SendMessageRequest) GetReplyToMessageId() string {
 	if x != nil {
 		return x.ReplyToMessageId
@@ -1172,13 +1148,6 @@ func (x *SendMessageRequest) GetAttachmentIds() []string {
 func (x *SendMessageRequest) GetSourceEndpointId() string {
 	if x != nil {
 		return x.SourceEndpointId
-	}
-	return ""
-}
-
-func (x *SendMessageRequest) GetSenderUserId() string {
-	if x != nil {
-		return x.SenderUserId
 	}
 	return ""
 }
@@ -1223,6 +1192,13 @@ func (x *SendMessageRequest) GetOutboundPolicy() string {
 		return x.OutboundPolicy
 	}
 	return ""
+}
+
+func (x *SendMessageRequest) GetSender() *Actor {
+	if x != nil {
+		return x.Sender
+	}
+	return nil
 }
 
 type SendMessageResponse struct {
@@ -1671,6 +1647,7 @@ type ListSavedMessagesRequest struct {
 	SavedByAgentId string                 `protobuf:"bytes,2,opt,name=saved_by_agent_id,json=savedByAgentId,proto3" json:"saved_by_agent_id,omitempty"`
 	SavedByUserId  string                 `protobuf:"bytes,3,opt,name=saved_by_user_id,json=savedByUserId,proto3" json:"saved_by_user_id,omitempty"`
 	Limit          uint32                 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor         *EventCursor           `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1733,9 +1710,17 @@ func (x *ListSavedMessagesRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListSavedMessagesRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListSavedMessagesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SavedMessages []*SavedMessageRecord  `protobuf:"bytes,1,rep,name=saved_messages,json=savedMessages,proto3" json:"saved_messages,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1773,6 +1758,13 @@ func (*ListSavedMessagesResponse) Descriptor() ([]byte, []int) {
 func (x *ListSavedMessagesResponse) GetSavedMessages() []*SavedMessageRecord {
 	if x != nil {
 		return x.SavedMessages
+	}
+	return nil
+}
+
+func (x *ListSavedMessagesResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
 	}
 	return nil
 }
@@ -2428,15 +2420,21 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\vconfig_json\x18\t \x01(\tR\n" +
 	"configJson\x12@\n" +
 	"\fcapabilities\x18\n" +
-	" \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"7\n" +
+	" \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"n\n" +
 	"\x1fListInteractionEndpointsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\rR\x05limit\"g\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\xa7\x01\n" +
 	" ListInteractionEndpointsResponse\x12C\n" +
-	"\tendpoints\x18\x01 \x03(\v2%.nekode.daemon.v1.InteractionEndpointR\tendpoints\"+\n" +
+	"\tendpoints\x18\x01 \x03(\v2%.nekode.daemon.v1.InteractionEndpointR\tendpoints\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"b\n" +
 	"\x13ListChannelsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\rR\x05limit\"S\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x93\x01\n" +
 	"\x14ListChannelsResponse\x12;\n" +
-	"\bchannels\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\bchannels\"\xb3\x02\n" +
+	"\bchannels\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\bchannels\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\xb3\x02\n" +
 	"\fThreadRecord\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1b\n" +
 	"\tthread_id\x18\x02 \x01(\tR\bthreadId\x12\x14\n" +
@@ -2447,30 +2445,28 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\rmessage_count\x18\x06 \x01(\rR\fmessageCount\x12*\n" +
 	"\x11created_time_unix\x18\a \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\b \x01(\x03R\x0fupdatedTimeUnix\x12\x1a\n" +
-	"\bfollowed\x18\t \x01(\bR\bfollowedJ\x06\b\xe8\a\x10\xd0\x0f\"O\n" +
+	"\bfollowed\x18\t \x01(\bR\bfollowedJ\x06\b\xe8\a\x10\xd0\x0f\"\x86\x01\n" +
 	"\x12ListThreadsRequest\x12#\n" +
 	"\rtarget_prefix\x18\x01 \x01(\tR\ftargetPrefix\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\rR\x05limit\"O\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x8f\x01\n" +
 	"\x13ListThreadsResponse\x128\n" +
-	"\athreads\x18\x01 \x03(\v2\x1e.nekode.daemon.v1.ThreadRecordR\athreads\"*\n" +
+	"\athreads\x18\x01 \x03(\v2\x1e.nekode.daemon.v1.ThreadRecordR\athreads\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"*\n" +
 	"\x10GetThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\"K\n" +
 	"\x11GetThreadResponse\x126\n" +
-	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xac\x06\n" +
+	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xf8\x05\n" +
 	"\x14CollaborationMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x1b\n" +
 	"\tthread_id\x18\x03 \x01(\tR\bthreadId\x12\x12\n" +
 	"\x04role\x18\x04 \x01(\tR\x04role\x12\x18\n" +
-	"\acontent\x18\x05 \x01(\tR\acontent\x12&\n" +
-	"\x0fsender_agent_id\x18\x06 \x01(\tR\rsenderAgentId\x12.\n" +
-	"\x13sender_display_name\x18\a \x01(\tR\x11senderDisplayName\x12-\n" +
+	"\acontent\x18\x05 \x01(\tR\acontent\x12-\n" +
 	"\x13reply_to_message_id\x18\b \x01(\tR\x10replyToMessageId\x12*\n" +
-	"\x11created_time_unix\x18\t \x01(\x03R\x0fcreatedTimeUnix\x12\x1f\n" +
-	"\vsender_kind\x18\n" +
-	" \x01(\tR\n" +
-	"senderKind\x12D\n" +
+	"\x11created_time_unix\x18\t \x01(\x03R\x0fcreatedTimeUnix\x12D\n" +
 	"\vattachments\x18\v \x03(\v2\".nekode.daemon.v1.AttachmentRecordR\vattachments\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\f \x01(\tR\trequestId\x12,\n" +
@@ -2481,40 +2477,35 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x10memory_record_id\x18\x11 \x01(\tR\x0ememoryRecordId\x12/\n" +
 	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06sender\x12\x1a\n" +
 	"\bsequence\x18\x13 \x01(\x03R\bsequence\x12!\n" +
-	"\faggregate_id\x18\x14 \x01(\tR\vaggregateIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xdd\x01\n" +
+	"\faggregate_id\x18\x14 \x01(\tR\vaggregateIdJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\n" +
+	"\x10\vR\x0fsender_agent_idR\x13sender_display_nameR\vsender_kind\"\xa7\x01\n" +
 	"\x13ReadMessagesRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\rR\x05limit\x125\n" +
-	"\x06cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x1d\n" +
-	"\n" +
-	"page_token\x18\x04 \x01(\tR\tpageToken\x12\x1b\n" +
-	"\tpage_size\x18\x05 \x01(\rR\bpageSize\x12%\n" +
-	"\x0eafter_sequence\x18\x06 \x01(\x03R\rafterSequence\"\xc2\x01\n" +
+	"\x06cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursorJ\x04\b\x04\x10\aR\n" +
+	"page_tokenR\tpage_sizeR\x0eafter_sequence\"\xb1\x01\n" +
 	"\x14ReadMessagesResponse\x12B\n" +
 	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\x12&\n" +
-	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xb3\x05\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xae\x05\n" +
 	"\x12SendMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\tR\acontent\x12&\n" +
-	"\x0fsender_agent_id\x18\x04 \x01(\tR\rsenderAgentId\x12.\n" +
-	"\x13sender_display_name\x18\x05 \x01(\tR\x11senderDisplayName\x12-\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12-\n" +
 	"\x13reply_to_message_id\x18\x06 \x01(\tR\x10replyToMessageId\x12#\n" +
 	"\remit_outbound\x18\a \x01(\bR\femitOutbound\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\b \x01(\tR\trequestId\x12%\n" +
 	"\x0eattachment_ids\x18\t \x03(\tR\rattachmentIds\x12,\n" +
 	"\x12source_endpoint_id\x18\n" +
-	" \x01(\tR\x10sourceEndpointId\x12$\n" +
-	"\x0esender_user_id\x18\v \x01(\tR\fsenderUserId\x12#\n" +
+	" \x01(\tR\x10sourceEndpointId\x12#\n" +
 	"\rmetadata_json\x18\f \x01(\tR\fmetadataJson\x124\n" +
 	"\x16coordination_record_id\x18\r \x01(\tR\x14coordinationRecordId\x12(\n" +
 	"\x10memory_record_id\x18\x0e \x01(\tR\x0ememoryRecordId\x12'\n" +
 	"\x0fidempotency_key\x18\x0f \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12'\n" +
-	"\x0foutbound_policy\x18\x11 \x01(\tR\x0eoutboundPolicy\"s\n" +
+	"\x0foutbound_policy\x18\x11 \x01(\tR\x0eoutboundPolicy\x12/\n" +
+	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06senderJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\v\x10\fR\x0fsender_agent_idR\x13sender_display_nameR\x0esender_user_id\"s\n" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
 	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xd0\x02\n" +
@@ -2553,14 +2544,17 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"|\n" +
 	"\x15UnsaveMessageResponse\x12\x18\n" +
 	"\aremoved\x18\x01 \x01(\bR\aremoved\x12I\n" +
-	"\rsaved_message\x18\x02 \x01(\v2$.nekode.daemon.v1.SavedMessageRecordR\fsavedMessage\"\x9c\x01\n" +
+	"\rsaved_message\x18\x02 \x01(\v2$.nekode.daemon.v1.SavedMessageRecordR\fsavedMessage\"\xd3\x01\n" +
 	"\x18ListSavedMessagesRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12)\n" +
 	"\x11saved_by_agent_id\x18\x02 \x01(\tR\x0esavedByAgentId\x12'\n" +
 	"\x10saved_by_user_id\x18\x03 \x01(\tR\rsavedByUserId\x12\x14\n" +
-	"\x05limit\x18\x04 \x01(\rR\x05limit\"h\n" +
+	"\x05limit\x18\x04 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x05 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\xa8\x01\n" +
 	"\x19ListSavedMessagesResponse\x12K\n" +
-	"\x0esaved_messages\x18\x01 \x03(\v2$.nekode.daemon.v1.SavedMessageRecordR\rsavedMessages\"\xcc\x01\n" +
+	"\x0esaved_messages\x18\x01 \x03(\v2$.nekode.daemon.v1.SavedMessageRecordR\rsavedMessages\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\xcc\x01\n" +
 	"\x13FollowThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
@@ -2670,43 +2664,52 @@ var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
 	(*RetryOutboundDeliveryRequest)(nil),     // 30: nekode.daemon.v1.RetryOutboundDeliveryRequest
 	(*RetryOutboundDeliveryResponse)(nil),    // 31: nekode.daemon.v1.RetryOutboundDeliveryResponse
 	(*Capability)(nil),                       // 32: nekode.daemon.v1.Capability
-	(*AttachmentRecord)(nil),                 // 33: nekode.daemon.v1.AttachmentRecord
-	(*Actor)(nil),                            // 34: nekode.daemon.v1.Actor
-	(*EventCursor)(nil),                      // 35: nekode.daemon.v1.EventCursor
+	(*EventCursor)(nil),                      // 33: nekode.daemon.v1.EventCursor
+	(*AttachmentRecord)(nil),                 // 34: nekode.daemon.v1.AttachmentRecord
+	(*Actor)(nil),                            // 35: nekode.daemon.v1.Actor
 	(*RequestContext)(nil),                   // 36: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_collaboration_proto_depIdxs = []int32{
 	32, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
 	32, // 1: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
-	1,  // 2: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
-	0,  // 3: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
-	6,  // 4: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
-	6,  // 5: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
-	33, // 6: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
-	34, // 7: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
-	35, // 8: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	11, // 9: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	35, // 10: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 11: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	11, // 12: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	11, // 13: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	36, // 14: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	16, // 15: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	36, // 16: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	16, // 17: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	16, // 18: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
-	36, // 19: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	36, // 20: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	35, // 21: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	27, // 22: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	35, // 23: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 24: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	27, // 25: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	26, // [26:26] is the sub-list for method output_type
-	26, // [26:26] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	33, // 2: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	1,  // 3: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
+	33, // 4: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	33, // 5: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	0,  // 6: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
+	33, // 7: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	33, // 8: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	6,  // 9: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
+	33, // 10: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	6,  // 11: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
+	34, // 12: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
+	35, // 13: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
+	33, // 14: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	11, // 15: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	33, // 16: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 17: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	35, // 18: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
+	11, // 19: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	11, // 20: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	36, // 21: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	16, // 22: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	36, // 23: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	16, // 24: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	33, // 25: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	16, // 26: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
+	33, // 27: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 28: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	36, // 29: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	33, // 30: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	27, // 31: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	33, // 32: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 33: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	27, // 34: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	35, // [35:35] is the sub-list for method output_type
+	35, // [35:35] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_collaboration_proto_init() }

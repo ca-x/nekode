@@ -22,8 +22,10 @@ message MemoryRecord {
   repeated string source_message_ids = 11;
   int64 created_time_unix = 12;
   int64 updated_time_unix = 13;
+  // Formatted as "sha256:<hex>" when present.
   string checksum = 14;
   bool local_only = 15;
+  uint32 content_size_bytes = 16;
 }
 
 message ListAgentMemoryRequest {
@@ -44,8 +46,11 @@ message UpsertAgentMemoryRequest {
   string request_id = 2;
   string idempotency_key = 3;
   RequestContext context = 4;
+  int64 expected_version = 5;
 }
 
 message UpsertAgentMemoryResponse {
   MemoryRecord record = 1;
+  bool accepted = 2;
+  string rejection_reason = 3;
 }

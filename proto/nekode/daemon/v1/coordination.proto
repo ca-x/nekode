@@ -95,6 +95,10 @@ message ReleaseGate {
   bool passed = 8;
   string waiver_reason = 9;
   int64 updated_time_unix = 10;
+  string release_version = 11;
+  string release_environment = 12;
+  int64 released_time_unix = 13;
+  string release_note = 14;
 }
 
 message RoleHandoff {
@@ -145,6 +149,8 @@ message DeadlineNegotiation {
   int64 decided_time_unix = 10;
   repeated NegotiationCounterProposal counter_proposals = 11;
   string accepted_counter_proposal_id = 12;
+  int64 expires_time_unix = 13;
+  uint32 max_rounds = 14;
 }
 
 message ScopeNegotiation {
@@ -162,10 +168,14 @@ message ScopeNegotiation {
   int64 decided_time_unix = 10;
   repeated NegotiationCounterProposal counter_proposals = 11;
   string accepted_counter_proposal_id = 12;
+  int64 expires_time_unix = 13;
+  uint32 max_rounds = 14;
 }
 
 message CoordinationRecord {
   reserved 1000 to 1999;
+  reserved 9 to 11;
+  reserved "request_id", "idempotency_key", "context";
 
   string coordination_id = 1;
   string target = 2;
@@ -175,9 +185,6 @@ message CoordinationRecord {
   string actor_user_id = 6;
   string kind = 7; // work_plan | progress_update | acceptance_evidence | release_gate | role_handoff | deadline_negotiation | scope_negotiation
   int64 created_time_unix = 8;
-  string request_id = 9;
-  string idempotency_key = 10;
-  RequestContext context = 11;
 
   oneof payload {
     WorkPlan work_plan = 20;
@@ -203,19 +210,23 @@ message PublishCoordinationRecordResponse {
 }
 
 message ListCoordinationRecordsRequest {
+  reserved 7;
+  reserved "page_token";
+
   string target = 1;
   string task_id = 2;
   string kind = 3;
   string actor_agent_id = 4;
   uint32 limit = 5;
   EventCursor cursor = 6;
-  string page_token = 7;
 }
 
 message ListCoordinationRecordsResponse {
+  reserved 3;
+  reserved "next_page_token";
+
   repeated CoordinationRecord records = 1;
   EventCursor next_cursor = 2;
-  string next_page_token = 3;
 }
 
 message CounterProposeNegotiationRequest {
@@ -229,4 +240,32 @@ message CounterProposeNegotiationRequest {
 
 message CounterProposeNegotiationResponse {
   CoordinationRecord record = 1;
+}
+
+message RespondRoleHandoffRequest {
+  string handoff_id = 1;
+  string response = 2; // accepted | declined | completed | canceled
+  string responding_agent_id = 3;
+  string response_note = 4;
+  string request_id = 5;
+  string idempotency_key = 6;
+  RequestContext context = 7;
+}
+
+message RespondRoleHandoffResponse {
+  bool accepted = 1;
+  CoordinationRecord record = 2;
+  string rejection_reason = 3;
+}
+
+message GetReleaseGateRequest {
+  reserved 2;
+  reserved "task_id";
+
+  string release_gate_id = 1;
+}
+
+message GetReleaseGateResponse {
+  ReleaseGate release_gate = 1;
+  CoordinationRecord record = 2;
 }

@@ -610,19 +610,23 @@ func (x *AcceptanceEvidence) GetSubmittedTimeUnix() int64 {
 }
 
 type ReleaseGate struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	ReleaseGateId   string                 `protobuf:"bytes,1,opt,name=release_gate_id,json=releaseGateId,proto3" json:"release_gate_id,omitempty"`
-	Target          string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	TaskId          string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Name            string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Status          string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // pending | running | passed | failed | waived
-	RequiredChecks  []string               `protobuf:"bytes,6,rep,name=required_checks,json=requiredChecks,proto3" json:"required_checks,omitempty"`
-	Results         []*VerificationResult  `protobuf:"bytes,7,rep,name=results,proto3" json:"results,omitempty"`
-	Passed          bool                   `protobuf:"varint,8,opt,name=passed,proto3" json:"passed,omitempty"`
-	WaiverReason    string                 `protobuf:"bytes,9,opt,name=waiver_reason,json=waiverReason,proto3" json:"waiver_reason,omitempty"`
-	UpdatedTimeUnix int64                  `protobuf:"varint,10,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ReleaseGateId      string                 `protobuf:"bytes,1,opt,name=release_gate_id,json=releaseGateId,proto3" json:"release_gate_id,omitempty"`
+	Target             string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	TaskId             string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Name               string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Status             string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // pending | running | passed | failed | waived
+	RequiredChecks     []string               `protobuf:"bytes,6,rep,name=required_checks,json=requiredChecks,proto3" json:"required_checks,omitempty"`
+	Results            []*VerificationResult  `protobuf:"bytes,7,rep,name=results,proto3" json:"results,omitempty"`
+	Passed             bool                   `protobuf:"varint,8,opt,name=passed,proto3" json:"passed,omitempty"`
+	WaiverReason       string                 `protobuf:"bytes,9,opt,name=waiver_reason,json=waiverReason,proto3" json:"waiver_reason,omitempty"`
+	UpdatedTimeUnix    int64                  `protobuf:"varint,10,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
+	ReleaseVersion     string                 `protobuf:"bytes,11,opt,name=release_version,json=releaseVersion,proto3" json:"release_version,omitempty"`
+	ReleaseEnvironment string                 `protobuf:"bytes,12,opt,name=release_environment,json=releaseEnvironment,proto3" json:"release_environment,omitempty"`
+	ReleasedTimeUnix   int64                  `protobuf:"varint,13,opt,name=released_time_unix,json=releasedTimeUnix,proto3" json:"released_time_unix,omitempty"`
+	ReleaseNote        string                 `protobuf:"bytes,14,opt,name=release_note,json=releaseNote,proto3" json:"release_note,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ReleaseGate) Reset() {
@@ -723,6 +727,34 @@ func (x *ReleaseGate) GetUpdatedTimeUnix() int64 {
 		return x.UpdatedTimeUnix
 	}
 	return 0
+}
+
+func (x *ReleaseGate) GetReleaseVersion() string {
+	if x != nil {
+		return x.ReleaseVersion
+	}
+	return ""
+}
+
+func (x *ReleaseGate) GetReleaseEnvironment() string {
+	if x != nil {
+		return x.ReleaseEnvironment
+	}
+	return ""
+}
+
+func (x *ReleaseGate) GetReleasedTimeUnix() int64 {
+	if x != nil {
+		return x.ReleasedTimeUnix
+	}
+	return 0
+}
+
+func (x *ReleaseGate) GetReleaseNote() string {
+	if x != nil {
+		return x.ReleaseNote
+	}
+	return ""
 }
 
 type RoleHandoff struct {
@@ -995,6 +1027,8 @@ type DeadlineNegotiation struct {
 	DecidedTimeUnix           int64                         `protobuf:"varint,10,opt,name=decided_time_unix,json=decidedTimeUnix,proto3" json:"decided_time_unix,omitempty"`
 	CounterProposals          []*NegotiationCounterProposal `protobuf:"bytes,11,rep,name=counter_proposals,json=counterProposals,proto3" json:"counter_proposals,omitempty"`
 	AcceptedCounterProposalId string                        `protobuf:"bytes,12,opt,name=accepted_counter_proposal_id,json=acceptedCounterProposalId,proto3" json:"accepted_counter_proposal_id,omitempty"`
+	ExpiresTimeUnix           int64                         `protobuf:"varint,13,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
+	MaxRounds                 uint32                        `protobuf:"varint,14,opt,name=max_rounds,json=maxRounds,proto3" json:"max_rounds,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1113,6 +1147,20 @@ func (x *DeadlineNegotiation) GetAcceptedCounterProposalId() string {
 	return ""
 }
 
+func (x *DeadlineNegotiation) GetExpiresTimeUnix() int64 {
+	if x != nil {
+		return x.ExpiresTimeUnix
+	}
+	return 0
+}
+
+func (x *DeadlineNegotiation) GetMaxRounds() uint32 {
+	if x != nil {
+		return x.MaxRounds
+	}
+	return 0
+}
+
 type ScopeNegotiation struct {
 	state                     protoimpl.MessageState        `protogen:"open.v1"`
 	NegotiationId             string                        `protobuf:"bytes,1,opt,name=negotiation_id,json=negotiationId,proto3" json:"negotiation_id,omitempty"`
@@ -1127,6 +1175,8 @@ type ScopeNegotiation struct {
 	DecidedTimeUnix           int64                         `protobuf:"varint,10,opt,name=decided_time_unix,json=decidedTimeUnix,proto3" json:"decided_time_unix,omitempty"`
 	CounterProposals          []*NegotiationCounterProposal `protobuf:"bytes,11,rep,name=counter_proposals,json=counterProposals,proto3" json:"counter_proposals,omitempty"`
 	AcceptedCounterProposalId string                        `protobuf:"bytes,12,opt,name=accepted_counter_proposal_id,json=acceptedCounterProposalId,proto3" json:"accepted_counter_proposal_id,omitempty"`
+	ExpiresTimeUnix           int64                         `protobuf:"varint,13,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
+	MaxRounds                 uint32                        `protobuf:"varint,14,opt,name=max_rounds,json=maxRounds,proto3" json:"max_rounds,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -1245,6 +1295,20 @@ func (x *ScopeNegotiation) GetAcceptedCounterProposalId() string {
 	return ""
 }
 
+func (x *ScopeNegotiation) GetExpiresTimeUnix() int64 {
+	if x != nil {
+		return x.ExpiresTimeUnix
+	}
+	return 0
+}
+
+func (x *ScopeNegotiation) GetMaxRounds() uint32 {
+	if x != nil {
+		return x.MaxRounds
+	}
+	return 0
+}
+
 type CoordinationRecord struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	CoordinationId  string                 `protobuf:"bytes,1,opt,name=coordination_id,json=coordinationId,proto3" json:"coordination_id,omitempty"`
@@ -1255,9 +1319,6 @@ type CoordinationRecord struct {
 	ActorUserId     string                 `protobuf:"bytes,6,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	Kind            string                 `protobuf:"bytes,7,opt,name=kind,proto3" json:"kind,omitempty"` // work_plan | progress_update | acceptance_evidence | release_gate | role_handoff | deadline_negotiation | scope_negotiation
 	CreatedTimeUnix int64                  `protobuf:"varint,8,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	RequestId       string                 `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey  string                 `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context         *RequestContext        `protobuf:"bytes,11,opt,name=context,proto3" json:"context,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*CoordinationRecord_WorkPlan
@@ -1356,27 +1417,6 @@ func (x *CoordinationRecord) GetCreatedTimeUnix() int64 {
 		return x.CreatedTimeUnix
 	}
 	return 0
-}
-
-func (x *CoordinationRecord) GetRequestId() string {
-	if x != nil {
-		return x.RequestId
-	}
-	return ""
-}
-
-func (x *CoordinationRecord) GetIdempotencyKey() string {
-	if x != nil {
-		return x.IdempotencyKey
-	}
-	return ""
-}
-
-func (x *CoordinationRecord) GetContext() *RequestContext {
-	if x != nil {
-		return x.Context
-	}
-	return nil
 }
 
 func (x *CoordinationRecord) GetPayload() isCoordinationRecord_Payload {
@@ -1623,7 +1663,6 @@ type ListCoordinationRecordsRequest struct {
 	ActorAgentId  string                 `protobuf:"bytes,4,opt,name=actor_agent_id,json=actorAgentId,proto3" json:"actor_agent_id,omitempty"`
 	Limit         uint32                 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        *EventCursor           `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	PageToken     string                 `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1700,18 +1739,10 @@ func (x *ListCoordinationRecordsRequest) GetCursor() *EventCursor {
 	return nil
 }
 
-func (x *ListCoordinationRecordsRequest) GetPageToken() string {
-	if x != nil {
-		return x.PageToken
-	}
-	return ""
-}
-
 type ListCoordinationRecordsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Records       []*CoordinationRecord  `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
 	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1758,13 +1789,6 @@ func (x *ListCoordinationRecordsResponse) GetNextCursor() *EventCursor {
 		return x.NextCursor
 	}
 	return nil
-}
-
-func (x *ListCoordinationRecordsResponse) GetNextPageToken() string {
-	if x != nil {
-		return x.NextPageToken
-	}
-	return ""
 }
 
 type CounterProposeNegotiationRequest struct {
@@ -1895,6 +1919,254 @@ func (x *CounterProposeNegotiationResponse) GetRecord() *CoordinationRecord {
 	return nil
 }
 
+type RespondRoleHandoffRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	HandoffId         string                 `protobuf:"bytes,1,opt,name=handoff_id,json=handoffId,proto3" json:"handoff_id,omitempty"`
+	Response          string                 `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"` // accepted | declined | completed | canceled
+	RespondingAgentId string                 `protobuf:"bytes,3,opt,name=responding_agent_id,json=respondingAgentId,proto3" json:"responding_agent_id,omitempty"`
+	ResponseNote      string                 `protobuf:"bytes,4,opt,name=response_note,json=responseNote,proto3" json:"response_note,omitempty"`
+	RequestId         string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey    string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context           *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RespondRoleHandoffRequest) Reset() {
+	*x = RespondRoleHandoffRequest{}
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RespondRoleHandoffRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RespondRoleHandoffRequest) ProtoMessage() {}
+
+func (x *RespondRoleHandoffRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RespondRoleHandoffRequest.ProtoReflect.Descriptor instead.
+func (*RespondRoleHandoffRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *RespondRoleHandoffRequest) GetHandoffId() string {
+	if x != nil {
+		return x.HandoffId
+	}
+	return ""
+}
+
+func (x *RespondRoleHandoffRequest) GetResponse() string {
+	if x != nil {
+		return x.Response
+	}
+	return ""
+}
+
+func (x *RespondRoleHandoffRequest) GetRespondingAgentId() string {
+	if x != nil {
+		return x.RespondingAgentId
+	}
+	return ""
+}
+
+func (x *RespondRoleHandoffRequest) GetResponseNote() string {
+	if x != nil {
+		return x.ResponseNote
+	}
+	return ""
+}
+
+func (x *RespondRoleHandoffRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RespondRoleHandoffRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *RespondRoleHandoffRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type RespondRoleHandoffResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Accepted        bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Record          *CoordinationRecord    `protobuf:"bytes,2,opt,name=record,proto3" json:"record,omitempty"`
+	RejectionReason string                 `protobuf:"bytes,3,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RespondRoleHandoffResponse) Reset() {
+	*x = RespondRoleHandoffResponse{}
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RespondRoleHandoffResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RespondRoleHandoffResponse) ProtoMessage() {}
+
+func (x *RespondRoleHandoffResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RespondRoleHandoffResponse.ProtoReflect.Descriptor instead.
+func (*RespondRoleHandoffResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *RespondRoleHandoffResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *RespondRoleHandoffResponse) GetRecord() *CoordinationRecord {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
+func (x *RespondRoleHandoffResponse) GetRejectionReason() string {
+	if x != nil {
+		return x.RejectionReason
+	}
+	return ""
+}
+
+type GetReleaseGateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ReleaseGateId string                 `protobuf:"bytes,1,opt,name=release_gate_id,json=releaseGateId,proto3" json:"release_gate_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReleaseGateRequest) Reset() {
+	*x = GetReleaseGateRequest{}
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReleaseGateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReleaseGateRequest) ProtoMessage() {}
+
+func (x *GetReleaseGateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReleaseGateRequest.ProtoReflect.Descriptor instead.
+func (*GetReleaseGateRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetReleaseGateRequest) GetReleaseGateId() string {
+	if x != nil {
+		return x.ReleaseGateId
+	}
+	return ""
+}
+
+type GetReleaseGateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ReleaseGate   *ReleaseGate           `protobuf:"bytes,1,opt,name=release_gate,json=releaseGate,proto3" json:"release_gate,omitempty"`
+	Record        *CoordinationRecord    `protobuf:"bytes,2,opt,name=record,proto3" json:"record,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReleaseGateResponse) Reset() {
+	*x = GetReleaseGateResponse{}
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReleaseGateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReleaseGateResponse) ProtoMessage() {}
+
+func (x *GetReleaseGateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_coordination_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReleaseGateResponse.ProtoReflect.Descriptor instead.
+func (*GetReleaseGateResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *GetReleaseGateResponse) GetReleaseGate() *ReleaseGate {
+	if x != nil {
+		return x.ReleaseGate
+	}
+	return nil
+}
+
+func (x *GetReleaseGateResponse) GetRecord() *CoordinationRecord {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
 var File_nekode_daemon_v1_coordination_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
@@ -1961,7 +2233,7 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\ttag_names\x18\n" +
 	" \x03(\tR\btagNames\x12!\n" +
 	"\fartifact_ids\x18\v \x03(\tR\vartifactIds\x12.\n" +
-	"\x13submitted_time_unix\x18\f \x01(\x03R\x11submittedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xec\x02\n" +
+	"\x13submitted_time_unix\x18\f \x01(\x03R\x11submittedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\x97\x04\n" +
 	"\vReleaseGate\x12&\n" +
 	"\x0frelease_gate_id\x18\x01 \x01(\tR\rreleaseGateId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
@@ -1973,7 +2245,11 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x06passed\x18\b \x01(\bR\x06passed\x12#\n" +
 	"\rwaiver_reason\x18\t \x01(\tR\fwaiverReason\x12*\n" +
 	"\x11updated_time_unix\x18\n" +
-	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xa7\x04\n" +
+	" \x01(\x03R\x0fupdatedTimeUnix\x12'\n" +
+	"\x0frelease_version\x18\v \x01(\tR\x0ereleaseVersion\x12/\n" +
+	"\x13release_environment\x18\f \x01(\tR\x12releaseEnvironment\x12,\n" +
+	"\x12released_time_unix\x18\r \x01(\x03R\x10releasedTimeUnix\x12!\n" +
+	"\frelease_note\x18\x0e \x01(\tR\vreleaseNoteJ\x06\b\xe8\a\x10\xd0\x0f\"\xa7\x04\n" +
 	"\vRoleHandoff\x12\x1d\n" +
 	"\n" +
 	"handoff_id\x18\x01 \x01(\tR\thandoffId\x12\x16\n" +
@@ -2001,7 +2277,7 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x16proposed_deadline_unix\x18\x05 \x01(\x03R\x14proposedDeadlineUnix\x12%\n" +
 	"\x0eincluded_scope\x18\x06 \x03(\tR\rincludedScope\x12%\n" +
 	"\x0edeferred_scope\x18\a \x03(\tR\rdeferredScope\x12*\n" +
-	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xbb\x04\n" +
+	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\x86\x05\n" +
 	"\x13DeadlineNegotiation\x12%\n" +
 	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
@@ -2015,7 +2291,10 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x11decided_time_unix\x18\n" +
 	" \x01(\x03R\x0fdecidedTimeUnix\x12Y\n" +
 	"\x11counter_proposals\x18\v \x03(\v2,.nekode.daemon.v1.NegotiationCounterProposalR\x10counterProposals\x12?\n" +
-	"\x1caccepted_counter_proposal_id\x18\f \x01(\tR\x19acceptedCounterProposalIdJ\x06\b\xe8\a\x10\xd0\x0f\"\x98\x04\n" +
+	"\x1caccepted_counter_proposal_id\x18\f \x01(\tR\x19acceptedCounterProposalId\x12*\n" +
+	"\x11expires_time_unix\x18\r \x01(\x03R\x0fexpiresTimeUnix\x12\x1d\n" +
+	"\n" +
+	"max_rounds\x18\x0e \x01(\rR\tmaxRoundsJ\x06\b\xe8\a\x10\xd0\x0f\"\xe3\x04\n" +
 	"\x10ScopeNegotiation\x12%\n" +
 	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
@@ -2029,7 +2308,10 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x11decided_time_unix\x18\n" +
 	" \x01(\x03R\x0fdecidedTimeUnix\x12Y\n" +
 	"\x11counter_proposals\x18\v \x03(\v2,.nekode.daemon.v1.NegotiationCounterProposalR\x10counterProposals\x12?\n" +
-	"\x1caccepted_counter_proposal_id\x18\f \x01(\tR\x19acceptedCounterProposalIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xc4\a\n" +
+	"\x1caccepted_counter_proposal_id\x18\f \x01(\tR\x19acceptedCounterProposalId\x12*\n" +
+	"\x11expires_time_unix\x18\r \x01(\x03R\x0fexpiresTimeUnix\x12\x1d\n" +
+	"\n" +
+	"max_rounds\x18\x0e \x01(\rR\tmaxRoundsJ\x06\b\xe8\a\x10\xd0\x0f\"\xec\x06\n" +
 	"\x12CoordinationRecord\x12'\n" +
 	"\x0fcoordination_id\x18\x01 \x01(\tR\x0ecoordinationId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x1b\n" +
@@ -2038,12 +2320,7 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x0eactor_agent_id\x18\x05 \x01(\tR\factorAgentId\x12\"\n" +
 	"\ractor_user_id\x18\x06 \x01(\tR\vactorUserId\x12\x12\n" +
 	"\x04kind\x18\a \x01(\tR\x04kind\x12*\n" +
-	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnix\x12\x1d\n" +
-	"\n" +
-	"request_id\x18\t \x01(\tR\trequestId\x12'\n" +
-	"\x0fidempotency_key\x18\n" +
-	" \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\v \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x129\n" +
+	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnix\x129\n" +
 	"\twork_plan\x18\x14 \x01(\v2\x1a.nekode.daemon.v1.WorkPlanH\x00R\bworkPlan\x12K\n" +
 	"\x0fprogress_update\x18\x15 \x01(\v2 .nekode.daemon.v1.ProgressUpdateH\x00R\x0eprogressUpdate\x12W\n" +
 	"\x13acceptance_evidence\x18\x16 \x01(\v2$.nekode.daemon.v1.AcceptanceEvidenceH\x00R\x12acceptanceEvidence\x12B\n" +
@@ -2051,7 +2328,8 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\frole_handoff\x18\x18 \x01(\v2\x1d.nekode.daemon.v1.RoleHandoffH\x00R\vroleHandoff\x12Z\n" +
 	"\x14deadline_negotiation\x18\x19 \x01(\v2%.nekode.daemon.v1.DeadlineNegotiationH\x00R\x13deadlineNegotiation\x12Q\n" +
 	"\x11scope_negotiation\x18\x1a \x01(\v2\".nekode.daemon.v1.ScopeNegotiationH\x00R\x10scopeNegotiationB\t\n" +
-	"\apayloadJ\x06\b\xe8\a\x10\xd0\x0f\"\xe4\x01\n" +
+	"\apayloadJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\t\x10\fR\n" +
+	"request_idR\x0fidempotency_keyR\acontext\"\xe4\x01\n" +
 	" PublishCoordinationRecordRequest\x12<\n" +
 	"\x06record\x18\x01 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\x12\x1d\n" +
 	"\n" +
@@ -2060,21 +2338,19 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"}\n" +
 	"!PublishCoordinationRecordResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12<\n" +
-	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\xf7\x01\n" +
+	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\xea\x01\n" +
 	"\x1eListCoordinationRecordsRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x12\n" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x12$\n" +
 	"\x0eactor_agent_id\x18\x04 \x01(\tR\factorAgentId\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\rR\x05limit\x125\n" +
-	"\x06cursor\x18\x06 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x1d\n" +
-	"\n" +
-	"page_token\x18\a \x01(\tR\tpageToken\"\xc9\x01\n" +
+	"\x06cursor\x18\x06 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursorJ\x04\b\a\x10\bR\n" +
+	"page_token\"\xb8\x01\n" +
 	"\x1fListCoordinationRecordsResponse\x12>\n" +
 	"\arecords\x18\x01 \x03(\v2$.nekode.daemon.v1.CoordinationRecordR\arecords\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\x12&\n" +
-	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xd1\x02\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xd1\x02\n" +
 	" CounterProposeNegotiationRequest\x12%\n" +
 	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12)\n" +
 	"\x10negotiation_kind\x18\x02 \x01(\tR\x0fnegotiationKind\x12W\n" +
@@ -2084,7 +2360,26 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x06 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"a\n" +
 	"!CounterProposeNegotiationResponse\x12<\n" +
-	"\x06record\x18\x01 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06recordB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x06record\x18\x01 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\xaf\x02\n" +
+	"\x19RespondRoleHandoffRequest\x12\x1d\n" +
+	"\n" +
+	"handoff_id\x18\x01 \x01(\tR\thandoffId\x12\x1a\n" +
+	"\bresponse\x18\x02 \x01(\tR\bresponse\x12.\n" +
+	"\x13responding_agent_id\x18\x03 \x01(\tR\x11respondingAgentId\x12#\n" +
+	"\rresponse_note\x18\x04 \x01(\tR\fresponseNote\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x05 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"\xa1\x01\n" +
+	"\x1aRespondRoleHandoffResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12<\n" +
+	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\x12)\n" +
+	"\x10rejection_reason\x18\x03 \x01(\tR\x0frejectionReason\"N\n" +
+	"\x15GetReleaseGateRequest\x12&\n" +
+	"\x0frelease_gate_id\x18\x01 \x01(\tR\rreleaseGateIdJ\x04\b\x02\x10\x03R\atask_id\"\x98\x01\n" +
+	"\x16GetReleaseGateResponse\x12@\n" +
+	"\frelease_gate\x18\x01 \x01(\v2\x1d.nekode.daemon.v1.ReleaseGateR\vreleaseGate\x12<\n" +
+	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06recordB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_coordination_proto_rawDescOnce sync.Once
@@ -2098,7 +2393,7 @@ func file_nekode_daemon_v1_coordination_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_coordination_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_coordination_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_nekode_daemon_v1_coordination_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_nekode_daemon_v1_coordination_proto_goTypes = []any{
 	(*WorkPlanItem)(nil),                      // 0: nekode.daemon.v1.WorkPlanItem
 	(*WorkPlan)(nil),                          // 1: nekode.daemon.v1.WorkPlan
@@ -2117,8 +2412,12 @@ var file_nekode_daemon_v1_coordination_proto_goTypes = []any{
 	(*ListCoordinationRecordsResponse)(nil),   // 14: nekode.daemon.v1.ListCoordinationRecordsResponse
 	(*CounterProposeNegotiationRequest)(nil),  // 15: nekode.daemon.v1.CounterProposeNegotiationRequest
 	(*CounterProposeNegotiationResponse)(nil), // 16: nekode.daemon.v1.CounterProposeNegotiationResponse
-	(*RequestContext)(nil),                    // 17: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),                       // 18: nekode.daemon.v1.EventCursor
+	(*RespondRoleHandoffRequest)(nil),         // 17: nekode.daemon.v1.RespondRoleHandoffRequest
+	(*RespondRoleHandoffResponse)(nil),        // 18: nekode.daemon.v1.RespondRoleHandoffResponse
+	(*GetReleaseGateRequest)(nil),             // 19: nekode.daemon.v1.GetReleaseGateRequest
+	(*GetReleaseGateResponse)(nil),            // 20: nekode.daemon.v1.GetReleaseGateResponse
+	(*RequestContext)(nil),                    // 21: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                       // 22: nekode.daemon.v1.EventCursor
 }
 var file_nekode_daemon_v1_coordination_proto_depIdxs = []int32{
 	0,  // 0: nekode.daemon.v1.WorkPlan.items:type_name -> nekode.daemon.v1.WorkPlanItem
@@ -2126,28 +2425,31 @@ var file_nekode_daemon_v1_coordination_proto_depIdxs = []int32{
 	3,  // 2: nekode.daemon.v1.ReleaseGate.results:type_name -> nekode.daemon.v1.VerificationResult
 	7,  // 3: nekode.daemon.v1.DeadlineNegotiation.counter_proposals:type_name -> nekode.daemon.v1.NegotiationCounterProposal
 	7,  // 4: nekode.daemon.v1.ScopeNegotiation.counter_proposals:type_name -> nekode.daemon.v1.NegotiationCounterProposal
-	17, // 5: nekode.daemon.v1.CoordinationRecord.context:type_name -> nekode.daemon.v1.RequestContext
-	1,  // 6: nekode.daemon.v1.CoordinationRecord.work_plan:type_name -> nekode.daemon.v1.WorkPlan
-	2,  // 7: nekode.daemon.v1.CoordinationRecord.progress_update:type_name -> nekode.daemon.v1.ProgressUpdate
-	4,  // 8: nekode.daemon.v1.CoordinationRecord.acceptance_evidence:type_name -> nekode.daemon.v1.AcceptanceEvidence
-	5,  // 9: nekode.daemon.v1.CoordinationRecord.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
-	6,  // 10: nekode.daemon.v1.CoordinationRecord.role_handoff:type_name -> nekode.daemon.v1.RoleHandoff
-	8,  // 11: nekode.daemon.v1.CoordinationRecord.deadline_negotiation:type_name -> nekode.daemon.v1.DeadlineNegotiation
-	9,  // 12: nekode.daemon.v1.CoordinationRecord.scope_negotiation:type_name -> nekode.daemon.v1.ScopeNegotiation
-	10, // 13: nekode.daemon.v1.PublishCoordinationRecordRequest.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	17, // 14: nekode.daemon.v1.PublishCoordinationRecordRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	10, // 15: nekode.daemon.v1.PublishCoordinationRecordResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	18, // 16: nekode.daemon.v1.ListCoordinationRecordsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	10, // 17: nekode.daemon.v1.ListCoordinationRecordsResponse.records:type_name -> nekode.daemon.v1.CoordinationRecord
-	18, // 18: nekode.daemon.v1.ListCoordinationRecordsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	7,  // 19: nekode.daemon.v1.CounterProposeNegotiationRequest.counter_proposal:type_name -> nekode.daemon.v1.NegotiationCounterProposal
-	17, // 20: nekode.daemon.v1.CounterProposeNegotiationRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	10, // 21: nekode.daemon.v1.CounterProposeNegotiationResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	1,  // 5: nekode.daemon.v1.CoordinationRecord.work_plan:type_name -> nekode.daemon.v1.WorkPlan
+	2,  // 6: nekode.daemon.v1.CoordinationRecord.progress_update:type_name -> nekode.daemon.v1.ProgressUpdate
+	4,  // 7: nekode.daemon.v1.CoordinationRecord.acceptance_evidence:type_name -> nekode.daemon.v1.AcceptanceEvidence
+	5,  // 8: nekode.daemon.v1.CoordinationRecord.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
+	6,  // 9: nekode.daemon.v1.CoordinationRecord.role_handoff:type_name -> nekode.daemon.v1.RoleHandoff
+	8,  // 10: nekode.daemon.v1.CoordinationRecord.deadline_negotiation:type_name -> nekode.daemon.v1.DeadlineNegotiation
+	9,  // 11: nekode.daemon.v1.CoordinationRecord.scope_negotiation:type_name -> nekode.daemon.v1.ScopeNegotiation
+	10, // 12: nekode.daemon.v1.PublishCoordinationRecordRequest.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	21, // 13: nekode.daemon.v1.PublishCoordinationRecordRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	10, // 14: nekode.daemon.v1.PublishCoordinationRecordResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	22, // 15: nekode.daemon.v1.ListCoordinationRecordsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	10, // 16: nekode.daemon.v1.ListCoordinationRecordsResponse.records:type_name -> nekode.daemon.v1.CoordinationRecord
+	22, // 17: nekode.daemon.v1.ListCoordinationRecordsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	7,  // 18: nekode.daemon.v1.CounterProposeNegotiationRequest.counter_proposal:type_name -> nekode.daemon.v1.NegotiationCounterProposal
+	21, // 19: nekode.daemon.v1.CounterProposeNegotiationRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	10, // 20: nekode.daemon.v1.CounterProposeNegotiationResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	21, // 21: nekode.daemon.v1.RespondRoleHandoffRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	10, // 22: nekode.daemon.v1.RespondRoleHandoffResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	5,  // 23: nekode.daemon.v1.GetReleaseGateResponse.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
+	10, // 24: nekode.daemon.v1.GetReleaseGateResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_coordination_proto_init() }
@@ -2171,7 +2473,7 @@ func file_nekode_daemon_v1_coordination_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_coordination_proto_rawDesc), len(file_nekode_daemon_v1_coordination_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

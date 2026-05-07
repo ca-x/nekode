@@ -36,11 +36,8 @@ type Task struct {
 	AssigneeId      string                 `protobuf:"bytes,11,opt,name=assignee_id,json=assigneeId,proto3" json:"assignee_id,omitempty"`
 	CurrentRunId    string                 `protobuf:"bytes,12,opt,name=current_run_id,json=currentRunId,proto3" json:"current_run_id,omitempty"`
 	// --- graph relationships ---
-	RootTaskId       string   `protobuf:"bytes,13,opt,name=root_task_id,json=rootTaskId,proto3" json:"root_task_id,omitempty"`
-	ParentTaskId     string   `protobuf:"bytes,14,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
-	SubtaskIds       []string `protobuf:"bytes,15,rep,name=subtask_ids,json=subtaskIds,proto3" json:"subtask_ids,omitempty"`
-	DependsOnTaskIds []string `protobuf:"bytes,16,rep,name=depends_on_task_ids,json=dependsOnTaskIds,proto3" json:"depends_on_task_ids,omitempty"`
-	BlockedByTaskIds []string `protobuf:"bytes,17,rep,name=blocked_by_task_ids,json=blockedByTaskIds,proto3" json:"blocked_by_task_ids,omitempty"`
+	RootTaskId   string `protobuf:"bytes,13,opt,name=root_task_id,json=rootTaskId,proto3" json:"root_task_id,omitempty"`
+	ParentTaskId string `protobuf:"bytes,14,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
 	// --- provenance ---
 	Source           string `protobuf:"bytes,18,opt,name=source,proto3" json:"source,omitempty"` // human | agent | server_rule | scheduler | import
 	CreatedByAgentId string `protobuf:"bytes,19,opt,name=created_by_agent_id,json=createdByAgentId,proto3" json:"created_by_agent_id,omitempty"`
@@ -61,10 +58,8 @@ type Task struct {
 	ReleaseGateId         string `protobuf:"bytes,30,opt,name=release_gate_id,json=releaseGateId,proto3" json:"release_gate_id,omitempty"`
 	AssignedTarget        string `protobuf:"bytes,31,opt,name=assigned_target,json=assignedTarget,proto3" json:"assigned_target,omitempty"`
 	DeadlineTimeUnix      int64  `protobuf:"varint,32,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3" json:"deadline_time_unix,omitempty"`
-	ReleasedTimeUnix      int64  `protobuf:"varint,33,opt,name=released_time_unix,json=releasedTimeUnix,proto3" json:"released_time_unix,omitempty"`
-	ReleaseVersion        string `protobuf:"bytes,34,opt,name=release_version,json=releaseVersion,proto3" json:"release_version,omitempty"`
-	ReleaseEnvironment    string `protobuf:"bytes,35,opt,name=release_environment,json=releaseEnvironment,proto3" json:"release_environment,omitempty"`
-	ReleaseState          string `protobuf:"bytes,36,opt,name=release_state,json=releaseState,proto3" json:"release_state,omitempty"` // pending | released | deployed | rolled_back | failed
+	CreatedTimeUnix       int64  `protobuf:"varint,37,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	UpdatedTimeUnix       int64  `protobuf:"varint,38,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -197,27 +192,6 @@ func (x *Task) GetParentTaskId() string {
 	return ""
 }
 
-func (x *Task) GetSubtaskIds() []string {
-	if x != nil {
-		return x.SubtaskIds
-	}
-	return nil
-}
-
-func (x *Task) GetDependsOnTaskIds() []string {
-	if x != nil {
-		return x.DependsOnTaskIds
-	}
-	return nil
-}
-
-func (x *Task) GetBlockedByTaskIds() []string {
-	if x != nil {
-		return x.BlockedByTaskIds
-	}
-	return nil
-}
-
 func (x *Task) GetSource() string {
 	if x != nil {
 		return x.Source
@@ -323,45 +297,37 @@ func (x *Task) GetDeadlineTimeUnix() int64 {
 	return 0
 }
 
-func (x *Task) GetReleasedTimeUnix() int64 {
+func (x *Task) GetCreatedTimeUnix() int64 {
 	if x != nil {
-		return x.ReleasedTimeUnix
+		return x.CreatedTimeUnix
 	}
 	return 0
 }
 
-func (x *Task) GetReleaseVersion() string {
+func (x *Task) GetUpdatedTimeUnix() int64 {
 	if x != nil {
-		return x.ReleaseVersion
+		return x.UpdatedTimeUnix
 	}
-	return ""
-}
-
-func (x *Task) GetReleaseEnvironment() string {
-	if x != nil {
-		return x.ReleaseEnvironment
-	}
-	return ""
-}
-
-func (x *Task) GetReleaseState() string {
-	if x != nil {
-		return x.ReleaseState
-	}
-	return ""
+	return 0
 }
 
 type CreateCollaborationTaskRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Target          string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Summary         string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
-	AgentId         string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	CreatedByUserId string                 `protobuf:"bytes,4,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
-	RequestId       string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey  string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context         *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Target                string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	Summary               string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
+	AgentId               string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	CreatedByUserId       string                 `protobuf:"bytes,4,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
+	RequestId             string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey        string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context               *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
+	ParentTaskId          *string                `protobuf:"bytes,8,opt,name=parent_task_id,json=parentTaskId,proto3,oneof" json:"parent_task_id,omitempty"`
+	ClaimPolicy           string                 `protobuf:"bytes,9,opt,name=claim_policy,json=claimPolicy,proto3" json:"claim_policy,omitempty"`
+	RequiredCapabilities  []string               `protobuf:"bytes,10,rep,name=required_capabilities,json=requiredCapabilities,proto3" json:"required_capabilities,omitempty"`
+	DeadlineTimeUnix      int64                  `protobuf:"varint,11,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3" json:"deadline_time_unix,omitempty"`
+	AssignedTarget        string                 `protobuf:"bytes,12,opt,name=assigned_target,json=assignedTarget,proto3" json:"assigned_target,omitempty"`
+	ClaimConflictBehavior string                 `protobuf:"bytes,13,opt,name=claim_conflict_behavior,json=claimConflictBehavior,proto3" json:"claim_conflict_behavior,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateCollaborationTaskRequest) Reset() {
@@ -443,6 +409,48 @@ func (x *CreateCollaborationTaskRequest) GetContext() *RequestContext {
 	return nil
 }
 
+func (x *CreateCollaborationTaskRequest) GetParentTaskId() string {
+	if x != nil && x.ParentTaskId != nil {
+		return *x.ParentTaskId
+	}
+	return ""
+}
+
+func (x *CreateCollaborationTaskRequest) GetClaimPolicy() string {
+	if x != nil {
+		return x.ClaimPolicy
+	}
+	return ""
+}
+
+func (x *CreateCollaborationTaskRequest) GetRequiredCapabilities() []string {
+	if x != nil {
+		return x.RequiredCapabilities
+	}
+	return nil
+}
+
+func (x *CreateCollaborationTaskRequest) GetDeadlineTimeUnix() int64 {
+	if x != nil {
+		return x.DeadlineTimeUnix
+	}
+	return 0
+}
+
+func (x *CreateCollaborationTaskRequest) GetAssignedTarget() string {
+	if x != nil {
+		return x.AssignedTarget
+	}
+	return ""
+}
+
+func (x *CreateCollaborationTaskRequest) GetClaimConflictBehavior() string {
+	if x != nil {
+		return x.ClaimConflictBehavior
+	}
+	return ""
+}
+
 type CreateCollaborationTaskResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Task          *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
@@ -487,18 +495,293 @@ func (x *CreateCollaborationTaskResponse) GetTask() *Task {
 	return nil
 }
 
+type GetTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskRequest) Reset() {
+	*x = GetTaskRequest{}
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskRequest) ProtoMessage() {}
+
+func (x *GetTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskRequest.ProtoReflect.Descriptor instead.
+func (*GetTaskRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetTaskRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+type GetTaskResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Task          *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskResponse) Reset() {
+	*x = GetTaskResponse{}
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskResponse) ProtoMessage() {}
+
+func (x *GetTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskResponse.ProtoReflect.Descriptor instead.
+func (*GetTaskResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetTaskResponse) GetTask() *Task {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+type UpdateTaskRequest struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	TaskId                  string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Summary                 *string                `protobuf:"bytes,2,opt,name=summary,proto3,oneof" json:"summary,omitempty"`
+	State                   *string                `protobuf:"bytes,3,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	DeadlineTimeUnix        *int64                 `protobuf:"varint,4,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3,oneof" json:"deadline_time_unix,omitempty"`
+	BoardColumn             *string                `protobuf:"bytes,5,opt,name=board_column,json=boardColumn,proto3,oneof" json:"board_column,omitempty"`
+	AssignedTarget          *string                `protobuf:"bytes,6,opt,name=assigned_target,json=assignedTarget,proto3,oneof" json:"assigned_target,omitempty"`
+	RequiredCapabilities    []string               `protobuf:"bytes,7,rep,name=required_capabilities,json=requiredCapabilities,proto3" json:"required_capabilities,omitempty"`
+	RequestId               string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey          string                 `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context                 *RequestContext        `protobuf:"bytes,10,opt,name=context,proto3" json:"context,omitempty"`
+	ExpectedUpdatedTimeUnix int64                  `protobuf:"varint,11,opt,name=expected_updated_time_unix,json=expectedUpdatedTimeUnix,proto3" json:"expected_updated_time_unix,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *UpdateTaskRequest) Reset() {
+	*x = UpdateTaskRequest{}
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTaskRequest) ProtoMessage() {}
+
+func (x *UpdateTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTaskRequest.ProtoReflect.Descriptor instead.
+func (*UpdateTaskRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *UpdateTaskRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetSummary() string {
+	if x != nil && x.Summary != nil {
+		return *x.Summary
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetState() string {
+	if x != nil && x.State != nil {
+		return *x.State
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetDeadlineTimeUnix() int64 {
+	if x != nil && x.DeadlineTimeUnix != nil {
+		return *x.DeadlineTimeUnix
+	}
+	return 0
+}
+
+func (x *UpdateTaskRequest) GetBoardColumn() string {
+	if x != nil && x.BoardColumn != nil {
+		return *x.BoardColumn
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetAssignedTarget() string {
+	if x != nil && x.AssignedTarget != nil {
+		return *x.AssignedTarget
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetRequiredCapabilities() []string {
+	if x != nil {
+		return x.RequiredCapabilities
+	}
+	return nil
+}
+
+func (x *UpdateTaskRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UpdateTaskRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *UpdateTaskRequest) GetExpectedUpdatedTimeUnix() int64 {
+	if x != nil {
+		return x.ExpectedUpdatedTimeUnix
+	}
+	return 0
+}
+
+type UpdateTaskResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Accepted        bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Task            *Task                  `protobuf:"bytes,2,opt,name=task,proto3" json:"task,omitempty"`
+	RejectionReason string                 `protobuf:"bytes,3,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UpdateTaskResponse) Reset() {
+	*x = UpdateTaskResponse{}
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateTaskResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateTaskResponse) ProtoMessage() {}
+
+func (x *UpdateTaskResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateTaskResponse.ProtoReflect.Descriptor instead.
+func (*UpdateTaskResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateTaskResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *UpdateTaskResponse) GetTask() *Task {
+	if x != nil {
+		return x.Task
+	}
+	return nil
+}
+
+func (x *UpdateTaskResponse) GetRejectionReason() string {
+	if x != nil {
+		return x.RejectionReason
+	}
+	return ""
+}
+
 type ListCollaborationTasksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Limit         uint32                 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	States        []string               `protobuf:"bytes,5,rep,name=states,proto3" json:"states,omitempty"`
+	BoardColumn   string                 `protobuf:"bytes,6,opt,name=board_column,json=boardColumn,proto3" json:"board_column,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCollaborationTasksRequest) Reset() {
 	*x = ListCollaborationTasksRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[3]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +793,7 @@ func (x *ListCollaborationTasksRequest) String() string {
 func (*ListCollaborationTasksRequest) ProtoMessage() {}
 
 func (x *ListCollaborationTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[3]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,7 +806,7 @@ func (x *ListCollaborationTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCollaborationTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListCollaborationTasksRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{3}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListCollaborationTasksRequest) GetTarget() string {
@@ -547,16 +830,38 @@ func (x *ListCollaborationTasksRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListCollaborationTasksRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+func (x *ListCollaborationTasksRequest) GetStates() []string {
+	if x != nil {
+		return x.States
+	}
+	return nil
+}
+
+func (x *ListCollaborationTasksRequest) GetBoardColumn() string {
+	if x != nil {
+		return x.BoardColumn
+	}
+	return ""
+}
+
 type ListCollaborationTasksResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tasks         []*Task                `protobuf:"bytes,1,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListCollaborationTasksResponse) Reset() {
 	*x = ListCollaborationTasksResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -568,7 +873,7 @@ func (x *ListCollaborationTasksResponse) String() string {
 func (*ListCollaborationTasksResponse) ProtoMessage() {}
 
 func (x *ListCollaborationTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -581,12 +886,19 @@ func (x *ListCollaborationTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCollaborationTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListCollaborationTasksResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{4}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListCollaborationTasksResponse) GetTasks() []*Task {
 	if x != nil {
 		return x.Tasks
+	}
+	return nil
+}
+
+func (x *ListCollaborationTasksResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
 	}
 	return nil
 }
@@ -602,7 +914,7 @@ type TaskBoardColumn struct {
 
 func (x *TaskBoardColumn) Reset() {
 	*x = TaskBoardColumn{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +926,7 @@ func (x *TaskBoardColumn) String() string {
 func (*TaskBoardColumn) ProtoMessage() {}
 
 func (x *TaskBoardColumn) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +939,7 @@ func (x *TaskBoardColumn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskBoardColumn.ProtoReflect.Descriptor instead.
 func (*TaskBoardColumn) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{5}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TaskBoardColumn) GetColumn() string {
@@ -654,7 +966,7 @@ func (x *TaskBoardColumn) GetTotalCount() int64 {
 type TaskBoardSnapshot struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Columns       []*TaskBoardColumn     `protobuf:"bytes,1,rep,name=columns,proto3" json:"columns,omitempty"`
-	Counts        map[string]int64       `protobuf:"bytes,2,rep,name=counts,proto3" json:"counts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	ColumnCounts  map[string]int64       `protobuf:"bytes,2,rep,name=column_counts,json=columnCounts,proto3" json:"column_counts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	NextCursor    *EventCursor           `protobuf:"bytes,3,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -662,7 +974,7 @@ type TaskBoardSnapshot struct {
 
 func (x *TaskBoardSnapshot) Reset() {
 	*x = TaskBoardSnapshot{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -674,7 +986,7 @@ func (x *TaskBoardSnapshot) String() string {
 func (*TaskBoardSnapshot) ProtoMessage() {}
 
 func (x *TaskBoardSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -687,7 +999,7 @@ func (x *TaskBoardSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskBoardSnapshot.ProtoReflect.Descriptor instead.
 func (*TaskBoardSnapshot) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{6}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *TaskBoardSnapshot) GetColumns() []*TaskBoardColumn {
@@ -697,9 +1009,9 @@ func (x *TaskBoardSnapshot) GetColumns() []*TaskBoardColumn {
 	return nil
 }
 
-func (x *TaskBoardSnapshot) GetCounts() map[string]int64 {
+func (x *TaskBoardSnapshot) GetColumnCounts() map[string]int64 {
 	if x != nil {
-		return x.Counts
+		return x.ColumnCounts
 	}
 	return nil
 }
@@ -721,14 +1033,13 @@ type ListTaskBoardRequest struct {
 	Limit            uint32                 `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor           *EventCursor           `protobuf:"bytes,7,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	RequestId        string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	PageToken        string                 `protobuf:"bytes,9,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ListTaskBoardRequest) Reset() {
 	*x = ListTaskBoardRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +1051,7 @@ func (x *ListTaskBoardRequest) String() string {
 func (*ListTaskBoardRequest) ProtoMessage() {}
 
 func (x *ListTaskBoardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +1064,7 @@ func (x *ListTaskBoardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskBoardRequest.ProtoReflect.Descriptor instead.
 func (*ListTaskBoardRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{7}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListTaskBoardRequest) GetTarget() string {
@@ -812,13 +1123,6 @@ func (x *ListTaskBoardRequest) GetRequestId() string {
 	return ""
 }
 
-func (x *ListTaskBoardRequest) GetPageToken() string {
-	if x != nil {
-		return x.PageToken
-	}
-	return ""
-}
-
 type ListTaskBoardResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Board         *TaskBoardSnapshot     `protobuf:"bytes,1,opt,name=board,proto3" json:"board,omitempty"`
@@ -828,7 +1132,7 @@ type ListTaskBoardResponse struct {
 
 func (x *ListTaskBoardResponse) Reset() {
 	*x = ListTaskBoardResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[8]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -840,7 +1144,7 @@ func (x *ListTaskBoardResponse) String() string {
 func (*ListTaskBoardResponse) ProtoMessage() {}
 
 func (x *ListTaskBoardResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[8]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -853,7 +1157,7 @@ func (x *ListTaskBoardResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskBoardResponse.ProtoReflect.Descriptor instead.
 func (*ListTaskBoardResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{8}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ListTaskBoardResponse) GetBoard() *TaskBoardSnapshot {
@@ -871,7 +1175,7 @@ type ClaimCollaborationTaskRequest struct {
 	ExpectedAssigneeId string                 `protobuf:"bytes,4,opt,name=expected_assignee_id,json=expectedAssigneeId,proto3" json:"expected_assignee_id,omitempty"`
 	SilentOnConflict   bool                   `protobuf:"varint,5,opt,name=silent_on_conflict,json=silentOnConflict,proto3" json:"silent_on_conflict,omitempty"`
 	ClaimMode          string                 `protobuf:"bytes,6,opt,name=claim_mode,json=claimMode,proto3" json:"claim_mode,omitempty"` // owner | reviewer | assistant
-	LeaseId            string                 `protobuf:"bytes,7,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	ExpectedLeaseId    string                 `protobuf:"bytes,7,opt,name=expected_lease_id,json=expectedLeaseId,proto3" json:"expected_lease_id,omitempty"`
 	IdempotencyKey     string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	Context            *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
 	LeaseTtlSeconds    uint32                 `protobuf:"varint,10,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
@@ -881,7 +1185,7 @@ type ClaimCollaborationTaskRequest struct {
 
 func (x *ClaimCollaborationTaskRequest) Reset() {
 	*x = ClaimCollaborationTaskRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[9]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -893,7 +1197,7 @@ func (x *ClaimCollaborationTaskRequest) String() string {
 func (*ClaimCollaborationTaskRequest) ProtoMessage() {}
 
 func (x *ClaimCollaborationTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[9]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -906,7 +1210,7 @@ func (x *ClaimCollaborationTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimCollaborationTaskRequest.ProtoReflect.Descriptor instead.
 func (*ClaimCollaborationTaskRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{9}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ClaimCollaborationTaskRequest) GetTaskId() string {
@@ -951,9 +1255,9 @@ func (x *ClaimCollaborationTaskRequest) GetClaimMode() string {
 	return ""
 }
 
-func (x *ClaimCollaborationTaskRequest) GetLeaseId() string {
+func (x *ClaimCollaborationTaskRequest) GetExpectedLeaseId() string {
 	if x != nil {
-		return x.LeaseId
+		return x.ExpectedLeaseId
 	}
 	return ""
 }
@@ -980,20 +1284,22 @@ func (x *ClaimCollaborationTaskRequest) GetLeaseTtlSeconds() uint32 {
 }
 
 type ClaimCollaborationTaskResponse struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Task              *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
-	Accepted          bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
-	ConflictReason    string                 `protobuf:"bytes,3,opt,name=conflict_reason,json=conflictReason,proto3" json:"conflict_reason,omitempty"`
-	CurrentAssigneeId string                 `protobuf:"bytes,4,opt,name=current_assignee_id,json=currentAssigneeId,proto3" json:"current_assignee_id,omitempty"`
-	ConflictPolicy    string                 `protobuf:"bytes,5,opt,name=conflict_policy,json=conflictPolicy,proto3" json:"conflict_policy,omitempty"`
-	ClaimLease        *Lease                 `protobuf:"bytes,6,opt,name=claim_lease,json=claimLease,proto3" json:"claim_lease,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	Task                    *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	Accepted                bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	ConflictReason          string                 `protobuf:"bytes,3,opt,name=conflict_reason,json=conflictReason,proto3" json:"conflict_reason,omitempty"`
+	CurrentAssigneeId       string                 `protobuf:"bytes,4,opt,name=current_assignee_id,json=currentAssigneeId,proto3" json:"current_assignee_id,omitempty"`
+	ConflictPolicy          string                 `protobuf:"bytes,5,opt,name=conflict_policy,json=conflictPolicy,proto3" json:"conflict_policy,omitempty"`
+	ClaimLease              *Lease                 `protobuf:"bytes,6,opt,name=claim_lease,json=claimLease,proto3" json:"claim_lease,omitempty"`
+	CurrentLeaseId          string                 `protobuf:"bytes,7,opt,name=current_lease_id,json=currentLeaseId,proto3" json:"current_lease_id,omitempty"`
+	CurrentLeaseExpiresUnix int64                  `protobuf:"varint,8,opt,name=current_lease_expires_unix,json=currentLeaseExpiresUnix,proto3" json:"current_lease_expires_unix,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ClaimCollaborationTaskResponse) Reset() {
 	*x = ClaimCollaborationTaskResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[10]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1005,7 +1311,7 @@ func (x *ClaimCollaborationTaskResponse) String() string {
 func (*ClaimCollaborationTaskResponse) ProtoMessage() {}
 
 func (x *ClaimCollaborationTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[10]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1018,7 +1324,7 @@ func (x *ClaimCollaborationTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimCollaborationTaskResponse.ProtoReflect.Descriptor instead.
 func (*ClaimCollaborationTaskResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{10}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ClaimCollaborationTaskResponse) GetTask() *Task {
@@ -1063,18 +1369,32 @@ func (x *ClaimCollaborationTaskResponse) GetClaimLease() *Lease {
 	return nil
 }
 
+func (x *ClaimCollaborationTaskResponse) GetCurrentLeaseId() string {
+	if x != nil {
+		return x.CurrentLeaseId
+	}
+	return ""
+}
+
+func (x *ClaimCollaborationTaskResponse) GetCurrentLeaseExpiresUnix() int64 {
+	if x != nil {
+		return x.CurrentLeaseExpiresUnix
+	}
+	return 0
+}
+
 type TaskEdge struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FromTaskId    string                 `protobuf:"bytes,1,opt,name=from_task_id,json=fromTaskId,proto3" json:"from_task_id,omitempty"`
 	ToTaskId      string                 `protobuf:"bytes,2,opt,name=to_task_id,json=toTaskId,proto3" json:"to_task_id,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"` // depends_on | blocks | parent_child
+	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"` // depends_on | blocks | parent_child | duplicate_of
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TaskEdge) Reset() {
 	*x = TaskEdge{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[11]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1086,7 +1406,7 @@ func (x *TaskEdge) String() string {
 func (*TaskEdge) ProtoMessage() {}
 
 func (x *TaskEdge) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[11]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1099,7 +1419,7 @@ func (x *TaskEdge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskEdge.ProtoReflect.Descriptor instead.
 func (*TaskEdge) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{11}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TaskEdge) GetFromTaskId() string {
@@ -1135,7 +1455,7 @@ type TaskGraphSnapshot struct {
 
 func (x *TaskGraphSnapshot) Reset() {
 	*x = TaskGraphSnapshot{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[12]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1147,7 +1467,7 @@ func (x *TaskGraphSnapshot) String() string {
 func (*TaskGraphSnapshot) ProtoMessage() {}
 
 func (x *TaskGraphSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[12]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1160,7 +1480,7 @@ func (x *TaskGraphSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskGraphSnapshot.ProtoReflect.Descriptor instead.
 func (*TaskGraphSnapshot) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{12}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TaskGraphSnapshot) GetRootTaskId() string {
@@ -1207,7 +1527,7 @@ type ProposedSubtask struct {
 
 func (x *ProposedSubtask) Reset() {
 	*x = ProposedSubtask{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[13]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1219,7 +1539,7 @@ func (x *ProposedSubtask) String() string {
 func (*ProposedSubtask) ProtoMessage() {}
 
 func (x *ProposedSubtask) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[13]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1232,7 +1552,7 @@ func (x *ProposedSubtask) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposedSubtask.ProtoReflect.Descriptor instead.
 func (*ProposedSubtask) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{13}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ProposedSubtask) GetClientProposedId() string {
@@ -1292,19 +1612,20 @@ func (x *ProposedSubtask) GetDeadlineTimeUnix() int64 {
 }
 
 type ProposeTaskSplitRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	ParentTaskId   string                 `protobuf:"bytes,1,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
-	ProposedTasks  []*ProposedSubtask     `protobuf:"bytes,2,rep,name=proposed_tasks,json=proposedTasks,proto3" json:"proposed_tasks,omitempty"`
-	RequestId      string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context        *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ParentTaskId       string                 `protobuf:"bytes,1,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
+	ProposedTasks      []*ProposedSubtask     `protobuf:"bytes,2,rep,name=proposed_tasks,json=proposedTasks,proto3" json:"proposed_tasks,omitempty"`
+	RequestId          string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey     string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context            *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	ProposalTtlSeconds uint32                 `protobuf:"varint,6,opt,name=proposal_ttl_seconds,json=proposalTtlSeconds,proto3" json:"proposal_ttl_seconds,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ProposeTaskSplitRequest) Reset() {
 	*x = ProposeTaskSplitRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[14]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1316,7 +1637,7 @@ func (x *ProposeTaskSplitRequest) String() string {
 func (*ProposeTaskSplitRequest) ProtoMessage() {}
 
 func (x *ProposeTaskSplitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[14]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1329,7 +1650,7 @@ func (x *ProposeTaskSplitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeTaskSplitRequest.ProtoReflect.Descriptor instead.
 func (*ProposeTaskSplitRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{14}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ProposeTaskSplitRequest) GetParentTaskId() string {
@@ -1367,6 +1688,13 @@ func (x *ProposeTaskSplitRequest) GetContext() *RequestContext {
 	return nil
 }
 
+func (x *ProposeTaskSplitRequest) GetProposalTtlSeconds() uint32 {
+	if x != nil {
+		return x.ProposalTtlSeconds
+	}
+	return 0
+}
+
 type ProposeTaskSplitResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ProposalId      string                 `protobuf:"bytes,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
@@ -1374,13 +1702,14 @@ type ProposeTaskSplitResponse struct {
 	ProposedTasks   []*Task                `protobuf:"bytes,3,rep,name=proposed_tasks,json=proposedTasks,proto3" json:"proposed_tasks,omitempty"`
 	Accepted        bool                   `protobuf:"varint,4,opt,name=accepted,proto3" json:"accepted,omitempty"`
 	RejectionReason string                 `protobuf:"bytes,5,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
+	ExpiresTimeUnix int64                  `protobuf:"varint,6,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ProposeTaskSplitResponse) Reset() {
 	*x = ProposeTaskSplitResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[15]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1392,7 +1721,7 @@ func (x *ProposeTaskSplitResponse) String() string {
 func (*ProposeTaskSplitResponse) ProtoMessage() {}
 
 func (x *ProposeTaskSplitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[15]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1405,7 +1734,7 @@ func (x *ProposeTaskSplitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeTaskSplitResponse.ProtoReflect.Descriptor instead.
 func (*ProposeTaskSplitResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{15}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ProposeTaskSplitResponse) GetProposalId() string {
@@ -1443,6 +1772,13 @@ func (x *ProposeTaskSplitResponse) GetRejectionReason() string {
 	return ""
 }
 
+func (x *ProposeTaskSplitResponse) GetExpiresTimeUnix() int64 {
+	if x != nil {
+		return x.ExpiresTimeUnix
+	}
+	return 0
+}
+
 type ApplyTaskSplitRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ParentTaskId    string                 `protobuf:"bytes,1,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
@@ -1457,7 +1793,7 @@ type ApplyTaskSplitRequest struct {
 
 func (x *ApplyTaskSplitRequest) Reset() {
 	*x = ApplyTaskSplitRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[16]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1469,7 +1805,7 @@ func (x *ApplyTaskSplitRequest) String() string {
 func (*ApplyTaskSplitRequest) ProtoMessage() {}
 
 func (x *ApplyTaskSplitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[16]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1482,7 +1818,7 @@ func (x *ApplyTaskSplitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyTaskSplitRequest.ProtoReflect.Descriptor instead.
 func (*ApplyTaskSplitRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{16}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ApplyTaskSplitRequest) GetParentTaskId() string {
@@ -1532,13 +1868,15 @@ type ApplyTaskSplitResponse struct {
 	ParentTask      *Task                  `protobuf:"bytes,1,opt,name=parent_task,json=parentTask,proto3" json:"parent_task,omitempty"`
 	CreatedSubtasks []*Task                `protobuf:"bytes,2,rep,name=created_subtasks,json=createdSubtasks,proto3" json:"created_subtasks,omitempty"`
 	NewGraphVersion int64                  `protobuf:"varint,3,opt,name=new_graph_version,json=newGraphVersion,proto3" json:"new_graph_version,omitempty"`
+	Accepted        bool                   `protobuf:"varint,4,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	RejectionReason string                 `protobuf:"bytes,5,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ApplyTaskSplitResponse) Reset() {
 	*x = ApplyTaskSplitResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[17]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1550,7 +1888,7 @@ func (x *ApplyTaskSplitResponse) String() string {
 func (*ApplyTaskSplitResponse) ProtoMessage() {}
 
 func (x *ApplyTaskSplitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[17]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1563,7 +1901,7 @@ func (x *ApplyTaskSplitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyTaskSplitResponse.ProtoReflect.Descriptor instead.
 func (*ApplyTaskSplitResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{17}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ApplyTaskSplitResponse) GetParentTask() *Task {
@@ -1587,6 +1925,140 @@ func (x *ApplyTaskSplitResponse) GetNewGraphVersion() int64 {
 	return 0
 }
 
+func (x *ApplyTaskSplitResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *ApplyTaskSplitResponse) GetRejectionReason() string {
+	if x != nil {
+		return x.RejectionReason
+	}
+	return ""
+}
+
+type CancelTaskSplitProposalRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ParentTaskId   string                 `protobuf:"bytes,1,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
+	ProposalId     string                 `protobuf:"bytes,2,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CancelTaskSplitProposalRequest) Reset() {
+	*x = CancelTaskSplitProposalRequest{}
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelTaskSplitProposalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelTaskSplitProposalRequest) ProtoMessage() {}
+
+func (x *CancelTaskSplitProposalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelTaskSplitProposalRequest.ProtoReflect.Descriptor instead.
+func (*CancelTaskSplitProposalRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CancelTaskSplitProposalRequest) GetParentTaskId() string {
+	if x != nil {
+		return x.ParentTaskId
+	}
+	return ""
+}
+
+func (x *CancelTaskSplitProposalRequest) GetProposalId() string {
+	if x != nil {
+		return x.ProposalId
+	}
+	return ""
+}
+
+func (x *CancelTaskSplitProposalRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *CancelTaskSplitProposalRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *CancelTaskSplitProposalRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type CancelTaskSplitProposalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelTaskSplitProposalResponse) Reset() {
+	*x = CancelTaskSplitProposalResponse{}
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelTaskSplitProposalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelTaskSplitProposalResponse) ProtoMessage() {}
+
+func (x *CancelTaskSplitProposalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelTaskSplitProposalResponse.ProtoReflect.Descriptor instead.
+func (*CancelTaskSplitProposalResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CancelTaskSplitProposalResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
 type CreateTaskGraphRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	RootTask       *Task                  `protobuf:"bytes,1,opt,name=root_task,json=rootTask,proto3" json:"root_task,omitempty"`
@@ -1601,7 +2073,7 @@ type CreateTaskGraphRequest struct {
 
 func (x *CreateTaskGraphRequest) Reset() {
 	*x = CreateTaskGraphRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[18]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1613,7 +2085,7 @@ func (x *CreateTaskGraphRequest) String() string {
 func (*CreateTaskGraphRequest) ProtoMessage() {}
 
 func (x *CreateTaskGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[18]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1626,7 +2098,7 @@ func (x *CreateTaskGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskGraphRequest.ProtoReflect.Descriptor instead.
 func (*CreateTaskGraphRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{18}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CreateTaskGraphRequest) GetRootTask() *Task {
@@ -1680,7 +2152,7 @@ type CreateTaskGraphResponse struct {
 
 func (x *CreateTaskGraphResponse) Reset() {
 	*x = CreateTaskGraphResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[19]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1692,7 +2164,7 @@ func (x *CreateTaskGraphResponse) String() string {
 func (*CreateTaskGraphResponse) ProtoMessage() {}
 
 func (x *CreateTaskGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[19]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1705,7 +2177,7 @@ func (x *CreateTaskGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskGraphResponse.ProtoReflect.Descriptor instead.
 func (*CreateTaskGraphResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{19}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CreateTaskGraphResponse) GetGraph() *TaskGraphSnapshot {
@@ -1725,7 +2197,7 @@ type ListTaskGraphRequest struct {
 
 func (x *ListTaskGraphRequest) Reset() {
 	*x = ListTaskGraphRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[20]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1737,7 +2209,7 @@ func (x *ListTaskGraphRequest) String() string {
 func (*ListTaskGraphRequest) ProtoMessage() {}
 
 func (x *ListTaskGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[20]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1750,7 +2222,7 @@ func (x *ListTaskGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskGraphRequest.ProtoReflect.Descriptor instead.
 func (*ListTaskGraphRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{20}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListTaskGraphRequest) GetRootTaskId() string {
@@ -1776,7 +2248,7 @@ type ListTaskGraphResponse struct {
 
 func (x *ListTaskGraphResponse) Reset() {
 	*x = ListTaskGraphResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[21]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1788,7 +2260,7 @@ func (x *ListTaskGraphResponse) String() string {
 func (*ListTaskGraphResponse) ProtoMessage() {}
 
 func (x *ListTaskGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[21]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1801,7 +2273,7 @@ func (x *ListTaskGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskGraphResponse.ProtoReflect.Descriptor instead.
 func (*ListTaskGraphResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{21}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListTaskGraphResponse) GetGraph() *TaskGraphSnapshot {
@@ -1812,22 +2284,23 @@ func (x *ListTaskGraphResponse) GetGraph() *TaskGraphSnapshot {
 }
 
 type UpdateTaskGraphRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	TaskId             string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	NewAssigneeId      *string                `protobuf:"bytes,2,opt,name=new_assignee_id,json=newAssigneeId,proto3,oneof" json:"new_assignee_id,omitempty"`
-	AddDependencies    []string               `protobuf:"bytes,3,rep,name=add_dependencies,json=addDependencies,proto3" json:"add_dependencies,omitempty"`
-	RemoveDependencies []string               `protobuf:"bytes,4,rep,name=remove_dependencies,json=removeDependencies,proto3" json:"remove_dependencies,omitempty"`
-	NewParentTaskId    *string                `protobuf:"bytes,5,opt,name=new_parent_task_id,json=newParentTaskId,proto3,oneof" json:"new_parent_task_id,omitempty"`
-	RequestId          string                 `protobuf:"bytes,6,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey     string                 `protobuf:"bytes,7,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context            *RequestContext        `protobuf:"bytes,8,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	TaskId               string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	NewAssigneeId        *string                `protobuf:"bytes,2,opt,name=new_assignee_id,json=newAssigneeId,proto3,oneof" json:"new_assignee_id,omitempty"`
+	AddDependencies      []*TaskEdge            `protobuf:"bytes,3,rep,name=add_dependencies,json=addDependencies,proto3" json:"add_dependencies,omitempty"`
+	RemoveDependencies   []*TaskEdge            `protobuf:"bytes,4,rep,name=remove_dependencies,json=removeDependencies,proto3" json:"remove_dependencies,omitempty"`
+	NewParentTaskId      *string                `protobuf:"bytes,5,opt,name=new_parent_task_id,json=newParentTaskId,proto3,oneof" json:"new_parent_task_id,omitempty"`
+	RequestId            string                 `protobuf:"bytes,6,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey       string                 `protobuf:"bytes,7,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context              *RequestContext        `protobuf:"bytes,8,opt,name=context,proto3" json:"context,omitempty"`
+	ExpectedGraphVersion int64                  `protobuf:"varint,9,opt,name=expected_graph_version,json=expectedGraphVersion,proto3" json:"expected_graph_version,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdateTaskGraphRequest) Reset() {
 	*x = UpdateTaskGraphRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[22]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1839,7 +2312,7 @@ func (x *UpdateTaskGraphRequest) String() string {
 func (*UpdateTaskGraphRequest) ProtoMessage() {}
 
 func (x *UpdateTaskGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[22]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1852,7 +2325,7 @@ func (x *UpdateTaskGraphRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskGraphRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTaskGraphRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{22}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *UpdateTaskGraphRequest) GetTaskId() string {
@@ -1869,14 +2342,14 @@ func (x *UpdateTaskGraphRequest) GetNewAssigneeId() string {
 	return ""
 }
 
-func (x *UpdateTaskGraphRequest) GetAddDependencies() []string {
+func (x *UpdateTaskGraphRequest) GetAddDependencies() []*TaskEdge {
 	if x != nil {
 		return x.AddDependencies
 	}
 	return nil
 }
 
-func (x *UpdateTaskGraphRequest) GetRemoveDependencies() []string {
+func (x *UpdateTaskGraphRequest) GetRemoveDependencies() []*TaskEdge {
 	if x != nil {
 		return x.RemoveDependencies
 	}
@@ -1911,17 +2384,26 @@ func (x *UpdateTaskGraphRequest) GetContext() *RequestContext {
 	return nil
 }
 
+func (x *UpdateTaskGraphRequest) GetExpectedGraphVersion() int64 {
+	if x != nil {
+		return x.ExpectedGraphVersion
+	}
+	return 0
+}
+
 type UpdateTaskGraphResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Task            *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
 	NewGraphVersion int64                  `protobuf:"varint,2,opt,name=new_graph_version,json=newGraphVersion,proto3" json:"new_graph_version,omitempty"`
+	Accepted        bool                   `protobuf:"varint,3,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	RejectionReason string                 `protobuf:"bytes,4,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateTaskGraphResponse) Reset() {
 	*x = UpdateTaskGraphResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[23]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1933,7 +2415,7 @@ func (x *UpdateTaskGraphResponse) String() string {
 func (*UpdateTaskGraphResponse) ProtoMessage() {}
 
 func (x *UpdateTaskGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[23]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1946,7 +2428,7 @@ func (x *UpdateTaskGraphResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskGraphResponse.ProtoReflect.Descriptor instead.
 func (*UpdateTaskGraphResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{23}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *UpdateTaskGraphResponse) GetTask() *Task {
@@ -1961,6 +2443,20 @@ func (x *UpdateTaskGraphResponse) GetNewGraphVersion() int64 {
 		return x.NewGraphVersion
 	}
 	return 0
+}
+
+func (x *UpdateTaskGraphResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *UpdateTaskGraphResponse) GetRejectionReason() string {
+	if x != nil {
+		return x.RejectionReason
+	}
+	return ""
 }
 
 type RenewTaskClaimLeaseRequest struct {
@@ -1978,7 +2474,7 @@ type RenewTaskClaimLeaseRequest struct {
 
 func (x *RenewTaskClaimLeaseRequest) Reset() {
 	*x = RenewTaskClaimLeaseRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[24]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1990,7 +2486,7 @@ func (x *RenewTaskClaimLeaseRequest) String() string {
 func (*RenewTaskClaimLeaseRequest) ProtoMessage() {}
 
 func (x *RenewTaskClaimLeaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[24]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2003,7 +2499,7 @@ func (x *RenewTaskClaimLeaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewTaskClaimLeaseRequest.ProtoReflect.Descriptor instead.
 func (*RenewTaskClaimLeaseRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{24}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RenewTaskClaimLeaseRequest) GetTaskId() string {
@@ -2056,17 +2552,18 @@ func (x *RenewTaskClaimLeaseRequest) GetLeaseTtlSeconds() uint32 {
 }
 
 type RenewTaskClaimLeaseResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
-	Task          *Task                  `protobuf:"bytes,2,opt,name=task,proto3" json:"task,omitempty"`
-	Lease         *Lease                 `protobuf:"bytes,3,opt,name=lease,proto3" json:"lease,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Accepted        bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Task            *Task                  `protobuf:"bytes,2,opt,name=task,proto3" json:"task,omitempty"`
+	Lease           *Lease                 `protobuf:"bytes,3,opt,name=lease,proto3" json:"lease,omitempty"`
+	RejectionReason string                 `protobuf:"bytes,4,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *RenewTaskClaimLeaseResponse) Reset() {
 	*x = RenewTaskClaimLeaseResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[25]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2078,7 +2575,7 @@ func (x *RenewTaskClaimLeaseResponse) String() string {
 func (*RenewTaskClaimLeaseResponse) ProtoMessage() {}
 
 func (x *RenewTaskClaimLeaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[25]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2091,7 +2588,7 @@ func (x *RenewTaskClaimLeaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewTaskClaimLeaseResponse.ProtoReflect.Descriptor instead.
 func (*RenewTaskClaimLeaseResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{25}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RenewTaskClaimLeaseResponse) GetAccepted() bool {
@@ -2115,6 +2612,13 @@ func (x *RenewTaskClaimLeaseResponse) GetLease() *Lease {
 	return nil
 }
 
+func (x *RenewTaskClaimLeaseResponse) GetRejectionReason() string {
+	if x != nil {
+		return x.RejectionReason
+	}
+	return ""
+}
+
 type ReleaseTaskRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	TaskId             string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -2131,7 +2635,7 @@ type ReleaseTaskRequest struct {
 
 func (x *ReleaseTaskRequest) Reset() {
 	*x = ReleaseTaskRequest{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[26]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2143,7 +2647,7 @@ func (x *ReleaseTaskRequest) String() string {
 func (*ReleaseTaskRequest) ProtoMessage() {}
 
 func (x *ReleaseTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[26]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2156,7 +2660,7 @@ func (x *ReleaseTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseTaskRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseTaskRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{26}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ReleaseTaskRequest) GetTaskId() string {
@@ -2219,13 +2723,14 @@ type ReleaseTaskResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Task             *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
 	ReleasedTimeUnix int64                  `protobuf:"varint,2,opt,name=released_time_unix,json=releasedTimeUnix,proto3" json:"released_time_unix,omitempty"`
+	ReleaseGate      *ReleaseGate           `protobuf:"bytes,3,opt,name=release_gate,json=releaseGate,proto3" json:"release_gate,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ReleaseTaskResponse) Reset() {
 	*x = ReleaseTaskResponse{}
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[27]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2237,7 +2742,7 @@ func (x *ReleaseTaskResponse) String() string {
 func (*ReleaseTaskResponse) ProtoMessage() {}
 
 func (x *ReleaseTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_task_proto_msgTypes[27]
+	mi := &file_nekode_daemon_v1_task_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2250,7 +2755,7 @@ func (x *ReleaseTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseTaskResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseTaskResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{27}
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ReleaseTaskResponse) GetTask() *Task {
@@ -2267,11 +2772,18 @@ func (x *ReleaseTaskResponse) GetReleasedTimeUnix() int64 {
 	return 0
 }
 
+func (x *ReleaseTaskResponse) GetReleaseGate() *ReleaseGate {
+	if x != nil {
+		return x.ReleaseGate
+	}
+	return nil
+}
+
 var File_nekode_daemon_v1_task_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x1bnekode/daemon/v1/task.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xec\n" +
+	"\x1bnekode/daemon/v1/task.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\x1a#nekode/daemon/v1/coordination.proto\"\xa4\n" +
 	"\n" +
 	"\x04Task\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x18\n" +
@@ -2292,11 +2804,7 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x0ecurrent_run_id\x18\f \x01(\tR\fcurrentRunId\x12 \n" +
 	"\froot_task_id\x18\r \x01(\tR\n" +
 	"rootTaskId\x12$\n" +
-	"\x0eparent_task_id\x18\x0e \x01(\tR\fparentTaskId\x12\x1f\n" +
-	"\vsubtask_ids\x18\x0f \x03(\tR\n" +
-	"subtaskIds\x12-\n" +
-	"\x13depends_on_task_ids\x18\x10 \x03(\tR\x10dependsOnTaskIds\x12-\n" +
-	"\x13blocked_by_task_ids\x18\x11 \x03(\tR\x10blockedByTaskIds\x12\x16\n" +
+	"\x0eparent_task_id\x18\x0e \x01(\tR\fparentTaskId\x12\x16\n" +
 	"\x06source\x18\x12 \x01(\tR\x06source\x12-\n" +
 	"\x13created_by_agent_id\x18\x13 \x01(\tR\x10createdByAgentId\x12$\n" +
 	"\x0eserver_rule_id\x18\x14 \x01(\tR\fserverRuleId\x12*\n" +
@@ -2311,11 +2819,9 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x11reviewer_agent_id\x18\x1d \x01(\tR\x0freviewerAgentId\x12&\n" +
 	"\x0frelease_gate_id\x18\x1e \x01(\tR\rreleaseGateId\x12'\n" +
 	"\x0fassigned_target\x18\x1f \x01(\tR\x0eassignedTarget\x12,\n" +
-	"\x12deadline_time_unix\x18  \x01(\x03R\x10deadlineTimeUnix\x12,\n" +
-	"\x12released_time_unix\x18! \x01(\x03R\x10releasedTimeUnix\x12'\n" +
-	"\x0frelease_version\x18\" \x01(\tR\x0ereleaseVersion\x12/\n" +
-	"\x13release_environment\x18# \x01(\tR\x12releaseEnvironment\x12#\n" +
-	"\rrelease_state\x18$ \x01(\tR\freleaseStateJ\x06\b\xe8\a\x10\xd0\x0f\"\x9e\x02\n" +
+	"\x12deadline_time_unix\x18  \x01(\x03R\x10deadlineTimeUnix\x12*\n" +
+	"\x11created_time_unix\x18% \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
+	"\x11updated_time_unix\x18& \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x0f\x10\x12J\x04\b!\x10%R\vsubtask_idsR\x13depends_on_task_idsR\x13blocked_by_task_idsR\x12released_time_unixR\x0frelease_versionR\x13release_environmentR\rrelease_state\"\xc3\x04\n" +
 	"\x1eCreateCollaborationTaskRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x19\n" +
@@ -2324,28 +2830,69 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\x05 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"M\n" +
+	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12)\n" +
+	"\x0eparent_task_id\x18\b \x01(\tH\x00R\fparentTaskId\x88\x01\x01\x12!\n" +
+	"\fclaim_policy\x18\t \x01(\tR\vclaimPolicy\x123\n" +
+	"\x15required_capabilities\x18\n" +
+	" \x03(\tR\x14requiredCapabilities\x12,\n" +
+	"\x12deadline_time_unix\x18\v \x01(\x03R\x10deadlineTimeUnix\x12'\n" +
+	"\x0fassigned_target\x18\f \x01(\tR\x0eassignedTarget\x126\n" +
+	"\x17claim_conflict_behavior\x18\r \x01(\tR\x15claimConflictBehaviorB\x11\n" +
+	"\x0f_parent_task_id\"M\n" +
 	"\x1fCreateCollaborationTaskResponse\x12*\n" +
-	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\"h\n" +
+	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\")\n" +
+	"\x0eGetTaskRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"=\n" +
+	"\x0fGetTaskResponse\x12*\n" +
+	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\"\xb7\x04\n" +
+	"\x11UpdateTaskRequest\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1d\n" +
+	"\asummary\x18\x02 \x01(\tH\x00R\asummary\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\x03 \x01(\tH\x01R\x05state\x88\x01\x01\x121\n" +
+	"\x12deadline_time_unix\x18\x04 \x01(\x03H\x02R\x10deadlineTimeUnix\x88\x01\x01\x12&\n" +
+	"\fboard_column\x18\x05 \x01(\tH\x03R\vboardColumn\x88\x01\x01\x12,\n" +
+	"\x0fassigned_target\x18\x06 \x01(\tH\x04R\x0eassignedTarget\x88\x01\x01\x123\n" +
+	"\x15required_capabilities\x18\a \x03(\tR\x14requiredCapabilities\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\b \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\n" +
+	" \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12;\n" +
+	"\x1aexpected_updated_time_unix\x18\v \x01(\x03R\x17expectedUpdatedTimeUnixB\n" +
+	"\n" +
+	"\b_summaryB\b\n" +
+	"\x06_stateB\x15\n" +
+	"\x13_deadline_time_unixB\x0f\n" +
+	"\r_board_columnB\x12\n" +
+	"\x10_assigned_target\"\x87\x01\n" +
+	"\x12UpdateTaskResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12*\n" +
+	"\x04task\x18\x02 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12)\n" +
+	"\x10rejection_reason\x18\x03 \x01(\tR\x0frejectionReason\"\xda\x01\n" +
 	"\x1dListCollaborationTasksRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\rR\x05limit\"N\n" +
+	"\x05limit\x18\x03 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x16\n" +
+	"\x06states\x18\x05 \x03(\tR\x06states\x12!\n" +
+	"\fboard_column\x18\x06 \x01(\tR\vboardColumn\"\x8e\x01\n" +
 	"\x1eListCollaborationTasksResponse\x12,\n" +
-	"\x05tasks\x18\x01 \x03(\v2\x16.nekode.daemon.v1.TaskR\x05tasks\"x\n" +
+	"\x05tasks\x18\x01 \x03(\v2\x16.nekode.daemon.v1.TaskR\x05tasks\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"x\n" +
 	"\x0fTaskBoardColumn\x12\x16\n" +
 	"\x06column\x18\x01 \x01(\tR\x06column\x12,\n" +
 	"\x05tasks\x18\x02 \x03(\v2\x16.nekode.daemon.v1.TaskR\x05tasks\x12\x1f\n" +
 	"\vtotal_count\x18\x03 \x01(\x03R\n" +
-	"totalCount\"\x94\x02\n" +
+	"totalCount\"\xad\x02\n" +
 	"\x11TaskBoardSnapshot\x12;\n" +
-	"\acolumns\x18\x01 \x03(\v2!.nekode.daemon.v1.TaskBoardColumnR\acolumns\x12G\n" +
-	"\x06counts\x18\x02 \x03(\v2/.nekode.daemon.v1.TaskBoardSnapshot.CountsEntryR\x06counts\x12>\n" +
+	"\acolumns\x18\x01 \x03(\v2!.nekode.daemon.v1.TaskBoardColumnR\acolumns\x12Z\n" +
+	"\rcolumn_counts\x18\x02 \x03(\v25.nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntryR\fcolumnCounts\x12>\n" +
 	"\vnext_cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\x1a9\n" +
-	"\vCountsEntry\x12\x10\n" +
+	"nextCursor\x1a?\n" +
+	"\x11ColumnCountsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xce\x02\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\xc1\x02\n" +
 	"\x14ListTaskBoardRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1f\n" +
 	"\vassignee_id\x18\x02 \x01(\tR\n" +
@@ -2356,11 +2903,11 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x05limit\x18\x06 \x01(\rR\x05limit\x125\n" +
 	"\x06cursor\x18\a \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\b \x01(\tR\trequestId\x12\x1d\n" +
-	"\n" +
-	"page_token\x18\t \x01(\tR\tpageToken\"R\n" +
+	"request_id\x18\b \x01(\tR\trequestIdJ\x04\b\t\x10\n" +
+	"R\n" +
+	"page_token\"R\n" +
 	"\x15ListTaskBoardResponse\x129\n" +
-	"\x05board\x18\x01 \x01(\v2#.nekode.daemon.v1.TaskBoardSnapshotR\x05board\"\x9d\x03\n" +
+	"\x05board\x18\x01 \x01(\v2#.nekode.daemon.v1.TaskBoardSnapshotR\x05board\"\xae\x03\n" +
 	"\x1dClaimCollaborationTaskRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
@@ -2369,12 +2916,12 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x14expected_assignee_id\x18\x04 \x01(\tR\x12expectedAssigneeId\x12,\n" +
 	"\x12silent_on_conflict\x18\x05 \x01(\bR\x10silentOnConflict\x12\x1d\n" +
 	"\n" +
-	"claim_mode\x18\x06 \x01(\tR\tclaimMode\x12\x19\n" +
-	"\blease_id\x18\a \x01(\tR\aleaseId\x12'\n" +
+	"claim_mode\x18\x06 \x01(\tR\tclaimMode\x12*\n" +
+	"\x11expected_lease_id\x18\a \x01(\tR\x0fexpectedLeaseId\x12'\n" +
 	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12*\n" +
 	"\x11lease_ttl_seconds\x18\n" +
-	" \x01(\rR\x0fleaseTtlSeconds\"\xa4\x02\n" +
+	" \x01(\rR\x0fleaseTtlSeconds\"\x8b\x03\n" +
 	"\x1eClaimCollaborationTaskResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12\x1a\n" +
 	"\baccepted\x18\x02 \x01(\bR\baccepted\x12'\n" +
@@ -2382,7 +2929,9 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x13current_assignee_id\x18\x04 \x01(\tR\x11currentAssigneeId\x12'\n" +
 	"\x0fconflict_policy\x18\x05 \x01(\tR\x0econflictPolicy\x128\n" +
 	"\vclaim_lease\x18\x06 \x01(\v2\x17.nekode.daemon.v1.LeaseR\n" +
-	"claimLease\"^\n" +
+	"claimLease\x12(\n" +
+	"\x10current_lease_id\x18\a \x01(\tR\x0ecurrentLeaseId\x12;\n" +
+	"\x1acurrent_lease_expires_unix\x18\b \x01(\x03R\x17currentLeaseExpiresUnix\"^\n" +
 	"\bTaskEdge\x12 \n" +
 	"\ffrom_task_id\x18\x01 \x01(\tR\n" +
 	"fromTaskId\x12\x1c\n" +
@@ -2404,14 +2953,15 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x15required_capabilities\x18\x05 \x03(\tR\x14requiredCapabilities\x12'\n" +
 	"\x0fassigned_target\x18\x06 \x01(\tR\x0eassignedTarget\x12-\n" +
 	"\x13created_by_agent_id\x18\a \x01(\tR\x10createdByAgentId\x12,\n" +
-	"\x12deadline_time_unix\x18\b \x01(\x03R\x10deadlineTimeUnix\"\x8d\x02\n" +
+	"\x12deadline_time_unix\x18\b \x01(\x03R\x10deadlineTimeUnix\"\xbf\x02\n" +
 	"\x17ProposeTaskSplitRequest\x12$\n" +
 	"\x0eparent_task_id\x18\x01 \x01(\tR\fparentTaskId\x12H\n" +
 	"\x0eproposed_tasks\x18\x02 \x03(\v2!.nekode.daemon.v1.ProposedSubtaskR\rproposedTasks\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x03 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"\xfa\x01\n" +
+	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x120\n" +
+	"\x14proposal_ttl_seconds\x18\x06 \x01(\rR\x12proposalTtlSeconds\"\xa6\x02\n" +
 	"\x18ProposeTaskSplitResponse\x12\x1f\n" +
 	"\vproposal_id\x18\x01 \x01(\tR\n" +
 	"proposalId\x127\n" +
@@ -2419,7 +2969,8 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"parentTask\x12=\n" +
 	"\x0eproposed_tasks\x18\x03 \x03(\v2\x16.nekode.daemon.v1.TaskR\rproposedTasks\x12\x1a\n" +
 	"\baccepted\x18\x04 \x01(\bR\baccepted\x12)\n" +
-	"\x10rejection_reason\x18\x05 \x01(\tR\x0frejectionReason\"\x8e\x02\n" +
+	"\x10rejection_reason\x18\x05 \x01(\tR\x0frejectionReason\x12*\n" +
+	"\x11expires_time_unix\x18\x06 \x01(\x03R\x0fexpiresTimeUnix\"\x8e\x02\n" +
 	"\x15ApplyTaskSplitRequest\x12$\n" +
 	"\x0eparent_task_id\x18\x01 \x01(\tR\fparentTaskId\x12\x1f\n" +
 	"\vproposal_id\x18\x02 \x01(\tR\n" +
@@ -2428,12 +2979,24 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\x04 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\x06 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"\xc0\x01\n" +
+	"\acontext\x18\x06 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"\x87\x02\n" +
 	"\x16ApplyTaskSplitResponse\x127\n" +
 	"\vparent_task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\n" +
 	"parentTask\x12A\n" +
 	"\x10created_subtasks\x18\x02 \x03(\v2\x16.nekode.daemon.v1.TaskR\x0fcreatedSubtasks\x12*\n" +
-	"\x11new_graph_version\x18\x03 \x01(\x03R\x0fnewGraphVersion\"\xc5\x02\n" +
+	"\x11new_graph_version\x18\x03 \x01(\x03R\x0fnewGraphVersion\x12\x1a\n" +
+	"\baccepted\x18\x04 \x01(\bR\baccepted\x12)\n" +
+	"\x10rejection_reason\x18\x05 \x01(\tR\x0frejectionReason\"\xeb\x01\n" +
+	"\x1eCancelTaskSplitProposalRequest\x12$\n" +
+	"\x0eparent_task_id\x18\x01 \x01(\tR\fparentTaskId\x12\x1f\n" +
+	"\vproposal_id\x18\x02 \x01(\tR\n" +
+	"proposalId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"=\n" +
+	"\x1fCancelTaskSplitProposalResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xc5\x02\n" +
 	"\x16CreateTaskGraphRequest\x123\n" +
 	"\troot_task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\brootTask\x122\n" +
 	"\bsubtasks\x18\x02 \x03(\v2\x16.nekode.daemon.v1.TaskR\bsubtasks\x12>\n" +
@@ -2449,22 +3012,25 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"rootTaskId\x12.\n" +
 	"\x13since_graph_version\x18\x02 \x01(\x03R\x11sinceGraphVersion\"R\n" +
 	"\x15ListTaskGraphResponse\x129\n" +
-	"\x05graph\x18\x01 \x01(\v2#.nekode.daemon.v1.TaskGraphSnapshotR\x05graph\"\x9b\x03\n" +
+	"\x05graph\x18\x01 \x01(\v2#.nekode.daemon.v1.TaskGraphSnapshotR\x05graph\"\x89\x04\n" +
 	"\x16UpdateTaskGraphRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12+\n" +
-	"\x0fnew_assignee_id\x18\x02 \x01(\tH\x00R\rnewAssigneeId\x88\x01\x01\x12)\n" +
-	"\x10add_dependencies\x18\x03 \x03(\tR\x0faddDependencies\x12/\n" +
-	"\x13remove_dependencies\x18\x04 \x03(\tR\x12removeDependencies\x120\n" +
+	"\x0fnew_assignee_id\x18\x02 \x01(\tH\x00R\rnewAssigneeId\x88\x01\x01\x12E\n" +
+	"\x10add_dependencies\x18\x03 \x03(\v2\x1a.nekode.daemon.v1.TaskEdgeR\x0faddDependencies\x12K\n" +
+	"\x13remove_dependencies\x18\x04 \x03(\v2\x1a.nekode.daemon.v1.TaskEdgeR\x12removeDependencies\x120\n" +
 	"\x12new_parent_task_id\x18\x05 \x01(\tH\x01R\x0fnewParentTaskId\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x06 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\a \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\b \x01(\v2 .nekode.daemon.v1.RequestContextR\acontextB\x12\n" +
+	"\acontext\x18\b \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x124\n" +
+	"\x16expected_graph_version\x18\t \x01(\x03R\x14expectedGraphVersionB\x12\n" +
 	"\x10_new_assignee_idB\x15\n" +
-	"\x13_new_parent_task_id\"q\n" +
+	"\x13_new_parent_task_id\"\xb8\x01\n" +
 	"\x17UpdateTaskGraphResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12*\n" +
-	"\x11new_graph_version\x18\x02 \x01(\x03R\x0fnewGraphVersion\"\x9b\x02\n" +
+	"\x11new_graph_version\x18\x02 \x01(\x03R\x0fnewGraphVersion\x12\x1a\n" +
+	"\baccepted\x18\x03 \x01(\bR\baccepted\x12)\n" +
+	"\x10rejection_reason\x18\x04 \x01(\tR\x0frejectionReason\"\x9b\x02\n" +
 	"\x1aRenewTaskClaimLeaseRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
 	"\blease_id\x18\x02 \x01(\tR\aleaseId\x12\x19\n" +
@@ -2473,11 +3039,12 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"request_id\x18\x04 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x06 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12*\n" +
-	"\x11lease_ttl_seconds\x18\a \x01(\rR\x0fleaseTtlSeconds\"\x94\x01\n" +
+	"\x11lease_ttl_seconds\x18\a \x01(\rR\x0fleaseTtlSeconds\"\xbf\x01\n" +
 	"\x1bRenewTaskClaimLeaseResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12*\n" +
 	"\x04task\x18\x02 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12-\n" +
-	"\x05lease\x18\x03 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\"\xd6\x02\n" +
+	"\x05lease\x18\x03 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\x12)\n" +
+	"\x10rejection_reason\x18\x04 \x01(\tR\x0frejectionReason\"\xd6\x02\n" +
 	"\x12ReleaseTaskRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12&\n" +
 	"\x0frelease_gate_id\x18\x02 \x01(\tR\rreleaseGateId\x12!\n" +
@@ -2487,10 +3054,11 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\x06 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\a \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\b \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"o\n" +
+	"\acontext\x18\b \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"\xb1\x01\n" +
 	"\x13ReleaseTaskResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12,\n" +
-	"\x12released_time_unix\x18\x02 \x01(\x03R\x10releasedTimeUnixB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x12released_time_unix\x18\x02 \x01(\x03R\x10releasedTimeUnix\x12@\n" +
+	"\frelease_gate\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.ReleaseGateR\vreleaseGateB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_task_proto_rawDescOnce sync.Once
@@ -2504,81 +3072,97 @@ func file_nekode_daemon_v1_task_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_task_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_nekode_daemon_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_nekode_daemon_v1_task_proto_goTypes = []any{
 	(*Task)(nil),                            // 0: nekode.daemon.v1.Task
 	(*CreateCollaborationTaskRequest)(nil),  // 1: nekode.daemon.v1.CreateCollaborationTaskRequest
 	(*CreateCollaborationTaskResponse)(nil), // 2: nekode.daemon.v1.CreateCollaborationTaskResponse
-	(*ListCollaborationTasksRequest)(nil),   // 3: nekode.daemon.v1.ListCollaborationTasksRequest
-	(*ListCollaborationTasksResponse)(nil),  // 4: nekode.daemon.v1.ListCollaborationTasksResponse
-	(*TaskBoardColumn)(nil),                 // 5: nekode.daemon.v1.TaskBoardColumn
-	(*TaskBoardSnapshot)(nil),               // 6: nekode.daemon.v1.TaskBoardSnapshot
-	(*ListTaskBoardRequest)(nil),            // 7: nekode.daemon.v1.ListTaskBoardRequest
-	(*ListTaskBoardResponse)(nil),           // 8: nekode.daemon.v1.ListTaskBoardResponse
-	(*ClaimCollaborationTaskRequest)(nil),   // 9: nekode.daemon.v1.ClaimCollaborationTaskRequest
-	(*ClaimCollaborationTaskResponse)(nil),  // 10: nekode.daemon.v1.ClaimCollaborationTaskResponse
-	(*TaskEdge)(nil),                        // 11: nekode.daemon.v1.TaskEdge
-	(*TaskGraphSnapshot)(nil),               // 12: nekode.daemon.v1.TaskGraphSnapshot
-	(*ProposedSubtask)(nil),                 // 13: nekode.daemon.v1.ProposedSubtask
-	(*ProposeTaskSplitRequest)(nil),         // 14: nekode.daemon.v1.ProposeTaskSplitRequest
-	(*ProposeTaskSplitResponse)(nil),        // 15: nekode.daemon.v1.ProposeTaskSplitResponse
-	(*ApplyTaskSplitRequest)(nil),           // 16: nekode.daemon.v1.ApplyTaskSplitRequest
-	(*ApplyTaskSplitResponse)(nil),          // 17: nekode.daemon.v1.ApplyTaskSplitResponse
-	(*CreateTaskGraphRequest)(nil),          // 18: nekode.daemon.v1.CreateTaskGraphRequest
-	(*CreateTaskGraphResponse)(nil),         // 19: nekode.daemon.v1.CreateTaskGraphResponse
-	(*ListTaskGraphRequest)(nil),            // 20: nekode.daemon.v1.ListTaskGraphRequest
-	(*ListTaskGraphResponse)(nil),           // 21: nekode.daemon.v1.ListTaskGraphResponse
-	(*UpdateTaskGraphRequest)(nil),          // 22: nekode.daemon.v1.UpdateTaskGraphRequest
-	(*UpdateTaskGraphResponse)(nil),         // 23: nekode.daemon.v1.UpdateTaskGraphResponse
-	(*RenewTaskClaimLeaseRequest)(nil),      // 24: nekode.daemon.v1.RenewTaskClaimLeaseRequest
-	(*RenewTaskClaimLeaseResponse)(nil),     // 25: nekode.daemon.v1.RenewTaskClaimLeaseResponse
-	(*ReleaseTaskRequest)(nil),              // 26: nekode.daemon.v1.ReleaseTaskRequest
-	(*ReleaseTaskResponse)(nil),             // 27: nekode.daemon.v1.ReleaseTaskResponse
-	nil,                                     // 28: nekode.daemon.v1.TaskBoardSnapshot.CountsEntry
-	(*RequestContext)(nil),                  // 29: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),                     // 30: nekode.daemon.v1.EventCursor
-	(*Lease)(nil),                           // 31: nekode.daemon.v1.Lease
+	(*GetTaskRequest)(nil),                  // 3: nekode.daemon.v1.GetTaskRequest
+	(*GetTaskResponse)(nil),                 // 4: nekode.daemon.v1.GetTaskResponse
+	(*UpdateTaskRequest)(nil),               // 5: nekode.daemon.v1.UpdateTaskRequest
+	(*UpdateTaskResponse)(nil),              // 6: nekode.daemon.v1.UpdateTaskResponse
+	(*ListCollaborationTasksRequest)(nil),   // 7: nekode.daemon.v1.ListCollaborationTasksRequest
+	(*ListCollaborationTasksResponse)(nil),  // 8: nekode.daemon.v1.ListCollaborationTasksResponse
+	(*TaskBoardColumn)(nil),                 // 9: nekode.daemon.v1.TaskBoardColumn
+	(*TaskBoardSnapshot)(nil),               // 10: nekode.daemon.v1.TaskBoardSnapshot
+	(*ListTaskBoardRequest)(nil),            // 11: nekode.daemon.v1.ListTaskBoardRequest
+	(*ListTaskBoardResponse)(nil),           // 12: nekode.daemon.v1.ListTaskBoardResponse
+	(*ClaimCollaborationTaskRequest)(nil),   // 13: nekode.daemon.v1.ClaimCollaborationTaskRequest
+	(*ClaimCollaborationTaskResponse)(nil),  // 14: nekode.daemon.v1.ClaimCollaborationTaskResponse
+	(*TaskEdge)(nil),                        // 15: nekode.daemon.v1.TaskEdge
+	(*TaskGraphSnapshot)(nil),               // 16: nekode.daemon.v1.TaskGraphSnapshot
+	(*ProposedSubtask)(nil),                 // 17: nekode.daemon.v1.ProposedSubtask
+	(*ProposeTaskSplitRequest)(nil),         // 18: nekode.daemon.v1.ProposeTaskSplitRequest
+	(*ProposeTaskSplitResponse)(nil),        // 19: nekode.daemon.v1.ProposeTaskSplitResponse
+	(*ApplyTaskSplitRequest)(nil),           // 20: nekode.daemon.v1.ApplyTaskSplitRequest
+	(*ApplyTaskSplitResponse)(nil),          // 21: nekode.daemon.v1.ApplyTaskSplitResponse
+	(*CancelTaskSplitProposalRequest)(nil),  // 22: nekode.daemon.v1.CancelTaskSplitProposalRequest
+	(*CancelTaskSplitProposalResponse)(nil), // 23: nekode.daemon.v1.CancelTaskSplitProposalResponse
+	(*CreateTaskGraphRequest)(nil),          // 24: nekode.daemon.v1.CreateTaskGraphRequest
+	(*CreateTaskGraphResponse)(nil),         // 25: nekode.daemon.v1.CreateTaskGraphResponse
+	(*ListTaskGraphRequest)(nil),            // 26: nekode.daemon.v1.ListTaskGraphRequest
+	(*ListTaskGraphResponse)(nil),           // 27: nekode.daemon.v1.ListTaskGraphResponse
+	(*UpdateTaskGraphRequest)(nil),          // 28: nekode.daemon.v1.UpdateTaskGraphRequest
+	(*UpdateTaskGraphResponse)(nil),         // 29: nekode.daemon.v1.UpdateTaskGraphResponse
+	(*RenewTaskClaimLeaseRequest)(nil),      // 30: nekode.daemon.v1.RenewTaskClaimLeaseRequest
+	(*RenewTaskClaimLeaseResponse)(nil),     // 31: nekode.daemon.v1.RenewTaskClaimLeaseResponse
+	(*ReleaseTaskRequest)(nil),              // 32: nekode.daemon.v1.ReleaseTaskRequest
+	(*ReleaseTaskResponse)(nil),             // 33: nekode.daemon.v1.ReleaseTaskResponse
+	nil,                                     // 34: nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntry
+	(*RequestContext)(nil),                  // 35: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                     // 36: nekode.daemon.v1.EventCursor
+	(*Lease)(nil),                           // 37: nekode.daemon.v1.Lease
+	(*ReleaseGate)(nil),                     // 38: nekode.daemon.v1.ReleaseGate
 }
 var file_nekode_daemon_v1_task_proto_depIdxs = []int32{
-	29, // 0: nekode.daemon.v1.CreateCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	35, // 0: nekode.daemon.v1.CreateCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
 	0,  // 1: nekode.daemon.v1.CreateCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	0,  // 2: nekode.daemon.v1.ListCollaborationTasksResponse.tasks:type_name -> nekode.daemon.v1.Task
-	0,  // 3: nekode.daemon.v1.TaskBoardColumn.tasks:type_name -> nekode.daemon.v1.Task
-	5,  // 4: nekode.daemon.v1.TaskBoardSnapshot.columns:type_name -> nekode.daemon.v1.TaskBoardColumn
-	28, // 5: nekode.daemon.v1.TaskBoardSnapshot.counts:type_name -> nekode.daemon.v1.TaskBoardSnapshot.CountsEntry
-	30, // 6: nekode.daemon.v1.TaskBoardSnapshot.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	30, // 7: nekode.daemon.v1.ListTaskBoardRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	6,  // 8: nekode.daemon.v1.ListTaskBoardResponse.board:type_name -> nekode.daemon.v1.TaskBoardSnapshot
-	29, // 9: nekode.daemon.v1.ClaimCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 10: nekode.daemon.v1.ClaimCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	31, // 11: nekode.daemon.v1.ClaimCollaborationTaskResponse.claim_lease:type_name -> nekode.daemon.v1.Lease
-	0,  // 12: nekode.daemon.v1.TaskGraphSnapshot.nodes:type_name -> nekode.daemon.v1.Task
-	11, // 13: nekode.daemon.v1.TaskGraphSnapshot.edges:type_name -> nekode.daemon.v1.TaskEdge
-	13, // 14: nekode.daemon.v1.ProposeTaskSplitRequest.proposed_tasks:type_name -> nekode.daemon.v1.ProposedSubtask
-	29, // 15: nekode.daemon.v1.ProposeTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 16: nekode.daemon.v1.ProposeTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
-	0,  // 17: nekode.daemon.v1.ProposeTaskSplitResponse.proposed_tasks:type_name -> nekode.daemon.v1.Task
-	29, // 18: nekode.daemon.v1.ApplyTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 19: nekode.daemon.v1.ApplyTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
-	0,  // 20: nekode.daemon.v1.ApplyTaskSplitResponse.created_subtasks:type_name -> nekode.daemon.v1.Task
-	0,  // 21: nekode.daemon.v1.CreateTaskGraphRequest.root_task:type_name -> nekode.daemon.v1.Task
-	0,  // 22: nekode.daemon.v1.CreateTaskGraphRequest.subtasks:type_name -> nekode.daemon.v1.Task
-	11, // 23: nekode.daemon.v1.CreateTaskGraphRequest.dependencies:type_name -> nekode.daemon.v1.TaskEdge
-	29, // 24: nekode.daemon.v1.CreateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	12, // 25: nekode.daemon.v1.CreateTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
-	12, // 26: nekode.daemon.v1.ListTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
-	29, // 27: nekode.daemon.v1.UpdateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 28: nekode.daemon.v1.UpdateTaskGraphResponse.task:type_name -> nekode.daemon.v1.Task
-	29, // 29: nekode.daemon.v1.RenewTaskClaimLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 30: nekode.daemon.v1.RenewTaskClaimLeaseResponse.task:type_name -> nekode.daemon.v1.Task
-	31, // 31: nekode.daemon.v1.RenewTaskClaimLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
-	29, // 32: nekode.daemon.v1.ReleaseTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 33: nekode.daemon.v1.ReleaseTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	0,  // 2: nekode.daemon.v1.GetTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	35, // 3: nekode.daemon.v1.UpdateTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 4: nekode.daemon.v1.UpdateTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	36, // 5: nekode.daemon.v1.ListCollaborationTasksRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	0,  // 6: nekode.daemon.v1.ListCollaborationTasksResponse.tasks:type_name -> nekode.daemon.v1.Task
+	36, // 7: nekode.daemon.v1.ListCollaborationTasksResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	0,  // 8: nekode.daemon.v1.TaskBoardColumn.tasks:type_name -> nekode.daemon.v1.Task
+	9,  // 9: nekode.daemon.v1.TaskBoardSnapshot.columns:type_name -> nekode.daemon.v1.TaskBoardColumn
+	34, // 10: nekode.daemon.v1.TaskBoardSnapshot.column_counts:type_name -> nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntry
+	36, // 11: nekode.daemon.v1.TaskBoardSnapshot.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 12: nekode.daemon.v1.ListTaskBoardRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	10, // 13: nekode.daemon.v1.ListTaskBoardResponse.board:type_name -> nekode.daemon.v1.TaskBoardSnapshot
+	35, // 14: nekode.daemon.v1.ClaimCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 15: nekode.daemon.v1.ClaimCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	37, // 16: nekode.daemon.v1.ClaimCollaborationTaskResponse.claim_lease:type_name -> nekode.daemon.v1.Lease
+	0,  // 17: nekode.daemon.v1.TaskGraphSnapshot.nodes:type_name -> nekode.daemon.v1.Task
+	15, // 18: nekode.daemon.v1.TaskGraphSnapshot.edges:type_name -> nekode.daemon.v1.TaskEdge
+	17, // 19: nekode.daemon.v1.ProposeTaskSplitRequest.proposed_tasks:type_name -> nekode.daemon.v1.ProposedSubtask
+	35, // 20: nekode.daemon.v1.ProposeTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 21: nekode.daemon.v1.ProposeTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
+	0,  // 22: nekode.daemon.v1.ProposeTaskSplitResponse.proposed_tasks:type_name -> nekode.daemon.v1.Task
+	35, // 23: nekode.daemon.v1.ApplyTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 24: nekode.daemon.v1.ApplyTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
+	0,  // 25: nekode.daemon.v1.ApplyTaskSplitResponse.created_subtasks:type_name -> nekode.daemon.v1.Task
+	35, // 26: nekode.daemon.v1.CancelTaskSplitProposalRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 27: nekode.daemon.v1.CreateTaskGraphRequest.root_task:type_name -> nekode.daemon.v1.Task
+	0,  // 28: nekode.daemon.v1.CreateTaskGraphRequest.subtasks:type_name -> nekode.daemon.v1.Task
+	15, // 29: nekode.daemon.v1.CreateTaskGraphRequest.dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	35, // 30: nekode.daemon.v1.CreateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	16, // 31: nekode.daemon.v1.CreateTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
+	16, // 32: nekode.daemon.v1.ListTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
+	15, // 33: nekode.daemon.v1.UpdateTaskGraphRequest.add_dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	15, // 34: nekode.daemon.v1.UpdateTaskGraphRequest.remove_dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	35, // 35: nekode.daemon.v1.UpdateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 36: nekode.daemon.v1.UpdateTaskGraphResponse.task:type_name -> nekode.daemon.v1.Task
+	35, // 37: nekode.daemon.v1.RenewTaskClaimLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 38: nekode.daemon.v1.RenewTaskClaimLeaseResponse.task:type_name -> nekode.daemon.v1.Task
+	37, // 39: nekode.daemon.v1.RenewTaskClaimLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
+	35, // 40: nekode.daemon.v1.ReleaseTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 41: nekode.daemon.v1.ReleaseTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	38, // 42: nekode.daemon.v1.ReleaseTaskResponse.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
+	43, // [43:43] is the sub-list for method output_type
+	43, // [43:43] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_task_proto_init() }
@@ -2587,14 +3171,17 @@ func file_nekode_daemon_v1_task_proto_init() {
 		return
 	}
 	file_nekode_daemon_v1_common_proto_init()
-	file_nekode_daemon_v1_task_proto_msgTypes[22].OneofWrappers = []any{}
+	file_nekode_daemon_v1_coordination_proto_init()
+	file_nekode_daemon_v1_task_proto_msgTypes[1].OneofWrappers = []any{}
+	file_nekode_daemon_v1_task_proto_msgTypes[5].OneofWrappers = []any{}
+	file_nekode_daemon_v1_task_proto_msgTypes[28].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_task_proto_rawDesc), len(file_nekode_daemon_v1_task_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

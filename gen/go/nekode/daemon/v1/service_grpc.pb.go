@@ -19,69 +19,81 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DaemonControlService_RegisterComputer_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
-	DaemonControlService_HeartbeatComputer_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
-	DaemonControlService_FetchAssignedRuns_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
-	DaemonControlService_UpdateRunStatus_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
-	DaemonControlService_AppendRunStep_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
-	DaemonControlService_ListRuns_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ListRuns"
-	DaemonControlService_GetRun_FullMethodName                    = "/nekode.daemon.v1.DaemonControlService/GetRun"
-	DaemonControlService_ListWorkspaceTree_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListWorkspaceTree"
-	DaemonControlService_ReadWorkspaceFile_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ReadWorkspaceFile"
-	DaemonControlService_ListChannels_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListChannels"
-	DaemonControlService_ListInteractionEndpoints_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/ListInteractionEndpoints"
-	DaemonControlService_ListThreads_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/ListThreads"
-	DaemonControlService_GetThread_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/GetThread"
-	DaemonControlService_ReadMessages_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ReadMessages"
-	DaemonControlService_SendMessage_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SendMessage"
-	DaemonControlService_SaveMessage_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SaveMessage"
-	DaemonControlService_UnsaveMessage_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/UnsaveMessage"
-	DaemonControlService_ListSavedMessages_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListSavedMessages"
-	DaemonControlService_FollowThread_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/FollowThread"
-	DaemonControlService_UnfollowThread_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UnfollowThread"
-	DaemonControlService_CreateCollaborationTask_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/CreateCollaborationTask"
-	DaemonControlService_ListCollaborationTasks_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/ListCollaborationTasks"
-	DaemonControlService_ListTaskBoard_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListTaskBoard"
-	DaemonControlService_ClaimCollaborationTask_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/ClaimCollaborationTask"
-	DaemonControlService_ProposeTaskSplit_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ProposeTaskSplit"
-	DaemonControlService_ApplyTaskSplit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ApplyTaskSplit"
-	DaemonControlService_CreateTaskGraph_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/CreateTaskGraph"
-	DaemonControlService_ListTaskGraph_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListTaskGraph"
-	DaemonControlService_UpdateTaskGraph_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UpdateTaskGraph"
-	DaemonControlService_RenewTaskClaimLease_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/RenewTaskClaimLease"
-	DaemonControlService_ReleaseTask_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/ReleaseTask"
-	DaemonControlService_GetServerInfo_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/GetServerInfo"
-	DaemonControlService_PublishCoordinationRecord_FullMethodName = "/nekode.daemon.v1.DaemonControlService/PublishCoordinationRecord"
-	DaemonControlService_ListCoordinationRecords_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/ListCoordinationRecords"
-	DaemonControlService_CounterProposeNegotiation_FullMethodName = "/nekode.daemon.v1.DaemonControlService/CounterProposeNegotiation"
-	DaemonControlService_ListAgentMemory_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListAgentMemory"
-	DaemonControlService_UpsertAgentMemory_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UpsertAgentMemory"
-	DaemonControlService_GetAgentProfile_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/GetAgentProfile"
-	DaemonControlService_UpdateAgentProfile_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/UpdateAgentProfile"
-	DaemonControlService_SetAgentEnv_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SetAgentEnv"
-	DaemonControlService_ListAgentProfiles_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListAgentProfiles"
-	DaemonControlService_ListAgentDMs_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListAgentDMs"
-	DaemonControlService_ControlAgent_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ControlAgent"
-	DaemonControlService_SendAgentDirectMessage_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/SendAgentDirectMessage"
-	DaemonControlService_UpdateAgentStatus_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UpdateAgentStatus"
-	DaemonControlService_ListAgentStatuses_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListAgentStatuses"
-	DaemonControlService_ScheduleReminder_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ScheduleReminder"
-	DaemonControlService_ListReminders_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListReminders"
-	DaemonControlService_CancelReminder_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/CancelReminder"
-	DaemonControlService_SnoozeReminder_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/SnoozeReminder"
-	DaemonControlService_UpdateReminder_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UpdateReminder"
-	DaemonControlService_GetReminderLog_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/GetReminderLog"
-	DaemonControlService_UploadAttachment_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UploadAttachment"
-	DaemonControlService_GetAttachment_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/GetAttachment"
-	DaemonControlService_ListOutboundDeliveries_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/ListOutboundDeliveries"
-	DaemonControlService_RetryOutboundDelivery_FullMethodName     = "/nekode.daemon.v1.DaemonControlService/RetryOutboundDelivery"
-	DaemonControlService_LogActivity_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/LogActivity"
-	DaemonControlService_ListActivity_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListActivity"
-	DaemonControlService_ListEventsSince_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListEventsSince"
-	DaemonControlService_SubscribeServerEvents_FullMethodName     = "/nekode.daemon.v1.DaemonControlService/SubscribeServerEvents"
-	DaemonControlService_SubscribeActivity_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/SubscribeActivity"
-	DaemonControlService_SubscribeMcpResource_FullMethodName      = "/nekode.daemon.v1.DaemonControlService/SubscribeMcpResource"
-	DaemonControlService_ListMcpResourceUpdates_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/ListMcpResourceUpdates"
+	DaemonControlService_RegisterComputer_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
+	DaemonControlService_HeartbeatComputer_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
+	DaemonControlService_SyncComputerInventory_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/SyncComputerInventory"
+	DaemonControlService_AcquireStartPermit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/AcquireStartPermit"
+	DaemonControlService_ReleaseStartPermit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ReleaseStartPermit"
+	DaemonControlService_FetchAssignedRuns_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
+	DaemonControlService_UpdateRunStatus_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
+	DaemonControlService_RenewRunLease_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/RenewRunLease"
+	DaemonControlService_AppendRunStep_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
+	DaemonControlService_ListRuns_FullMethodName                      = "/nekode.daemon.v1.DaemonControlService/ListRuns"
+	DaemonControlService_GetRun_FullMethodName                        = "/nekode.daemon.v1.DaemonControlService/GetRun"
+	DaemonControlService_ListWorkspaceTree_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListWorkspaceTree"
+	DaemonControlService_ReadWorkspaceFile_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ReadWorkspaceFile"
+	DaemonControlService_ListChannels_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ListChannels"
+	DaemonControlService_ListInteractionEndpoints_FullMethodName      = "/nekode.daemon.v1.DaemonControlService/ListInteractionEndpoints"
+	DaemonControlService_ListThreads_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/ListThreads"
+	DaemonControlService_GetThread_FullMethodName                     = "/nekode.daemon.v1.DaemonControlService/GetThread"
+	DaemonControlService_ReadMessages_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ReadMessages"
+	DaemonControlService_SendMessage_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/SendMessage"
+	DaemonControlService_SaveMessage_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/SaveMessage"
+	DaemonControlService_UnsaveMessage_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/UnsaveMessage"
+	DaemonControlService_ListSavedMessages_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListSavedMessages"
+	DaemonControlService_FollowThread_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/FollowThread"
+	DaemonControlService_UnfollowThread_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/UnfollowThread"
+	DaemonControlService_CreateCollaborationTask_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/CreateCollaborationTask"
+	DaemonControlService_GetTask_FullMethodName                       = "/nekode.daemon.v1.DaemonControlService/GetTask"
+	DaemonControlService_UpdateTask_FullMethodName                    = "/nekode.daemon.v1.DaemonControlService/UpdateTask"
+	DaemonControlService_ListCollaborationTasks_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListCollaborationTasks"
+	DaemonControlService_ListTaskBoard_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ListTaskBoard"
+	DaemonControlService_ClaimCollaborationTask_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ClaimCollaborationTask"
+	DaemonControlService_ProposeTaskSplit_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ProposeTaskSplit"
+	DaemonControlService_ApplyTaskSplit_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/ApplyTaskSplit"
+	DaemonControlService_CancelTaskSplitProposal_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/CancelTaskSplitProposal"
+	DaemonControlService_CreateTaskGraph_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/CreateTaskGraph"
+	DaemonControlService_ListTaskGraph_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ListTaskGraph"
+	DaemonControlService_UpdateTaskGraph_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/UpdateTaskGraph"
+	DaemonControlService_RenewTaskClaimLease_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/RenewTaskClaimLease"
+	DaemonControlService_ReleaseTask_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/ReleaseTask"
+	DaemonControlService_GetReleaseGate_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/GetReleaseGate"
+	DaemonControlService_GetServerInfo_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/GetServerInfo"
+	DaemonControlService_PublishCoordinationRecord_FullMethodName     = "/nekode.daemon.v1.DaemonControlService/PublishCoordinationRecord"
+	DaemonControlService_ListCoordinationRecords_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/ListCoordinationRecords"
+	DaemonControlService_CounterProposeNegotiation_FullMethodName     = "/nekode.daemon.v1.DaemonControlService/CounterProposeNegotiation"
+	DaemonControlService_RespondRoleHandoff_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/RespondRoleHandoff"
+	DaemonControlService_ListAgentMemory_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/ListAgentMemory"
+	DaemonControlService_UpsertAgentMemory_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/UpsertAgentMemory"
+	DaemonControlService_GetAgentProfile_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/GetAgentProfile"
+	DaemonControlService_UpdateAgentProfile_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UpdateAgentProfile"
+	DaemonControlService_SetAgentEnv_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/SetAgentEnv"
+	DaemonControlService_ListAgentProfiles_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListAgentProfiles"
+	DaemonControlService_ListAgentDMs_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ListAgentDMs"
+	DaemonControlService_ControlAgent_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ControlAgent"
+	DaemonControlService_SendAgentDirectMessage_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/SendAgentDirectMessage"
+	DaemonControlService_UpdateAgentStatus_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/UpdateAgentStatus"
+	DaemonControlService_ListAgentStatuses_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListAgentStatuses"
+	DaemonControlService_ScheduleReminder_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ScheduleReminder"
+	DaemonControlService_ListReminders_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ListReminders"
+	DaemonControlService_CancelReminder_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/CancelReminder"
+	DaemonControlService_SnoozeReminder_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/SnoozeReminder"
+	DaemonControlService_UpdateReminder_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/UpdateReminder"
+	DaemonControlService_GetReminderLog_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/GetReminderLog"
+	DaemonControlService_UploadAttachment_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/UploadAttachment"
+	DaemonControlService_GetAttachment_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/GetAttachment"
+	DaemonControlService_ListOutboundDeliveries_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListOutboundDeliveries"
+	DaemonControlService_RetryOutboundDelivery_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/RetryOutboundDelivery"
+	DaemonControlService_LogActivity_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/LogActivity"
+	DaemonControlService_ListActivity_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ListActivity"
+	DaemonControlService_ListEventsSince_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/ListEventsSince"
+	DaemonControlService_SubscribeServerEvents_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/SubscribeServerEvents"
+	DaemonControlService_AcknowledgeServerEvents_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/AcknowledgeServerEvents"
+	DaemonControlService_SubscribeActivity_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/SubscribeActivity"
+	DaemonControlService_AcknowledgeActivityEvents_FullMethodName     = "/nekode.daemon.v1.DaemonControlService/AcknowledgeActivityEvents"
+	DaemonControlService_SubscribeMcpResource_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/SubscribeMcpResource"
+	DaemonControlService_CancelMcpResourceSubscription_FullMethodName = "/nekode.daemon.v1.DaemonControlService/CancelMcpResourceSubscription"
+	DaemonControlService_ListMcpResourceUpdates_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListMcpResourceUpdates"
 )
 
 // DaemonControlServiceClient is the client API for DaemonControlService service.
@@ -90,8 +102,12 @@ const (
 type DaemonControlServiceClient interface {
 	RegisterComputer(ctx context.Context, in *RegisterComputerRequest, opts ...grpc.CallOption) (*RegisterComputerResponse, error)
 	HeartbeatComputer(ctx context.Context, in *HeartbeatComputerRequest, opts ...grpc.CallOption) (*HeartbeatComputerResponse, error)
+	SyncComputerInventory(ctx context.Context, in *SyncComputerInventoryRequest, opts ...grpc.CallOption) (*SyncComputerInventoryResponse, error)
+	AcquireStartPermit(ctx context.Context, in *AcquireStartPermitRequest, opts ...grpc.CallOption) (*AcquireStartPermitResponse, error)
+	ReleaseStartPermit(ctx context.Context, in *ReleaseStartPermitRequest, opts ...grpc.CallOption) (*ReleaseStartPermitResponse, error)
 	FetchAssignedRuns(ctx context.Context, in *FetchAssignedRunsRequest, opts ...grpc.CallOption) (*FetchAssignedRunsResponse, error)
 	UpdateRunStatus(ctx context.Context, in *UpdateRunStatusRequest, opts ...grpc.CallOption) (*UpdateRunStatusResponse, error)
+	RenewRunLease(ctx context.Context, in *RenewRunLeaseRequest, opts ...grpc.CallOption) (*RenewRunLeaseResponse, error)
 	AppendRunStep(ctx context.Context, in *AppendRunStepRequest, opts ...grpc.CallOption) (*AppendRunStepResponse, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error)
@@ -109,20 +125,25 @@ type DaemonControlServiceClient interface {
 	FollowThread(ctx context.Context, in *FollowThreadRequest, opts ...grpc.CallOption) (*FollowThreadResponse, error)
 	UnfollowThread(ctx context.Context, in *UnfollowThreadRequest, opts ...grpc.CallOption) (*UnfollowThreadResponse, error)
 	CreateCollaborationTask(ctx context.Context, in *CreateCollaborationTaskRequest, opts ...grpc.CallOption) (*CreateCollaborationTaskResponse, error)
+	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskResponse, error)
+	UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*UpdateTaskResponse, error)
 	ListCollaborationTasks(ctx context.Context, in *ListCollaborationTasksRequest, opts ...grpc.CallOption) (*ListCollaborationTasksResponse, error)
 	ListTaskBoard(ctx context.Context, in *ListTaskBoardRequest, opts ...grpc.CallOption) (*ListTaskBoardResponse, error)
 	ClaimCollaborationTask(ctx context.Context, in *ClaimCollaborationTaskRequest, opts ...grpc.CallOption) (*ClaimCollaborationTaskResponse, error)
 	ProposeTaskSplit(ctx context.Context, in *ProposeTaskSplitRequest, opts ...grpc.CallOption) (*ProposeTaskSplitResponse, error)
 	ApplyTaskSplit(ctx context.Context, in *ApplyTaskSplitRequest, opts ...grpc.CallOption) (*ApplyTaskSplitResponse, error)
+	CancelTaskSplitProposal(ctx context.Context, in *CancelTaskSplitProposalRequest, opts ...grpc.CallOption) (*CancelTaskSplitProposalResponse, error)
 	CreateTaskGraph(ctx context.Context, in *CreateTaskGraphRequest, opts ...grpc.CallOption) (*CreateTaskGraphResponse, error)
 	ListTaskGraph(ctx context.Context, in *ListTaskGraphRequest, opts ...grpc.CallOption) (*ListTaskGraphResponse, error)
 	UpdateTaskGraph(ctx context.Context, in *UpdateTaskGraphRequest, opts ...grpc.CallOption) (*UpdateTaskGraphResponse, error)
 	RenewTaskClaimLease(ctx context.Context, in *RenewTaskClaimLeaseRequest, opts ...grpc.CallOption) (*RenewTaskClaimLeaseResponse, error)
 	ReleaseTask(ctx context.Context, in *ReleaseTaskRequest, opts ...grpc.CallOption) (*ReleaseTaskResponse, error)
+	GetReleaseGate(ctx context.Context, in *GetReleaseGateRequest, opts ...grpc.CallOption) (*GetReleaseGateResponse, error)
 	GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error)
 	PublishCoordinationRecord(ctx context.Context, in *PublishCoordinationRecordRequest, opts ...grpc.CallOption) (*PublishCoordinationRecordResponse, error)
 	ListCoordinationRecords(ctx context.Context, in *ListCoordinationRecordsRequest, opts ...grpc.CallOption) (*ListCoordinationRecordsResponse, error)
 	CounterProposeNegotiation(ctx context.Context, in *CounterProposeNegotiationRequest, opts ...grpc.CallOption) (*CounterProposeNegotiationResponse, error)
+	RespondRoleHandoff(ctx context.Context, in *RespondRoleHandoffRequest, opts ...grpc.CallOption) (*RespondRoleHandoffResponse, error)
 	ListAgentMemory(ctx context.Context, in *ListAgentMemoryRequest, opts ...grpc.CallOption) (*ListAgentMemoryResponse, error)
 	UpsertAgentMemory(ctx context.Context, in *UpsertAgentMemoryRequest, opts ...grpc.CallOption) (*UpsertAgentMemoryResponse, error)
 	GetAgentProfile(ctx context.Context, in *GetAgentProfileRequest, opts ...grpc.CallOption) (*GetAgentProfileResponse, error)
@@ -148,8 +169,11 @@ type DaemonControlServiceClient interface {
 	ListActivity(ctx context.Context, in *ListActivityRequest, opts ...grpc.CallOption) (*ListActivityResponse, error)
 	ListEventsSince(ctx context.Context, in *ListEventsSinceRequest, opts ...grpc.CallOption) (*ListEventsSinceResponse, error)
 	SubscribeServerEvents(ctx context.Context, in *SubscribeServerEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeServerEventsResponse], error)
+	AcknowledgeServerEvents(ctx context.Context, in *AcknowledgeServerEventsRequest, opts ...grpc.CallOption) (*AcknowledgeServerEventsResponse, error)
 	SubscribeActivity(ctx context.Context, in *SubscribeActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeActivityResponse], error)
+	AcknowledgeActivityEvents(ctx context.Context, in *AcknowledgeActivityEventsRequest, opts ...grpc.CallOption) (*AcknowledgeActivityEventsResponse, error)
 	SubscribeMcpResource(ctx context.Context, in *SubscribeMcpResourceRequest, opts ...grpc.CallOption) (*SubscribeMcpResourceResponse, error)
+	CancelMcpResourceSubscription(ctx context.Context, in *CancelMcpResourceSubscriptionRequest, opts ...grpc.CallOption) (*CancelMcpResourceSubscriptionResponse, error)
 	ListMcpResourceUpdates(ctx context.Context, in *ListMcpResourceUpdatesRequest, opts ...grpc.CallOption) (*ListMcpResourceUpdatesResponse, error)
 }
 
@@ -181,6 +205,36 @@ func (c *daemonControlServiceClient) HeartbeatComputer(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *daemonControlServiceClient) SyncComputerInventory(ctx context.Context, in *SyncComputerInventoryRequest, opts ...grpc.CallOption) (*SyncComputerInventoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SyncComputerInventoryResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_SyncComputerInventory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) AcquireStartPermit(ctx context.Context, in *AcquireStartPermitRequest, opts ...grpc.CallOption) (*AcquireStartPermitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcquireStartPermitResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_AcquireStartPermit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ReleaseStartPermit(ctx context.Context, in *ReleaseStartPermitRequest, opts ...grpc.CallOption) (*ReleaseStartPermitResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseStartPermitResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ReleaseStartPermit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daemonControlServiceClient) FetchAssignedRuns(ctx context.Context, in *FetchAssignedRunsRequest, opts ...grpc.CallOption) (*FetchAssignedRunsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FetchAssignedRunsResponse)
@@ -195,6 +249,16 @@ func (c *daemonControlServiceClient) UpdateRunStatus(ctx context.Context, in *Up
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateRunStatusResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_UpdateRunStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) RenewRunLease(ctx context.Context, in *RenewRunLeaseRequest, opts ...grpc.CallOption) (*RenewRunLeaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenewRunLeaseResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_RenewRunLease_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -371,6 +435,26 @@ func (c *daemonControlServiceClient) CreateCollaborationTask(ctx context.Context
 	return out, nil
 }
 
+func (c *daemonControlServiceClient) GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTaskResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_GetTask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*UpdateTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateTaskResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_UpdateTask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daemonControlServiceClient) ListCollaborationTasks(ctx context.Context, in *ListCollaborationTasksRequest, opts ...grpc.CallOption) (*ListCollaborationTasksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCollaborationTasksResponse)
@@ -415,6 +499,16 @@ func (c *daemonControlServiceClient) ApplyTaskSplit(ctx context.Context, in *App
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ApplyTaskSplitResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_ApplyTaskSplit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) CancelTaskSplitProposal(ctx context.Context, in *CancelTaskSplitProposalRequest, opts ...grpc.CallOption) (*CancelTaskSplitProposalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelTaskSplitProposalResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_CancelTaskSplitProposal_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -471,6 +565,16 @@ func (c *daemonControlServiceClient) ReleaseTask(ctx context.Context, in *Releas
 	return out, nil
 }
 
+func (c *daemonControlServiceClient) GetReleaseGate(ctx context.Context, in *GetReleaseGateRequest, opts ...grpc.CallOption) (*GetReleaseGateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReleaseGateResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_GetReleaseGate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daemonControlServiceClient) GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetServerInfoResponse)
@@ -505,6 +609,16 @@ func (c *daemonControlServiceClient) CounterProposeNegotiation(ctx context.Conte
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CounterProposeNegotiationResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_CounterProposeNegotiation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) RespondRoleHandoff(ctx context.Context, in *RespondRoleHandoffRequest, opts ...grpc.CallOption) (*RespondRoleHandoffResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RespondRoleHandoffResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_RespondRoleHandoff_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -770,6 +884,16 @@ func (c *daemonControlServiceClient) SubscribeServerEvents(ctx context.Context, 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DaemonControlService_SubscribeServerEventsClient = grpc.ServerStreamingClient[SubscribeServerEventsResponse]
 
+func (c *daemonControlServiceClient) AcknowledgeServerEvents(ctx context.Context, in *AcknowledgeServerEventsRequest, opts ...grpc.CallOption) (*AcknowledgeServerEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcknowledgeServerEventsResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_AcknowledgeServerEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daemonControlServiceClient) SubscribeActivity(ctx context.Context, in *SubscribeActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeActivityResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &DaemonControlService_ServiceDesc.Streams[1], DaemonControlService_SubscribeActivity_FullMethodName, cOpts...)
@@ -789,10 +913,30 @@ func (c *daemonControlServiceClient) SubscribeActivity(ctx context.Context, in *
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DaemonControlService_SubscribeActivityClient = grpc.ServerStreamingClient[SubscribeActivityResponse]
 
+func (c *daemonControlServiceClient) AcknowledgeActivityEvents(ctx context.Context, in *AcknowledgeActivityEventsRequest, opts ...grpc.CallOption) (*AcknowledgeActivityEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcknowledgeActivityEventsResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_AcknowledgeActivityEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daemonControlServiceClient) SubscribeMcpResource(ctx context.Context, in *SubscribeMcpResourceRequest, opts ...grpc.CallOption) (*SubscribeMcpResourceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubscribeMcpResourceResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_SubscribeMcpResource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) CancelMcpResourceSubscription(ctx context.Context, in *CancelMcpResourceSubscriptionRequest, opts ...grpc.CallOption) (*CancelMcpResourceSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelMcpResourceSubscriptionResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_CancelMcpResourceSubscription_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -815,8 +959,12 @@ func (c *daemonControlServiceClient) ListMcpResourceUpdates(ctx context.Context,
 type DaemonControlServiceServer interface {
 	RegisterComputer(context.Context, *RegisterComputerRequest) (*RegisterComputerResponse, error)
 	HeartbeatComputer(context.Context, *HeartbeatComputerRequest) (*HeartbeatComputerResponse, error)
+	SyncComputerInventory(context.Context, *SyncComputerInventoryRequest) (*SyncComputerInventoryResponse, error)
+	AcquireStartPermit(context.Context, *AcquireStartPermitRequest) (*AcquireStartPermitResponse, error)
+	ReleaseStartPermit(context.Context, *ReleaseStartPermitRequest) (*ReleaseStartPermitResponse, error)
 	FetchAssignedRuns(context.Context, *FetchAssignedRunsRequest) (*FetchAssignedRunsResponse, error)
 	UpdateRunStatus(context.Context, *UpdateRunStatusRequest) (*UpdateRunStatusResponse, error)
+	RenewRunLease(context.Context, *RenewRunLeaseRequest) (*RenewRunLeaseResponse, error)
 	AppendRunStep(context.Context, *AppendRunStepRequest) (*AppendRunStepResponse, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error)
@@ -834,20 +982,25 @@ type DaemonControlServiceServer interface {
 	FollowThread(context.Context, *FollowThreadRequest) (*FollowThreadResponse, error)
 	UnfollowThread(context.Context, *UnfollowThreadRequest) (*UnfollowThreadResponse, error)
 	CreateCollaborationTask(context.Context, *CreateCollaborationTaskRequest) (*CreateCollaborationTaskResponse, error)
+	GetTask(context.Context, *GetTaskRequest) (*GetTaskResponse, error)
+	UpdateTask(context.Context, *UpdateTaskRequest) (*UpdateTaskResponse, error)
 	ListCollaborationTasks(context.Context, *ListCollaborationTasksRequest) (*ListCollaborationTasksResponse, error)
 	ListTaskBoard(context.Context, *ListTaskBoardRequest) (*ListTaskBoardResponse, error)
 	ClaimCollaborationTask(context.Context, *ClaimCollaborationTaskRequest) (*ClaimCollaborationTaskResponse, error)
 	ProposeTaskSplit(context.Context, *ProposeTaskSplitRequest) (*ProposeTaskSplitResponse, error)
 	ApplyTaskSplit(context.Context, *ApplyTaskSplitRequest) (*ApplyTaskSplitResponse, error)
+	CancelTaskSplitProposal(context.Context, *CancelTaskSplitProposalRequest) (*CancelTaskSplitProposalResponse, error)
 	CreateTaskGraph(context.Context, *CreateTaskGraphRequest) (*CreateTaskGraphResponse, error)
 	ListTaskGraph(context.Context, *ListTaskGraphRequest) (*ListTaskGraphResponse, error)
 	UpdateTaskGraph(context.Context, *UpdateTaskGraphRequest) (*UpdateTaskGraphResponse, error)
 	RenewTaskClaimLease(context.Context, *RenewTaskClaimLeaseRequest) (*RenewTaskClaimLeaseResponse, error)
 	ReleaseTask(context.Context, *ReleaseTaskRequest) (*ReleaseTaskResponse, error)
+	GetReleaseGate(context.Context, *GetReleaseGateRequest) (*GetReleaseGateResponse, error)
 	GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error)
 	PublishCoordinationRecord(context.Context, *PublishCoordinationRecordRequest) (*PublishCoordinationRecordResponse, error)
 	ListCoordinationRecords(context.Context, *ListCoordinationRecordsRequest) (*ListCoordinationRecordsResponse, error)
 	CounterProposeNegotiation(context.Context, *CounterProposeNegotiationRequest) (*CounterProposeNegotiationResponse, error)
+	RespondRoleHandoff(context.Context, *RespondRoleHandoffRequest) (*RespondRoleHandoffResponse, error)
 	ListAgentMemory(context.Context, *ListAgentMemoryRequest) (*ListAgentMemoryResponse, error)
 	UpsertAgentMemory(context.Context, *UpsertAgentMemoryRequest) (*UpsertAgentMemoryResponse, error)
 	GetAgentProfile(context.Context, *GetAgentProfileRequest) (*GetAgentProfileResponse, error)
@@ -873,8 +1026,11 @@ type DaemonControlServiceServer interface {
 	ListActivity(context.Context, *ListActivityRequest) (*ListActivityResponse, error)
 	ListEventsSince(context.Context, *ListEventsSinceRequest) (*ListEventsSinceResponse, error)
 	SubscribeServerEvents(*SubscribeServerEventsRequest, grpc.ServerStreamingServer[SubscribeServerEventsResponse]) error
+	AcknowledgeServerEvents(context.Context, *AcknowledgeServerEventsRequest) (*AcknowledgeServerEventsResponse, error)
 	SubscribeActivity(*SubscribeActivityRequest, grpc.ServerStreamingServer[SubscribeActivityResponse]) error
+	AcknowledgeActivityEvents(context.Context, *AcknowledgeActivityEventsRequest) (*AcknowledgeActivityEventsResponse, error)
 	SubscribeMcpResource(context.Context, *SubscribeMcpResourceRequest) (*SubscribeMcpResourceResponse, error)
+	CancelMcpResourceSubscription(context.Context, *CancelMcpResourceSubscriptionRequest) (*CancelMcpResourceSubscriptionResponse, error)
 	ListMcpResourceUpdates(context.Context, *ListMcpResourceUpdatesRequest) (*ListMcpResourceUpdatesResponse, error)
 	mustEmbedUnimplementedDaemonControlServiceServer()
 }
@@ -892,11 +1048,23 @@ func (UnimplementedDaemonControlServiceServer) RegisterComputer(context.Context,
 func (UnimplementedDaemonControlServiceServer) HeartbeatComputer(context.Context, *HeartbeatComputerRequest) (*HeartbeatComputerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method HeartbeatComputer not implemented")
 }
+func (UnimplementedDaemonControlServiceServer) SyncComputerInventory(context.Context, *SyncComputerInventoryRequest) (*SyncComputerInventoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SyncComputerInventory not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) AcquireStartPermit(context.Context, *AcquireStartPermitRequest) (*AcquireStartPermitResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcquireStartPermit not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ReleaseStartPermit(context.Context, *ReleaseStartPermitRequest) (*ReleaseStartPermitResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReleaseStartPermit not implemented")
+}
 func (UnimplementedDaemonControlServiceServer) FetchAssignedRuns(context.Context, *FetchAssignedRunsRequest) (*FetchAssignedRunsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FetchAssignedRuns not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) UpdateRunStatus(context.Context, *UpdateRunStatusRequest) (*UpdateRunStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateRunStatus not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) RenewRunLease(context.Context, *RenewRunLeaseRequest) (*RenewRunLeaseResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenewRunLease not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) AppendRunStep(context.Context, *AppendRunStepRequest) (*AppendRunStepResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AppendRunStep not implemented")
@@ -949,6 +1117,12 @@ func (UnimplementedDaemonControlServiceServer) UnfollowThread(context.Context, *
 func (UnimplementedDaemonControlServiceServer) CreateCollaborationTask(context.Context, *CreateCollaborationTaskRequest) (*CreateCollaborationTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCollaborationTask not implemented")
 }
+func (UnimplementedDaemonControlServiceServer) GetTask(context.Context, *GetTaskRequest) (*GetTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTask not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) UpdateTask(context.Context, *UpdateTaskRequest) (*UpdateTaskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateTask not implemented")
+}
 func (UnimplementedDaemonControlServiceServer) ListCollaborationTasks(context.Context, *ListCollaborationTasksRequest) (*ListCollaborationTasksResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCollaborationTasks not implemented")
 }
@@ -963,6 +1137,9 @@ func (UnimplementedDaemonControlServiceServer) ProposeTaskSplit(context.Context,
 }
 func (UnimplementedDaemonControlServiceServer) ApplyTaskSplit(context.Context, *ApplyTaskSplitRequest) (*ApplyTaskSplitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyTaskSplit not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) CancelTaskSplitProposal(context.Context, *CancelTaskSplitProposalRequest) (*CancelTaskSplitProposalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelTaskSplitProposal not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) CreateTaskGraph(context.Context, *CreateTaskGraphRequest) (*CreateTaskGraphResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTaskGraph not implemented")
@@ -979,6 +1156,9 @@ func (UnimplementedDaemonControlServiceServer) RenewTaskClaimLease(context.Conte
 func (UnimplementedDaemonControlServiceServer) ReleaseTask(context.Context, *ReleaseTaskRequest) (*ReleaseTaskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReleaseTask not implemented")
 }
+func (UnimplementedDaemonControlServiceServer) GetReleaseGate(context.Context, *GetReleaseGateRequest) (*GetReleaseGateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetReleaseGate not implemented")
+}
 func (UnimplementedDaemonControlServiceServer) GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetServerInfo not implemented")
 }
@@ -990,6 +1170,9 @@ func (UnimplementedDaemonControlServiceServer) ListCoordinationRecords(context.C
 }
 func (UnimplementedDaemonControlServiceServer) CounterProposeNegotiation(context.Context, *CounterProposeNegotiationRequest) (*CounterProposeNegotiationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CounterProposeNegotiation not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) RespondRoleHandoff(context.Context, *RespondRoleHandoffRequest) (*RespondRoleHandoffResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RespondRoleHandoff not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) ListAgentMemory(context.Context, *ListAgentMemoryRequest) (*ListAgentMemoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAgentMemory not implemented")
@@ -1066,11 +1249,20 @@ func (UnimplementedDaemonControlServiceServer) ListEventsSince(context.Context, 
 func (UnimplementedDaemonControlServiceServer) SubscribeServerEvents(*SubscribeServerEventsRequest, grpc.ServerStreamingServer[SubscribeServerEventsResponse]) error {
 	return status.Error(codes.Unimplemented, "method SubscribeServerEvents not implemented")
 }
+func (UnimplementedDaemonControlServiceServer) AcknowledgeServerEvents(context.Context, *AcknowledgeServerEventsRequest) (*AcknowledgeServerEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcknowledgeServerEvents not implemented")
+}
 func (UnimplementedDaemonControlServiceServer) SubscribeActivity(*SubscribeActivityRequest, grpc.ServerStreamingServer[SubscribeActivityResponse]) error {
 	return status.Error(codes.Unimplemented, "method SubscribeActivity not implemented")
 }
+func (UnimplementedDaemonControlServiceServer) AcknowledgeActivityEvents(context.Context, *AcknowledgeActivityEventsRequest) (*AcknowledgeActivityEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcknowledgeActivityEvents not implemented")
+}
 func (UnimplementedDaemonControlServiceServer) SubscribeMcpResource(context.Context, *SubscribeMcpResourceRequest) (*SubscribeMcpResourceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubscribeMcpResource not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) CancelMcpResourceSubscription(context.Context, *CancelMcpResourceSubscriptionRequest) (*CancelMcpResourceSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelMcpResourceSubscription not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) ListMcpResourceUpdates(context.Context, *ListMcpResourceUpdatesRequest) (*ListMcpResourceUpdatesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMcpResourceUpdates not implemented")
@@ -1132,6 +1324,60 @@ func _DaemonControlService_HeartbeatComputer_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaemonControlService_SyncComputerInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncComputerInventoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).SyncComputerInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_SyncComputerInventory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).SyncComputerInventory(ctx, req.(*SyncComputerInventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_AcquireStartPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcquireStartPermitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).AcquireStartPermit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_AcquireStartPermit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).AcquireStartPermit(ctx, req.(*AcquireStartPermitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ReleaseStartPermit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseStartPermitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ReleaseStartPermit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ReleaseStartPermit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ReleaseStartPermit(ctx, req.(*ReleaseStartPermitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaemonControlService_FetchAssignedRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FetchAssignedRunsRequest)
 	if err := dec(in); err != nil {
@@ -1164,6 +1410,24 @@ func _DaemonControlService_UpdateRunStatus_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).UpdateRunStatus(ctx, req.(*UpdateRunStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_RenewRunLease_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenewRunLeaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).RenewRunLease(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_RenewRunLease_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).RenewRunLease(ctx, req.(*RenewRunLeaseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1474,6 +1738,42 @@ func _DaemonControlService_CreateCollaborationTask_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaemonControlService_GetTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).GetTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_GetTask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).GetTask(ctx, req.(*GetTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_UpdateTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).UpdateTask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_UpdateTask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).UpdateTask(ctx, req.(*UpdateTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaemonControlService_ListCollaborationTasks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCollaborationTasksRequest)
 	if err := dec(in); err != nil {
@@ -1560,6 +1860,24 @@ func _DaemonControlService_ApplyTaskSplit_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).ApplyTaskSplit(ctx, req.(*ApplyTaskSplitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_CancelTaskSplitProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelTaskSplitProposalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).CancelTaskSplitProposal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_CancelTaskSplitProposal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).CancelTaskSplitProposal(ctx, req.(*CancelTaskSplitProposalRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1654,6 +1972,24 @@ func _DaemonControlService_ReleaseTask_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaemonControlService_GetReleaseGate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReleaseGateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).GetReleaseGate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_GetReleaseGate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).GetReleaseGate(ctx, req.(*GetReleaseGateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaemonControlService_GetServerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetServerInfoRequest)
 	if err := dec(in); err != nil {
@@ -1722,6 +2058,24 @@ func _DaemonControlService_CounterProposeNegotiation_Handler(srv interface{}, ct
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).CounterProposeNegotiation(ctx, req.(*CounterProposeNegotiationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_RespondRoleHandoff_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RespondRoleHandoffRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).RespondRoleHandoff(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_RespondRoleHandoff_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).RespondRoleHandoff(ctx, req.(*RespondRoleHandoffRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2169,6 +2523,24 @@ func _DaemonControlService_SubscribeServerEvents_Handler(srv interface{}, stream
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DaemonControlService_SubscribeServerEventsServer = grpc.ServerStreamingServer[SubscribeServerEventsResponse]
 
+func _DaemonControlService_AcknowledgeServerEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcknowledgeServerEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).AcknowledgeServerEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_AcknowledgeServerEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).AcknowledgeServerEvents(ctx, req.(*AcknowledgeServerEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaemonControlService_SubscribeActivity_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(SubscribeActivityRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -2179,6 +2551,24 @@ func _DaemonControlService_SubscribeActivity_Handler(srv interface{}, stream grp
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DaemonControlService_SubscribeActivityServer = grpc.ServerStreamingServer[SubscribeActivityResponse]
+
+func _DaemonControlService_AcknowledgeActivityEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcknowledgeActivityEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).AcknowledgeActivityEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_AcknowledgeActivityEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).AcknowledgeActivityEvents(ctx, req.(*AcknowledgeActivityEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
 
 func _DaemonControlService_SubscribeMcpResource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SubscribeMcpResourceRequest)
@@ -2194,6 +2584,24 @@ func _DaemonControlService_SubscribeMcpResource_Handler(srv interface{}, ctx con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).SubscribeMcpResource(ctx, req.(*SubscribeMcpResourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_CancelMcpResourceSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelMcpResourceSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).CancelMcpResourceSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_CancelMcpResourceSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).CancelMcpResourceSubscription(ctx, req.(*CancelMcpResourceSubscriptionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2232,12 +2640,28 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaemonControlService_HeartbeatComputer_Handler,
 		},
 		{
+			MethodName: "SyncComputerInventory",
+			Handler:    _DaemonControlService_SyncComputerInventory_Handler,
+		},
+		{
+			MethodName: "AcquireStartPermit",
+			Handler:    _DaemonControlService_AcquireStartPermit_Handler,
+		},
+		{
+			MethodName: "ReleaseStartPermit",
+			Handler:    _DaemonControlService_ReleaseStartPermit_Handler,
+		},
+		{
 			MethodName: "FetchAssignedRuns",
 			Handler:    _DaemonControlService_FetchAssignedRuns_Handler,
 		},
 		{
 			MethodName: "UpdateRunStatus",
 			Handler:    _DaemonControlService_UpdateRunStatus_Handler,
+		},
+		{
+			MethodName: "RenewRunLease",
+			Handler:    _DaemonControlService_RenewRunLease_Handler,
 		},
 		{
 			MethodName: "AppendRunStep",
@@ -2308,6 +2732,14 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaemonControlService_CreateCollaborationTask_Handler,
 		},
 		{
+			MethodName: "GetTask",
+			Handler:    _DaemonControlService_GetTask_Handler,
+		},
+		{
+			MethodName: "UpdateTask",
+			Handler:    _DaemonControlService_UpdateTask_Handler,
+		},
+		{
 			MethodName: "ListCollaborationTasks",
 			Handler:    _DaemonControlService_ListCollaborationTasks_Handler,
 		},
@@ -2326,6 +2758,10 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyTaskSplit",
 			Handler:    _DaemonControlService_ApplyTaskSplit_Handler,
+		},
+		{
+			MethodName: "CancelTaskSplitProposal",
+			Handler:    _DaemonControlService_CancelTaskSplitProposal_Handler,
 		},
 		{
 			MethodName: "CreateTaskGraph",
@@ -2348,6 +2784,10 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaemonControlService_ReleaseTask_Handler,
 		},
 		{
+			MethodName: "GetReleaseGate",
+			Handler:    _DaemonControlService_GetReleaseGate_Handler,
+		},
+		{
 			MethodName: "GetServerInfo",
 			Handler:    _DaemonControlService_GetServerInfo_Handler,
 		},
@@ -2362,6 +2802,10 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CounterProposeNegotiation",
 			Handler:    _DaemonControlService_CounterProposeNegotiation_Handler,
+		},
+		{
+			MethodName: "RespondRoleHandoff",
+			Handler:    _DaemonControlService_RespondRoleHandoff_Handler,
 		},
 		{
 			MethodName: "ListAgentMemory",
@@ -2460,8 +2904,20 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaemonControlService_ListEventsSince_Handler,
 		},
 		{
+			MethodName: "AcknowledgeServerEvents",
+			Handler:    _DaemonControlService_AcknowledgeServerEvents_Handler,
+		},
+		{
+			MethodName: "AcknowledgeActivityEvents",
+			Handler:    _DaemonControlService_AcknowledgeActivityEvents_Handler,
+		},
+		{
 			MethodName: "SubscribeMcpResource",
 			Handler:    _DaemonControlService_SubscribeMcpResource_Handler,
+		},
+		{
+			MethodName: "CancelMcpResourceSubscription",
+			Handler:    _DaemonControlService_CancelMcpResourceSubscription_Handler,
 		},
 		{
 			MethodName: "ListMcpResourceUpdates",

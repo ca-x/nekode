@@ -89,12 +89,16 @@ message RegisterComputerResponse {
 }
 message HeartbeatComputerRequest {
   ComputerInfo info = 1;
+  // Optional full inventory snapshot. Servers must only apply it when
+  // inventory_full_snapshot is true; otherwise omission means unchanged.
   ComputerInventory inventory = 2;
   string lease_id = 3;
   string request_id = 4;
   repeated AgentStatusSnapshot agent_statuses = 5;
   string idempotency_key = 6;
   RequestContext context = 7;
+  string inventory_version = 8;
+  bool inventory_full_snapshot = 9;
 }
 message HeartbeatComputerResponse {
   bool accepted = 1;
@@ -104,6 +108,8 @@ message HeartbeatComputerResponse {
 }
 message Run {
   reserved 1000 to 1999;
+  reserved 17;
+  reserved "status";
 
   string run_id = 1;
   string task_id = 2;
@@ -111,7 +117,7 @@ message Run {
   string agent_id = 4;
   string computer_id = 5;
   string runtime_profile_id = 6;
-  string status = 7;
+  string state = 7; // queued | running | blocked | completed | failed | canceled
   string lease_id = 8;
   string request_id = 9;
   string input_message_id = 10;
@@ -121,10 +127,11 @@ message Run {
   int64 completed_time_unix = 14;
   string error = 15;
   string summary = 16;
-  string state = 17;
 }
 message RunStep {
   reserved 1000 to 1999;
+  reserved 11;
+  reserved "request_id";
 
   string step_id = 1;
   string run_id = 2;
@@ -136,7 +143,6 @@ message RunStep {
   repeated string artifact_ids = 8;
   int64 started_time_unix = 9;
   int64 completed_time_unix = 10;
-  string request_id = 11;
 }
 message FetchAssignedRunsRequest {
   string computer_id = 1;
@@ -147,6 +153,7 @@ message FetchAssignedRunsRequest {
 }
 message FetchAssignedRunsResponse {
   repeated Run runs = 1;
+  EventCursor next_cursor = 2;
 }
 message UpdateRunStatusRequest {
   string run_id = 1;
@@ -159,19 +166,39 @@ message UpdateRunStatusRequest {
   string request_id = 8;
   string idempotency_key = 9;
   RequestContext context = 10;
+  string lease_id = 11;
 }
 message UpdateRunStatusResponse {
   bool accepted = 1;
+  string rejection_reason = 2;
+  Run run = 3;
+}
+message RenewRunLeaseRequest {
+  string run_id = 1;
+  string lease_id = 2;
+  string agent_id = 3;
+  string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+  uint32 lease_ttl_seconds = 7;
+}
+message RenewRunLeaseResponse {
+  bool accepted = 1;
+  Run run = 2;
+  Lease lease = 3;
+  string rejection_reason = 4;
 }
 message AppendRunStepRequest {
   RunStep step = 1;
   string request_id = 2;
   string idempotency_key = 3;
   RequestContext context = 4;
+  string lease_id = 5;
 }
 message AppendRunStepResponse {
   bool accepted = 1;
   RunStep step = 2;
+  string rejection_reason = 3;
 }
 message ListRunsRequest {
   string target = 1;
@@ -202,16 +229,20 @@ message WorkspaceTreeEntry {
 }
 message ListWorkspaceTreeRequest {
   string workspace_id = 1;
+  // Path must resolve inside workspace_id after cleaning symlinks and "..".
   string path = 2;
   uint32 limit = 3;
+  EventCursor cursor = 4;
 }
 message ListWorkspaceTreeResponse {
   string workspace_id = 1;
   string path = 2;
   repeated WorkspaceTreeEntry entries = 3;
+  EventCursor next_cursor = 4;
 }
 message ReadWorkspaceFileRequest {
   string workspace_id = 1;
+  // Path must resolve inside workspace_id after cleaning symlinks and "..".
   string path = 2;
   uint32 max_bytes = 3;
 }
@@ -255,14 +286,67 @@ message SubscribeMcpResourceRequest {
 message SubscribeMcpResourceResponse {
   McpResourceSubscription subscription = 1;
 }
+message CancelMcpResourceSubscriptionRequest {
+  string subscription_id = 1;
+  string agent_id = 2;
+  string request_id = 3;
+  string idempotency_key = 4;
+  RequestContext context = 5;
+}
+message CancelMcpResourceSubscriptionResponse {
+  bool accepted = 1;
+  McpResourceSubscription subscription = 2;
+}
 message ListMcpResourceUpdatesRequest {
+  reserved 3;
+  reserved "from_sequence";
+
   string subscription_id = 1;
   string resource_uri = 2;
-  int64 from_sequence = 3;
   uint32 limit = 4;
   EventCursor cursor = 5;
 }
 message ListMcpResourceUpdatesResponse {
   repeated McpResourceUpdate updates = 1;
   EventCursor next_cursor = 2;
+}
+message SyncComputerInventoryRequest {
+  ComputerInfo info = 1;
+  ComputerInventory inventory = 2;
+  string inventory_version = 3;
+  string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+}
+message SyncComputerInventoryResponse {
+  bool accepted = 1;
+  string inventory_version = 2;
+  int64 server_time_unix = 3;
+}
+message AcquireStartPermitRequest {
+  string computer_id = 1;
+  string agent_id = 2;
+  string runtime_profile_id = 3;
+  string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+  uint32 permit_ttl_seconds = 7;
+}
+message AcquireStartPermitResponse {
+  bool granted = 1;
+  Lease permit_lease = 2;
+  string queued_operation_id = 3;
+  uint32 retry_after_seconds = 4;
+  string rejection_reason = 5;
+}
+message ReleaseStartPermitRequest {
+  string lease_id = 1;
+  string computer_id = 2;
+  string agent_id = 3;
+  string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+}
+message ReleaseStartPermitResponse {
+  bool accepted = 1;
 }

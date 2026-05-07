@@ -81,23 +81,20 @@ message SetAgentEnvResponse {
 }
 message ListAgentProfilesRequest {
   uint32 limit = 1;
+  EventCursor cursor = 2;
 }
 message ListAgentProfilesResponse {
   repeated AgentProfile profiles = 1;
+  EventCursor next_cursor = 2;
 }
 message ListAgentDMsRequest {
   string agent_id = 1;
   uint32 limit = 2;
+  EventCursor cursor = 3;
 }
 message ListAgentDMsResponse {
   repeated ChannelRecord dms = 1;
-}
-enum AgentControlAction {
-  AGENT_CONTROL_ACTION_UNSPECIFIED = 0;
-  AGENT_CONTROL_ACTION_TERMINATE = 1;
-  AGENT_CONTROL_ACTION_RESTART = 2;
-  AGENT_CONTROL_ACTION_RESTART_RESET_SESSION = 3;
-  AGENT_CONTROL_ACTION_RESTART_FULL_RESET = 4;
+  EventCursor next_cursor = 2;
 }
 message AgentControlOperation {
   reserved 1000 to 1999;
@@ -106,7 +103,7 @@ message AgentControlOperation {
   string agent_id = 2;
   string computer_id = 3;
   string runtime_profile_id = 4;
-  AgentControlAction action = 5;
+  string action = 5; // terminate | restart | restart_reset_session | restart_full_reset | custom
   string state = 6; // requested | queued | running | completed | failed | unsupported
   string reason = 7;
   string requested_by_agent_id = 8;
@@ -117,11 +114,13 @@ message ControlAgentRequest {
   string agent_id = 1;
   string computer_id = 2;
   string runtime_profile_id = 3;
-  AgentControlAction action = 4;
+  string action = 4; // terminate | restart | restart_reset_session | restart_full_reset | custom
   string reason = 5;
   string requested_by_agent_id = 6;
   string request_id = 7;
+  // Existing caller-held lease that authorizes this control request.
   string lease_id = 8;
+  // TTL requested for the operation lease returned in ControlAgentResponse.
   uint32 lease_ttl_seconds = 9;
   string idempotency_key = 10;
   RequestContext context = 11;
@@ -133,15 +132,17 @@ message ControlAgentResponse {
   Lease lease = 4;
 }
 message SendAgentDirectMessageRequest {
+  reserved 3, 4;
+  reserved "sender_agent_id", "sender_display_name";
+
   string agent_id = 1;
   string content = 2;
-  string sender_agent_id = 3;
-  string sender_display_name = 4;
   string request_id = 5;
   repeated string attachment_ids = 6;
   string reply_to_message_id = 7;
   string idempotency_key = 8;
   RequestContext context = 9;
+  Actor sender = 10;
 }
 message SendAgentDirectMessageResponse {
   bool accepted = 1;
@@ -217,7 +218,9 @@ message ListAgentStatusesRequest {
   string agent_id = 1;
   string target = 2;
   uint32 limit = 3;
+  EventCursor cursor = 4;
 }
 message ListAgentStatusesResponse {
   repeated AgentStatusSnapshot statuses = 1;
+  EventCursor next_cursor = 2;
 }

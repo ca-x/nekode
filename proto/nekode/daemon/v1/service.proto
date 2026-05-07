@@ -15,23 +15,36 @@ import "nekode/daemon/v1/task.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
-message GetServerInfoRequest {}
+message GetServerInfoRequest {
+  reserved 1 to 5;
+  reserved "include_channels", "include_agents", "include_interaction_endpoints", "limit", "cursor";
+}
 
 message GetServerInfoResponse {
+  reserved 3 to 6;
+  reserved "channels", "agents", "interaction_endpoints", "next_cursor";
+
   string server_name = 1;
   string version = 2;
-  repeated ChannelRecord channels = 3;
-  repeated AgentProfile agents = 4;
-  repeated InteractionEndpoint interaction_endpoints = 5;
+  int32 protocol_version = 7;
+  int32 min_protocol_version = 8;
+  int32 max_protocol_version = 9;
+  string server_id = 10;
 }
 
 message SubscribeServerEventsRequest {
   string daemon_id = 1;
   string computer_id = 2;
+  // Empty filters mean "only events addressed to this daemon/computer".
+  // Use include_all_agents for explicitly broad subscriptions.
   repeated string agent_ids = 3;
   EventCursor cursor = 4;
   repeated string targets = 5;
   string request_id = 6;
+  string lease_id = 7;
+  bool include_all_agents = 8;
+  bool include_all_targets = 9;
+  string idempotency_key = 10;
 }
 
 message ServerEvent {
@@ -41,6 +54,7 @@ message ServerEvent {
   int64 sequence = 2;
   string aggregate_id = 3;
   string target = 4;
+  // Routing hint. The oneof payload is authoritative and mismatches are invalid.
   string kind = 5; // run_assigned | agent_control | message | task | reminder | activity | mcp_resource | ping
   int64 created_time_unix = 6;
   int32 protocol_version = 7;
@@ -54,7 +68,16 @@ message ServerEvent {
     ReminderRecord reminder = 24;
     ActivityRecord activity = 25;
     McpResourceUpdate mcp_resource_update = 26;
+    CoordinationRecord coordination_record = 27;
+    MemoryRecord memory_record = 28;
+    OutboundDeliveryRecord outbound_delivery = 29;
+    ServerPing ping = 30;
   }
+}
+
+message ServerPing {
+  int64 server_time_unix = 1;
+  uint32 timeout_seconds = 2;
 }
 
 message SubscribeServerEventsResponse {
@@ -65,11 +88,30 @@ message SubscribeActivityResponse {
   CollaborationEvent event = 1;
 }
 
+message AcknowledgeServerEventsRequest {
+  string daemon_id = 1;
+  string computer_id = 2;
+  repeated string event_ids = 3;
+  EventCursor cursor = 4;
+  string request_id = 5;
+  string idempotency_key = 6;
+  RequestContext context = 7;
+}
+
+message AcknowledgeServerEventsResponse {
+  bool accepted = 1;
+  EventCursor cursor = 2;
+}
+
 service DaemonControlService {
   rpc RegisterComputer(RegisterComputerRequest) returns (RegisterComputerResponse);
   rpc HeartbeatComputer(HeartbeatComputerRequest) returns (HeartbeatComputerResponse);
+  rpc SyncComputerInventory(SyncComputerInventoryRequest) returns (SyncComputerInventoryResponse);
+  rpc AcquireStartPermit(AcquireStartPermitRequest) returns (AcquireStartPermitResponse);
+  rpc ReleaseStartPermit(ReleaseStartPermitRequest) returns (ReleaseStartPermitResponse);
   rpc FetchAssignedRuns(FetchAssignedRunsRequest) returns (FetchAssignedRunsResponse);
   rpc UpdateRunStatus(UpdateRunStatusRequest) returns (UpdateRunStatusResponse);
+  rpc RenewRunLease(RenewRunLeaseRequest) returns (RenewRunLeaseResponse);
   rpc AppendRunStep(AppendRunStepRequest) returns (AppendRunStepResponse);
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
   rpc GetRun(GetRunRequest) returns (GetRunResponse);
@@ -87,20 +129,25 @@ service DaemonControlService {
   rpc FollowThread(FollowThreadRequest) returns (FollowThreadResponse);
   rpc UnfollowThread(UnfollowThreadRequest) returns (UnfollowThreadResponse);
   rpc CreateCollaborationTask(CreateCollaborationTaskRequest) returns (CreateCollaborationTaskResponse);
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
   rpc ListCollaborationTasks(ListCollaborationTasksRequest) returns (ListCollaborationTasksResponse);
   rpc ListTaskBoard(ListTaskBoardRequest) returns (ListTaskBoardResponse);
   rpc ClaimCollaborationTask(ClaimCollaborationTaskRequest) returns (ClaimCollaborationTaskResponse);
   rpc ProposeTaskSplit(ProposeTaskSplitRequest) returns (ProposeTaskSplitResponse);
   rpc ApplyTaskSplit(ApplyTaskSplitRequest) returns (ApplyTaskSplitResponse);
+  rpc CancelTaskSplitProposal(CancelTaskSplitProposalRequest) returns (CancelTaskSplitProposalResponse);
   rpc CreateTaskGraph(CreateTaskGraphRequest) returns (CreateTaskGraphResponse);
   rpc ListTaskGraph(ListTaskGraphRequest) returns (ListTaskGraphResponse);
   rpc UpdateTaskGraph(UpdateTaskGraphRequest) returns (UpdateTaskGraphResponse);
   rpc RenewTaskClaimLease(RenewTaskClaimLeaseRequest) returns (RenewTaskClaimLeaseResponse);
   rpc ReleaseTask(ReleaseTaskRequest) returns (ReleaseTaskResponse);
+  rpc GetReleaseGate(GetReleaseGateRequest) returns (GetReleaseGateResponse);
   rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
   rpc PublishCoordinationRecord(PublishCoordinationRecordRequest) returns (PublishCoordinationRecordResponse);
   rpc ListCoordinationRecords(ListCoordinationRecordsRequest) returns (ListCoordinationRecordsResponse);
   rpc CounterProposeNegotiation(CounterProposeNegotiationRequest) returns (CounterProposeNegotiationResponse);
+  rpc RespondRoleHandoff(RespondRoleHandoffRequest) returns (RespondRoleHandoffResponse);
   rpc ListAgentMemory(ListAgentMemoryRequest) returns (ListAgentMemoryResponse);
   rpc UpsertAgentMemory(UpsertAgentMemoryRequest) returns (UpsertAgentMemoryResponse);
   rpc GetAgentProfile(GetAgentProfileRequest) returns (GetAgentProfileResponse);
@@ -126,7 +173,10 @@ service DaemonControlService {
   rpc ListActivity(ListActivityRequest) returns (ListActivityResponse);
   rpc ListEventsSince(ListEventsSinceRequest) returns (ListEventsSinceResponse);
   rpc SubscribeServerEvents(SubscribeServerEventsRequest) returns (stream SubscribeServerEventsResponse);
+  rpc AcknowledgeServerEvents(AcknowledgeServerEventsRequest) returns (AcknowledgeServerEventsResponse);
   rpc SubscribeActivity(SubscribeActivityRequest) returns (stream SubscribeActivityResponse);
+  rpc AcknowledgeActivityEvents(AcknowledgeActivityEventsRequest) returns (AcknowledgeActivityEventsResponse);
   rpc SubscribeMcpResource(SubscribeMcpResourceRequest) returns (SubscribeMcpResourceResponse);
+  rpc CancelMcpResourceSubscription(CancelMcpResourceSubscriptionRequest) returns (CancelMcpResourceSubscriptionResponse);
   rpc ListMcpResourceUpdates(ListMcpResourceUpdatesRequest) returns (ListMcpResourceUpdatesResponse);
 }

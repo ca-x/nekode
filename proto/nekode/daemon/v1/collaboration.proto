@@ -36,15 +36,19 @@ message InteractionEndpoint {
 }
 message ListInteractionEndpointsRequest {
   uint32 limit = 1;
+  EventCursor cursor = 2;
 }
 message ListInteractionEndpointsResponse {
   repeated InteractionEndpoint endpoints = 1;
+  EventCursor next_cursor = 2;
 }
 message ListChannelsRequest {
   uint32 limit = 1;
+  EventCursor cursor = 2;
 }
 message ListChannelsResponse {
   repeated ChannelRecord channels = 1;
+  EventCursor next_cursor = 2;
 }
 message ThreadRecord {
   reserved 1000 to 1999;
@@ -62,9 +66,11 @@ message ThreadRecord {
 message ListThreadsRequest {
   string target_prefix = 1;
   uint32 limit = 2;
+  EventCursor cursor = 3;
 }
 message ListThreadsResponse {
   repeated ThreadRecord threads = 1;
+  EventCursor next_cursor = 2;
 }
 message GetThreadRequest {
   string target = 1;
@@ -74,17 +80,16 @@ message GetThreadResponse {
 }
 message CollaborationMessage {
   reserved 1000 to 1999;
+  reserved 6, 7, 10;
+  reserved "sender_agent_id", "sender_display_name", "sender_kind";
 
   string message_id = 1;
   string target = 2;
   string thread_id = 3;
   string role = 4;
   string content = 5;
-  string sender_agent_id = 6;
-  string sender_display_name = 7;
   string reply_to_message_id = 8;
   int64 created_time_unix = 9;
-  string sender_kind = 10;
   repeated AttachmentRecord attachments = 11;
   string request_id = 12;
   string source_endpoint_id = 13;
@@ -97,36 +102,39 @@ message CollaborationMessage {
   string aggregate_id = 20;
 }
 message ReadMessagesRequest {
+  reserved 4 to 6;
+  reserved "page_token", "page_size", "after_sequence";
+
   string target = 1;
   uint32 limit = 2;
   EventCursor cursor = 3;
-  string page_token = 4;
-  uint32 page_size = 5;
-  int64 after_sequence = 6;
 }
 message ReadMessagesResponse {
+  reserved 3;
+  reserved "next_page_token";
+
   repeated CollaborationMessage messages = 1;
   EventCursor next_cursor = 2;
-  string next_page_token = 3;
 }
 message SendMessageRequest {
+  reserved 4, 5, 11;
+  reserved "sender_agent_id", "sender_display_name", "sender_user_id";
+
   string target = 1;
   string role = 2;
   string content = 3;
-  string sender_agent_id = 4;
-  string sender_display_name = 5;
   string reply_to_message_id = 6;
   bool emit_outbound = 7;
   string request_id = 8;
   repeated string attachment_ids = 9;
   string source_endpoint_id = 10;
-  string sender_user_id = 11;
   string metadata_json = 12;
   string coordination_record_id = 13;
   string memory_record_id = 14;
   string idempotency_key = 15;
   RequestContext context = 16;
   string outbound_policy = 17; // none | source_only | all_bound_endpoints | selected_endpoints
+  Actor sender = 18;
 }
 message SendMessageResponse {
   bool accepted = 1;
@@ -173,9 +181,11 @@ message ListSavedMessagesRequest {
   string saved_by_agent_id = 2;
   string saved_by_user_id = 3;
   uint32 limit = 4;
+  EventCursor cursor = 5;
 }
 message ListSavedMessagesResponse {
   repeated SavedMessageRecord saved_messages = 1;
+  EventCursor next_cursor = 2;
 }
 message FollowThreadRequest {
   string target = 1;

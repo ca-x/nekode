@@ -2,7 +2,13 @@ syntax = "proto3";
 
 package nekode.daemon.v1;
 
+import "nekode/daemon/v1/collaboration.proto";
 import "nekode/daemon/v1/common.proto";
+import "nekode/daemon/v1/coordination.proto";
+import "nekode/daemon/v1/memory.proto";
+import "nekode/daemon/v1/reminder.proto";
+import "nekode/daemon/v1/runtime.proto";
+import "nekode/daemon/v1/task.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
@@ -40,25 +46,27 @@ message LogActivityResponse {
   ActivityRecord activity = 1;
 }
 message ListActivityRequest {
+  reserved 5 to 7;
+  reserved "from_sequence", "aggregate_id", "page_token";
+
   string target = 1;
   string agent_id = 2;
   uint32 limit = 3;
   EventCursor cursor = 4;
-  int64 from_sequence = 5;
-  string aggregate_id = 6;
-  string page_token = 7;
 }
 message ListActivityResponse {
+  reserved 3;
+  reserved "next_page_token";
+
   repeated ActivityRecord activities = 1;
   EventCursor next_cursor = 2;
-  string next_page_token = 3;
 }
 message ListEventsSinceRequest {
+  reserved 3 to 5;
+  reserved "from_sequence", "aggregate_id", "page_token";
+
   EventCursor cursor = 1;
   uint32 limit = 2;
-  int64 from_sequence = 3;
-  string aggregate_id = 4;
-  string page_token = 5;
 }
 message CollaborationEvent {
   reserved 1000 to 1999;
@@ -78,22 +86,43 @@ message CollaborationEvent {
   string aggregate_id = 13;
   int32 protocol_version = 14;
   string source_endpoint_id = 15;
+
+  oneof payload {
+    CollaborationMessage message = 20;
+    ActivityRecord activity = 21;
+    Task task = 22;
+    ReminderRecord reminder = 23;
+    CoordinationRecord coordination_record = 24;
+    MemoryRecord memory_record = 25;
+    Run run = 26;
+    RunStep run_step = 27;
+  }
 }
 message ListEventsSinceResponse {
+  reserved 3;
+  reserved "next_page_token";
+
   repeated CollaborationEvent events = 1;
   EventCursor next_cursor = 2;
-  string next_page_token = 3;
 }
 message SubscribeActivityRequest {
+  reserved 2, 3;
+  reserved "from_sequence", "aggregate_id";
+
   EventCursor cursor = 1;
-  int64 from_sequence = 2;
-  string aggregate_id = 3;
   repeated string targets = 4;
   string request_id = 5;
 }
-message ActivityAck {
-  string event_id = 1;
-  int64 sequence = 2;
-  string aggregate_id = 3;
-  string request_id = 4;
+
+message AcknowledgeActivityEventsRequest {
+  repeated string event_ids = 1;
+  EventCursor cursor = 2;
+  string request_id = 3;
+  string idempotency_key = 4;
+  RequestContext context = 5;
+}
+
+message AcknowledgeActivityEventsResponse {
+  bool accepted = 1;
+  EventCursor cursor = 2;
 }

@@ -32,14 +32,15 @@ message Lease {
 }
 message EventCursor {
   reserved 1000 to 1999;
+  reserved 3 to 5;
+  reserved "last_event_id", "last_message_id", "last_activity_id";
 
+  // Opaque server-issued cursor. When set, it is the canonical resume token.
   string cursor = 1;
   string target = 2;
-  string last_event_id = 3;
-  string last_message_id = 4;
-  string last_activity_id = 5;
   int32 protocol_version = 6;
   string snapshot_id = 7;
+  // Explicit sequence resume point used only when cursor is empty.
   int64 sequence = 8;
   string aggregate_id = 9;
 }
@@ -55,10 +56,12 @@ message Actor {
 }
 message RequestContext {
   reserved 1000 to 1999;
+  reserved 1, 2;
+  reserved "request_id", "idempotency_key";
 
-  string request_id = 1;
-  string idempotency_key = 2;
+  // Request-scoped trace metadata only. Idempotency keys live on RPC requests.
   string trace_id = 3;
+  // Caller hint for attribution; servers must derive authority from transport auth.
   Actor actor = 4;
   string source_endpoint_id = 5;
 }
@@ -66,8 +69,11 @@ message EnvVar {
   reserved 1000 to 1999;
 
   string name = 1;
+  // Secret values must be empty on read/list/heartbeat responses.
   string value = 2;
   bool secret = 3;
+  string secret_ref = 4;
+  bool redacted = 5;
 }
 message SkillRecord {
   reserved 1000 to 1999;

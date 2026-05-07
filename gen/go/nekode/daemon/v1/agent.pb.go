@@ -21,61 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type AgentControlAction int32
-
-const (
-	AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED           AgentControlAction = 0
-	AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE             AgentControlAction = 1
-	AgentControlAction_AGENT_CONTROL_ACTION_RESTART               AgentControlAction = 2
-	AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION AgentControlAction = 3
-	AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET    AgentControlAction = 4
-)
-
-// Enum value maps for AgentControlAction.
-var (
-	AgentControlAction_name = map[int32]string{
-		0: "AGENT_CONTROL_ACTION_UNSPECIFIED",
-		1: "AGENT_CONTROL_ACTION_TERMINATE",
-		2: "AGENT_CONTROL_ACTION_RESTART",
-		3: "AGENT_CONTROL_ACTION_RESTART_RESET_SESSION",
-		4: "AGENT_CONTROL_ACTION_RESTART_FULL_RESET",
-	}
-	AgentControlAction_value = map[string]int32{
-		"AGENT_CONTROL_ACTION_UNSPECIFIED":           0,
-		"AGENT_CONTROL_ACTION_TERMINATE":             1,
-		"AGENT_CONTROL_ACTION_RESTART":               2,
-		"AGENT_CONTROL_ACTION_RESTART_RESET_SESSION": 3,
-		"AGENT_CONTROL_ACTION_RESTART_FULL_RESET":    4,
-	}
-)
-
-func (x AgentControlAction) Enum() *AgentControlAction {
-	p := new(AgentControlAction)
-	*p = x
-	return p
-}
-
-func (x AgentControlAction) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (AgentControlAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[0].Descriptor()
-}
-
-func (AgentControlAction) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[0]
-}
-
-func (x AgentControlAction) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use AgentControlAction.Descriptor instead.
-func (AgentControlAction) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{0}
-}
-
 type AgentPresence int32
 
 const (
@@ -124,11 +69,11 @@ func (x AgentPresence) String() string {
 }
 
 func (AgentPresence) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[1].Descriptor()
+	return file_nekode_daemon_v1_agent_proto_enumTypes[0].Descriptor()
 }
 
 func (AgentPresence) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[1]
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[0]
 }
 
 func (x AgentPresence) Number() protoreflect.EnumNumber {
@@ -137,7 +82,7 @@ func (x AgentPresence) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentPresence.Descriptor instead.
 func (AgentPresence) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{1}
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{0}
 }
 
 type AgentActivityState int32
@@ -203,11 +148,11 @@ func (x AgentActivityState) String() string {
 }
 
 func (AgentActivityState) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[2].Descriptor()
+	return file_nekode_daemon_v1_agent_proto_enumTypes[1].Descriptor()
 }
 
 func (AgentActivityState) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[2]
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[1]
 }
 
 func (x AgentActivityState) Number() protoreflect.EnumNumber {
@@ -216,7 +161,7 @@ func (x AgentActivityState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentActivityState.Descriptor instead.
 func (AgentActivityState) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{2}
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{1}
 }
 
 type AgentHealth int32
@@ -267,11 +212,11 @@ func (x AgentHealth) String() string {
 }
 
 func (AgentHealth) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[3].Descriptor()
+	return file_nekode_daemon_v1_agent_proto_enumTypes[2].Descriptor()
 }
 
 func (AgentHealth) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[3]
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[2]
 }
 
 func (x AgentHealth) Number() protoreflect.EnumNumber {
@@ -280,7 +225,7 @@ func (x AgentHealth) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentHealth.Descriptor instead.
 func (AgentHealth) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{3}
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{2}
 }
 
 type AgentRoleAssignment struct {
@@ -990,6 +935,7 @@ func (x *SetAgentEnvResponse) GetProfile() *AgentProfile {
 type ListAgentProfilesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1031,9 +977,17 @@ func (x *ListAgentProfilesRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListAgentProfilesRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListAgentProfilesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Profiles      []*AgentProfile        `protobuf:"bytes,1,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1075,10 +1029,18 @@ func (x *ListAgentProfilesResponse) GetProfiles() []*AgentProfile {
 	return nil
 }
 
+func (x *ListAgentProfilesResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
 type ListAgentDMsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1127,9 +1089,17 @@ func (x *ListAgentDMsRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListAgentDMsRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListAgentDMsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Dms           []*ChannelRecord       `protobuf:"bytes,1,rep,name=dms,proto3" json:"dms,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1171,14 +1141,21 @@ func (x *ListAgentDMsResponse) GetDms() []*ChannelRecord {
 	return nil
 }
 
+func (x *ListAgentDMsResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
 type AgentControlOperation struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	OperationId        string                 `protobuf:"bytes,1,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
 	AgentId            string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ComputerId         string                 `protobuf:"bytes,3,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
 	RuntimeProfileId   string                 `protobuf:"bytes,4,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	Action             AgentControlAction     `protobuf:"varint,5,opt,name=action,proto3,enum=nekode.daemon.v1.AgentControlAction" json:"action,omitempty"`
-	State              string                 `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"` // requested | queued | running | completed | failed | unsupported
+	Action             string                 `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"` // terminate | restart | restart_reset_session | restart_full_reset | custom
+	State              string                 `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"`   // requested | queued | running | completed | failed | unsupported
 	Reason             string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
 	RequestedByAgentId string                 `protobuf:"bytes,8,opt,name=requested_by_agent_id,json=requestedByAgentId,proto3" json:"requested_by_agent_id,omitempty"`
 	CreatedTimeUnix    int64                  `protobuf:"varint,9,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
@@ -1245,11 +1222,11 @@ func (x *AgentControlOperation) GetRuntimeProfileId() string {
 	return ""
 }
 
-func (x *AgentControlOperation) GetAction() AgentControlAction {
+func (x *AgentControlOperation) GetAction() string {
 	if x != nil {
 		return x.Action
 	}
-	return AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED
+	return ""
 }
 
 func (x *AgentControlOperation) GetState() string {
@@ -1292,16 +1269,18 @@ type ControlAgentRequest struct {
 	AgentId            string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ComputerId         string                 `protobuf:"bytes,2,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
 	RuntimeProfileId   string                 `protobuf:"bytes,3,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	Action             AgentControlAction     `protobuf:"varint,4,opt,name=action,proto3,enum=nekode.daemon.v1.AgentControlAction" json:"action,omitempty"`
+	Action             string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"` // terminate | restart | restart_reset_session | restart_full_reset | custom
 	Reason             string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	RequestedByAgentId string                 `protobuf:"bytes,6,opt,name=requested_by_agent_id,json=requestedByAgentId,proto3" json:"requested_by_agent_id,omitempty"`
 	RequestId          string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	LeaseId            string                 `protobuf:"bytes,8,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
-	LeaseTtlSeconds    uint32                 `protobuf:"varint,9,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
-	IdempotencyKey     string                 `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context            *RequestContext        `protobuf:"bytes,11,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Existing caller-held lease that authorizes this control request.
+	LeaseId string `protobuf:"bytes,8,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	// TTL requested for the operation lease returned in ControlAgentResponse.
+	LeaseTtlSeconds uint32          `protobuf:"varint,9,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
+	IdempotencyKey  string          `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context         *RequestContext `protobuf:"bytes,11,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ControlAgentRequest) Reset() {
@@ -1355,11 +1334,11 @@ func (x *ControlAgentRequest) GetRuntimeProfileId() string {
 	return ""
 }
 
-func (x *ControlAgentRequest) GetAction() AgentControlAction {
+func (x *ControlAgentRequest) GetAction() string {
 	if x != nil {
 		return x.Action
 	}
-	return AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED
+	return ""
 }
 
 func (x *ControlAgentRequest) GetReason() string {
@@ -1480,18 +1459,17 @@ func (x *ControlAgentResponse) GetLease() *Lease {
 }
 
 type SendAgentDirectMessageRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	AgentId           string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Content           string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	SenderAgentId     string                 `protobuf:"bytes,3,opt,name=sender_agent_id,json=senderAgentId,proto3" json:"sender_agent_id,omitempty"`
-	SenderDisplayName string                 `protobuf:"bytes,4,opt,name=sender_display_name,json=senderDisplayName,proto3" json:"sender_display_name,omitempty"`
-	RequestId         string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	AttachmentIds     []string               `protobuf:"bytes,6,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
-	ReplyToMessageId  string                 `protobuf:"bytes,7,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
-	IdempotencyKey    string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context           *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	AgentId          string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Content          string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	RequestId        string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	AttachmentIds    []string               `protobuf:"bytes,6,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
+	ReplyToMessageId string                 `protobuf:"bytes,7,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
+	IdempotencyKey   string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context          *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
+	Sender           *Actor                 `protobuf:"bytes,10,opt,name=sender,proto3" json:"sender,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SendAgentDirectMessageRequest) Reset() {
@@ -1538,20 +1516,6 @@ func (x *SendAgentDirectMessageRequest) GetContent() string {
 	return ""
 }
 
-func (x *SendAgentDirectMessageRequest) GetSenderAgentId() string {
-	if x != nil {
-		return x.SenderAgentId
-	}
-	return ""
-}
-
-func (x *SendAgentDirectMessageRequest) GetSenderDisplayName() string {
-	if x != nil {
-		return x.SenderDisplayName
-	}
-	return ""
-}
-
 func (x *SendAgentDirectMessageRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
@@ -1583,6 +1547,13 @@ func (x *SendAgentDirectMessageRequest) GetIdempotencyKey() string {
 func (x *SendAgentDirectMessageRequest) GetContext() *RequestContext {
 	if x != nil {
 		return x.Context
+	}
+	return nil
+}
+
+func (x *SendAgentDirectMessageRequest) GetSender() *Actor {
+	if x != nil {
+		return x.Sender
 	}
 	return nil
 }
@@ -1936,6 +1907,7 @@ type ListAgentStatusesRequest struct {
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
 	Limit         uint32                 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1991,9 +1963,17 @@ func (x *ListAgentStatusesRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListAgentStatusesRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
 type ListAgentStatusesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Statuses      []*AgentStatusSnapshot `protobuf:"bytes,1,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2031,6 +2011,13 @@ func (*ListAgentStatusesResponse) Descriptor() ([]byte, []int) {
 func (x *ListAgentStatusesResponse) GetStatuses() []*AgentStatusSnapshot {
 	if x != nil {
 		return x.Statuses
+	}
+	return nil
+}
+
+func (x *ListAgentStatusesResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
 	}
 	return nil
 }
@@ -2108,35 +2095,41 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"O\n" +
 	"\x13SetAgentEnvResponse\x128\n" +
-	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"0\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"g\n" +
 	"\x18ListAgentProfilesRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\rR\x05limit\"W\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x97\x01\n" +
 	"\x19ListAgentProfilesResponse\x12:\n" +
-	"\bprofiles\x18\x01 \x03(\v2\x1e.nekode.daemon.v1.AgentProfileR\bprofiles\"F\n" +
+	"\bprofiles\x18\x01 \x03(\v2\x1e.nekode.daemon.v1.AgentProfileR\bprofiles\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"}\n" +
 	"\x13ListAgentDMsRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\rR\x05limit\"I\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x89\x01\n" +
 	"\x14ListAgentDMsResponse\x121\n" +
-	"\x03dms\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\x03dms\"\xa3\x03\n" +
+	"\x03dms\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\x03dms\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\xfd\x02\n" +
 	"\x15AgentControlOperation\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x03 \x01(\tR\n" +
 	"computerId\x12,\n" +
-	"\x12runtime_profile_id\x18\x04 \x01(\tR\x10runtimeProfileId\x12<\n" +
-	"\x06action\x18\x05 \x01(\x0e2$.nekode.daemon.v1.AgentControlActionR\x06action\x12\x14\n" +
+	"\x12runtime_profile_id\x18\x04 \x01(\tR\x10runtimeProfileId\x12\x16\n" +
+	"\x06action\x18\x05 \x01(\tR\x06action\x12\x14\n" +
 	"\x05state\x18\x06 \x01(\tR\x05state\x12\x16\n" +
 	"\x06reason\x18\a \x01(\tR\x06reason\x121\n" +
 	"\x15requested_by_agent_id\x18\b \x01(\tR\x12requestedByAgentId\x12*\n" +
 	"\x11created_time_unix\x18\t \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\n" +
-	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xd3\x03\n" +
+	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xad\x03\n" +
 	"\x13ControlAgentRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
 	"computerId\x12,\n" +
-	"\x12runtime_profile_id\x18\x03 \x01(\tR\x10runtimeProfileId\x12<\n" +
-	"\x06action\x18\x04 \x01(\x0e2$.nekode.daemon.v1.AgentControlActionR\x06action\x12\x16\n" +
+	"\x12runtime_profile_id\x18\x03 \x01(\tR\x10runtimeProfileId\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\x12\x16\n" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x121\n" +
 	"\x15requested_by_agent_id\x18\x06 \x01(\tR\x12requestedByAgentId\x12\x1d\n" +
 	"\n" +
@@ -2150,18 +2143,18 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12E\n" +
 	"\toperation\x18\x02 \x01(\v2'.nekode.daemon.v1.AgentControlOperationR\toperation\x128\n" +
 	"\aprofile\x18\x03 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\x12-\n" +
-	"\x05lease\x18\x04 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\"\x86\x03\n" +
+	"\x05lease\x18\x04 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\"\x91\x03\n" +
 	"\x1dSendAgentDirectMessageRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\x12&\n" +
-	"\x0fsender_agent_id\x18\x03 \x01(\tR\rsenderAgentId\x12.\n" +
-	"\x13sender_display_name\x18\x04 \x01(\tR\x11senderDisplayName\x12\x1d\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x05 \x01(\tR\trequestId\x12%\n" +
 	"\x0eattachment_ids\x18\x06 \x03(\tR\rattachmentIds\x12-\n" +
 	"\x13reply_to_message_id\x18\a \x01(\tR\x10replyToMessageId\x12'\n" +
 	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"~\n" +
+	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12/\n" +
+	"\x06sender\x18\n" +
+	" \x01(\v2\x17.nekode.daemon.v1.ActorR\x06senderJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fsender_agent_idR\x13sender_display_name\"~\n" +
 	"\x1eSendAgentDirectMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
 	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xc1\x05\n" +
@@ -2194,19 +2187,16 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"Z\n" +
 	"\x19UpdateAgentStatusResponse\x12=\n" +
-	"\x06status\x18\x01 \x01(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\x06status\"c\n" +
+	"\x06status\x18\x01 \x01(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\x06status\"\x9a\x01\n" +
 	"\x18ListAgentStatusesRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\rR\x05limit\"^\n" +
+	"\x05limit\x18\x03 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x9e\x01\n" +
 	"\x19ListAgentStatusesResponse\x12A\n" +
-	"\bstatuses\x18\x01 \x03(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\bstatuses*\xdd\x01\n" +
-	"\x12AgentControlAction\x12$\n" +
-	" AGENT_CONTROL_ACTION_UNSPECIFIED\x10\x00\x12\"\n" +
-	"\x1eAGENT_CONTROL_ACTION_TERMINATE\x10\x01\x12 \n" +
-	"\x1cAGENT_CONTROL_ACTION_RESTART\x10\x02\x12.\n" +
-	"*AGENT_CONTROL_ACTION_RESTART_RESET_SESSION\x10\x03\x12+\n" +
-	"'AGENT_CONTROL_ACTION_RESTART_FULL_RESET\x10\x04*\xec\x01\n" +
+	"\bstatuses\x18\x01 \x03(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\bstatuses\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor*\xec\x01\n" +
 	"\rAgentPresence\x12\x1e\n" +
 	"\x1aAGENT_PRESENCE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15AGENT_PRESENCE_ONLINE\x10\x01\x12\x17\n" +
@@ -2253,79 +2243,85 @@ func file_nekode_daemon_v1_agent_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_agent_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_nekode_daemon_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_nekode_daemon_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_nekode_daemon_v1_agent_proto_goTypes = []any{
-	(AgentControlAction)(0),                // 0: nekode.daemon.v1.AgentControlAction
-	(AgentPresence)(0),                     // 1: nekode.daemon.v1.AgentPresence
-	(AgentActivityState)(0),                // 2: nekode.daemon.v1.AgentActivityState
-	(AgentHealth)(0),                       // 3: nekode.daemon.v1.AgentHealth
-	(*AgentRoleAssignment)(nil),            // 4: nekode.daemon.v1.AgentRoleAssignment
-	(*AgentProfile)(nil),                   // 5: nekode.daemon.v1.AgentProfile
-	(*GetAgentProfileRequest)(nil),         // 6: nekode.daemon.v1.GetAgentProfileRequest
-	(*GetAgentProfileResponse)(nil),        // 7: nekode.daemon.v1.GetAgentProfileResponse
-	(*UpdateAgentProfileRequest)(nil),      // 8: nekode.daemon.v1.UpdateAgentProfileRequest
-	(*UpdateAgentProfileResponse)(nil),     // 9: nekode.daemon.v1.UpdateAgentProfileResponse
-	(*SetAgentEnvRequest)(nil),             // 10: nekode.daemon.v1.SetAgentEnvRequest
-	(*SetAgentEnvResponse)(nil),            // 11: nekode.daemon.v1.SetAgentEnvResponse
-	(*ListAgentProfilesRequest)(nil),       // 12: nekode.daemon.v1.ListAgentProfilesRequest
-	(*ListAgentProfilesResponse)(nil),      // 13: nekode.daemon.v1.ListAgentProfilesResponse
-	(*ListAgentDMsRequest)(nil),            // 14: nekode.daemon.v1.ListAgentDMsRequest
-	(*ListAgentDMsResponse)(nil),           // 15: nekode.daemon.v1.ListAgentDMsResponse
-	(*AgentControlOperation)(nil),          // 16: nekode.daemon.v1.AgentControlOperation
-	(*ControlAgentRequest)(nil),            // 17: nekode.daemon.v1.ControlAgentRequest
-	(*ControlAgentResponse)(nil),           // 18: nekode.daemon.v1.ControlAgentResponse
-	(*SendAgentDirectMessageRequest)(nil),  // 19: nekode.daemon.v1.SendAgentDirectMessageRequest
-	(*SendAgentDirectMessageResponse)(nil), // 20: nekode.daemon.v1.SendAgentDirectMessageResponse
-	(*AgentStatusSnapshot)(nil),            // 21: nekode.daemon.v1.AgentStatusSnapshot
-	(*UpdateAgentStatusRequest)(nil),       // 22: nekode.daemon.v1.UpdateAgentStatusRequest
-	(*UpdateAgentStatusResponse)(nil),      // 23: nekode.daemon.v1.UpdateAgentStatusResponse
-	(*ListAgentStatusesRequest)(nil),       // 24: nekode.daemon.v1.ListAgentStatusesRequest
-	(*ListAgentStatusesResponse)(nil),      // 25: nekode.daemon.v1.ListAgentStatusesResponse
-	(*EnvVar)(nil),                         // 26: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil),                    // 27: nekode.daemon.v1.SkillRecord
-	(*Capability)(nil),                     // 28: nekode.daemon.v1.Capability
-	(*Permission)(nil),                     // 29: nekode.daemon.v1.Permission
-	(*RequestContext)(nil),                 // 30: nekode.daemon.v1.RequestContext
+	(AgentPresence)(0),                     // 0: nekode.daemon.v1.AgentPresence
+	(AgentActivityState)(0),                // 1: nekode.daemon.v1.AgentActivityState
+	(AgentHealth)(0),                       // 2: nekode.daemon.v1.AgentHealth
+	(*AgentRoleAssignment)(nil),            // 3: nekode.daemon.v1.AgentRoleAssignment
+	(*AgentProfile)(nil),                   // 4: nekode.daemon.v1.AgentProfile
+	(*GetAgentProfileRequest)(nil),         // 5: nekode.daemon.v1.GetAgentProfileRequest
+	(*GetAgentProfileResponse)(nil),        // 6: nekode.daemon.v1.GetAgentProfileResponse
+	(*UpdateAgentProfileRequest)(nil),      // 7: nekode.daemon.v1.UpdateAgentProfileRequest
+	(*UpdateAgentProfileResponse)(nil),     // 8: nekode.daemon.v1.UpdateAgentProfileResponse
+	(*SetAgentEnvRequest)(nil),             // 9: nekode.daemon.v1.SetAgentEnvRequest
+	(*SetAgentEnvResponse)(nil),            // 10: nekode.daemon.v1.SetAgentEnvResponse
+	(*ListAgentProfilesRequest)(nil),       // 11: nekode.daemon.v1.ListAgentProfilesRequest
+	(*ListAgentProfilesResponse)(nil),      // 12: nekode.daemon.v1.ListAgentProfilesResponse
+	(*ListAgentDMsRequest)(nil),            // 13: nekode.daemon.v1.ListAgentDMsRequest
+	(*ListAgentDMsResponse)(nil),           // 14: nekode.daemon.v1.ListAgentDMsResponse
+	(*AgentControlOperation)(nil),          // 15: nekode.daemon.v1.AgentControlOperation
+	(*ControlAgentRequest)(nil),            // 16: nekode.daemon.v1.ControlAgentRequest
+	(*ControlAgentResponse)(nil),           // 17: nekode.daemon.v1.ControlAgentResponse
+	(*SendAgentDirectMessageRequest)(nil),  // 18: nekode.daemon.v1.SendAgentDirectMessageRequest
+	(*SendAgentDirectMessageResponse)(nil), // 19: nekode.daemon.v1.SendAgentDirectMessageResponse
+	(*AgentStatusSnapshot)(nil),            // 20: nekode.daemon.v1.AgentStatusSnapshot
+	(*UpdateAgentStatusRequest)(nil),       // 21: nekode.daemon.v1.UpdateAgentStatusRequest
+	(*UpdateAgentStatusResponse)(nil),      // 22: nekode.daemon.v1.UpdateAgentStatusResponse
+	(*ListAgentStatusesRequest)(nil),       // 23: nekode.daemon.v1.ListAgentStatusesRequest
+	(*ListAgentStatusesResponse)(nil),      // 24: nekode.daemon.v1.ListAgentStatusesResponse
+	(*EnvVar)(nil),                         // 25: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),                    // 26: nekode.daemon.v1.SkillRecord
+	(*Capability)(nil),                     // 27: nekode.daemon.v1.Capability
+	(*Permission)(nil),                     // 28: nekode.daemon.v1.Permission
+	(*RequestContext)(nil),                 // 29: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                    // 30: nekode.daemon.v1.EventCursor
 	(*ChannelRecord)(nil),                  // 31: nekode.daemon.v1.ChannelRecord
 	(*Lease)(nil),                          // 32: nekode.daemon.v1.Lease
-	(*CollaborationMessage)(nil),           // 33: nekode.daemon.v1.CollaborationMessage
+	(*Actor)(nil),                          // 33: nekode.daemon.v1.Actor
+	(*CollaborationMessage)(nil),           // 34: nekode.daemon.v1.CollaborationMessage
 }
 var file_nekode_daemon_v1_agent_proto_depIdxs = []int32{
-	26, // 0: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
-	27, // 1: nekode.daemon.v1.AgentProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
-	28, // 2: nekode.daemon.v1.AgentProfile.capabilities:type_name -> nekode.daemon.v1.Capability
-	29, // 3: nekode.daemon.v1.AgentProfile.permissions:type_name -> nekode.daemon.v1.Permission
-	21, // 4: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	4,  // 5: nekode.daemon.v1.AgentProfile.roles:type_name -> nekode.daemon.v1.AgentRoleAssignment
-	5,  // 6: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	30, // 7: nekode.daemon.v1.UpdateAgentProfileRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	5,  // 8: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	26, // 9: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
-	30, // 10: nekode.daemon.v1.SetAgentEnvRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	5,  // 11: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	5,  // 12: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
-	31, // 13: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
-	0,  // 14: nekode.daemon.v1.AgentControlOperation.action:type_name -> nekode.daemon.v1.AgentControlAction
-	0,  // 15: nekode.daemon.v1.ControlAgentRequest.action:type_name -> nekode.daemon.v1.AgentControlAction
-	30, // 16: nekode.daemon.v1.ControlAgentRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	16, // 17: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
-	5,  // 18: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	32, // 19: nekode.daemon.v1.ControlAgentResponse.lease:type_name -> nekode.daemon.v1.Lease
-	30, // 20: nekode.daemon.v1.SendAgentDirectMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	33, // 21: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	1,  // 22: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
-	2,  // 23: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
-	3,  // 24: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
-	21, // 25: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	30, // 26: nekode.daemon.v1.UpdateAgentStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	21, // 27: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	21, // 28: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	29, // [29:29] is the sub-list for method output_type
-	29, // [29:29] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	25, // 0: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
+	26, // 1: nekode.daemon.v1.AgentProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
+	27, // 2: nekode.daemon.v1.AgentProfile.capabilities:type_name -> nekode.daemon.v1.Capability
+	28, // 3: nekode.daemon.v1.AgentProfile.permissions:type_name -> nekode.daemon.v1.Permission
+	20, // 4: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	3,  // 5: nekode.daemon.v1.AgentProfile.roles:type_name -> nekode.daemon.v1.AgentRoleAssignment
+	4,  // 6: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	29, // 7: nekode.daemon.v1.UpdateAgentProfileRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	4,  // 8: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	25, // 9: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
+	29, // 10: nekode.daemon.v1.SetAgentEnvRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	4,  // 11: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	30, // 12: nekode.daemon.v1.ListAgentProfilesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	4,  // 13: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
+	30, // 14: nekode.daemon.v1.ListAgentProfilesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	30, // 15: nekode.daemon.v1.ListAgentDMsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	31, // 16: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
+	30, // 17: nekode.daemon.v1.ListAgentDMsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	29, // 18: nekode.daemon.v1.ControlAgentRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	15, // 19: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
+	4,  // 20: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	32, // 21: nekode.daemon.v1.ControlAgentResponse.lease:type_name -> nekode.daemon.v1.Lease
+	29, // 22: nekode.daemon.v1.SendAgentDirectMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	33, // 23: nekode.daemon.v1.SendAgentDirectMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
+	34, // 24: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	0,  // 25: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
+	1,  // 26: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
+	2,  // 27: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
+	20, // 28: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	29, // 29: nekode.daemon.v1.UpdateAgentStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	20, // 30: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	30, // 31: nekode.daemon.v1.ListAgentStatusesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	20, // 32: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	30, // 33: nekode.daemon.v1.ListAgentStatusesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	34, // [34:34] is the sub-list for method output_type
+	34, // [34:34] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_agent_proto_init() }
@@ -2341,7 +2337,7 @@ func file_nekode_daemon_v1_agent_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_agent_proto_rawDesc), len(file_nekode_daemon_v1_agent_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      3,
 			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
