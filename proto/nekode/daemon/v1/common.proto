@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message Capability {
+  string name = 1;
+  string description = 2;
+  bool enabled = 3;
+}
+message Permission {
+  string name = 1;
+  string target = 2;
+  bool allowed = 3;
+  string reason = 4;
+}
+message Lease {
+  string lease_id = 1;
+  string holder_id = 2;
+  string resource_type = 3;
+  string resource_id = 4;
+  int64 expires_time_unix = 5;
+  uint32 heartbeat_after_seconds = 6;
+}
+message EventCursor {
+  string cursor = 1;
+  string target = 2;
+  string last_event_id = 3;
+  string last_message_id = 4;
+  string last_activity_id = 5;
+}
+message EnvVar {
+  string name = 1;
+  string value = 2;
+  bool secret = 3;
+}
+message SkillRecord {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string version = 4;
+  bool enabled = 5;
+  bool always = 6;
+  bool eligible = 7;
+  string file_path = 8;
+}

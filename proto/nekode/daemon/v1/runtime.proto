@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/agent.proto";
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message Workspace {
+  string workspace_id = 1;
+  string computer_id = 2;
+  string path = 3;
+  string display_name = 4;
+  repeated string aliases = 5;
+  bool is_default = 6;
+}
+message RuntimeProfile {
+  string runtime_profile_id = 1;
+  string kind = 2;
+  string provider = 3;
+  string model = 4;
+  string adapter_config_json = 5;
+  string workspace_id = 6;
+  repeated EnvVar env = 7;
+  repeated SkillRecord skills = 8;
+  repeated Capability capabilities = 9;
+}
+message Runtime {
+  string runtime_id = 1;
+  string computer_id = 2;
+  string workspace_id = 3;
+  string kind = 4;
+  string display_name = 5;
+  repeated string aliases = 6;
+  string tool = 7;
+  string command = 8;
+  bool installed = 9;
+  bool healthy = 10;
+  bool supports_auto_install = 11;
+  repeated string install_hint = 12;
+  string config_dir = 13;
+  uint32 current_task_count = 14;
+  uint32 pending_task_count = 15;
+  repeated Capability capabilities = 16;
+  RuntimeProfile runtime_profile = 17;
+}
+message ComputerInventory {
+  repeated Workspace workspaces = 1;
+  repeated Runtime runtimes = 2;
+  repeated AgentProfile agents = 3;
+  repeated RuntimeProfile runtime_profiles = 4;
+}
+message ComputerInfo {
+  string daemon_id = 1;
+  string computer_id = 2;
+  string display_name = 3;
+  string hostname = 4;
+  string os = 5;
+  string arch = 6;
+  string version = 7;
+  string status = 8;
+  int64 last_seen_unix = 9;
+  string daemon_url = 10;
+  string lease_id = 11;
+  repeated Capability capabilities = 12;
+}
+message RegisterComputerRequest {
+  ComputerInfo info = 1;
+  ComputerInventory inventory = 2;
+  string request_id = 3;
+}
+message RegisterComputerResponse {
+  bool accepted = 1;
+  int64 server_time_unix = 2;
+  Lease lease = 3;
+}
+message HeartbeatComputerRequest {
+  ComputerInfo info = 1;
+  ComputerInventory inventory = 2;
+  string lease_id = 3;
+  string request_id = 4;
+}
+message HeartbeatComputerResponse {
+  bool accepted = 1;
+  int64 server_time_unix = 2;
+  uint32 next_heartbeat_after_seconds = 3;
+  Lease lease = 4;
+}
+message Run {
+  string run_id = 1;
+  string task_id = 2;
+  string target = 3;
+  string agent_id = 4;
+  string computer_id = 5;
+  string runtime_profile_id = 6;
+  string status = 7;
+  string lease_id = 8;
+  string request_id = 9;
+  string input_message_id = 10;
+  string last_seen_event_id = 11;
+  int64 started_time_unix = 12;
+  int64 updated_time_unix = 13;
+  int64 completed_time_unix = 14;
+  string error = 15;
+  string summary = 16;
+  string state = 17;
+}
+message RunStep {
+  string step_id = 1;
+  string run_id = 2;
+  uint32 sequence = 3;
+  string kind = 4;
+  string status = 5;
+  string summary = 6;
+  string detail = 7;
+  repeated string artifact_ids = 8;
+  int64 started_time_unix = 9;
+  int64 completed_time_unix = 10;
+  string request_id = 11;
+}
+message FetchAssignedRunsRequest {
+  string computer_id = 1;
+  repeated string agent_ids = 2;
+  uint32 limit = 3;
+  string request_id = 4;
+}
+message FetchAssignedRunsResponse {
+  repeated Run runs = 1;
+}
+message UpdateRunStatusRequest {
+  string run_id = 1;
+  string agent_id = 2;
+  string state = 3;
+  string summary = 4;
+  string error = 5;
+  string blocked_reason = 6;
+  string result_message = 7;
+  string request_id = 8;
+}
+message UpdateRunStatusResponse {
+  bool accepted = 1;
+}
+message AppendRunStepRequest {
+  RunStep step = 1;
+  string request_id = 2;
+}
+message AppendRunStepResponse {
+  bool accepted = 1;
+  RunStep step = 2;
+}
+message ListRunsRequest {
+  string target = 1;
+  string task_id = 2;
+  string agent_id = 3;
+  uint32 limit = 4;
+}
+message ListRunsResponse {
+  repeated Run runs = 1;
+}
+message GetRunRequest {
+  string run_id = 1;
+}
+message GetRunResponse {
+  Run run = 1;
+  repeated RunStep steps = 2;
+}
+message WorkspaceTreeEntry {
+  string path = 1;
+  string name = 2;
+  bool is_dir = 3;
+  int64 size_bytes = 4;
+  int64 modified_time_unix = 5;
+}
+message ListWorkspaceTreeRequest {
+  string workspace_id = 1;
+  string path = 2;
+  uint32 limit = 3;
+}
+message ListWorkspaceTreeResponse {
+  string workspace_id = 1;
+  string path = 2;
+  repeated WorkspaceTreeEntry entries = 3;
+}
+message ReadWorkspaceFileRequest {
+  string workspace_id = 1;
+  string path = 2;
+  uint32 max_bytes = 3;
+}
+message ReadWorkspaceFileResponse {
+  string workspace_id = 1;
+  string path = 2;
+  string content = 3;
+  bool truncated = 4;
+  int64 size_bytes = 5;
+}

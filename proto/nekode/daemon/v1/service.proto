@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/activity.proto";
+import "nekode/daemon/v1/agent.proto";
+import "nekode/daemon/v1/attachment.proto";
+import "nekode/daemon/v1/collaboration.proto";
+import "nekode/daemon/v1/coordination.proto";
+import "nekode/daemon/v1/memory.proto";
+import "nekode/daemon/v1/reminder.proto";
+import "nekode/daemon/v1/runtime.proto";
+import "nekode/daemon/v1/task.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message GetServerInfoRequest {}
+
+message GetServerInfoResponse {
+  string server_name = 1;
+  string version = 2;
+  repeated ChannelRecord channels = 3;
+  repeated AgentProfile agents = 4;
+  repeated InteractionEndpoint interaction_endpoints = 5;
+}
+
+service DaemonControlService {
+  rpc RegisterComputer(RegisterComputerRequest) returns (RegisterComputerResponse);
+  rpc HeartbeatComputer(HeartbeatComputerRequest) returns (HeartbeatComputerResponse);
+  rpc FetchAssignedRuns(FetchAssignedRunsRequest) returns (FetchAssignedRunsResponse);
+  rpc UpdateRunStatus(UpdateRunStatusRequest) returns (UpdateRunStatusResponse);
+  rpc AppendRunStep(AppendRunStepRequest) returns (AppendRunStepResponse);
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
+  rpc ListWorkspaceTree(ListWorkspaceTreeRequest) returns (ListWorkspaceTreeResponse);
+  rpc ReadWorkspaceFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc ListInteractionEndpoints(ListInteractionEndpointsRequest) returns (ListInteractionEndpointsResponse);
+  rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse);
+  rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
+  rpc ReadMessages(ReadMessagesRequest) returns (ReadMessagesResponse);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc SaveMessage(SaveMessageRequest) returns (SaveMessageResponse);
+  rpc UnsaveMessage(UnsaveMessageRequest) returns (UnsaveMessageResponse);
+  rpc ListSavedMessages(ListSavedMessagesRequest) returns (ListSavedMessagesResponse);
+  rpc FollowThread(FollowThreadRequest) returns (FollowThreadResponse);
+  rpc UnfollowThread(UnfollowThreadRequest) returns (UnfollowThreadResponse);
+  rpc CreateCollaborationTask(CreateCollaborationTaskRequest) returns (CreateCollaborationTaskResponse);
+  rpc ListCollaborationTasks(ListCollaborationTasksRequest) returns (ListCollaborationTasksResponse);
+  rpc ListTaskBoard(ListTaskBoardRequest) returns (ListTaskBoardResponse);
+  rpc ClaimCollaborationTask(ClaimCollaborationTaskRequest) returns (ClaimCollaborationTaskResponse);
+  rpc ProposeTaskSplit(ProposeTaskSplitRequest) returns (ProposeTaskSplitResponse);
+  rpc ApplyTaskSplit(ApplyTaskSplitRequest) returns (ApplyTaskSplitResponse);
+  rpc CreateTaskGraph(CreateTaskGraphRequest) returns (CreateTaskGraphResponse);
+  rpc ListTaskGraph(ListTaskGraphRequest) returns (ListTaskGraphResponse);
+  rpc UpdateTaskGraph(UpdateTaskGraphRequest) returns (UpdateTaskGraphResponse);
+  rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
+  rpc PublishCoordinationRecord(PublishCoordinationRecordRequest) returns (PublishCoordinationRecordResponse);
+  rpc ListCoordinationRecords(ListCoordinationRecordsRequest) returns (ListCoordinationRecordsResponse);
+  rpc ListAgentMemory(ListAgentMemoryRequest) returns (ListAgentMemoryResponse);
+  rpc UpsertAgentMemory(UpsertAgentMemoryRequest) returns (UpsertAgentMemoryResponse);
+  rpc GetAgentProfile(GetAgentProfileRequest) returns (GetAgentProfileResponse);
+  rpc UpdateAgentProfile(UpdateAgentProfileRequest) returns (UpdateAgentProfileResponse);
+  rpc SetAgentEnv(SetAgentEnvRequest) returns (SetAgentEnvResponse);
+  rpc ListAgentProfiles(ListAgentProfilesRequest) returns (ListAgentProfilesResponse);
+  rpc ListAgentDMs(ListAgentDMsRequest) returns (ListAgentDMsResponse);
+  rpc ControlAgent(ControlAgentRequest) returns (ControlAgentResponse);
+  rpc SendAgentDirectMessage(SendAgentDirectMessageRequest) returns (SendAgentDirectMessageResponse);
+  rpc UpdateAgentStatus(UpdateAgentStatusRequest) returns (UpdateAgentStatusResponse);
+  rpc ListAgentStatuses(ListAgentStatusesRequest) returns (ListAgentStatusesResponse);
+  rpc ScheduleReminder(ScheduleReminderRequest) returns (ScheduleReminderResponse);
+  rpc ListReminders(ListRemindersRequest) returns (ListRemindersResponse);
+  rpc CancelReminder(CancelReminderRequest) returns (CancelReminderResponse);
+  rpc SnoozeReminder(SnoozeReminderRequest) returns (SnoozeReminderResponse);
+  rpc UpdateReminder(UpdateReminderRequest) returns (UpdateReminderResponse);
+  rpc GetReminderLog(GetReminderLogRequest) returns (GetReminderLogResponse);
+  rpc UploadAttachment(UploadAttachmentRequest) returns (UploadAttachmentResponse);
+  rpc GetAttachment(GetAttachmentRequest) returns (GetAttachmentResponse);
+  rpc LogActivity(LogActivityRequest) returns (LogActivityResponse);
+  rpc ListActivity(ListActivityRequest) returns (ListActivityResponse);
+  rpc ListEventsSince(ListEventsSinceRequest) returns (ListEventsSinceResponse);
+}

@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message WorkPlanItem {
+  string item_id = 1;
+  string summary = 2;
+  string status = 3; // pending | in_progress | completed | blocked | skipped
+  string owner_agent_id = 4;
+  string owner_user_id = 5;
+  string task_id = 6;
+  repeated string depends_on_item_ids = 7;
+  repeated string file_paths = 8;
+  repeated string acceptance_criteria = 9;
+}
+
+message WorkPlan {
+  string plan_id = 1;
+  string target = 2;
+  string thread_id = 3;
+  string task_id = 4;
+  string owner_agent_id = 5;
+  string status = 6; // draft | active | superseded | completed | canceled
+  repeated WorkPlanItem items = 7;
+  string summary = 8;
+  int64 created_time_unix = 9;
+  int64 updated_time_unix = 10;
+}
+
+message ProgressUpdate {
+  string update_id = 1;
+  string target = 2;
+  string task_id = 3;
+  string run_id = 4;
+  string agent_id = 5;
+  string status = 6; // started | in_progress | blocked | verifying | completed
+  string summary = 7;
+  string detail = 8;
+  repeated string completed_item_ids = 9;
+  repeated string blocked_item_ids = 10;
+  int64 created_time_unix = 11;
+}
+
+message VerificationResult {
+  string verification_id = 1;
+  string kind = 2; // command | test | build | lint | smoke | review | manual
+  string command = 3;
+  string status = 4; // passed | failed | skipped | blocked
+  string summary = 5;
+  string output_excerpt = 6;
+  repeated string artifact_ids = 7;
+  int64 started_time_unix = 8;
+  int64 completed_time_unix = 9;
+}
+
+message AcceptanceEvidence {
+  string evidence_id = 1;
+  string target = 2;
+  string task_id = 3;
+  string run_id = 4;
+  string submitted_by_agent_id = 5;
+  string submitted_by_user_id = 6;
+  string summary = 7;
+  repeated VerificationResult verification_results = 8;
+  repeated string commit_ids = 9;
+  repeated string tag_names = 10;
+  repeated string artifact_ids = 11;
+  int64 submitted_time_unix = 12;
+}
+
+message ReleaseGate {
+  string release_gate_id = 1;
+  string target = 2;
+  string task_id = 3;
+  string name = 4;
+  string status = 5; // pending | running | passed | failed | waived
+  repeated string required_checks = 6;
+  repeated VerificationResult results = 7;
+  bool passed = 8;
+  string waiver_reason = 9;
+  int64 updated_time_unix = 10;
+}
+
+message RoleHandoff {
+  string handoff_id = 1;
+  string target = 2;
+  string task_id = 3;
+  string from_agent_id = 4;
+  string to_agent_id = 5;
+  string role = 6; // designer | implementer | reviewer | verifier | releaser | owner | custom
+  string context_summary = 7;
+  repeated string required_artifact_ids = 8;
+  string status = 9; // proposed | accepted | declined | canceled | completed
+  int64 created_time_unix = 10;
+  int64 accepted_time_unix = 11;
+}
+
+message DeadlineNegotiation {
+  string negotiation_id = 1;
+  string target = 2;
+  string task_id = 3;
+  string proposed_by_agent_id = 4;
+  string proposed_by_user_id = 5;
+  int64 requested_deadline_unix = 6;
+  int64 proposed_deadline_unix = 7;
+  string reason = 8;
+  string status = 9; // proposed | accepted | rejected | superseded
+  int64 decided_time_unix = 10;
+}
+
+message ScopeNegotiation {
+  string negotiation_id = 1;
+  string target = 2;
+  string task_id = 3;
+  string proposed_by_agent_id = 4;
+  string proposed_by_user_id = 5;
+  repeated string included_scope = 6;
+  repeated string deferred_scope = 7;
+  string reason = 8;
+  string status = 9; // proposed | accepted | rejected | superseded
+  int64 decided_time_unix = 10;
+}
+
+message CoordinationRecord {
+  string coordination_id = 1;
+  string target = 2;
+  string thread_id = 3;
+  string task_id = 4;
+  string actor_agent_id = 5;
+  string actor_user_id = 6;
+  string kind = 7; // work_plan | progress_update | acceptance_evidence | release_gate | role_handoff | deadline_negotiation | scope_negotiation
+  int64 created_time_unix = 8;
+  string request_id = 9;
+
+  oneof payload {
+    WorkPlan work_plan = 20;
+    ProgressUpdate progress_update = 21;
+    AcceptanceEvidence acceptance_evidence = 22;
+    ReleaseGate release_gate = 23;
+    RoleHandoff role_handoff = 24;
+    DeadlineNegotiation deadline_negotiation = 25;
+    ScopeNegotiation scope_negotiation = 26;
+  }
+}
+
+message PublishCoordinationRecordRequest {
+  CoordinationRecord record = 1;
+  string request_id = 2;
+}
+
+message PublishCoordinationRecordResponse {
+  bool accepted = 1;
+  CoordinationRecord record = 2;
+}
+
+message ListCoordinationRecordsRequest {
+  string target = 1;
+  string task_id = 2;
+  string kind = 3;
+  string actor_agent_id = 4;
+  uint32 limit = 5;
+  EventCursor cursor = 6;
+}
+
+message ListCoordinationRecordsResponse {
+  repeated CoordinationRecord records = 1;
+  EventCursor next_cursor = 2;
+}

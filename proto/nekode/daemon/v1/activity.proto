@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message ActivityRecord {
+  string activity_id = 1;
+  string target = 2;
+  string agent_id = 3;
+  string kind = 4;
+  string summary = 5;
+  string detail = 6;
+  int64 created_time_unix = 7;
+  string run_id = 8;
+  string step_id = 9;
+  string coordination_record_id = 10;
+  string memory_record_id = 11;
+}
+message LogActivityRequest {
+  string target = 1;
+  string agent_id = 2;
+  string kind = 3;
+  string summary = 4;
+  string detail = 5;
+  string run_id = 6;
+  string step_id = 7;
+  string request_id = 8;
+}
+message LogActivityResponse {
+  ActivityRecord activity = 1;
+}
+message ListActivityRequest {
+  string target = 1;
+  string agent_id = 2;
+  uint32 limit = 3;
+  EventCursor cursor = 4;
+}
+message ListActivityResponse {
+  repeated ActivityRecord activities = 1;
+  EventCursor next_cursor = 2;
+}
+message ListEventsSinceRequest {
+  EventCursor cursor = 1;
+  uint32 limit = 2;
+}
+message CollaborationEvent {
+  string event_id = 1;
+  string target = 2;
+  string kind = 3;
+  string message_id = 4;
+  string activity_id = 5;
+  string task_id = 6;
+  string run_id = 7;
+  int64 created_time_unix = 8;
+  string attachment_id = 9;
+  string coordination_record_id = 10;
+  string memory_record_id = 11;
+}
+message ListEventsSinceResponse {
+  repeated CollaborationEvent events = 1;
+  EventCursor next_cursor = 2;
+}

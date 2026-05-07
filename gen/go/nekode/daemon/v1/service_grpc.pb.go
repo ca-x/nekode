@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             (unknown)
-// source: nekode/daemon/v1/daemon.proto
+// source: nekode/daemon/v1/service.proto
 
 package daemonv1
 
@@ -19,56 +19,60 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DaemonControlService_RegisterComputer_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
-	DaemonControlService_HeartbeatComputer_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
-	DaemonControlService_FetchAssignedRuns_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
-	DaemonControlService_UpdateRunStatus_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
-	DaemonControlService_AppendRunStep_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
-	DaemonControlService_ListRuns_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ListRuns"
-	DaemonControlService_GetRun_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/GetRun"
-	DaemonControlService_ListWorkspaceTree_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListWorkspaceTree"
-	DaemonControlService_ReadWorkspaceFile_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ReadWorkspaceFile"
-	DaemonControlService_ListChannels_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListChannels"
-	DaemonControlService_ListInteractionEndpoints_FullMethodName = "/nekode.daemon.v1.DaemonControlService/ListInteractionEndpoints"
-	DaemonControlService_ListThreads_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListThreads"
-	DaemonControlService_GetThread_FullMethodName                = "/nekode.daemon.v1.DaemonControlService/GetThread"
-	DaemonControlService_ReadMessages_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ReadMessages"
-	DaemonControlService_SendMessage_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/SendMessage"
-	DaemonControlService_SaveMessage_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/SaveMessage"
-	DaemonControlService_UnsaveMessage_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UnsaveMessage"
-	DaemonControlService_ListSavedMessages_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListSavedMessages"
-	DaemonControlService_FollowThread_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/FollowThread"
-	DaemonControlService_UnfollowThread_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UnfollowThread"
-	DaemonControlService_CreateCollaborationTask_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/CreateCollaborationTask"
-	DaemonControlService_ListCollaborationTasks_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/ListCollaborationTasks"
-	DaemonControlService_ListTaskBoard_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListTaskBoard"
-	DaemonControlService_ClaimCollaborationTask_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/ClaimCollaborationTask"
-	DaemonControlService_ProposeTaskSplit_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ProposeTaskSplit"
-	DaemonControlService_ApplyTaskSplit_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ApplyTaskSplit"
-	DaemonControlService_CreateTaskGraph_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/CreateTaskGraph"
-	DaemonControlService_ListTaskGraph_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListTaskGraph"
-	DaemonControlService_UpdateTaskGraph_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UpdateTaskGraph"
-	DaemonControlService_GetServerInfo_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/GetServerInfo"
-	DaemonControlService_GetAgentProfile_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/GetAgentProfile"
-	DaemonControlService_UpdateAgentProfile_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/UpdateAgentProfile"
-	DaemonControlService_SetAgentEnv_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/SetAgentEnv"
-	DaemonControlService_ListAgentProfiles_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListAgentProfiles"
-	DaemonControlService_ListAgentDMs_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListAgentDMs"
-	DaemonControlService_ControlAgent_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ControlAgent"
-	DaemonControlService_SendAgentDirectMessage_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/SendAgentDirectMessage"
-	DaemonControlService_UpdateAgentStatus_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/UpdateAgentStatus"
-	DaemonControlService_ListAgentStatuses_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/ListAgentStatuses"
-	DaemonControlService_ScheduleReminder_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ScheduleReminder"
-	DaemonControlService_ListReminders_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListReminders"
-	DaemonControlService_CancelReminder_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/CancelReminder"
-	DaemonControlService_SnoozeReminder_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/SnoozeReminder"
-	DaemonControlService_UpdateReminder_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UpdateReminder"
-	DaemonControlService_GetReminderLog_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/GetReminderLog"
-	DaemonControlService_UploadAttachment_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UploadAttachment"
-	DaemonControlService_GetAttachment_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/GetAttachment"
-	DaemonControlService_LogActivity_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/LogActivity"
-	DaemonControlService_ListActivity_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListActivity"
-	DaemonControlService_ListEventsSince_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ListEventsSince"
+	DaemonControlService_RegisterComputer_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
+	DaemonControlService_HeartbeatComputer_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
+	DaemonControlService_FetchAssignedRuns_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
+	DaemonControlService_UpdateRunStatus_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
+	DaemonControlService_AppendRunStep_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
+	DaemonControlService_ListRuns_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/ListRuns"
+	DaemonControlService_GetRun_FullMethodName                    = "/nekode.daemon.v1.DaemonControlService/GetRun"
+	DaemonControlService_ListWorkspaceTree_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListWorkspaceTree"
+	DaemonControlService_ReadWorkspaceFile_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ReadWorkspaceFile"
+	DaemonControlService_ListChannels_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListChannels"
+	DaemonControlService_ListInteractionEndpoints_FullMethodName  = "/nekode.daemon.v1.DaemonControlService/ListInteractionEndpoints"
+	DaemonControlService_ListThreads_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/ListThreads"
+	DaemonControlService_GetThread_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/GetThread"
+	DaemonControlService_ReadMessages_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ReadMessages"
+	DaemonControlService_SendMessage_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SendMessage"
+	DaemonControlService_SaveMessage_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SaveMessage"
+	DaemonControlService_UnsaveMessage_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/UnsaveMessage"
+	DaemonControlService_ListSavedMessages_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListSavedMessages"
+	DaemonControlService_FollowThread_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/FollowThread"
+	DaemonControlService_UnfollowThread_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UnfollowThread"
+	DaemonControlService_CreateCollaborationTask_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/CreateCollaborationTask"
+	DaemonControlService_ListCollaborationTasks_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/ListCollaborationTasks"
+	DaemonControlService_ListTaskBoard_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListTaskBoard"
+	DaemonControlService_ClaimCollaborationTask_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/ClaimCollaborationTask"
+	DaemonControlService_ProposeTaskSplit_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ProposeTaskSplit"
+	DaemonControlService_ApplyTaskSplit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ApplyTaskSplit"
+	DaemonControlService_CreateTaskGraph_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/CreateTaskGraph"
+	DaemonControlService_ListTaskGraph_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListTaskGraph"
+	DaemonControlService_UpdateTaskGraph_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/UpdateTaskGraph"
+	DaemonControlService_GetServerInfo_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/GetServerInfo"
+	DaemonControlService_PublishCoordinationRecord_FullMethodName = "/nekode.daemon.v1.DaemonControlService/PublishCoordinationRecord"
+	DaemonControlService_ListCoordinationRecords_FullMethodName   = "/nekode.daemon.v1.DaemonControlService/ListCoordinationRecords"
+	DaemonControlService_ListAgentMemory_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListAgentMemory"
+	DaemonControlService_UpsertAgentMemory_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UpsertAgentMemory"
+	DaemonControlService_GetAgentProfile_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/GetAgentProfile"
+	DaemonControlService_UpdateAgentProfile_FullMethodName        = "/nekode.daemon.v1.DaemonControlService/UpdateAgentProfile"
+	DaemonControlService_SetAgentEnv_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SetAgentEnv"
+	DaemonControlService_ListAgentProfiles_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListAgentProfiles"
+	DaemonControlService_ListAgentDMs_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListAgentDMs"
+	DaemonControlService_ControlAgent_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ControlAgent"
+	DaemonControlService_SendAgentDirectMessage_FullMethodName    = "/nekode.daemon.v1.DaemonControlService/SendAgentDirectMessage"
+	DaemonControlService_UpdateAgentStatus_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/UpdateAgentStatus"
+	DaemonControlService_ListAgentStatuses_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/ListAgentStatuses"
+	DaemonControlService_ScheduleReminder_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/ScheduleReminder"
+	DaemonControlService_ListReminders_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/ListReminders"
+	DaemonControlService_CancelReminder_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/CancelReminder"
+	DaemonControlService_SnoozeReminder_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/SnoozeReminder"
+	DaemonControlService_UpdateReminder_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/UpdateReminder"
+	DaemonControlService_GetReminderLog_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/GetReminderLog"
+	DaemonControlService_UploadAttachment_FullMethodName          = "/nekode.daemon.v1.DaemonControlService/UploadAttachment"
+	DaemonControlService_GetAttachment_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/GetAttachment"
+	DaemonControlService_LogActivity_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/LogActivity"
+	DaemonControlService_ListActivity_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/ListActivity"
+	DaemonControlService_ListEventsSince_FullMethodName           = "/nekode.daemon.v1.DaemonControlService/ListEventsSince"
 )
 
 // DaemonControlServiceClient is the client API for DaemonControlService service.
@@ -105,6 +109,10 @@ type DaemonControlServiceClient interface {
 	ListTaskGraph(ctx context.Context, in *ListTaskGraphRequest, opts ...grpc.CallOption) (*ListTaskGraphResponse, error)
 	UpdateTaskGraph(ctx context.Context, in *UpdateTaskGraphRequest, opts ...grpc.CallOption) (*UpdateTaskGraphResponse, error)
 	GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error)
+	PublishCoordinationRecord(ctx context.Context, in *PublishCoordinationRecordRequest, opts ...grpc.CallOption) (*PublishCoordinationRecordResponse, error)
+	ListCoordinationRecords(ctx context.Context, in *ListCoordinationRecordsRequest, opts ...grpc.CallOption) (*ListCoordinationRecordsResponse, error)
+	ListAgentMemory(ctx context.Context, in *ListAgentMemoryRequest, opts ...grpc.CallOption) (*ListAgentMemoryResponse, error)
+	UpsertAgentMemory(ctx context.Context, in *UpsertAgentMemoryRequest, opts ...grpc.CallOption) (*UpsertAgentMemoryResponse, error)
 	GetAgentProfile(ctx context.Context, in *GetAgentProfileRequest, opts ...grpc.CallOption) (*GetAgentProfileResponse, error)
 	UpdateAgentProfile(ctx context.Context, in *UpdateAgentProfileRequest, opts ...grpc.CallOption) (*UpdateAgentProfileResponse, error)
 	SetAgentEnv(ctx context.Context, in *SetAgentEnvRequest, opts ...grpc.CallOption) (*SetAgentEnvResponse, error)
@@ -435,6 +443,46 @@ func (c *daemonControlServiceClient) GetServerInfo(ctx context.Context, in *GetS
 	return out, nil
 }
 
+func (c *daemonControlServiceClient) PublishCoordinationRecord(ctx context.Context, in *PublishCoordinationRecordRequest, opts ...grpc.CallOption) (*PublishCoordinationRecordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PublishCoordinationRecordResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_PublishCoordinationRecord_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ListCoordinationRecords(ctx context.Context, in *ListCoordinationRecordsRequest, opts ...grpc.CallOption) (*ListCoordinationRecordsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCoordinationRecordsResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ListCoordinationRecords_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ListAgentMemory(ctx context.Context, in *ListAgentMemoryRequest, opts ...grpc.CallOption) (*ListAgentMemoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAgentMemoryResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ListAgentMemory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) UpsertAgentMemory(ctx context.Context, in *UpsertAgentMemoryRequest, opts ...grpc.CallOption) (*UpsertAgentMemoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertAgentMemoryResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_UpsertAgentMemory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daemonControlServiceClient) GetAgentProfile(ctx context.Context, in *GetAgentProfileRequest, opts ...grpc.CallOption) (*GetAgentProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAgentProfileResponse)
@@ -669,6 +717,10 @@ type DaemonControlServiceServer interface {
 	ListTaskGraph(context.Context, *ListTaskGraphRequest) (*ListTaskGraphResponse, error)
 	UpdateTaskGraph(context.Context, *UpdateTaskGraphRequest) (*UpdateTaskGraphResponse, error)
 	GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error)
+	PublishCoordinationRecord(context.Context, *PublishCoordinationRecordRequest) (*PublishCoordinationRecordResponse, error)
+	ListCoordinationRecords(context.Context, *ListCoordinationRecordsRequest) (*ListCoordinationRecordsResponse, error)
+	ListAgentMemory(context.Context, *ListAgentMemoryRequest) (*ListAgentMemoryResponse, error)
+	UpsertAgentMemory(context.Context, *UpsertAgentMemoryRequest) (*UpsertAgentMemoryResponse, error)
 	GetAgentProfile(context.Context, *GetAgentProfileRequest) (*GetAgentProfileResponse, error)
 	UpdateAgentProfile(context.Context, *UpdateAgentProfileRequest) (*UpdateAgentProfileResponse, error)
 	SetAgentEnv(context.Context, *SetAgentEnvRequest) (*SetAgentEnvResponse, error)
@@ -788,6 +840,18 @@ func (UnimplementedDaemonControlServiceServer) UpdateTaskGraph(context.Context, 
 }
 func (UnimplementedDaemonControlServiceServer) GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetServerInfo not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) PublishCoordinationRecord(context.Context, *PublishCoordinationRecordRequest) (*PublishCoordinationRecordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PublishCoordinationRecord not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ListCoordinationRecords(context.Context, *ListCoordinationRecordsRequest) (*ListCoordinationRecordsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCoordinationRecords not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ListAgentMemory(context.Context, *ListAgentMemoryRequest) (*ListAgentMemoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAgentMemory not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) UpsertAgentMemory(context.Context, *UpsertAgentMemoryRequest) (*UpsertAgentMemoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpsertAgentMemory not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) GetAgentProfile(context.Context, *GetAgentProfileRequest) (*GetAgentProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAgentProfile not implemented")
@@ -1410,6 +1474,78 @@ func _DaemonControlService_GetServerInfo_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaemonControlService_PublishCoordinationRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishCoordinationRecordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).PublishCoordinationRecord(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_PublishCoordinationRecord_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).PublishCoordinationRecord(ctx, req.(*PublishCoordinationRecordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ListCoordinationRecords_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCoordinationRecordsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ListCoordinationRecords(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ListCoordinationRecords_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ListCoordinationRecords(ctx, req.(*ListCoordinationRecordsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ListAgentMemory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAgentMemoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ListAgentMemory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ListAgentMemory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ListAgentMemory(ctx, req.(*ListAgentMemoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_UpsertAgentMemory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertAgentMemoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).UpsertAgentMemory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_UpsertAgentMemory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).UpsertAgentMemory(ctx, req.(*UpsertAgentMemoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaemonControlService_GetAgentProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetAgentProfileRequest)
 	if err := dec(in); err != nil {
@@ -1898,6 +2034,22 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaemonControlService_GetServerInfo_Handler,
 		},
 		{
+			MethodName: "PublishCoordinationRecord",
+			Handler:    _DaemonControlService_PublishCoordinationRecord_Handler,
+		},
+		{
+			MethodName: "ListCoordinationRecords",
+			Handler:    _DaemonControlService_ListCoordinationRecords_Handler,
+		},
+		{
+			MethodName: "ListAgentMemory",
+			Handler:    _DaemonControlService_ListAgentMemory_Handler,
+		},
+		{
+			MethodName: "UpsertAgentMemory",
+			Handler:    _DaemonControlService_UpsertAgentMemory_Handler,
+		},
+		{
 			MethodName: "GetAgentProfile",
 			Handler:    _DaemonControlService_GetAgentProfile_Handler,
 		},
@@ -1979,5 +2131,5 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "nekode/daemon/v1/daemon.proto",
+	Metadata: "nekode/daemon/v1/service.proto",
 }

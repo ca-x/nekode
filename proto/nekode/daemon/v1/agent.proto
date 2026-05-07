@@ -1,0 +1,202 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/collaboration.proto";
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message AgentRoleAssignment {
+  string role_id = 1;
+  string name = 2; // implementer | reviewer | designer | releaser | observer | custom
+  string scope = 3; // server | channel | thread | task | run
+  string target = 4;
+  string task_id = 5;
+  bool active = 6;
+  int64 assigned_time_unix = 7;
+  string assigned_by_agent_id = 8;
+  string assigned_by_user_id = 9;
+}
+message AgentProfile {
+  string agent_id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  bool enabled = 5;
+  string provider = 6;
+  string model = 7;
+  repeated EnvVar env = 8;
+  repeated SkillRecord skills = 9;
+  repeated string dm_targets = 10;
+  string computer_id = 11;
+  string runtime_profile_id = 12;
+  string status = 13;
+  int64 last_activity_time_unix = 14;
+  repeated Capability capabilities = 15;
+  repeated Permission permissions = 16;
+  AgentStatusSnapshot status_snapshot = 17;
+  string avatar_url = 18;
+  string runtime_kind = 19;
+  string reasoning_effort = 20;
+  string execution_mode = 21;
+  string daemon_version = 22;
+  repeated AgentRoleAssignment roles = 23;
+  string memory_root = 24;
+  repeated string coordination_tags = 25;
+}
+message GetAgentProfileRequest {
+  string agent_id = 1;
+}
+message GetAgentProfileResponse {
+  AgentProfile profile = 1;
+}
+message UpdateAgentProfileRequest {
+  string agent_id = 1;
+  optional string display_name = 2;
+  optional string description = 3;
+  string avatar_filename = 4;
+  string avatar_mime_type = 5;
+  bytes avatar_content = 6;
+  string request_id = 7;
+}
+message UpdateAgentProfileResponse {
+  AgentProfile profile = 1;
+}
+message SetAgentEnvRequest {
+  string agent_id = 1;
+  repeated EnvVar env = 2;
+  string request_id = 3;
+}
+message SetAgentEnvResponse {
+  AgentProfile profile = 1;
+}
+message ListAgentProfilesRequest {
+  uint32 limit = 1;
+}
+message ListAgentProfilesResponse {
+  repeated AgentProfile profiles = 1;
+}
+message ListAgentDMsRequest {
+  string agent_id = 1;
+  uint32 limit = 2;
+}
+message ListAgentDMsResponse {
+  repeated ChannelRecord dms = 1;
+}
+enum AgentControlAction {
+  AGENT_CONTROL_ACTION_UNSPECIFIED = 0;
+  AGENT_CONTROL_ACTION_TERMINATE = 1;
+  AGENT_CONTROL_ACTION_RESTART = 2;
+  AGENT_CONTROL_ACTION_RESTART_RESET_SESSION = 3;
+  AGENT_CONTROL_ACTION_RESTART_FULL_RESET = 4;
+}
+message AgentControlOperation {
+  string operation_id = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  string runtime_profile_id = 4;
+  AgentControlAction action = 5;
+  string state = 6; // requested | queued | running | completed | failed | unsupported
+  string reason = 7;
+  string requested_by_agent_id = 8;
+  int64 created_time_unix = 9;
+  int64 updated_time_unix = 10;
+}
+message ControlAgentRequest {
+  string agent_id = 1;
+  string computer_id = 2;
+  string runtime_profile_id = 3;
+  AgentControlAction action = 4;
+  string reason = 5;
+  string requested_by_agent_id = 6;
+  string request_id = 7;
+}
+message ControlAgentResponse {
+  bool accepted = 1;
+  AgentControlOperation operation = 2;
+  AgentProfile profile = 3;
+}
+message SendAgentDirectMessageRequest {
+  string agent_id = 1;
+  string content = 2;
+  string sender_agent_id = 3;
+  string sender_display_name = 4;
+  string request_id = 5;
+  repeated string attachment_ids = 6;
+  string reply_to_message_id = 7;
+}
+message SendAgentDirectMessageResponse {
+  bool accepted = 1;
+  CollaborationMessage message = 2;
+}
+enum AgentPresence {
+  AGENT_PRESENCE_UNSPECIFIED = 0;
+  AGENT_PRESENCE_ONLINE = 1;
+  AGENT_PRESENCE_IDLE = 2;
+  AGENT_PRESENCE_BUSY = 3;
+  AGENT_PRESENCE_SLEEPING = 4;
+  AGENT_PRESENCE_STALE = 5;
+  AGENT_PRESENCE_OFFLINE = 6;
+  AGENT_PRESENCE_DEGRADED = 7;
+}
+enum AgentActivityState {
+  AGENT_ACTIVITY_STATE_UNSPECIFIED = 0;
+  AGENT_ACTIVITY_STATE_RECEIVING_MESSAGE = 1;
+  AGENT_ACTIVITY_STATE_READING_CONTEXT = 2;
+  AGENT_ACTIVITY_STATE_COMPACTING_CONTEXT = 3;
+  AGENT_ACTIVITY_STATE_THINKING = 4;
+  AGENT_ACTIVITY_STATE_CODING = 5;
+  AGENT_ACTIVITY_STATE_RUNNING_COMMAND = 6;
+  AGENT_ACTIVITY_STATE_RUNNING_TEST = 7;
+  AGENT_ACTIVITY_STATE_REVIEWING = 8;
+  AGENT_ACTIVITY_STATE_WAITING = 9;
+  AGENT_ACTIVITY_STATE_BLOCKED = 10;
+  AGENT_ACTIVITY_STATE_RESTARTING = 11;
+  AGENT_ACTIVITY_STATE_RESTORING_MEMORY = 12;
+}
+enum AgentHealth {
+  AGENT_HEALTH_UNSPECIFIED = 0;
+  AGENT_HEALTH_OK = 1;
+  AGENT_HEALTH_PROVIDER_QUOTA = 2;
+  AGENT_HEALTH_COMMAND_FAILED = 3;
+  AGENT_HEALTH_TEST_FAILED = 4;
+  AGENT_HEALTH_AUTH_REQUIRED = 5;
+  AGENT_HEALTH_RUNTIME_ERROR = 6;
+  AGENT_HEALTH_OFFLINE = 7;
+}
+message AgentStatusSnapshot {
+  string agent_id = 1;
+  string computer_id = 2;
+  string runtime_profile_id = 3;
+  AgentPresence presence = 4;
+  AgentActivityState activity_state = 5;
+  AgentHealth health = 6;
+  string summary = 7;
+  string detail = 8;
+  string target = 9;
+  string thread_id = 10;
+  string message_id = 11;
+  string task_id = 12;
+  string run_id = 13;
+  string operation_id = 14;
+  string severity = 15;
+  int64 started_time_unix = 16;
+  int64 updated_time_unix = 17;
+  int64 expires_time_unix = 18;
+}
+message UpdateAgentStatusRequest {
+  AgentStatusSnapshot status = 1;
+  string request_id = 2;
+}
+message UpdateAgentStatusResponse {
+  AgentStatusSnapshot status = 1;
+}
+message ListAgentStatusesRequest {
+  string agent_id = 1;
+  string target = 2;
+  uint32 limit = 3;
+}
+message ListAgentStatusesResponse {
+  repeated AgentStatusSnapshot statuses = 1;
+}

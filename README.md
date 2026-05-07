@@ -10,7 +10,8 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - HTTP health endpoint: `GET /health`
 - Protocol metadata endpoint: `GET /api/protocol`
 - Phase 2 API docs: `docs/api.md`
-- Reusable daemon IDL: `proto/nekode/daemon/v1/daemon.proto`
+- Reusable daemon IDL: `proto/nekode/daemon/v1/*.proto`
+- Protocol capability review: `docs/protocol-capability-review.md`
 - Implementation design: `docs/slock-style-daemon-runtime.md`
 - Logo asset: `assets/brand.png`
 - Container bootstrap: `Dockerfile` and `docker-compose.yml`

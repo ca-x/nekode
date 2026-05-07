@@ -11,20 +11,23 @@ implementation. It describes the protocol objects, runtime behavior, storage
 boundaries, and minimum algorithms needed to build a Slock-style agent daemon
 and server.
 
-Use it with the protobuf definitions currently stored at:
+Use it with the protobuf definitions currently stored under:
 
 ```text
-proto/nekode/daemon/v1/daemon.proto
+proto/nekode/daemon/v1/
 ```
 
-The current Nekode copy keeps the reusable field numbers and RPC semantics, but
-uses a project-local proto package path. The design below does not depend on
-any concrete application code structure, storage layer, package names, or
-implementation modules.
+The protocol is split by capability boundary. `service.proto` owns the
+`DaemonControlService` RPC surface, while sibling files own runtime,
+collaboration, task, agent, coordination, memory, reminder, attachment, and
+activity objects. The current Nekode copy keeps reusable field numbers and RPC
+semantics, but uses a project-local proto package path. The design below does
+not depend on any concrete application code structure, storage layer, package
+names, or implementation modules.
 
 For a new implementation:
 
-1. Treat `daemon.proto` as the service and message contract.
+1. Treat `proto/nekode/daemon/v1/*.proto` as the service and message contract.
 2. Treat this document as the behavioral contract.
 3. Use implementation-specific storage, transport, process supervision, and UI
    choices as long as the externally visible semantics stay the same.
@@ -68,6 +71,10 @@ groups are:
 - channels, DMs, threads, messages, and attachments;
 - interaction endpoints that can originate or deliver messages outside the Web UI;
 - collaboration tasks, task boards, task graph split/apply flow;
+- structured coordination records for plans, progress, review evidence, release
+  gates, handoffs, and scope/deadline negotiation;
+- server-visible memory records that complement local `MEMORY.md` and `notes/`
+  files;
 - agent profiles, profile updates, environment variables, and status snapshots;
 - reminders, reminder lifecycle, and reminder event history;
 - activity records, event replay, runs, and run steps;
@@ -759,7 +766,7 @@ Check in this order:
 
 ### Phase 1: Protocol and Storage
 
-- Generate server and client bindings from `daemon.proto`.
+- Generate server and client bindings from `proto/nekode/daemon/v1/*.proto`.
 - Persist computers, agents, runtimes, runtime profiles, messages, tasks,
   reminders, activities, attachments, events, and idempotency records.
 - Add event cursor storage.
@@ -848,7 +855,7 @@ When the upstream daemon behavior changes:
 1. Check server info and daemon version.
 2. Check CLI help for new commands or flags.
 3. Inspect daemon logs for new event types or runtime launch fields.
-4. Compare behavior with `daemon.proto`.
+4. Compare behavior with the split files under `proto/nekode/daemon/v1/`.
 5. Prefer additive protobuf fields/RPCs while the package remains `v1`.
 6. Regenerate language bindings.
 7. Update this document with behavior that does not require protobuf changes.

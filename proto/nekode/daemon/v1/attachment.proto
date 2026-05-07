@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message AttachmentRecord {
+  string attachment_id = 1;
+  string target = 2;
+  string owner_id = 3;
+  string filename = 4;
+  string mime_type = 5;
+  int64 size_bytes = 6;
+  string storage_ref = 7;
+  int64 created_time_unix = 8;
+}
+message UploadAttachmentRequest {
+  string target = 1;
+  string filename = 2;
+  string mime_type = 3;
+  bytes content = 4;
+  string owner_id = 5;
+  string request_id = 6;
+}
+message UploadAttachmentResponse {
+  AttachmentRecord attachment = 1;
+}
+message GetAttachmentRequest {
+  string attachment_id = 1;
+  string target = 2;
+  string requester_agent_id = 3;
+}
+message GetAttachmentResponse {
+  AttachmentRecord attachment = 1;
+  bytes content = 2;
+}

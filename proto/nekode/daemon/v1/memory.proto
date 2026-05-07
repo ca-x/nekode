@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message MemoryRecord {
+  string memory_id = 1;
+  string agent_id = 2;
+  string target = 3;
+  string scope = 4; // global | channel | thread | task | user | runtime
+  string path = 5; // MEMORY.md, notes/channels.md, or server logical path
+  string title = 6;
+  string content = 7;
+  string content_format = 8; // markdown | json | text
+  int64 version = 9;
+  repeated string tags = 10;
+  repeated string source_message_ids = 11;
+  int64 created_time_unix = 12;
+  int64 updated_time_unix = 13;
+  string checksum = 14;
+  bool local_only = 15;
+}
+
+message ListAgentMemoryRequest {
+  string agent_id = 1;
+  string target = 2;
+  string scope = 3;
+  uint32 limit = 4;
+  EventCursor cursor = 5;
+}
+
+message ListAgentMemoryResponse {
+  repeated MemoryRecord records = 1;
+  EventCursor next_cursor = 2;
+}
+
+message UpsertAgentMemoryRequest {
+  MemoryRecord record = 1;
+  string request_id = 2;
+}
+
+message UpsertAgentMemoryResponse {
+  MemoryRecord record = 1;
+}

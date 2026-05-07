@@ -13,7 +13,7 @@ cmd/nekode/                 CLI entrypoint
 internal/config/            environment and flag-backed configuration
 internal/server/            HTTP server and bootstrap API endpoints
 internal/version/           build metadata
-proto/nekode/daemon/v1/     daemon/server protobuf contract
+proto/nekode/daemon/v1/     split daemon/server protobuf contract
 gen/go/nekode/daemon/v1/    generated Go bindings
 docs/                       implementation design and architecture notes
 assets/brand.png            logo asset for later UI work
@@ -49,10 +49,12 @@ or channel semantics.
 
 ## Protocol Boundary
 
-The protobuf file at `proto/nekode/daemon/v1/daemon.proto` is the authoritative
-IDL for the daemon/server control plane. Nekode uses project-local package names
-but preserves the reusable field numbers and RPC semantics from the Slock-style
-protocol work.
+The protobuf files under `proto/nekode/daemon/v1/` are the authoritative IDL
+for the daemon/server control plane. `service.proto` owns the RPC surface, and
+domain files own runtime, collaboration, task, agent, coordination, memory,
+reminder, attachment, and activity records. Nekode uses project-local package
+names but preserves the reusable field numbers and RPC semantics from the
+Slock-style protocol work.
 
 The behavioral contract lives in `docs/slock-style-daemon-runtime.md`. Later
 implementation should follow that document for:
