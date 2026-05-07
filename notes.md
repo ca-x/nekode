@@ -50,7 +50,8 @@
 - task #93: product scope, hosted deployment plan, acceptance docs.
 
 ### Task #94 backend Phase 2
-- Add SQLite through `database/sql` with the pure-Go `modernc.org/sqlite` driver so Docker can keep a static build.
+- Use Ent ORM like Nekobot. Database config is `NEKODE_DB_TYPE` (`sqlite`, `postgres`, `mysql`) plus `NEKODE_DB_DSN`; default is sqlite at `$NEKODE_DATA_DIR/nekode.db`.
+- SQLite uses `github.com/lib-x/entsqlite`, matching Nekobot's driver approach.
 - Use `POST /api/auth/bootstrap` for the first admin user; do not create default credentials.
 - Store sessions as random bearer tokens with server-side expiry.
 - Keep messages/tasks tied to transport-neutral targets, with optional interaction endpoint metadata.

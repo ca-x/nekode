@@ -32,7 +32,9 @@ Environment variables:
 | `NEKODE_ADDR` | `:18790` | HTTP listen address |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | Public server URL |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | Persistent data directory |
-| `NEKODE_DB_PATH` | `$NEKODE_DATA_DIR/nekode.db` | SQLite database file |
+| `NEKODE_DB_TYPE` | `sqlite` | Database type: `sqlite`, `postgres`, or `mysql` |
+| `NEKODE_DB_DSN` | `$NEKODE_DATA_DIR/nekode.db` | Database DSN |
+| `NEKODE_DB_PATH` | empty | Legacy SQLite path alias if `NEKODE_DB_DSN` is unset |
 
 ## Protocol
 

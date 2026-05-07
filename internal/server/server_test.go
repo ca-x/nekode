@@ -103,16 +103,17 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 
 func testConfig() config.Config {
 	return config.Config{
-		Addr:         "127.0.0.1:0",
-		BaseURL:      "http://127.0.0.1",
-		DataDir:      "/tmp/nekode-test",
-		DatabasePath: ":memory:",
+		Addr:    "127.0.0.1:0",
+		BaseURL: "http://127.0.0.1",
+		DataDir: "/tmp/nekode-test",
+		DBType:  "sqlite",
+		DBDSN:   ":memory:",
 	}
 }
 
 func newTestStore(t *testing.T) *storage.Store {
 	t.Helper()
-	store, err := storage.Open(context.Background(), "file:"+storage.NewID("server_test")+"?mode=memory&cache=shared")
+	store, err := storage.Open(context.Background(), "file:"+storage.NewID("server_test")+"?mode=memory&cache=shared&_fk=1")
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

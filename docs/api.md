@@ -2,6 +2,17 @@
 
 Status: task #94 backend Phase 2
 
+Persistence uses Ent ORM. Configure the database with:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NEKODE_DB_TYPE` | `sqlite` | `sqlite`, `postgres`, or `mysql` |
+| `NEKODE_DB_DSN` | `$NEKODE_DATA_DIR/nekode.db` | Database DSN |
+| `NEKODE_DB_PATH` | empty | Legacy sqlite path alias when `NEKODE_DB_DSN` is unset |
+
+SQLite uses the same pure-Go `github.com/lib-x/entsqlite` driver pattern as
+Nekobot.
+
 All mutating collaboration endpoints use bearer authentication after the first
 admin user is created.
 

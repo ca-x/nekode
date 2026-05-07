@@ -53,7 +53,8 @@ func serve(args []string) error {
 	flags.StringVar(&cfg.Addr, "addr", cfg.Addr, "HTTP listen address")
 	flags.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "public base URL")
 	flags.StringVar(&cfg.DataDir, "data-dir", cfg.DataDir, "persistent data directory")
-	flags.StringVar(&cfg.DatabasePath, "db", cfg.DatabasePath, "SQLite database path")
+	flags.StringVar(&cfg.DBType, "db-type", cfg.DBType, "database type: sqlite, postgres, or mysql")
+	flags.StringVar(&cfg.DBDSN, "db-dsn", cfg.DBDSN, "database DSN; defaults to ~/.nekode/nekode.db for sqlite")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -64,14 +65,14 @@ func serve(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	store, err := storage.Open(ctx, cfg.DatabasePath)
+	store, err := storage.OpenWithOptions(ctx, storage.OpenOptions{
+		Type: cfg.DatabaseType(),
+		DSN:  cfg.DBDSN,
+	})
 	if err != nil {
 		return err
 	}
 	defer store.Close()
-	if err := store.Migrate(ctx); err != nil {
-		return err
-	}
 
 	s := server.New(cfg, slog.Default(), store)
 	err = s.ListenAndServe(ctx)
@@ -83,6 +84,6 @@ func serve(args []string) error {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  nekode serve [--addr :18790] [--base-url http://localhost:18790] [--data-dir ~/.nekode] [--db ~/.nekode/nekode.db]")
+	fmt.Fprintln(os.Stderr, "  nekode serve [--addr :18790] [--base-url http://localhost:18790] [--data-dir ~/.nekode] [--db-type sqlite] [--db-dsn ~/.nekode/nekode.db]")
 	fmt.Fprintln(os.Stderr, "  nekode version")
 }

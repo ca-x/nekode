@@ -2,374 +2,422 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"entgo.io/ent/dialect/sql"
+	entschema "entgo.io/ent/dialect/sql/schema"
+	"github.com/ca-x/nekode/internal/ent"
+	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
+	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/session"
+	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/user"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib-x/entsqlite"
+	_ "github.com/lib/pq"
 )
 
 type Store struct {
-	db *sql.DB
+	client *ent.Client
+}
+
+type OpenOptions struct {
+	Type string
+	DSN  string
 }
 
 func Open(ctx context.Context, path string) (*Store, error) {
-	if path != ":memory:" && !strings.HasPrefix(path, "file:") {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return nil, err
+	return OpenWithOptions(ctx, OpenOptions{Type: "sqlite", DSN: path})
+}
+
+func OpenWithOptions(ctx context.Context, opts OpenOptions) (*Store, error) {
+	dbType := normalizeDBType(opts.Type)
+	dsn := strings.TrimSpace(opts.DSN)
+	if dbType == "sqlite" {
+		if dsn == "" {
+			return nil, errors.New("sqlite dsn is required")
 		}
+		if dsn != ":memory:" && !strings.HasPrefix(dsn, "file:") {
+			if err := os.MkdirAll(filepath.Dir(dsn), 0o755); err != nil {
+				return nil, err
+			}
+			dsn = sqliteDSN(dsn)
+		} else {
+			dsn = ensureSQLiteForeignKeys(dsn)
+		}
+	} else if dsn == "" {
+		return nil, fmt.Errorf("%s dsn is required", dbType)
 	}
 
-	db, err := sql.Open("sqlite", path)
+	client, err := ent.Open(entDialect(dbType), dsn)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(1)
-
-	if _, err := db.ExecContext(ctx, "PRAGMA foreign_keys = ON"); err != nil {
-		_ = db.Close()
+	store := &Store{client: client}
+	if err := store.Migrate(ctx); err != nil {
+		_ = store.Close()
 		return nil, err
 	}
-	return &Store{db: db}, nil
+	return store, nil
 }
 
 func (s *Store) Close() error {
-	if s == nil || s.db == nil {
+	if s == nil || s.client == nil {
 		return nil
 	}
-	return s.db.Close()
+	return s.client.Close()
 }
 
 func (s *Store) Migrate(ctx context.Context) error {
-	for _, statement := range schemaStatements {
-		if _, err := s.db.ExecContext(ctx, statement); err != nil {
-			return err
-		}
-	}
-	return nil
+	return s.client.Schema.Create(ctx, entschema.WithForeignKeys(true))
 }
 
 func (s *Store) CountUsers(ctx context.Context) (int, error) {
-	var count int
-	if err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count); err != nil {
-		return 0, err
-	}
-	return count, nil
+	return s.client.User.Query().Count(ctx)
 }
 
-func (s *Store) CreateUser(ctx context.Context, user User) (User, error) {
+func (s *Store) CreateUser(ctx context.Context, userModel User) (User, error) {
 	now := unixNow()
-	if user.ID == "" {
-		user.ID = NewID("usr")
+	role := userModel.Role
+	if role == "" {
+		role = "member"
 	}
-	if user.Role == "" {
-		user.Role = "member"
+	create := s.client.User.Create().
+		SetUsername(userModel.Username).
+		SetDisplayName(userModel.DisplayName).
+		SetPasswordHash(userModel.PasswordHash).
+		SetRole(role).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now)
+	if userModel.ID != "" {
+		create.SetID(userModel.ID)
 	}
-	user.CreatedUnix = now
-	user.UpdatedUnix = now
-
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO users (id, username, display_name, password_hash, role, created_unix, updated_unix)
-VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		user.ID, user.Username, user.DisplayName, user.PasswordHash, user.Role, user.CreatedUnix, user.UpdatedUnix)
-	if isConstraint(err) {
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
 		return User{}, ErrConflict
 	}
 	if err != nil {
 		return User{}, err
 	}
-	return user, nil
+	return userFromEnt(row), nil
 }
 
 func (s *Store) GetUser(ctx context.Context, id string) (User, error) {
-	return s.scanUser(s.db.QueryRowContext(ctx, `
-SELECT id, username, display_name, password_hash, role, created_unix, updated_unix
-FROM users WHERE id = ?`, id))
+	row, err := s.client.User.Query().Where(user.IDEQ(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return User{}, ErrNotFound
+	}
+	if err != nil {
+		return User{}, err
+	}
+	return userFromEnt(row), nil
 }
 
 func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, error) {
-	return s.scanUser(s.db.QueryRowContext(ctx, `
-SELECT id, username, display_name, password_hash, role, created_unix, updated_unix
-FROM users WHERE username = ?`, username))
+	row, err := s.client.User.Query().Where(user.UsernameEQ(username)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return User{}, ErrNotFound
+	}
+	if err != nil {
+		return User{}, err
+	}
+	return userFromEnt(row), nil
 }
 
-func (s *Store) CreateSession(ctx context.Context, session Session) (Session, error) {
+func (s *Store) CreateSession(ctx context.Context, sessionModel Session) (Session, error) {
 	now := unixNow()
-	if session.ID == "" {
-		session.ID = NewID("ses")
+	create := s.client.Session.Create().
+		SetTokenHash(sessionModel.TokenHash).
+		SetUserID(sessionModel.UserID).
+		SetExpiresUnix(sessionModel.ExpiresUnix).
+		SetCreatedUnix(now)
+	if sessionModel.ID != "" {
+		create.SetID(sessionModel.ID)
 	}
-	session.CreatedUnix = now
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO sessions (id, token_hash, user_id, expires_unix, created_unix)
-VALUES (?, ?, ?, ?, ?)`, session.ID, session.TokenHash, session.UserID, session.ExpiresUnix, session.CreatedUnix)
+	row, err := create.Save(ctx)
 	if err != nil {
 		return Session{}, err
 	}
-	return session, nil
+	return sessionFromEnt(row), nil
 }
 
 func (s *Store) GetSessionByTokenHash(ctx context.Context, tokenHash string) (Session, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT id, token_hash, user_id, expires_unix, created_unix
-FROM sessions WHERE token_hash = ?`, tokenHash)
-	var session Session
-	if err := row.Scan(&session.ID, &session.TokenHash, &session.UserID, &session.ExpiresUnix, &session.CreatedUnix); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return Session{}, ErrNotFound
-		}
-		return Session{}, err
-	}
-	if session.ExpiresUnix <= unixNow() {
-		_ = s.DeleteSession(ctx, session.ID)
+	row, err := s.client.Session.Query().Where(session.TokenHashEQ(tokenHash)).Only(ctx)
+	if ent.IsNotFound(err) {
 		return Session{}, ErrNotFound
 	}
-	return session, nil
+	if err != nil {
+		return Session{}, err
+	}
+	if row.ExpiresUnix <= unixNow() {
+		_ = s.DeleteSession(ctx, row.ID)
+		return Session{}, ErrNotFound
+	}
+	return sessionFromEnt(row), nil
 }
 
 func (s *Store) DeleteSession(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM sessions WHERE id = ?", id)
-	return err
+	return s.client.Session.DeleteOneID(id).Exec(ctx)
 }
 
 func (s *Store) CreateInteractionEndpoint(ctx context.Context, endpoint InteractionEndpoint) (InteractionEndpoint, error) {
 	now := unixNow()
-	if endpoint.ID == "" {
-		endpoint.ID = NewID("iep")
+	create := s.client.InteractionEndpoint.Create().
+		SetKind(endpoint.Kind).
+		SetProvider(endpoint.Provider).
+		SetDisplayName(endpoint.DisplayName).
+		SetTargetPrefix(endpoint.TargetPrefix).
+		SetInboundEnabled(endpoint.InboundEnabled).
+		SetOutboundEnabled(endpoint.OutboundEnabled).
+		SetAuthMode(endpoint.AuthMode).
+		SetConfigJSON(endpoint.ConfigJSON).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now)
+	if endpoint.ID != "" {
+		create.SetID(endpoint.ID)
 	}
-	endpoint.CreatedUnix = now
-	endpoint.UpdatedUnix = now
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO interaction_endpoints
-  (id, kind, provider, display_name, target_prefix, inbound_enabled, outbound_enabled, auth_mode, config_json, created_unix, updated_unix)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		endpoint.ID, endpoint.Kind, endpoint.Provider, endpoint.DisplayName, endpoint.TargetPrefix,
-		endpoint.InboundEnabled, endpoint.OutboundEnabled, endpoint.AuthMode, endpoint.ConfigJSON,
-		endpoint.CreatedUnix, endpoint.UpdatedUnix)
-	if isConstraint(err) {
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
 		return InteractionEndpoint{}, ErrConflict
 	}
 	if err != nil {
 		return InteractionEndpoint{}, err
 	}
-	return endpoint, nil
+	return endpointFromEnt(row), nil
 }
 
 func (s *Store) ListInteractionEndpoints(ctx context.Context, limit int) ([]InteractionEndpoint, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	rows, err := s.db.QueryContext(ctx, `
-SELECT id, kind, provider, display_name, target_prefix, inbound_enabled, outbound_enabled, auth_mode, config_json, created_unix, updated_unix
-FROM interaction_endpoints
-ORDER BY created_unix DESC, id DESC
-LIMIT ?`, limit)
+	rows, err := s.client.InteractionEndpoint.Query().
+		Order(interactionendpoint.ByCreatedUnix(sql.OrderDesc()), interactionendpoint.ByID(sql.OrderDesc())).
+		Limit(limit).
+		All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var endpoints []InteractionEndpoint
-	for rows.Next() {
-		var endpoint InteractionEndpoint
-		if err := rows.Scan(&endpoint.ID, &endpoint.Kind, &endpoint.Provider, &endpoint.DisplayName,
-			&endpoint.TargetPrefix, &endpoint.InboundEnabled, &endpoint.OutboundEnabled, &endpoint.AuthMode,
-			&endpoint.ConfigJSON, &endpoint.CreatedUnix, &endpoint.UpdatedUnix); err != nil {
-			return nil, err
-		}
-		endpoints = append(endpoints, endpoint)
+	endpoints := make([]InteractionEndpoint, 0, len(rows))
+	for _, row := range rows {
+		endpoints = append(endpoints, endpointFromEnt(row))
 	}
-	return endpoints, rows.Err()
+	return endpoints, nil
 }
 
-func (s *Store) CreateMessage(ctx context.Context, message Message) (Message, error) {
-	if message.ID == "" {
-		message.ID = NewID("msg")
+func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Message, error) {
+	if messageModel.CreatedUnix == 0 {
+		messageModel.CreatedUnix = unixNow()
 	}
-	if message.CreatedUnix == 0 {
-		message.CreatedUnix = unixNow()
+	create := s.client.Message.Create().
+		SetTarget(messageModel.Target).
+		SetThreadID(messageModel.ThreadID).
+		SetRole(messageModel.Role).
+		SetContent(messageModel.Content).
+		SetSenderUserID(messageModel.SenderUserID).
+		SetSenderAgentID(messageModel.SenderAgentID).
+		SetSenderDisplayName(messageModel.SenderDisplayName).
+		SetSenderKind(messageModel.SenderKind).
+		SetSourceEndpointID(messageModel.SourceEndpointID).
+		SetExternalMessageID(messageModel.ExternalMessageID).
+		SetMetadataJSON(messageModel.MetadataJSON).
+		SetRequestID(messageModel.RequestID).
+		SetCreatedUnix(messageModel.CreatedUnix)
+	if messageModel.ID != "" {
+		create.SetID(messageModel.ID)
 	}
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO messages
-  (id, target, thread_id, role, content, sender_user_id, sender_agent_id, sender_display_name, sender_kind, source_endpoint_id, external_message_id, metadata_json, request_id, created_unix)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		message.ID, message.Target, message.ThreadID, message.Role, message.Content, message.SenderUserID,
-		message.SenderAgentID, message.SenderDisplayName, message.SenderKind, message.SourceEndpointID,
-		message.ExternalMessageID, message.MetadataJSON, message.RequestID, message.CreatedUnix)
-	if isConstraint(err) {
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
 		return Message{}, ErrConflict
 	}
 	if err != nil {
 		return Message{}, err
 	}
-	return message, nil
+	return messageFromEnt(row), nil
 }
 
 func (s *Store) ListMessages(ctx context.Context, target string, limit int) ([]Message, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	rows, err := s.db.QueryContext(ctx, `
-SELECT id, target, thread_id, role, content, sender_user_id, sender_agent_id, sender_display_name, sender_kind, source_endpoint_id, external_message_id, metadata_json, request_id, created_unix
-FROM messages
-WHERE target = ?
-ORDER BY created_unix DESC, id DESC
-LIMIT ?`, target, limit)
+	rows, err := s.client.Message.Query().
+		Where(message.TargetEQ(target)).
+		Order(message.ByCreatedUnix(sql.OrderDesc()), message.ByID(sql.OrderDesc())).
+		Limit(limit).
+		All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var messages []Message
-	for rows.Next() {
-		message, err := scanMessage(rows)
-		if err != nil {
-			return nil, err
-		}
-		messages = append(messages, message)
+	messages := make([]Message, 0, len(rows))
+	for _, row := range rows {
+		messages = append(messages, messageFromEnt(row))
 	}
-	return messages, rows.Err()
+	return messages, nil
 }
 
-func (s *Store) CreateTask(ctx context.Context, task Task) (Task, error) {
+func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {
 	now := unixNow()
-	if task.ID == "" {
-		task.ID = NewID("tsk")
+	if taskModel.State == "" {
+		taskModel.State = "todo"
 	}
-	if task.State == "" {
-		task.State = "todo"
-	}
-	if !validTaskState(task.State) {
+	if !validTaskState(taskModel.State) {
 		return Task{}, ErrInvalidState
 	}
-	task.CreatedUnix = now
-	task.UpdatedUnix = now
-	_, err := s.db.ExecContext(ctx, `
-INSERT INTO tasks (id, summary, state, target, assignee_id, created_by_user_id, created_unix, updated_unix)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		task.ID, task.Summary, task.State, task.Target, task.AssigneeID, task.CreatedByUserID, task.CreatedUnix, task.UpdatedUnix)
+	create := s.client.Task.Create().
+		SetSummary(taskModel.Summary).
+		SetState(taskModel.State).
+		SetTarget(taskModel.Target).
+		SetAssigneeID(taskModel.AssigneeID).
+		SetCreatedByUserID(taskModel.CreatedByUserID).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now)
+	if taskModel.ID != "" {
+		create.SetID(taskModel.ID)
+	}
+	row, err := create.Save(ctx)
 	if err != nil {
 		return Task{}, err
 	}
-	return task, nil
+	return taskFromEnt(row), nil
 }
 
 func (s *Store) ListTasks(ctx context.Context, state, target string, limit int) ([]Task, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	query := `
-SELECT id, summary, state, target, assignee_id, created_by_user_id, created_unix, updated_unix
-FROM tasks`
-	var conditions []string
-	var args []any
+	query := s.client.Task.Query()
 	if state != "" {
-		conditions = append(conditions, "state = ?")
-		args = append(args, state)
+		query.Where(task.StateEQ(state))
 	}
 	if target != "" {
-		conditions = append(conditions, "target = ?")
-		args = append(args, target)
+		query.Where(task.TargetEQ(target))
 	}
-	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
-	}
-	query += " ORDER BY updated_unix DESC, id DESC LIMIT ?"
-	args = append(args, limit)
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := query.
+		Order(task.ByUpdatedUnix(sql.OrderDesc()), task.ByID(sql.OrderDesc())).
+		Limit(limit).
+		All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var tasks []Task
-	for rows.Next() {
-		task, err := scanTask(rows)
-		if err != nil {
-			return nil, err
-		}
-		tasks = append(tasks, task)
+	tasks := make([]Task, 0, len(rows))
+	for _, row := range rows {
+		tasks = append(tasks, taskFromEnt(row))
 	}
-	return tasks, rows.Err()
+	return tasks, nil
 }
 
 func (s *Store) UpdateTask(ctx context.Context, id string, patch TaskPatch) (Task, error) {
-	current, err := s.GetTask(ctx, id)
-	if err != nil {
-		return Task{}, err
-	}
+	update := s.client.Task.UpdateOneID(id)
 	if patch.Summary != nil {
-		current.Summary = *patch.Summary
+		update.SetSummary(*patch.Summary)
 	}
 	if patch.State != nil {
 		if !validTaskState(*patch.State) {
 			return Task{}, ErrInvalidState
 		}
-		current.State = *patch.State
+		update.SetState(*patch.State)
 	}
 	if patch.AssigneeID != nil {
-		current.AssigneeID = *patch.AssigneeID
+		update.SetAssigneeID(*patch.AssigneeID)
 	}
-	current.UpdatedUnix = unixNow()
-	_, err = s.db.ExecContext(ctx, `
-UPDATE tasks SET summary = ?, state = ?, assignee_id = ?, updated_unix = ? WHERE id = ?`,
-		current.Summary, current.State, current.AssigneeID, current.UpdatedUnix, current.ID)
+	update.SetUpdatedUnix(unixNow())
+	row, err := update.Save(ctx)
+	if ent.IsNotFound(err) {
+		return Task{}, ErrNotFound
+	}
 	if err != nil {
 		return Task{}, err
 	}
-	return current, nil
+	return taskFromEnt(row), nil
 }
 
 func (s *Store) GetTask(ctx context.Context, id string) (Task, error) {
-	row := s.db.QueryRowContext(ctx, `
-SELECT id, summary, state, target, assignee_id, created_by_user_id, created_unix, updated_unix
-FROM tasks WHERE id = ?`, id)
-	task, err := scanTask(row)
-	if errors.Is(err, sql.ErrNoRows) {
+	row, err := s.client.Task.Query().Where(task.IDEQ(id)).Only(ctx)
+	if ent.IsNotFound(err) {
 		return Task{}, ErrNotFound
 	}
-	return task, err
-}
-
-func (s *Store) scanUser(row interface{ Scan(dest ...any) error }) (User, error) {
-	var user User
-	if err := row.Scan(&user.ID, &user.Username, &user.DisplayName, &user.PasswordHash, &user.Role, &user.CreatedUnix, &user.UpdatedUnix); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return User{}, ErrNotFound
-		}
-		return User{}, err
-	}
-	return user, nil
-}
-
-func scanMessage(row interface{ Scan(dest ...any) error }) (Message, error) {
-	var message Message
-	if err := row.Scan(&message.ID, &message.Target, &message.ThreadID, &message.Role, &message.Content,
-		&message.SenderUserID, &message.SenderAgentID, &message.SenderDisplayName, &message.SenderKind,
-		&message.SourceEndpointID, &message.ExternalMessageID, &message.MetadataJSON, &message.RequestID,
-		&message.CreatedUnix); err != nil {
-		return Message{}, err
-	}
-	return message, nil
-}
-
-func scanTask(row interface{ Scan(dest ...any) error }) (Task, error) {
-	var task Task
-	if err := row.Scan(&task.ID, &task.Summary, &task.State, &task.Target, &task.AssigneeID, &task.CreatedByUserID, &task.CreatedUnix, &task.UpdatedUnix); err != nil {
+	if err != nil {
 		return Task{}, err
 	}
-	return task, nil
+	return taskFromEnt(row), nil
+}
+
+func userFromEnt(row *ent.User) User {
+	return User{
+		ID:           row.ID,
+		Username:     row.Username,
+		DisplayName:  row.DisplayName,
+		PasswordHash: row.PasswordHash,
+		Role:         row.Role,
+		CreatedUnix:  row.CreatedUnix,
+		UpdatedUnix:  row.UpdatedUnix,
+	}
+}
+
+func sessionFromEnt(row *ent.Session) Session {
+	return Session{
+		ID:          row.ID,
+		TokenHash:   row.TokenHash,
+		UserID:      row.UserID,
+		ExpiresUnix: row.ExpiresUnix,
+		CreatedUnix: row.CreatedUnix,
+	}
+}
+
+func endpointFromEnt(row *ent.InteractionEndpoint) InteractionEndpoint {
+	return InteractionEndpoint{
+		ID:              row.ID,
+		Kind:            row.Kind,
+		Provider:        row.Provider,
+		DisplayName:     row.DisplayName,
+		TargetPrefix:    row.TargetPrefix,
+		InboundEnabled:  row.InboundEnabled,
+		OutboundEnabled: row.OutboundEnabled,
+		AuthMode:        row.AuthMode,
+		ConfigJSON:      row.ConfigJSON,
+		CreatedUnix:     row.CreatedUnix,
+		UpdatedUnix:     row.UpdatedUnix,
+	}
+}
+
+func messageFromEnt(row *ent.Message) Message {
+	return Message{
+		ID:                row.ID,
+		Target:            row.Target,
+		ThreadID:          row.ThreadID,
+		Role:              row.Role,
+		Content:           row.Content,
+		SenderUserID:      row.SenderUserID,
+		SenderAgentID:     row.SenderAgentID,
+		SenderDisplayName: row.SenderDisplayName,
+		SenderKind:        row.SenderKind,
+		SourceEndpointID:  row.SourceEndpointID,
+		ExternalMessageID: row.ExternalMessageID,
+		MetadataJSON:      row.MetadataJSON,
+		RequestID:         row.RequestID,
+		CreatedUnix:       row.CreatedUnix,
+	}
+}
+
+func taskFromEnt(row *ent.Task) Task {
+	return Task{
+		ID:              row.ID,
+		Summary:         row.Summary,
+		State:           row.State,
+		Target:          row.Target,
+		AssigneeID:      row.AssigneeID,
+		CreatedByUserID: row.CreatedByUserID,
+		CreatedUnix:     row.CreatedUnix,
+		UpdatedUnix:     row.UpdatedUnix,
+	}
 }
 
 func unixNow() int64 {
 	return time.Now().Unix()
-}
-
-func isConstraint(err error) bool {
-	return err != nil && strings.Contains(strings.ToLower(err.Error()), "constraint")
 }
 
 func validTaskState(state string) bool {
@@ -379,4 +427,43 @@ func validTaskState(state string) bool {
 	default:
 		return false
 	}
+}
+
+func normalizeDBType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "sqlite", "sqlite3":
+		return "sqlite"
+	case "postgres", "postgresql":
+		return "postgres"
+	case "mysql":
+		return "mysql"
+	default:
+		return strings.ToLower(strings.TrimSpace(value))
+	}
+}
+
+func entDialect(dbType string) string {
+	switch normalizeDBType(dbType) {
+	case "postgres":
+		return "postgres"
+	case "mysql":
+		return "mysql"
+	default:
+		return "sqlite3"
+	}
+}
+
+func sqliteDSN(path string) string {
+	return fmt.Sprintf("file:%s?cache=shared&_pragma=foreign_keys(1)&_pragma=journal_mode(DELETE)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(10000)", path)
+}
+
+func ensureSQLiteForeignKeys(dsn string) string {
+	if strings.Contains(dsn, "_pragma=foreign_keys") {
+		return dsn
+	}
+	separator := "?"
+	if strings.Contains(dsn, "?") {
+		separator = "&"
+	}
+	return dsn + separator + "_pragma=foreign_keys(1)"
 }

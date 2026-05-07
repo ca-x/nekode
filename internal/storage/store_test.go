@@ -111,7 +111,7 @@ func TestStoreRejectsInvalidTaskState(t *testing.T) {
 
 func newTestStore(t *testing.T) *Store {
 	t.Helper()
-	store, err := Open(context.Background(), "file:"+NewID("test")+"?mode=memory&cache=shared")
+	store, err := Open(context.Background(), "file:"+NewID("test")+"?mode=memory&cache=shared&_fk=1")
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

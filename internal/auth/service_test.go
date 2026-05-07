@@ -58,7 +58,7 @@ func TestBootstrapLoginAuthenticate(t *testing.T) {
 
 func newTestStore(t *testing.T) *storage.Store {
 	t.Helper()
-	store, err := storage.Open(context.Background(), "file:"+storage.NewID("auth_test")+"?mode=memory&cache=shared")
+	store, err := storage.Open(context.Background(), "file:"+storage.NewID("auth_test")+"?mode=memory&cache=shared&_fk=1")
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

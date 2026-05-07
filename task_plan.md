@@ -28,11 +28,11 @@ Create the first repo foundation for Nekode so the team can implement a hostable
 - Put frontend design/implementation in task #92 and product/deploy acceptance in task #93: keeps #91 focused on repo and architecture foundations.
 - Model Web, CLI, API, webhook, MCP, IM, mobile, IDE, and future clients as interaction endpoints instead of hardcoding Web as the only write surface.
 - Use a first-user bootstrap endpoint instead of shipping default admin credentials.
-- Use embedded SQL migrations rather than adding a migration framework in the first storage slice.
+- Use Ent ORM like Nekobot instead of hand-written SQL; support sqlite/postgres/mysql through db type and DSN.
 
 ## Errors Encountered
 - Started bootstrap before the `plan-with-files` request arrived: recovered by adding this plan, notes, and deliverable docs before committing.
-- `modernc.org/sqlite` pulled a larger dependency graph than expected, but it preserves static Linux builds and avoids CGO in Docker.
+- Initial hand-written SQL storage was replaced with Ent ORM after review feedback; this is early enough that no data migration is needed.
 
 ## Status
 **Task #94 complete** - Storage/auth/core API implementation is verified and ready for review.
