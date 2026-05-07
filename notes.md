@@ -29,3 +29,32 @@
 - task #91: architecture, repo bootstrap, protocol files, backend skeleton, verification.
 - task #92: frontend console UX and implementation. @小螃蟹 designs interaction details, @小吱吱 implements.
 - task #93: product scope, hosted deployment plan, acceptance docs.
+
+### Reference Architecture Analysis (2026-05-07)
+
+**Projects Analyzed**:
+- `open-agent-room` (Go backend, single binary, skill center, local daemon)
+- `zano` (Next.js + Supabase frontend, Node bridge, Claude Code agents, CLI-first)
+
+**Key Insights**:
+1. **Deployment**: Single binary (open-agent-room) or docker-compose (nekode) is simpler than multi-service.
+2. **Bridge Pattern**: Zano's bridge for local agent execution is clean; consider for future agent support.
+3. **CLI-First**: Agents communicate via CLI (zano CLI in Zano, nekode CLI in nekode) for scriptability.
+4. **Persistent Memory**: Each agent has workspace + MEMORY.md + notes/ for long-term learning.
+5. **Multi-Channel**: Both projects support multiple interaction modes; nekode should design for extensibility from day 1.
+6. **Protocol**: JSON envelopes (open-agent-room) or structured types (zano) work well for extensibility.
+
+**Nekode Synthesis**:
+- Go backend (HTTP + WebSocket for Web, gRPC for CLI, JSON envelope for extensibility)
+- SQLite for MVP (self-hosted friendly, no external deps)
+- Multi-channel architecture: Web, CLI, API, Webhook, MCP, Bridge, IM (future)
+- Unified endpoint/target routing for all channel kinds
+- Bridge pattern for local agent execution (future phase)
+- CLI for agents to send messages, claim tasks, manage memory
+
+**Recommended Phases**:
+1. Task #91: Backend bootstrap (HTTP, WebSocket, proto, SQLite schema, Docker)
+2. Task #92: Frontend console (React, real-time, task board, agent management)
+3. Task #93: Deployment guide, operations, acceptance testing
+4. Future: Bridge for local agents, CLI, webhook/MCP support, IM integrations
+

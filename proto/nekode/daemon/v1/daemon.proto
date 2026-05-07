@@ -301,6 +301,31 @@ message ChannelRecord {
   string display_name = 3;
   string channel_type = 4;
   bool enabled = 5;
+  string interaction_endpoint_id = 6;
+  string source_kind = 7;
+  string external_id = 8;
+  repeated Capability capabilities = 9;
+}
+
+message InteractionEndpoint {
+  string endpoint_id = 1;
+  string kind = 2;                // web | cli | api | webhook | mcp | im | custom
+  string provider = 3;            // browser | mobile | wechat | slack | openapi | custom
+  string display_name = 4;
+  string target_prefix = 5;
+  bool inbound_enabled = 6;
+  bool outbound_enabled = 7;
+  string auth_mode = 8;           // cookie | bearer | webhook_signature | mcp_token | none
+  string config_json = 9;         // non-secret endpoint configuration
+  repeated Capability capabilities = 10;
+}
+
+message ListInteractionEndpointsRequest {
+  uint32 limit = 1;
+}
+
+message ListInteractionEndpointsResponse {
+  repeated InteractionEndpoint endpoints = 1;
 }
 
 message ListChannelsRequest {
@@ -353,6 +378,9 @@ message CollaborationMessage {
   string sender_kind = 10;
   repeated AttachmentRecord attachments = 11;
   string request_id = 12;
+  string source_endpoint_id = 13;
+  string external_message_id = 14;
+  string metadata_json = 15;
 }
 
 message ReadMessagesRequest {
@@ -374,6 +402,9 @@ message SendMessageRequest {
   bool emit_outbound = 7;
   string request_id = 8;
   repeated string attachment_ids = 9;
+  string source_endpoint_id = 10;
+  string sender_user_id = 11;
+  string metadata_json = 12;
 }
 
 message SendMessageResponse {
@@ -599,6 +630,7 @@ message GetServerInfoResponse {
   string version = 2;
   repeated ChannelRecord channels = 3;
   repeated AgentProfile agents = 4;
+  repeated InteractionEndpoint interaction_endpoints = 5;
 }
 
 message EnvVar {
@@ -1029,6 +1061,7 @@ service DaemonControlService {
   rpc ListWorkspaceTree(ListWorkspaceTreeRequest) returns (ListWorkspaceTreeResponse);
   rpc ReadWorkspaceFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
   rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc ListInteractionEndpoints(ListInteractionEndpointsRequest) returns (ListInteractionEndpointsResponse);
   rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse);
   rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
   rpc ReadMessages(ReadMessagesRequest) returns (ReadMessagesResponse);

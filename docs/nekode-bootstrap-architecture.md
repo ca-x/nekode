@@ -30,6 +30,23 @@ show the protocol boundary:
 | `GET` | `/api/version` | build metadata |
 | `GET` | `/api/protocol` | daemon protocol doc and proto location |
 
+## Interaction Endpoint Model
+
+Web is not the only future client. Nekode reserves protocol space for
+interaction endpoints so later Web UI, CLI, public API, webhook, MCP, IM,
+mobile, and IDE integrations all write through the same collaboration model.
+
+The first protobuf contract includes:
+
+- `InteractionEndpoint` for transport/provider/auth/capability metadata;
+- `ListInteractionEndpoints` for daemon and client discovery;
+- `source_endpoint_id`, external message id, and metadata JSON on messages;
+- endpoint references on channel records.
+
+Core server code should treat endpoints as ingress/egress adapters. They
+authenticate the sender and annotate messages, but do not own separate task, DM,
+or channel semantics.
+
 ## Protocol Boundary
 
 The protobuf file at `proto/nekode/daemon/v1/daemon.proto` is the authoritative
@@ -50,10 +67,11 @@ implementation should follow that document for:
 
 1. Define persistent storage tables for server-owned objects.
 2. Implement auth/session/membership primitives.
-3. Implement channel, thread, DM, message, and task board APIs.
-4. Implement daemon registration, heartbeat, and event replay.
-5. Implement runtime start queue, token file injection, and status reporting.
-6. Wire the frontend console against stable REST/gRPC gateway endpoints.
+3. Implement interaction endpoint registration and permission checks.
+4. Implement channel, thread, DM, message, and task board APIs.
+5. Implement daemon registration, heartbeat, and event replay.
+6. Implement runtime start queue, token file injection, and status reporting.
+7. Wire the frontend console against stable REST/gRPC gateway endpoints.
 
 ## Verification Baseline
 

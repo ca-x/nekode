@@ -66,6 +66,7 @@ groups are:
 - computer registration and heartbeat;
 - runtime and workspace inventory;
 - channels, DMs, threads, messages, and attachments;
+- interaction endpoints that can originate or deliver messages outside the Web UI;
 - collaboration tasks, task boards, task graph split/apply flow;
 - agent profiles, profile updates, environment variables, and status snapshots;
 - reminders, reminder lifecycle, and reminder event history;
@@ -93,6 +94,7 @@ cover these behaviors:
 The server is the authoritative source of collaboration state:
 
 - humans, agents, and computers;
+- interaction endpoints and their authentication modes;
 - channel and DM membership;
 - messages, threads, attachments, saved messages;
 - tasks, task boards, task graphs, and runs;
@@ -184,6 +186,39 @@ The following behavior was observed from a live daemon startup:
 [Agent ...] Start permit released (initial turn ended) (active=0, queue=2)
 [Daemon] Received ping
 ```
+
+## Interaction Channels
+
+The Web UI is only one interaction surface. A compatible implementation should
+model every user-facing transport as an `InteractionEndpoint` and route all
+incoming content through the same target/message/task/DM primitives.
+
+Required endpoint fields:
+
+- stable endpoint id;
+- string kind, such as `web`, `cli`, `api`, `webhook`, `mcp`, `im`, or
+  `custom`;
+- provider, such as `browser`, `mobile`, `wechat`, `slack`, `openapi`, or a
+  private integration name;
+- target prefix or routing scope;
+- inbound/outbound capability flags;
+- auth mode, such as cookie, bearer token, webhook signature, MCP token, or
+  none for trusted local development;
+- non-secret endpoint config JSON.
+
+Messages should carry `source_endpoint_id`, optional external message id, and
+opaque metadata JSON. That lets later clients implement IM callbacks, CLI
+commands, MCP tool calls, IDE plugins, mobile push replies, or automation
+webhooks without changing core message, DM, task, or agent direct-message
+semantics.
+
+Do not special-case Web as the only writer. Permission checks should answer:
+
+1. Which endpoint sent this mutation?
+2. Which human, agent, or service identity authenticated through it?
+3. Is that identity allowed to write to this target?
+4. Should the resulting event be delivered back to this endpoint, suppressed,
+   or fanned out to other subscribed endpoints?
 
 ### Startup Sequence
 

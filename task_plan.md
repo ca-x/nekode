@@ -8,8 +8,9 @@ Create the first repo foundation for Nekode so the team can implement a hostable
 - [x] Phase 2: Import reusable protocol/design references
 - [x] Phase 3: Bootstrap Go backend, health API, proto generation, Docker files
 - [x] Phase 4: Add unit tests and run bootstrap verification
-- [ ] Phase 5: Coordinate frontend/product follow-up tasks
-- [ ] Phase 6: Commit and push task #91 branch
+- [x] Phase 5: Reserve non-Web interaction endpoint extension points
+- [ ] Phase 6: Coordinate frontend/product follow-up tasks
+- [ ] Phase 7: Commit and push task #91 branch
 
 ## Key Questions
 1. Should the reusable protobuf keep the old package path or use a project-local Nekode package?
@@ -21,9 +22,10 @@ Create the first repo foundation for Nekode so the team can implement a hostable
 - Use proto package `nekode.daemon.v1`: keep field numbers/RPC semantics reusable while avoiding an old application name in new generated code.
 - Start with standard library HTTP and minimal dependencies: leaves room to add framework/storage after the API shape is clearer.
 - Put frontend design/implementation in task #92 and product/deploy acceptance in task #93: keeps #91 focused on repo and architecture foundations.
+- Model Web, CLI, API, webhook, MCP, IM, mobile, IDE, and future clients as interaction endpoints instead of hardcoding Web as the only write surface.
 
 ## Errors Encountered
 - Started bootstrap before the `plan-with-files` request arrived: recovered by adding this plan, notes, and deliverable docs before committing.
 
 ## Status
-**Currently in Phase 6** - Bootstrap code and verification are complete; preparing commit and push.
+**Currently in Phase 7** - Bootstrap code and verification are complete; preparing commit and push.
