@@ -1,0 +1,15 @@
+services:
+  nekode:
+    build: .
+    image: nekode:local
+    ports:
+      - "18790:18790"
+    environment:
+      NEKODE_ADDR: ":18790"
+      NEKODE_BASE_URL: "http://localhost:18790"
+      NEKODE_DATA_DIR: "/data"
+    volumes:
+      - nekode-data:/data
+
+volumes:
+  nekode-data:

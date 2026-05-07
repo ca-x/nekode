@@ -1,0 +1,1071 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+message Capability {
+  string name = 1;
+  string description = 2;
+  bool enabled = 3;
+}
+
+message Permission {
+  string name = 1;
+  string target = 2;
+  bool allowed = 3;
+  string reason = 4;
+}
+
+message Lease {
+  string lease_id = 1;
+  string holder_id = 2;
+  string resource_type = 3;
+  string resource_id = 4;
+  int64 expires_time_unix = 5;
+  uint32 heartbeat_after_seconds = 6;
+}
+
+message EventCursor {
+  string cursor = 1;
+  string target = 2;
+  string last_event_id = 3;
+  string last_message_id = 4;
+  string last_activity_id = 5;
+}
+
+message AttachmentRecord {
+  string attachment_id = 1;
+  string target = 2;
+  string owner_id = 3;
+  string filename = 4;
+  string mime_type = 5;
+  int64 size_bytes = 6;
+  string storage_ref = 7;
+  int64 created_time_unix = 8;
+}
+
+message Workspace {
+  string workspace_id = 1;
+  string computer_id = 2;
+  string path = 3;
+  string display_name = 4;
+  repeated string aliases = 5;
+  bool is_default = 6;
+}
+
+message RuntimeProfile {
+  string runtime_profile_id = 1;
+  string kind = 2;
+  string provider = 3;
+  string model = 4;
+  string adapter_config_json = 5;
+  string workspace_id = 6;
+  repeated EnvVar env = 7;
+  repeated SkillRecord skills = 8;
+  repeated Capability capabilities = 9;
+}
+
+message Runtime {
+  string runtime_id = 1;
+  string computer_id = 2;
+  string workspace_id = 3;
+  string kind = 4;
+  string display_name = 5;
+  repeated string aliases = 6;
+  string tool = 7;
+  string command = 8;
+  bool installed = 9;
+  bool healthy = 10;
+  bool supports_auto_install = 11;
+  repeated string install_hint = 12;
+  string config_dir = 13;
+  uint32 current_task_count = 14;
+  uint32 pending_task_count = 15;
+  repeated Capability capabilities = 16;
+  RuntimeProfile runtime_profile = 17;
+}
+
+message ComputerInventory {
+  repeated Workspace workspaces = 1;
+  repeated Runtime runtimes = 2;
+  repeated AgentProfile agents = 3;
+  repeated RuntimeProfile runtime_profiles = 4;
+}
+
+message ComputerInfo {
+  string daemon_id = 1;
+  string computer_id = 2;
+  string display_name = 3;
+  string hostname = 4;
+  string os = 5;
+  string arch = 6;
+  string version = 7;
+  string status = 8;
+  int64 last_seen_unix = 9;
+  string daemon_url = 10;
+  string lease_id = 11;
+  repeated Capability capabilities = 12;
+}
+
+message RegisterComputerRequest {
+  ComputerInfo info = 1;
+  ComputerInventory inventory = 2;
+  string request_id = 3;
+}
+
+message RegisterComputerResponse {
+  bool accepted = 1;
+  int64 server_time_unix = 2;
+  Lease lease = 3;
+}
+
+message HeartbeatComputerRequest {
+  ComputerInfo info = 1;
+  ComputerInventory inventory = 2;
+  string lease_id = 3;
+  string request_id = 4;
+}
+
+message HeartbeatComputerResponse {
+  bool accepted = 1;
+  int64 server_time_unix = 2;
+  uint32 next_heartbeat_after_seconds = 3;
+  Lease lease = 4;
+}
+
+message Task {
+  string task_id = 1;
+  string summary = 2;
+  string state = 3;
+  string runtime_id = 4;
+  string thread_id = 5;
+  string workspace_id = 6;
+  string computer_id = 7;
+  string created_by_user_id = 8;
+  string blocked_reason = 9;
+  string target = 10;
+  string assignee_id = 11;
+  string current_run_id = 12;
+
+  // --- graph relationships ---
+  string root_task_id = 13;
+  string parent_task_id = 14;
+  repeated string subtask_ids = 15;
+  repeated string depends_on_task_ids = 16;
+  repeated string blocked_by_task_ids = 17;
+
+  // --- provenance ---
+  string source = 18;                     // human | agent | server_rule | scheduler | import
+  string created_by_agent_id = 19;
+  string server_rule_id = 20;
+  string split_proposal_id = 21;
+
+  // --- graph versioning ---
+  int64 graph_version = 22;
+
+  // --- capability requirements ---
+  repeated string required_capabilities = 23;
+
+  // --- board projection ---
+  string board_column = 24;
+}
+
+message Run {
+  string run_id = 1;
+  string task_id = 2;
+  string target = 3;
+  string agent_id = 4;
+  string computer_id = 5;
+  string runtime_profile_id = 6;
+  string status = 7;
+  string lease_id = 8;
+  string request_id = 9;
+  string input_message_id = 10;
+  string last_seen_event_id = 11;
+  int64 started_time_unix = 12;
+  int64 updated_time_unix = 13;
+  int64 completed_time_unix = 14;
+  string error = 15;
+  string summary = 16;
+  string state = 17;
+}
+
+message RunStep {
+  string step_id = 1;
+  string run_id = 2;
+  uint32 sequence = 3;
+  string kind = 4;
+  string status = 5;
+  string summary = 6;
+  string detail = 7;
+  repeated string artifact_ids = 8;
+  int64 started_time_unix = 9;
+  int64 completed_time_unix = 10;
+  string request_id = 11;
+}
+
+message FetchAssignedRunsRequest {
+  string computer_id = 1;
+  repeated string agent_ids = 2;
+  uint32 limit = 3;
+  string request_id = 4;
+}
+
+message FetchAssignedRunsResponse {
+  repeated Run runs = 1;
+}
+
+message UpdateRunStatusRequest {
+  string run_id = 1;
+  string agent_id = 2;
+  string state = 3;
+  string summary = 4;
+  string error = 5;
+  string blocked_reason = 6;
+  string result_message = 7;
+  string request_id = 8;
+}
+
+message UpdateRunStatusResponse {
+  bool accepted = 1;
+}
+
+message AppendRunStepRequest {
+  RunStep step = 1;
+  string request_id = 2;
+}
+
+message AppendRunStepResponse {
+  bool accepted = 1;
+  RunStep step = 2;
+}
+
+message ListRunsRequest {
+  string target = 1;
+  string task_id = 2;
+  string agent_id = 3;
+  uint32 limit = 4;
+}
+
+message ListRunsResponse {
+  repeated Run runs = 1;
+}
+
+message GetRunRequest {
+  string run_id = 1;
+}
+
+message GetRunResponse {
+  Run run = 1;
+  repeated RunStep steps = 2;
+}
+
+message WorkspaceTreeEntry {
+  string path = 1;
+  string name = 2;
+  bool is_dir = 3;
+  int64 size_bytes = 4;
+  int64 modified_time_unix = 5;
+}
+
+message ListWorkspaceTreeRequest {
+  string workspace_id = 1;
+  string path = 2;
+  uint32 limit = 3;
+}
+
+message ListWorkspaceTreeResponse {
+  string workspace_id = 1;
+  string path = 2;
+  repeated WorkspaceTreeEntry entries = 3;
+}
+
+message ReadWorkspaceFileRequest {
+  string workspace_id = 1;
+  string path = 2;
+  uint32 max_bytes = 3;
+}
+
+message ReadWorkspaceFileResponse {
+  string workspace_id = 1;
+  string path = 2;
+  string content = 3;
+  bool truncated = 4;
+  int64 size_bytes = 5;
+}
+
+message ChannelRecord {
+  string target = 1;
+  string channel_id = 2;
+  string display_name = 3;
+  string channel_type = 4;
+  bool enabled = 5;
+}
+
+message ListChannelsRequest {
+  uint32 limit = 1;
+}
+
+message ListChannelsResponse {
+  repeated ChannelRecord channels = 1;
+}
+
+message ThreadRecord {
+  string target = 1;
+  string thread_id = 2;
+  string topic = 3;
+  string summary = 4;
+  string runtime_id = 5;
+  uint32 message_count = 6;
+  int64 created_time_unix = 7;
+  int64 updated_time_unix = 8;
+  bool followed = 9;
+}
+
+message ListThreadsRequest {
+  string target_prefix = 1;
+  uint32 limit = 2;
+}
+
+message ListThreadsResponse {
+  repeated ThreadRecord threads = 1;
+}
+
+message GetThreadRequest {
+  string target = 1;
+}
+
+message GetThreadResponse {
+  ThreadRecord thread = 1;
+}
+
+message CollaborationMessage {
+  string message_id = 1;
+  string target = 2;
+  string thread_id = 3;
+  string role = 4;
+  string content = 5;
+  string sender_agent_id = 6;
+  string sender_display_name = 7;
+  string reply_to_message_id = 8;
+  int64 created_time_unix = 9;
+  string sender_kind = 10;
+  repeated AttachmentRecord attachments = 11;
+  string request_id = 12;
+}
+
+message ReadMessagesRequest {
+  string target = 1;
+  uint32 limit = 2;
+}
+
+message ReadMessagesResponse {
+  repeated CollaborationMessage messages = 1;
+}
+
+message SendMessageRequest {
+  string target = 1;
+  string role = 2;
+  string content = 3;
+  string sender_agent_id = 4;
+  string sender_display_name = 5;
+  string reply_to_message_id = 6;
+  bool emit_outbound = 7;
+  string request_id = 8;
+  repeated string attachment_ids = 9;
+}
+
+message SendMessageResponse {
+  bool accepted = 1;
+  CollaborationMessage message = 2;
+}
+
+message SavedMessageRecord {
+  string saved_message_id = 1;
+  string target = 2;
+  string thread_id = 3;
+  string message_id = 4;
+  string saved_by_agent_id = 5;
+  string saved_by_user_id = 6;
+  int64 saved_time_unix = 7;
+  CollaborationMessage message = 8;
+}
+
+message SaveMessageRequest {
+  string target = 1;
+  string message_id = 2;
+  string saved_by_agent_id = 3;
+  string saved_by_user_id = 4;
+  string request_id = 5;
+}
+
+message SaveMessageResponse {
+  bool saved = 1;
+  SavedMessageRecord saved_message = 2;
+}
+
+message UnsaveMessageRequest {
+  string target = 1;
+  string message_id = 2;
+  string saved_by_agent_id = 3;
+  string saved_by_user_id = 4;
+  string request_id = 5;
+}
+
+message UnsaveMessageResponse {
+  bool removed = 1;
+  SavedMessageRecord saved_message = 2;
+}
+
+message ListSavedMessagesRequest {
+  string target = 1;
+  string saved_by_agent_id = 2;
+  string saved_by_user_id = 3;
+  uint32 limit = 4;
+}
+
+message ListSavedMessagesResponse {
+  repeated SavedMessageRecord saved_messages = 1;
+}
+
+message FollowThreadRequest {
+  string target = 1;
+  string agent_id = 2;
+  string request_id = 3;
+}
+
+message FollowThreadResponse {
+  bool accepted = 1;
+}
+
+message UnfollowThreadRequest {
+  string target = 1;
+  string agent_id = 2;
+  string request_id = 3;
+}
+
+message UnfollowThreadResponse {
+  bool accepted = 1;
+}
+
+message CreateCollaborationTaskRequest {
+  string target = 1;
+  string summary = 2;
+  string agent_id = 3;
+  string created_by_user_id = 4;
+  string request_id = 5;
+}
+
+message CreateCollaborationTaskResponse {
+  Task task = 1;
+}
+
+message ListCollaborationTasksRequest {
+  string target = 1;
+  string agent_id = 2;
+  uint32 limit = 3;
+}
+
+message ListCollaborationTasksResponse {
+  repeated Task tasks = 1;
+}
+
+message TaskBoardColumn {
+  string column = 1;
+  repeated Task tasks = 2;
+  int64 total_count = 3;
+}
+
+message TaskBoardSnapshot {
+  repeated TaskBoardColumn columns = 1;
+  map<string, int64> counts = 2;
+  EventCursor next_cursor = 3;
+}
+
+message ListTaskBoardRequest {
+  string target = 1;
+  string assignee_id = 2;
+  string created_by_user_id = 3;
+  string created_by_agent_id = 4;
+  string column = 5;
+  uint32 limit = 6;
+  EventCursor cursor = 7;
+}
+
+message ListTaskBoardResponse {
+  TaskBoardSnapshot board = 1;
+}
+
+message ClaimCollaborationTaskRequest {
+  string task_id = 1;
+  string agent_id = 2;
+  string request_id = 3;
+}
+
+message ClaimCollaborationTaskResponse {
+  Task task = 1;
+}
+
+// --- Task Graph ---
+
+message TaskEdge {
+  string from_task_id = 1;
+  string to_task_id = 2;
+  string kind = 3;  // depends_on | blocks | parent_child
+}
+
+message TaskGraphSnapshot {
+  string root_task_id = 1;
+  int64 graph_version = 2;
+  repeated Task nodes = 3;
+  repeated TaskEdge edges = 4;
+}
+
+message ProposedSubtask {
+  string client_proposed_id = 1;
+  string summary = 2;
+  string assignee_id = 3;
+  repeated string depends_on_proposed_ids = 4;
+  repeated string required_capabilities = 5;
+}
+
+message ProposeTaskSplitRequest {
+  string parent_task_id = 1;
+  repeated ProposedSubtask proposed_tasks = 2;
+  string request_id = 3;
+}
+
+message ProposeTaskSplitResponse {
+  string proposal_id = 1;
+  Task parent_task = 2;
+  repeated Task proposed_tasks = 3;
+  bool accepted = 4;
+  string rejection_reason = 5;
+}
+
+message ApplyTaskSplitRequest {
+  string parent_task_id = 1;
+  string proposal_id = 2;
+  repeated string selected_task_ids = 3;
+  string request_id = 4;
+}
+
+message ApplyTaskSplitResponse {
+  Task parent_task = 1;
+  repeated Task created_subtasks = 2;
+  int64 new_graph_version = 3;
+}
+
+message CreateTaskGraphRequest {
+  Task root_task = 1;
+  repeated Task subtasks = 2;
+  repeated TaskEdge dependencies = 3;
+  string request_id = 4;
+}
+
+message CreateTaskGraphResponse {
+  TaskGraphSnapshot graph = 1;
+}
+
+message ListTaskGraphRequest {
+  string root_task_id = 1;
+  int64 since_graph_version = 2;
+}
+
+message ListTaskGraphResponse {
+  TaskGraphSnapshot graph = 1;
+}
+
+message UpdateTaskGraphRequest {
+  string task_id = 1;
+  optional string new_assignee_id = 2;
+  repeated string add_dependencies = 3;
+  repeated string remove_dependencies = 4;
+  optional string new_parent_task_id = 5;
+  string request_id = 6;
+}
+
+message UpdateTaskGraphResponse {
+  Task task = 1;
+  int64 new_graph_version = 2;
+}
+
+message GetServerInfoRequest {
+}
+
+message GetServerInfoResponse {
+  string server_name = 1;
+  string version = 2;
+  repeated ChannelRecord channels = 3;
+  repeated AgentProfile agents = 4;
+}
+
+message EnvVar {
+  string name = 1;
+  string value = 2;
+  bool secret = 3;
+}
+
+message SkillRecord {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string version = 4;
+  bool enabled = 5;
+  bool always = 6;
+  bool eligible = 7;
+  string file_path = 8;
+}
+
+message AgentProfile {
+  string agent_id = 1;
+  string name = 2;
+  string display_name = 3;
+  string description = 4;
+  bool enabled = 5;
+  string provider = 6;
+  string model = 7;
+  repeated EnvVar env = 8;
+  repeated SkillRecord skills = 9;
+  repeated string dm_targets = 10;
+  string computer_id = 11;
+  string runtime_profile_id = 12;
+  string status = 13;
+  int64 last_activity_time_unix = 14;
+  repeated Capability capabilities = 15;
+  repeated Permission permissions = 16;
+  AgentStatusSnapshot status_snapshot = 17;
+  string avatar_url = 18;
+  string runtime_kind = 19;
+  string reasoning_effort = 20;
+  string execution_mode = 21;
+  string daemon_version = 22;
+}
+
+message GetAgentProfileRequest {
+  string agent_id = 1;
+}
+
+message GetAgentProfileResponse {
+  AgentProfile profile = 1;
+}
+
+message UpdateAgentProfileRequest {
+  string agent_id = 1;
+  optional string display_name = 2;
+  optional string description = 3;
+  string avatar_filename = 4;
+  string avatar_mime_type = 5;
+  bytes avatar_content = 6;
+  string request_id = 7;
+}
+
+message UpdateAgentProfileResponse {
+  AgentProfile profile = 1;
+}
+
+message SetAgentEnvRequest {
+  string agent_id = 1;
+  repeated EnvVar env = 2;
+  string request_id = 3;
+}
+
+message SetAgentEnvResponse {
+  AgentProfile profile = 1;
+}
+
+message ListAgentProfilesRequest {
+  uint32 limit = 1;
+}
+
+message ListAgentProfilesResponse {
+  repeated AgentProfile profiles = 1;
+}
+
+message ListAgentDMsRequest {
+  string agent_id = 1;
+  uint32 limit = 2;
+}
+
+message ListAgentDMsResponse {
+  repeated ChannelRecord dms = 1;
+}
+
+enum AgentControlAction {
+  AGENT_CONTROL_ACTION_UNSPECIFIED = 0;
+  AGENT_CONTROL_ACTION_TERMINATE = 1;
+  AGENT_CONTROL_ACTION_RESTART = 2;
+  AGENT_CONTROL_ACTION_RESTART_RESET_SESSION = 3;
+  AGENT_CONTROL_ACTION_RESTART_FULL_RESET = 4;
+}
+
+message AgentControlOperation {
+  string operation_id = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  string runtime_profile_id = 4;
+  AgentControlAction action = 5;
+  string state = 6;  // requested | queued | running | completed | failed | unsupported
+  string reason = 7;
+  string requested_by_agent_id = 8;
+  int64 created_time_unix = 9;
+  int64 updated_time_unix = 10;
+}
+
+message ControlAgentRequest {
+  string agent_id = 1;
+  string computer_id = 2;
+  string runtime_profile_id = 3;
+  AgentControlAction action = 4;
+  string reason = 5;
+  string requested_by_agent_id = 6;
+  string request_id = 7;
+}
+
+message ControlAgentResponse {
+  bool accepted = 1;
+  AgentControlOperation operation = 2;
+  AgentProfile profile = 3;
+}
+
+message SendAgentDirectMessageRequest {
+  string agent_id = 1;
+  string content = 2;
+  string sender_agent_id = 3;
+  string sender_display_name = 4;
+  string request_id = 5;
+  repeated string attachment_ids = 6;
+  string reply_to_message_id = 7;
+}
+
+message SendAgentDirectMessageResponse {
+  bool accepted = 1;
+  CollaborationMessage message = 2;
+}
+
+enum AgentPresence {
+  AGENT_PRESENCE_UNSPECIFIED = 0;
+  AGENT_PRESENCE_ONLINE = 1;
+  AGENT_PRESENCE_IDLE = 2;
+  AGENT_PRESENCE_BUSY = 3;
+  AGENT_PRESENCE_SLEEPING = 4;
+  AGENT_PRESENCE_STALE = 5;
+  AGENT_PRESENCE_OFFLINE = 6;
+  AGENT_PRESENCE_DEGRADED = 7;
+}
+
+enum AgentActivityState {
+  AGENT_ACTIVITY_STATE_UNSPECIFIED = 0;
+  AGENT_ACTIVITY_STATE_RECEIVING_MESSAGE = 1;
+  AGENT_ACTIVITY_STATE_READING_CONTEXT = 2;
+  AGENT_ACTIVITY_STATE_COMPACTING_CONTEXT = 3;
+  AGENT_ACTIVITY_STATE_THINKING = 4;
+  AGENT_ACTIVITY_STATE_CODING = 5;
+  AGENT_ACTIVITY_STATE_RUNNING_COMMAND = 6;
+  AGENT_ACTIVITY_STATE_RUNNING_TEST = 7;
+  AGENT_ACTIVITY_STATE_REVIEWING = 8;
+  AGENT_ACTIVITY_STATE_WAITING = 9;
+  AGENT_ACTIVITY_STATE_BLOCKED = 10;
+  AGENT_ACTIVITY_STATE_RESTARTING = 11;
+  AGENT_ACTIVITY_STATE_RESTORING_MEMORY = 12;
+}
+
+enum AgentHealth {
+  AGENT_HEALTH_UNSPECIFIED = 0;
+  AGENT_HEALTH_OK = 1;
+  AGENT_HEALTH_PROVIDER_QUOTA = 2;
+  AGENT_HEALTH_COMMAND_FAILED = 3;
+  AGENT_HEALTH_TEST_FAILED = 4;
+  AGENT_HEALTH_AUTH_REQUIRED = 5;
+  AGENT_HEALTH_RUNTIME_ERROR = 6;
+  AGENT_HEALTH_OFFLINE = 7;
+}
+
+message AgentStatusSnapshot {
+  string agent_id = 1;
+  string computer_id = 2;
+  string runtime_profile_id = 3;
+  AgentPresence presence = 4;
+  AgentActivityState activity_state = 5;
+  AgentHealth health = 6;
+  string summary = 7;
+  string detail = 8;
+  string target = 9;
+  string thread_id = 10;
+  string message_id = 11;
+  string task_id = 12;
+  string run_id = 13;
+  string operation_id = 14;
+  string severity = 15;
+  int64 started_time_unix = 16;
+  int64 updated_time_unix = 17;
+  int64 expires_time_unix = 18;
+}
+
+message UpdateAgentStatusRequest {
+  AgentStatusSnapshot status = 1;
+  string request_id = 2;
+}
+
+message UpdateAgentStatusResponse {
+  AgentStatusSnapshot status = 1;
+}
+
+message ListAgentStatusesRequest {
+  string agent_id = 1;
+  string target = 2;
+  uint32 limit = 3;
+}
+
+message ListAgentStatusesResponse {
+  repeated AgentStatusSnapshot statuses = 1;
+}
+
+message ReminderRecord {
+  string reminder_id = 1;
+  string target = 2;
+  string schedule_kind = 3;
+  string schedule = 4;
+  string prompt = 5;
+  bool enabled = 6;
+  int64 next_run_unix = 7;
+  int64 last_run_unix = 8;
+  uint32 run_count = 9;
+  string last_error = 10;
+  string title = 11;
+  string status = 12;
+  int64 fire_time_unix = 13;
+  int64 fired_time_unix = 14;
+  string msg_ref = 15;
+  ReminderRecurrence recurrence = 16;
+}
+
+message ReminderRecurrence {
+  string rule = 1;
+  string description = 2;
+  string timezone = 3;
+}
+
+message ReminderEvent {
+  string event_id = 1;
+  string reminder_id = 2;
+  string event_type = 3;
+  string actor_type = 4;
+  string actor_id = 5;
+  int64 occurred_time_unix = 6;
+  int64 next_fire_time_unix = 7;
+  string detail = 8;
+}
+
+message ScheduleReminderRequest {
+  string target = 1;
+  string name = 2;
+  string schedule_kind = 3;
+  string schedule = 4;
+  string prompt = 5;
+  repeated string skills = 6;
+  string request_id = 7;
+  string title = 8;
+  uint32 delay_seconds = 9;
+  string fire_at = 10;
+  string repeat = 11;
+  string timezone = 12;
+  string channel = 13;
+  string msg_id = 14;
+}
+
+message ScheduleReminderResponse {
+  ReminderRecord reminder = 1;
+}
+
+message ListRemindersRequest {
+  string target = 1;
+  uint32 limit = 2;
+  repeated string statuses = 3;
+  bool include_canceled = 4;
+}
+
+message ListRemindersResponse {
+  repeated ReminderRecord reminders = 1;
+}
+
+message CancelReminderRequest {
+  string reminder_id = 1;
+  string request_id = 2;
+}
+
+message CancelReminderResponse {
+  bool accepted = 1;
+  ReminderRecord reminder = 2;
+}
+
+message SnoozeReminderRequest {
+  string reminder_id = 1;
+  uint32 delay_seconds = 2;
+  string request_id = 3;
+}
+
+message SnoozeReminderResponse {
+  ReminderRecord reminder = 1;
+}
+
+message UpdateReminderRequest {
+  string reminder_id = 1;
+  optional string title = 2;
+  optional string fire_at = 3;
+  optional uint32 delay_seconds = 4;
+  optional string repeat = 5;
+  optional string timezone = 6;
+  string request_id = 7;
+}
+
+message UpdateReminderResponse {
+  ReminderRecord reminder = 1;
+}
+
+message GetReminderLogRequest {
+  string reminder_id = 1;
+  string request_id = 2;
+}
+
+message GetReminderLogResponse {
+  repeated ReminderEvent events = 1;
+}
+
+message ActivityRecord {
+  string activity_id = 1;
+  string target = 2;
+  string agent_id = 3;
+  string kind = 4;
+  string summary = 5;
+  string detail = 6;
+  int64 created_time_unix = 7;
+  string run_id = 8;
+  string step_id = 9;
+}
+
+message LogActivityRequest {
+  string target = 1;
+  string agent_id = 2;
+  string kind = 3;
+  string summary = 4;
+  string detail = 5;
+  string run_id = 6;
+  string step_id = 7;
+  string request_id = 8;
+}
+
+message LogActivityResponse {
+  ActivityRecord activity = 1;
+}
+
+message ListActivityRequest {
+  string target = 1;
+  string agent_id = 2;
+  uint32 limit = 3;
+  EventCursor cursor = 4;
+}
+
+message ListActivityResponse {
+  repeated ActivityRecord activities = 1;
+  EventCursor next_cursor = 2;
+}
+
+message UploadAttachmentRequest {
+  string target = 1;
+  string filename = 2;
+  string mime_type = 3;
+  bytes content = 4;
+  string owner_id = 5;
+  string request_id = 6;
+}
+
+message UploadAttachmentResponse {
+  AttachmentRecord attachment = 1;
+}
+
+message GetAttachmentRequest {
+  string attachment_id = 1;
+  string target = 2;
+  string requester_agent_id = 3;
+}
+
+message GetAttachmentResponse {
+  AttachmentRecord attachment = 1;
+  bytes content = 2;
+}
+
+message ListEventsSinceRequest {
+  EventCursor cursor = 1;
+  uint32 limit = 2;
+}
+
+message CollaborationEvent {
+  string event_id = 1;
+  string target = 2;
+  string kind = 3;
+  string message_id = 4;
+  string activity_id = 5;
+  string task_id = 6;
+  string run_id = 7;
+  int64 created_time_unix = 8;
+  string attachment_id = 9;
+}
+
+message ListEventsSinceResponse {
+  repeated CollaborationEvent events = 1;
+  EventCursor next_cursor = 2;
+}
+
+service DaemonControlService {
+  rpc RegisterComputer(RegisterComputerRequest) returns (RegisterComputerResponse);
+  rpc HeartbeatComputer(HeartbeatComputerRequest) returns (HeartbeatComputerResponse);
+  rpc FetchAssignedRuns(FetchAssignedRunsRequest) returns (FetchAssignedRunsResponse);
+  rpc UpdateRunStatus(UpdateRunStatusRequest) returns (UpdateRunStatusResponse);
+  rpc AppendRunStep(AppendRunStepRequest) returns (AppendRunStepResponse);
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
+  rpc ListWorkspaceTree(ListWorkspaceTreeRequest) returns (ListWorkspaceTreeResponse);
+  rpc ReadWorkspaceFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse);
+  rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
+  rpc ReadMessages(ReadMessagesRequest) returns (ReadMessagesResponse);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc SaveMessage(SaveMessageRequest) returns (SaveMessageResponse);
+  rpc UnsaveMessage(UnsaveMessageRequest) returns (UnsaveMessageResponse);
+  rpc ListSavedMessages(ListSavedMessagesRequest) returns (ListSavedMessagesResponse);
+  rpc FollowThread(FollowThreadRequest) returns (FollowThreadResponse);
+  rpc UnfollowThread(UnfollowThreadRequest) returns (UnfollowThreadResponse);
+  rpc CreateCollaborationTask(CreateCollaborationTaskRequest) returns (CreateCollaborationTaskResponse);
+  rpc ListCollaborationTasks(ListCollaborationTasksRequest) returns (ListCollaborationTasksResponse);
+  rpc ListTaskBoard(ListTaskBoardRequest) returns (ListTaskBoardResponse);
+  rpc ClaimCollaborationTask(ClaimCollaborationTaskRequest) returns (ClaimCollaborationTaskResponse);
+  rpc ProposeTaskSplit(ProposeTaskSplitRequest) returns (ProposeTaskSplitResponse);
+  rpc ApplyTaskSplit(ApplyTaskSplitRequest) returns (ApplyTaskSplitResponse);
+  rpc CreateTaskGraph(CreateTaskGraphRequest) returns (CreateTaskGraphResponse);
+  rpc ListTaskGraph(ListTaskGraphRequest) returns (ListTaskGraphResponse);
+  rpc UpdateTaskGraph(UpdateTaskGraphRequest) returns (UpdateTaskGraphResponse);
+  rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
+  rpc GetAgentProfile(GetAgentProfileRequest) returns (GetAgentProfileResponse);
+  rpc UpdateAgentProfile(UpdateAgentProfileRequest) returns (UpdateAgentProfileResponse);
+  rpc SetAgentEnv(SetAgentEnvRequest) returns (SetAgentEnvResponse);
+  rpc ListAgentProfiles(ListAgentProfilesRequest) returns (ListAgentProfilesResponse);
+  rpc ListAgentDMs(ListAgentDMsRequest) returns (ListAgentDMsResponse);
+  rpc ControlAgent(ControlAgentRequest) returns (ControlAgentResponse);
+  rpc SendAgentDirectMessage(SendAgentDirectMessageRequest) returns (SendAgentDirectMessageResponse);
+  rpc UpdateAgentStatus(UpdateAgentStatusRequest) returns (UpdateAgentStatusResponse);
+  rpc ListAgentStatuses(ListAgentStatusesRequest) returns (ListAgentStatusesResponse);
+  rpc ScheduleReminder(ScheduleReminderRequest) returns (ScheduleReminderResponse);
+  rpc ListReminders(ListRemindersRequest) returns (ListRemindersResponse);
+  rpc CancelReminder(CancelReminderRequest) returns (CancelReminderResponse);
+  rpc SnoozeReminder(SnoozeReminderRequest) returns (SnoozeReminderResponse);
+  rpc UpdateReminder(UpdateReminderRequest) returns (UpdateReminderResponse);
+  rpc GetReminderLog(GetReminderLogRequest) returns (GetReminderLogResponse);
+  rpc UploadAttachment(UploadAttachmentRequest) returns (UploadAttachmentResponse);
+  rpc GetAttachment(GetAttachmentRequest) returns (GetAttachmentResponse);
+  rpc LogActivity(LogActivityRequest) returns (LogActivityResponse);
+  rpc ListActivity(ListActivityRequest) returns (ListActivityResponse);
+  rpc ListEventsSince(ListEventsSinceRequest) returns (ListEventsSinceResponse);
+}
