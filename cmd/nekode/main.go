@@ -11,6 +11,7 @@ import (
 
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/server"
+	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
 )
 
@@ -52,6 +53,7 @@ func serve(args []string) error {
 	flags.StringVar(&cfg.Addr, "addr", cfg.Addr, "HTTP listen address")
 	flags.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "public base URL")
 	flags.StringVar(&cfg.DataDir, "data-dir", cfg.DataDir, "persistent data directory")
+	flags.StringVar(&cfg.DatabasePath, "db", cfg.DatabasePath, "SQLite database path")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -62,7 +64,16 @@ func serve(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	s := server.New(cfg, slog.Default())
+	store, err := storage.Open(ctx, cfg.DatabasePath)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+	if err := store.Migrate(ctx); err != nil {
+		return err
+	}
+
+	s := server.New(cfg, slog.Default(), store)
 	err = s.ListenAndServe(ctx)
 	if err == context.Canceled {
 		return nil
@@ -72,6 +83,6 @@ func serve(args []string) error {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  nekode serve [--addr :18790] [--base-url http://localhost:18790] [--data-dir ~/.nekode]")
+	fmt.Fprintln(os.Stderr, "  nekode serve [--addr :18790] [--base-url http://localhost:18790] [--data-dir ~/.nekode] [--db ~/.nekode/nekode.db]")
 	fmt.Fprintln(os.Stderr, "  nekode version")
 }

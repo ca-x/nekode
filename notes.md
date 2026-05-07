@@ -49,6 +49,21 @@
 - task #92: frontend console UX and implementation. @小螃蟹 designs interaction details, @小吱吱 implements.
 - task #93: product scope, hosted deployment plan, acceptance docs.
 
+### Task #94 backend Phase 2
+- Add SQLite through `database/sql` with the pure-Go `modernc.org/sqlite` driver so Docker can keep a static build.
+- Use `POST /api/auth/bootstrap` for the first admin user; do not create default credentials.
+- Store sessions as random bearer tokens with server-side expiry.
+- Keep messages/tasks tied to transport-neutral targets, with optional interaction endpoint metadata.
+- Phase 2 REST API:
+  - `POST /api/auth/bootstrap`
+  - `POST /api/auth/login`
+  - `POST /api/auth/logout`
+  - `GET /api/auth/me`
+  - `GET/POST /api/interaction-endpoints`
+  - `GET/POST /api/messages`
+  - `GET/POST /api/tasks`
+  - `PATCH /api/tasks/{id}`
+
 ### Reference Architecture Analysis (2026-05-07)
 
 **Projects Analyzed**:

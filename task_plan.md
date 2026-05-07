@@ -1,4 +1,4 @@
-# Task Plan: Nekode Self-Hosted Slock Bootstrap
+# Task Plan: Nekode Self-Hosted Slock Bootstrap And Backend Phase 2
 
 ## Goal
 Create the first repo foundation for Nekode so the team can implement a hostable Slock-style collaboration server with a clear protocol, backend skeleton, frontend lane, and acceptance path.
@@ -9,8 +9,12 @@ Create the first repo foundation for Nekode so the team can implement a hostable
 - [x] Phase 3: Bootstrap Go backend, health API, proto generation, Docker files
 - [x] Phase 4: Add unit tests and run bootstrap verification
 - [x] Phase 5: Reserve non-Web interaction endpoint extension points
-- [ ] Phase 6: Coordinate frontend/product follow-up tasks
-- [ ] Phase 7: Commit and push task #91 branch
+- [x] Phase 6: Coordinate frontend/product follow-up tasks
+- [x] Phase 7: Commit and push task #91 branch
+- [x] Phase 8: Implement SQLite storage and migrations
+- [x] Phase 9: Implement auth/session service
+- [x] Phase 10: Implement interaction endpoint, message, and task APIs
+- [x] Phase 11: Verify, commit, and push task #94
 
 ## Key Questions
 1. Should the reusable protobuf keep the old package path or use a project-local Nekode package?
@@ -23,9 +27,12 @@ Create the first repo foundation for Nekode so the team can implement a hostable
 - Start with standard library HTTP and minimal dependencies: leaves room to add framework/storage after the API shape is clearer.
 - Put frontend design/implementation in task #92 and product/deploy acceptance in task #93: keeps #91 focused on repo and architecture foundations.
 - Model Web, CLI, API, webhook, MCP, IM, mobile, IDE, and future clients as interaction endpoints instead of hardcoding Web as the only write surface.
+- Use a first-user bootstrap endpoint instead of shipping default admin credentials.
+- Use embedded SQL migrations rather than adding a migration framework in the first storage slice.
 
 ## Errors Encountered
 - Started bootstrap before the `plan-with-files` request arrived: recovered by adding this plan, notes, and deliverable docs before committing.
+- `modernc.org/sqlite` pulled a larger dependency graph than expected, but it preserves static Linux builds and avoids CGO in Docker.
 
 ## Status
-**Currently in Phase 7** - Bootstrap code and verification are complete; preparing commit and push.
+**Task #94 complete** - Storage/auth/core API implementation is verified and ready for review.

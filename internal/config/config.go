@@ -14,9 +14,10 @@ const (
 )
 
 type Config struct {
-	Addr    string
-	BaseURL string
-	DataDir string
+	Addr         string
+	BaseURL      string
+	DataDir      string
+	DatabasePath string
 }
 
 func Load() (Config, error) {
@@ -30,6 +31,7 @@ func Load() (Config, error) {
 		BaseURL: env("NEKODE_BASE_URL", DefaultBaseURL),
 		DataDir: env("NEKODE_DATA_DIR", filepath.Join(home, ".nekode")),
 	}
+	cfg.DatabasePath = env("NEKODE_DB_PATH", filepath.Join(cfg.DataDir, "nekode.db"))
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -42,6 +44,9 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.DataDir) == "" {
 		return errors.New("data dir is required")
+	}
+	if strings.TrimSpace(c.DatabasePath) == "" {
+		return errors.New("database path is required")
 	}
 	if _, err := url.ParseRequestURI(c.BaseURL); err != nil {
 		return err

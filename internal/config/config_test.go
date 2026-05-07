@@ -9,6 +9,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("NEKODE_ADDR", "")
 	t.Setenv("NEKODE_BASE_URL", "")
 	t.Setenv("NEKODE_DATA_DIR", "")
+	t.Setenv("NEKODE_DB_PATH", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -23,12 +24,16 @@ func TestLoadDefaults(t *testing.T) {
 	if filepath.Base(cfg.DataDir) != ".nekode" {
 		t.Fatalf("DataDir = %q, want .nekode suffix", cfg.DataDir)
 	}
+	if filepath.Base(cfg.DatabasePath) != "nekode.db" {
+		t.Fatalf("DatabasePath = %q, want nekode.db suffix", cfg.DatabasePath)
+	}
 }
 
 func TestLoadFromEnvironment(t *testing.T) {
 	t.Setenv("NEKODE_ADDR", ":19000")
 	t.Setenv("NEKODE_BASE_URL", "https://nekode.example.test")
 	t.Setenv("NEKODE_DATA_DIR", "/tmp/nekode-test")
+	t.Setenv("NEKODE_DB_PATH", "/tmp/nekode-test/custom.db")
 
 	cfg, err := Load()
 	if err != nil {
@@ -42,6 +47,9 @@ func TestLoadFromEnvironment(t *testing.T) {
 	}
 	if cfg.DataDir != "/tmp/nekode-test" {
 		t.Fatalf("DataDir = %q", cfg.DataDir)
+	}
+	if cfg.DatabasePath != "/tmp/nekode-test/custom.db" {
+		t.Fatalf("DatabasePath = %q", cfg.DatabasePath)
 	}
 }
 

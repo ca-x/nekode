@@ -6,21 +6,36 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/ca-x/nekode/internal/auth"
 	"github.com/ca-x/nekode/internal/config"
+	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
 )
 
 const ProtocolPath = "proto/nekode/daemon/v1/daemon.proto"
 
+type contextKey string
+
+const principalKey contextKey = "principal"
+
 type Server struct {
 	cfg    config.Config
 	logger *slog.Logger
 	mux    *http.ServeMux
+	store  *storage.Store
+	auth   *auth.Service
 }
 
-func New(cfg config.Config, logger *slog.Logger) *Server {
+type Principal struct {
+	User    storage.User
+	Session storage.Session
+}
+
+func New(cfg config.Config, logger *slog.Logger, store *storage.Store) *Server {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -28,6 +43,10 @@ func New(cfg config.Config, logger *slog.Logger) *Server {
 		cfg:    cfg,
 		logger: logger,
 		mux:    http.NewServeMux(),
+		store:  store,
+	}
+	if store != nil {
+		s.auth = auth.New(store)
 	}
 	s.routes()
 	return s
@@ -70,6 +89,17 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/version", s.handleVersion)
 	s.mux.HandleFunc("GET /api/protocol", s.handleProtocol)
+	s.mux.HandleFunc("POST /api/auth/bootstrap", s.handleBootstrap)
+	s.mux.HandleFunc("POST /api/auth/login", s.handleLogin)
+	s.mux.HandleFunc("POST /api/auth/logout", s.requireAuth(s.handleLogout))
+	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
+	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
+	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
+	s.mux.HandleFunc("GET /api/messages", s.requireAuth(s.handleListMessages))
+	s.mux.HandleFunc("POST /api/messages", s.requireAuth(s.handleCreateMessage))
+	s.mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListTasks))
+	s.mux.HandleFunc("POST /api/tasks", s.requireAuth(s.handleCreateTask))
+	s.mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -92,8 +122,341 @@ func (s *Server) handleProtocol(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
+func (s *Server) handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	var req authRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := validateCredentials(req.Username, req.Password); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	token, err := s.auth.Bootstrap(r.Context(), req.Username, req.Password, req.DisplayName)
+	if errors.Is(err, auth.ErrBootstrapClosed) {
+		writeError(w, http.StatusConflict, "bootstrap is already closed")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "bootstrap failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, token)
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var req authRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	token, err := s.auth.Login(r.Context(), req.Username, req.Password)
+	if errors.Is(err, auth.ErrInvalidCredential) {
+		writeError(w, http.StatusUnauthorized, "invalid username or password")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "login failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, token)
+}
+
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context())
+	if err := s.auth.Logout(r.Context(), principal.Session.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, "logout failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, principalFromContext(r.Context()).User)
+}
+
+func (s *Server) handleListInteractionEndpoints(w http.ResponseWriter, r *http.Request) {
+	endpoints, err := s.store.ListInteractionEndpoints(r.Context(), intQuery(r, "limit", 100))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list interaction endpoints failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": endpoints})
+}
+
+func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.Request) {
+	var req endpointRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	endpoint := storage.InteractionEndpoint{
+		Kind:            strings.TrimSpace(req.Kind),
+		Provider:        strings.TrimSpace(req.Provider),
+		DisplayName:     strings.TrimSpace(req.DisplayName),
+		TargetPrefix:    strings.TrimSpace(req.TargetPrefix),
+		InboundEnabled:  req.InboundEnabled,
+		OutboundEnabled: req.OutboundEnabled,
+		AuthMode:        strings.TrimSpace(req.AuthMode),
+		ConfigJSON:      normalizedJSON(req.ConfigJSON),
+	}
+	if endpoint.Kind == "" || endpoint.Provider == "" || endpoint.DisplayName == "" {
+		writeError(w, http.StatusBadRequest, "kind, provider, and displayName are required")
+		return
+	}
+	if endpoint.TargetPrefix == "" {
+		endpoint.TargetPrefix = "#"
+	}
+	if endpoint.AuthMode == "" {
+		endpoint.AuthMode = "bearer"
+	}
+	created, err := s.store.CreateInteractionEndpoint(r.Context(), endpoint)
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "interaction endpoint already exists")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create interaction endpoint failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, created)
+}
+
+func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
+	target := strings.TrimSpace(r.URL.Query().Get("target"))
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	messages, err := s.store.ListMessages(r.Context(), target, intQuery(r, "limit", 50))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list messages failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": messages})
+}
+
+func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
+	var req messageRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	target := strings.TrimSpace(req.Target)
+	content := strings.TrimSpace(req.Content)
+	if target == "" || content == "" {
+		writeError(w, http.StatusBadRequest, "target and content are required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	role := strings.TrimSpace(req.Role)
+	if role == "" {
+		role = "user"
+	}
+	message, err := s.store.CreateMessage(r.Context(), storage.Message{
+		Target:            target,
+		ThreadID:          strings.TrimSpace(req.ThreadID),
+		Role:              role,
+		Content:           content,
+		SenderUserID:      principal.User.ID,
+		SenderDisplayName: principal.User.DisplayName,
+		SenderKind:        "human",
+		SourceEndpointID:  strings.TrimSpace(req.SourceEndpointID),
+		ExternalMessageID: strings.TrimSpace(req.ExternalMessageID),
+		MetadataJSON:      normalizedJSON(req.MetadataJSON),
+		RequestID:         strings.TrimSpace(req.RequestID),
+	})
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "duplicate request id")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create message failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, message)
+}
+
+func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
+	tasks, err := s.store.ListTasks(r.Context(), strings.TrimSpace(r.URL.Query().Get("state")),
+		strings.TrimSpace(r.URL.Query().Get("target")), intQuery(r, "limit", 100))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list tasks failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": tasks})
+}
+
+func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
+	var req taskRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	summary := strings.TrimSpace(req.Summary)
+	target := strings.TrimSpace(req.Target)
+	if summary == "" || target == "" {
+		writeError(w, http.StatusBadRequest, "summary and target are required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	task, err := s.store.CreateTask(r.Context(), storage.Task{
+		Summary:         summary,
+		State:           strings.TrimSpace(req.State),
+		Target:          target,
+		AssigneeID:      strings.TrimSpace(req.AssigneeID),
+		CreatedByUserID: principal.User.ID,
+	})
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid task state")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create task failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, task)
+}
+
+func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
+	var req taskPatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	patch := storage.TaskPatch{
+		Summary:    optionalTrimmed(req.Summary),
+		State:      optionalTrimmed(req.State),
+		AssigneeID: optionalTrimmed(req.AssigneeID),
+	}
+	task, err := s.store.UpdateTask(r.Context(), r.PathValue("id"), patch)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "task not found")
+		return
+	}
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid task state")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "update task failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, task)
+}
+
+func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		token, ok := strings.CutPrefix(header, "Bearer ")
+		if !ok || strings.TrimSpace(token) == "" {
+			writeError(w, http.StatusUnauthorized, "bearer token is required")
+			return
+		}
+		user, session, err := s.auth.Authenticate(r.Context(), strings.TrimSpace(token))
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid bearer token")
+			return
+		}
+		ctx := context.WithValue(r.Context(), principalKey, Principal{User: user, Session: session})
+		next(w, r.WithContext(ctx))
+	}
+}
+
+func principalFromContext(ctx context.Context) Principal {
+	principal, _ := ctx.Value(principalKey).(Principal)
+	return principal
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(dest); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return false
+	}
+	return true
+}
+
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
+}
+
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func intQuery(r *http.Request, name string, fallback int) int {
+	raw := strings.TrimSpace(r.URL.Query().Get(name))
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return value
+}
+
+func normalizedJSON(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "{}"
+	}
+	return value
+}
+
+func optionalTrimmed(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	return &trimmed
+}
+
+func validateCredentials(username, password string) error {
+	if strings.TrimSpace(username) == "" {
+		return errors.New("username is required")
+	}
+	if len(password) < 8 {
+		return errors.New("password must be at least 8 characters")
+	}
+	return nil
+}
+
+type authRequest struct {
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	DisplayName string `json:"displayName"`
+}
+
+type endpointRequest struct {
+	Kind            string `json:"kind"`
+	Provider        string `json:"provider"`
+	DisplayName     string `json:"displayName"`
+	TargetPrefix    string `json:"targetPrefix"`
+	InboundEnabled  bool   `json:"inboundEnabled"`
+	OutboundEnabled bool   `json:"outboundEnabled"`
+	AuthMode        string `json:"authMode"`
+	ConfigJSON      string `json:"configJson"`
+}
+
+type messageRequest struct {
+	Target            string `json:"target"`
+	ThreadID          string `json:"threadId"`
+	Role              string `json:"role"`
+	Content           string `json:"content"`
+	SourceEndpointID  string `json:"sourceEndpointId"`
+	ExternalMessageID string `json:"externalMessageId"`
+	MetadataJSON      string `json:"metadataJson"`
+	RequestID         string `json:"requestId"`
+}
+
+type taskRequest struct {
+	Summary    string `json:"summary"`
+	State      string `json:"state"`
+	Target     string `json:"target"`
+	AssigneeID string `json:"assigneeId"`
+}
+
+type taskPatchRequest struct {
+	Summary    *string `json:"summary"`
+	State      *string `json:"state"`
+	AssigneeID *string `json:"assigneeId"`
 }

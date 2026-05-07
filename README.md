@@ -9,6 +9,7 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - Go backend entrypoint: `cmd/nekode`
 - HTTP health endpoint: `GET /health`
 - Protocol metadata endpoint: `GET /api/protocol`
+- Phase 2 API docs: `docs/api.md`
 - Reusable daemon IDL: `proto/nekode/daemon/v1/daemon.proto`
 - Implementation design: `docs/slock-style-daemon-runtime.md`
 - Logo asset: `assets/brand.png`
@@ -31,6 +32,7 @@ Environment variables:
 | `NEKODE_ADDR` | `:18790` | HTTP listen address |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | Public server URL |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | Persistent data directory |
+| `NEKODE_DB_PATH` | `$NEKODE_DATA_DIR/nekode.db` | SQLite database file |
 
 ## Protocol
 
