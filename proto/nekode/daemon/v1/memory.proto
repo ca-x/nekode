@@ -7,6 +7,8 @@ import "nekode/daemon/v1/common.proto";
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message MemoryRecord {
+  reserved 1000 to 1999;
+
   string memory_id = 1;
   string agent_id = 2;
   string target = 3;
@@ -40,6 +42,8 @@ message ListAgentMemoryResponse {
 message UpsertAgentMemoryRequest {
   MemoryRecord record = 1;
   string request_id = 2;
+  string idempotency_key = 3;
+  RequestContext context = 4;
 }
 
 message UpsertAgentMemoryResponse {

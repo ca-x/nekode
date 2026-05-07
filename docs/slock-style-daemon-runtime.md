@@ -322,6 +322,12 @@ Required diagnostics:
 The server/daemon transport can be WebSocket, gRPC stream, server-sent events,
 long polling, or another bidirectional protocol.
 
+The protobuf contract exposes this as `SubscribeServerEvents`. A production
+daemon should prefer the stream for low-latency server-to-daemon delivery of
+assigned runs, agent lifecycle controls, token-injection work, reminders, and
+ping/reconnect signals. Polling may exist as a degraded fallback, but it must
+preserve the same cursor and idempotency semantics.
+
 The required contract is:
 
 1. daemon authenticates;
@@ -330,7 +336,8 @@ The required contract is:
 4. server sends events;
 5. daemon acknowledges accepted side effects;
 6. daemon reports agent status and run/activity progress;
-7. daemon reconnects and replays missed events from a cursor.
+7. daemon reconnects and replays missed events from a cursor, sequence, and
+   aggregate id.
 
 ### Event Types
 
@@ -350,6 +357,9 @@ Event payloads should include:
 
 - event id;
 - event type;
+- protocol version;
+- monotonic sequence;
+- aggregate id, such as channel target, task id, or daemon id;
 - server time;
 - target or subject id;
 - request id or idempotency key when applicable;
@@ -360,7 +370,7 @@ Event payloads should include:
 All side-effecting operations should be idempotent by:
 
 ```text
-(caller_kind, caller_id, method, request_id)
+(caller_kind, caller_id, method, request_id or idempotency_key)
 ```
 
 Required behavior:
@@ -380,6 +390,26 @@ Operations that should carry request ids include:
 - update agent profile/status/env;
 - control agent lifecycle;
 - log activity.
+
+`request_id` remains the traceable request identifier. `idempotency_key` is an
+explicit deduplication key for clients that need retry identity to survive
+transport reconnects or request reconstruction.
+
+### Open String Values
+
+Several fields intentionally use strings instead of closed enums. Server-side
+validation must document and accept these initial values while preserving an
+unknown-value path for later integrations:
+
+| Field | Initial values |
+| --- | --- |
+| `Runtime.kind` / `RuntimeProfile.kind` | `codex`, `claude`, `opencode`, `kimi`, `gemini`, `custom` |
+| `InteractionEndpoint.kind` | `web`, `cli`, `api`, `webhook`, `mcp`, `im`, `mobile`, `ide`, `custom` |
+| `Task.state` | `todo`, `in_progress`, `in_review`, `done`, `blocked`, `canceled` |
+| `Task.claim_policy` | `exclusive`, `shared`, `reviewer_only`, `unclaimable` |
+| `Task.claim_conflict_behavior` | `fail_silent`, `fail_with_reason`, `queue`, `assist` |
+| `AgentRoleAssignment.name` | `designer`, `implementer`, `reviewer`, `verifier`, `releaser`, `observer`, `custom` |
+| `CoordinationRecord.kind` | `work_plan`, `progress_update`, `acceptance_evidence`, `release_gate`, `role_handoff`, `deadline_negotiation`, `scope_negotiation` |
 
 ## Authentication and Token Injection
 
@@ -608,6 +638,10 @@ A task board is a projection grouped by status:
 - Done.
 
 The exact labels can vary, but the canonical statuses should remain stable.
+
+Release is a separate transition from review acceptance. `ReleaseGate` records
+required checks and their results, while `ReleaseTask` records the explicit
+release/deploy decision, version, environment, note, and timestamp.
 
 ### Split Flow
 

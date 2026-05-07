@@ -306,11 +306,13 @@ func (x *ListAgentMemoryResponse) GetNextCursor() *EventCursor {
 }
 
 type UpsertAgentMemoryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Record        *MemoryRecord          `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
-	RequestId     string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Record         *MemoryRecord          `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpsertAgentMemoryRequest) Reset() {
@@ -355,6 +357,20 @@ func (x *UpsertAgentMemoryRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *UpsertAgentMemoryRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UpsertAgentMemoryRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type UpsertAgentMemoryResponse struct {
@@ -405,7 +421,7 @@ var File_nekode_daemon_v1_memory_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\n" +
-	"\x1dnekode/daemon/v1/memory.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xce\x03\n" +
+	"\x1dnekode/daemon/v1/memory.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xd6\x03\n" +
 	"\fMemoryRecord\x12\x1b\n" +
 	"\tmemory_id\x18\x01 \x01(\tR\bmemoryId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x16\n" +
@@ -423,7 +439,7 @@ const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\x11updated_time_unix\x18\r \x01(\x03R\x0fupdatedTimeUnix\x12\x1a\n" +
 	"\bchecksum\x18\x0e \x01(\tR\bchecksum\x12\x1d\n" +
 	"\n" +
-	"local_only\x18\x0f \x01(\bR\tlocalOnly\"\xae\x01\n" +
+	"local_only\x18\x0f \x01(\bR\tlocalOnlyJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x01\n" +
 	"\x16ListAgentMemoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x14\n" +
@@ -433,11 +449,13 @@ const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\x17ListAgentMemoryResponse\x128\n" +
 	"\arecords\x18\x01 \x03(\v2\x1e.nekode.daemon.v1.MemoryRecordR\arecords\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"q\n" +
+	"nextCursor\"\xd6\x01\n" +
 	"\x18UpsertAgentMemoryRequest\x126\n" +
 	"\x06record\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.MemoryRecordR\x06record\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tR\trequestId\"S\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"S\n" +
 	"\x19UpsertAgentMemoryResponse\x126\n" +
 	"\x06record\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.MemoryRecordR\x06recordB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
@@ -461,18 +479,20 @@ var file_nekode_daemon_v1_memory_proto_goTypes = []any{
 	(*UpsertAgentMemoryRequest)(nil),  // 3: nekode.daemon.v1.UpsertAgentMemoryRequest
 	(*UpsertAgentMemoryResponse)(nil), // 4: nekode.daemon.v1.UpsertAgentMemoryResponse
 	(*EventCursor)(nil),               // 5: nekode.daemon.v1.EventCursor
+	(*RequestContext)(nil),            // 6: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_memory_proto_depIdxs = []int32{
 	5, // 0: nekode.daemon.v1.ListAgentMemoryRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
 	0, // 1: nekode.daemon.v1.ListAgentMemoryResponse.records:type_name -> nekode.daemon.v1.MemoryRecord
 	5, // 2: nekode.daemon.v1.ListAgentMemoryResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
 	0, // 3: nekode.daemon.v1.UpsertAgentMemoryRequest.record:type_name -> nekode.daemon.v1.MemoryRecord
-	0, // 4: nekode.daemon.v1.UpsertAgentMemoryResponse.record:type_name -> nekode.daemon.v1.MemoryRecord
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	6, // 4: nekode.daemon.v1.UpsertAgentMemoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0, // 5: nekode.daemon.v1.UpsertAgentMemoryResponse.record:type_name -> nekode.daemon.v1.MemoryRecord
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_memory_proto_init() }

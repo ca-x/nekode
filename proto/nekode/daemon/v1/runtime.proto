@@ -8,6 +8,8 @@ import "nekode/daemon/v1/common.proto";
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message Workspace {
+  reserved 1000 to 1999;
+
   string workspace_id = 1;
   string computer_id = 2;
   string path = 3;
@@ -16,6 +18,8 @@ message Workspace {
   bool is_default = 6;
 }
 message RuntimeProfile {
+  reserved 1000 to 1999;
+
   string runtime_profile_id = 1;
   string kind = 2;
   string provider = 3;
@@ -27,6 +31,8 @@ message RuntimeProfile {
   repeated Capability capabilities = 9;
 }
 message Runtime {
+  reserved 1000 to 1999;
+
   string runtime_id = 1;
   string computer_id = 2;
   string workspace_id = 3;
@@ -46,12 +52,16 @@ message Runtime {
   RuntimeProfile runtime_profile = 17;
 }
 message ComputerInventory {
+  reserved 1000 to 1999;
+
   repeated Workspace workspaces = 1;
   repeated Runtime runtimes = 2;
   repeated AgentProfile agents = 3;
   repeated RuntimeProfile runtime_profiles = 4;
 }
 message ComputerInfo {
+  reserved 1000 to 1999;
+
   string daemon_id = 1;
   string computer_id = 2;
   string display_name = 3;
@@ -69,6 +79,8 @@ message RegisterComputerRequest {
   ComputerInfo info = 1;
   ComputerInventory inventory = 2;
   string request_id = 3;
+  string idempotency_key = 4;
+  RequestContext context = 5;
 }
 message RegisterComputerResponse {
   bool accepted = 1;
@@ -80,6 +92,9 @@ message HeartbeatComputerRequest {
   ComputerInventory inventory = 2;
   string lease_id = 3;
   string request_id = 4;
+  repeated AgentStatusSnapshot agent_statuses = 5;
+  string idempotency_key = 6;
+  RequestContext context = 7;
 }
 message HeartbeatComputerResponse {
   bool accepted = 1;
@@ -88,6 +103,8 @@ message HeartbeatComputerResponse {
   Lease lease = 4;
 }
 message Run {
+  reserved 1000 to 1999;
+
   string run_id = 1;
   string task_id = 2;
   string target = 3;
@@ -107,6 +124,8 @@ message Run {
   string state = 17;
 }
 message RunStep {
+  reserved 1000 to 1999;
+
   string step_id = 1;
   string run_id = 2;
   uint32 sequence = 3;
@@ -124,6 +143,7 @@ message FetchAssignedRunsRequest {
   repeated string agent_ids = 2;
   uint32 limit = 3;
   string request_id = 4;
+  EventCursor cursor = 5;
 }
 message FetchAssignedRunsResponse {
   repeated Run runs = 1;
@@ -137,6 +157,8 @@ message UpdateRunStatusRequest {
   string blocked_reason = 6;
   string result_message = 7;
   string request_id = 8;
+  string idempotency_key = 9;
+  RequestContext context = 10;
 }
 message UpdateRunStatusResponse {
   bool accepted = 1;
@@ -144,6 +166,8 @@ message UpdateRunStatusResponse {
 message AppendRunStepRequest {
   RunStep step = 1;
   string request_id = 2;
+  string idempotency_key = 3;
+  RequestContext context = 4;
 }
 message AppendRunStepResponse {
   bool accepted = 1;
@@ -154,9 +178,11 @@ message ListRunsRequest {
   string task_id = 2;
   string agent_id = 3;
   uint32 limit = 4;
+  EventCursor cursor = 5;
 }
 message ListRunsResponse {
   repeated Run runs = 1;
+  EventCursor next_cursor = 2;
 }
 message GetRunRequest {
   string run_id = 1;
@@ -166,6 +192,8 @@ message GetRunResponse {
   repeated RunStep steps = 2;
 }
 message WorkspaceTreeEntry {
+  reserved 1000 to 1999;
+
   string path = 1;
   string name = 2;
   bool is_dir = 3;
@@ -193,4 +221,48 @@ message ReadWorkspaceFileResponse {
   string content = 3;
   bool truncated = 4;
   int64 size_bytes = 5;
+}
+message McpResourceSubscription {
+  reserved 1000 to 1999;
+
+  string subscription_id = 1;
+  string agent_id = 2;
+  string runtime_id = 3;
+  string endpoint_id = 4;
+  string resource_uri = 5;
+  string status = 6; // active | paused | canceled | failed
+  int64 created_time_unix = 7;
+  string request_id = 8;
+}
+message McpResourceUpdate {
+  reserved 1000 to 1999;
+
+  string update_id = 1;
+  string subscription_id = 2;
+  string resource_uri = 3;
+  string content_type = 4;
+  string content = 5;
+  bytes content_bytes = 6;
+  int64 sequence = 7;
+  int64 created_time_unix = 8;
+}
+message SubscribeMcpResourceRequest {
+  McpResourceSubscription subscription = 1;
+  string request_id = 2;
+  string idempotency_key = 3;
+  RequestContext context = 4;
+}
+message SubscribeMcpResourceResponse {
+  McpResourceSubscription subscription = 1;
+}
+message ListMcpResourceUpdatesRequest {
+  string subscription_id = 1;
+  string resource_uri = 2;
+  int64 from_sequence = 3;
+  uint32 limit = 4;
+  EventCursor cursor = 5;
+}
+message ListMcpResourceUpdatesResponse {
+  repeated McpResourceUpdate updates = 1;
+  EventCursor next_cursor = 2;
 }

@@ -34,6 +34,9 @@ type ActivityRecord struct {
 	StepId               string                 `protobuf:"bytes,9,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	CoordinationRecordId string                 `protobuf:"bytes,10,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
 	MemoryRecordId       string                 `protobuf:"bytes,11,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	Sequence             int64                  `protobuf:"varint,12,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId          string                 `protobuf:"bytes,13,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	ProtocolVersion      int32                  `protobuf:"varint,14,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -145,18 +148,41 @@ func (x *ActivityRecord) GetMemoryRecordId() string {
 	return ""
 }
 
+func (x *ActivityRecord) GetSequence() int64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *ActivityRecord) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+func (x *ActivityRecord) GetProtocolVersion() int32 {
+	if x != nil {
+		return x.ProtocolVersion
+	}
+	return 0
+}
+
 type LogActivityRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	Summary       string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
-	Detail        string                 `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
-	RunId         string                 `protobuf:"bytes,6,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	StepId        string                 `protobuf:"bytes,7,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
-	RequestId     string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Target         string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Kind           string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Summary        string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
+	Detail         string                 `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
+	RunId          string                 `protobuf:"bytes,6,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	StepId         string                 `protobuf:"bytes,7,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,10,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *LogActivityRequest) Reset() {
@@ -245,6 +271,20 @@ func (x *LogActivityRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *LogActivityRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *LogActivityRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type LogActivityResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Activity      *ActivityRecord        `protobuf:"bytes,1,opt,name=activity,proto3" json:"activity,omitempty"`
@@ -295,6 +335,9 @@ type ListActivityRequest struct {
 	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Limit         uint32                 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        *EventCursor           `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	FromSequence  int64                  `protobuf:"varint,5,opt,name=from_sequence,json=fromSequence,proto3" json:"from_sequence,omitempty"`
+	AggregateId   string                 `protobuf:"bytes,6,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	PageToken     string                 `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -357,10 +400,32 @@ func (x *ListActivityRequest) GetCursor() *EventCursor {
 	return nil
 }
 
+func (x *ListActivityRequest) GetFromSequence() int64 {
+	if x != nil {
+		return x.FromSequence
+	}
+	return 0
+}
+
+func (x *ListActivityRequest) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+func (x *ListActivityRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListActivityResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Activities    []*ActivityRecord      `protobuf:"bytes,1,rep,name=activities,proto3" json:"activities,omitempty"`
 	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -409,10 +474,20 @@ func (x *ListActivityResponse) GetNextCursor() *EventCursor {
 	return nil
 }
 
+func (x *ListActivityResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 type ListEventsSinceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cursor        *EventCursor           `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	FromSequence  int64                  `protobuf:"varint,3,opt,name=from_sequence,json=fromSequence,proto3" json:"from_sequence,omitempty"`
+	AggregateId   string                 `protobuf:"bytes,4,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	PageToken     string                 `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -461,6 +536,27 @@ func (x *ListEventsSinceRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListEventsSinceRequest) GetFromSequence() int64 {
+	if x != nil {
+		return x.FromSequence
+	}
+	return 0
+}
+
+func (x *ListEventsSinceRequest) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+func (x *ListEventsSinceRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type CollaborationEvent struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	EventId              string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -474,6 +570,10 @@ type CollaborationEvent struct {
 	AttachmentId         string                 `protobuf:"bytes,9,opt,name=attachment_id,json=attachmentId,proto3" json:"attachment_id,omitempty"`
 	CoordinationRecordId string                 `protobuf:"bytes,10,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
 	MemoryRecordId       string                 `protobuf:"bytes,11,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	Sequence             int64                  `protobuf:"varint,12,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId          string                 `protobuf:"bytes,13,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	ProtocolVersion      int32                  `protobuf:"varint,14,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	SourceEndpointId     string                 `protobuf:"bytes,15,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -585,10 +685,39 @@ func (x *CollaborationEvent) GetMemoryRecordId() string {
 	return ""
 }
 
+func (x *CollaborationEvent) GetSequence() int64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *CollaborationEvent) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+func (x *CollaborationEvent) GetProtocolVersion() int32 {
+	if x != nil {
+		return x.ProtocolVersion
+	}
+	return 0
+}
+
+func (x *CollaborationEvent) GetSourceEndpointId() string {
+	if x != nil {
+		return x.SourceEndpointId
+	}
+	return ""
+}
+
 type ListEventsSinceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Events        []*CollaborationEvent  `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
 	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -637,11 +766,162 @@ func (x *ListEventsSinceResponse) GetNextCursor() *EventCursor {
 	return nil
 }
 
+func (x *ListEventsSinceResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type SubscribeActivityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cursor        *EventCursor           `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	FromSequence  int64                  `protobuf:"varint,2,opt,name=from_sequence,json=fromSequence,proto3" json:"from_sequence,omitempty"`
+	AggregateId   string                 `protobuf:"bytes,3,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	Targets       []string               `protobuf:"bytes,4,rep,name=targets,proto3" json:"targets,omitempty"`
+	RequestId     string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscribeActivityRequest) Reset() {
+	*x = SubscribeActivityRequest{}
+	mi := &file_nekode_daemon_v1_activity_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeActivityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeActivityRequest) ProtoMessage() {}
+
+func (x *SubscribeActivityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_activity_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeActivityRequest.ProtoReflect.Descriptor instead.
+func (*SubscribeActivityRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_activity_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SubscribeActivityRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+func (x *SubscribeActivityRequest) GetFromSequence() int64 {
+	if x != nil {
+		return x.FromSequence
+	}
+	return 0
+}
+
+func (x *SubscribeActivityRequest) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+func (x *SubscribeActivityRequest) GetTargets() []string {
+	if x != nil {
+		return x.Targets
+	}
+	return nil
+}
+
+func (x *SubscribeActivityRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type ActivityAck struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	Sequence      int64                  `protobuf:"varint,2,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId   string                 `protobuf:"bytes,3,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	RequestId     string                 `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActivityAck) Reset() {
+	*x = ActivityAck{}
+	mi := &file_nekode_daemon_v1_activity_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActivityAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActivityAck) ProtoMessage() {}
+
+func (x *ActivityAck) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_activity_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActivityAck.ProtoReflect.Descriptor instead.
+func (*ActivityAck) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_activity_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ActivityAck) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *ActivityAck) GetSequence() int64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *ActivityAck) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+func (x *ActivityAck) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
 var File_nekode_daemon_v1_activity_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\n" +
-	"\x1fnekode/daemon/v1/activity.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xe6\x02\n" +
+	"\x1fnekode/daemon/v1/activity.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xd8\x03\n" +
 	"\x0eActivityRecord\x12\x1f\n" +
 	"\vactivity_id\x18\x01 \x01(\tR\n" +
 	"activityId\x12\x16\n" +
@@ -655,7 +935,10 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\astep_id\x18\t \x01(\tR\x06stepId\x124\n" +
 	"\x16coordination_record_id\x18\n" +
 	" \x01(\tR\x14coordinationRecordId\x12(\n" +
-	"\x10memory_record_id\x18\v \x01(\tR\x0ememoryRecordId\"\xdc\x01\n" +
+	"\x10memory_record_id\x18\v \x01(\tR\x0ememoryRecordId\x12\x1a\n" +
+	"\bsequence\x18\f \x01(\x03R\bsequence\x12!\n" +
+	"\faggregate_id\x18\r \x01(\tR\vaggregateId\x12)\n" +
+	"\x10protocol_version\x18\x0e \x01(\x05R\x0fprotocolVersionJ\x06\b\xe8\a\x10\xd0\x0f\"\xc1\x02\n" +
 	"\x12LogActivityRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x12\n" +
@@ -665,23 +948,35 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\x06run_id\x18\x06 \x01(\tR\x05runId\x12\x17\n" +
 	"\astep_id\x18\a \x01(\tR\x06stepId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\b \x01(\tR\trequestId\"S\n" +
+	"request_id\x18\b \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\n" +
+	" \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"S\n" +
 	"\x13LogActivityResponse\x12<\n" +
-	"\bactivity\x18\x01 \x01(\v2 .nekode.daemon.v1.ActivityRecordR\bactivity\"\x95\x01\n" +
+	"\bactivity\x18\x01 \x01(\v2 .nekode.daemon.v1.ActivityRecordR\bactivity\"\xfc\x01\n" +
 	"\x13ListActivityRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\rR\x05limit\x125\n" +
-	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x98\x01\n" +
+	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12#\n" +
+	"\rfrom_sequence\x18\x05 \x01(\x03R\ffromSequence\x12!\n" +
+	"\faggregate_id\x18\x06 \x01(\tR\vaggregateId\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\a \x01(\tR\tpageToken\"\xc0\x01\n" +
 	"\x14ListActivityResponse\x12@\n" +
 	"\n" +
 	"activities\x18\x01 \x03(\v2 .nekode.daemon.v1.ActivityRecordR\n" +
 	"activities\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"e\n" +
+	"nextCursor\x12&\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xcc\x01\n" +
 	"\x16ListEventsSinceRequest\x125\n" +
 	"\x06cursor\x18\x01 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\rR\x05limit\"\xfc\x02\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x12#\n" +
+	"\rfrom_sequence\x18\x03 \x01(\x03R\ffromSequence\x12!\n" +
+	"\faggregate_id\x18\x04 \x01(\tR\vaggregateId\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\"\x9c\x04\n" +
 	"\x12CollaborationEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x12\n" +
@@ -696,11 +991,29 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\rattachment_id\x18\t \x01(\tR\fattachmentId\x124\n" +
 	"\x16coordination_record_id\x18\n" +
 	" \x01(\tR\x14coordinationRecordId\x12(\n" +
-	"\x10memory_record_id\x18\v \x01(\tR\x0ememoryRecordId\"\x97\x01\n" +
+	"\x10memory_record_id\x18\v \x01(\tR\x0ememoryRecordId\x12\x1a\n" +
+	"\bsequence\x18\f \x01(\x03R\bsequence\x12!\n" +
+	"\faggregate_id\x18\r \x01(\tR\vaggregateId\x12)\n" +
+	"\x10protocol_version\x18\x0e \x01(\x05R\x0fprotocolVersion\x12,\n" +
+	"\x12source_endpoint_id\x18\x0f \x01(\tR\x10sourceEndpointIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xbf\x01\n" +
 	"\x17ListEventsSinceResponse\x12<\n" +
 	"\x06events\x18\x01 \x03(\v2$.nekode.daemon.v1.CollaborationEventR\x06events\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursorB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"nextCursor\x12&\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xd2\x01\n" +
+	"\x18SubscribeActivityRequest\x125\n" +
+	"\x06cursor\x18\x01 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12#\n" +
+	"\rfrom_sequence\x18\x02 \x01(\x03R\ffromSequence\x12!\n" +
+	"\faggregate_id\x18\x03 \x01(\tR\vaggregateId\x12\x18\n" +
+	"\atargets\x18\x04 \x03(\tR\atargets\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x05 \x01(\tR\trequestId\"\x86\x01\n" +
+	"\vActivityAck\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1a\n" +
+	"\bsequence\x18\x02 \x01(\x03R\bsequence\x12!\n" +
+	"\faggregate_id\x18\x03 \x01(\tR\vaggregateId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x04 \x01(\tR\trequestIdB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_activity_proto_rawDescOnce sync.Once
@@ -714,31 +1027,36 @@ func file_nekode_daemon_v1_activity_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_activity_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_activity_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_nekode_daemon_v1_activity_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_nekode_daemon_v1_activity_proto_goTypes = []any{
-	(*ActivityRecord)(nil),          // 0: nekode.daemon.v1.ActivityRecord
-	(*LogActivityRequest)(nil),      // 1: nekode.daemon.v1.LogActivityRequest
-	(*LogActivityResponse)(nil),     // 2: nekode.daemon.v1.LogActivityResponse
-	(*ListActivityRequest)(nil),     // 3: nekode.daemon.v1.ListActivityRequest
-	(*ListActivityResponse)(nil),    // 4: nekode.daemon.v1.ListActivityResponse
-	(*ListEventsSinceRequest)(nil),  // 5: nekode.daemon.v1.ListEventsSinceRequest
-	(*CollaborationEvent)(nil),      // 6: nekode.daemon.v1.CollaborationEvent
-	(*ListEventsSinceResponse)(nil), // 7: nekode.daemon.v1.ListEventsSinceResponse
-	(*EventCursor)(nil),             // 8: nekode.daemon.v1.EventCursor
+	(*ActivityRecord)(nil),           // 0: nekode.daemon.v1.ActivityRecord
+	(*LogActivityRequest)(nil),       // 1: nekode.daemon.v1.LogActivityRequest
+	(*LogActivityResponse)(nil),      // 2: nekode.daemon.v1.LogActivityResponse
+	(*ListActivityRequest)(nil),      // 3: nekode.daemon.v1.ListActivityRequest
+	(*ListActivityResponse)(nil),     // 4: nekode.daemon.v1.ListActivityResponse
+	(*ListEventsSinceRequest)(nil),   // 5: nekode.daemon.v1.ListEventsSinceRequest
+	(*CollaborationEvent)(nil),       // 6: nekode.daemon.v1.CollaborationEvent
+	(*ListEventsSinceResponse)(nil),  // 7: nekode.daemon.v1.ListEventsSinceResponse
+	(*SubscribeActivityRequest)(nil), // 8: nekode.daemon.v1.SubscribeActivityRequest
+	(*ActivityAck)(nil),              // 9: nekode.daemon.v1.ActivityAck
+	(*RequestContext)(nil),           // 10: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),              // 11: nekode.daemon.v1.EventCursor
 }
 var file_nekode_daemon_v1_activity_proto_depIdxs = []int32{
-	0, // 0: nekode.daemon.v1.LogActivityResponse.activity:type_name -> nekode.daemon.v1.ActivityRecord
-	8, // 1: nekode.daemon.v1.ListActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	0, // 2: nekode.daemon.v1.ListActivityResponse.activities:type_name -> nekode.daemon.v1.ActivityRecord
-	8, // 3: nekode.daemon.v1.ListActivityResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	8, // 4: nekode.daemon.v1.ListEventsSinceRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	6, // 5: nekode.daemon.v1.ListEventsSinceResponse.events:type_name -> nekode.daemon.v1.CollaborationEvent
-	8, // 6: nekode.daemon.v1.ListEventsSinceResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	10, // 0: nekode.daemon.v1.LogActivityRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 1: nekode.daemon.v1.LogActivityResponse.activity:type_name -> nekode.daemon.v1.ActivityRecord
+	11, // 2: nekode.daemon.v1.ListActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	0,  // 3: nekode.daemon.v1.ListActivityResponse.activities:type_name -> nekode.daemon.v1.ActivityRecord
+	11, // 4: nekode.daemon.v1.ListActivityResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	11, // 5: nekode.daemon.v1.ListEventsSinceRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	6,  // 6: nekode.daemon.v1.ListEventsSinceResponse.events:type_name -> nekode.daemon.v1.CollaborationEvent
+	11, // 7: nekode.daemon.v1.ListEventsSinceResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	11, // 8: nekode.daemon.v1.SubscribeActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	9,  // [9:9] is the sub-list for method output_type
+	9,  // [9:9] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_activity_proto_init() }
@@ -753,7 +1071,7 @@ func file_nekode_daemon_v1_activity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_activity_proto_rawDesc), len(file_nekode_daemon_v1_activity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -6,6 +6,7 @@ import "nekode/daemon/v1/activity.proto";
 import "nekode/daemon/v1/agent.proto";
 import "nekode/daemon/v1/attachment.proto";
 import "nekode/daemon/v1/collaboration.proto";
+import "nekode/daemon/v1/common.proto";
 import "nekode/daemon/v1/coordination.proto";
 import "nekode/daemon/v1/memory.proto";
 import "nekode/daemon/v1/reminder.proto";
@@ -22,6 +23,46 @@ message GetServerInfoResponse {
   repeated ChannelRecord channels = 3;
   repeated AgentProfile agents = 4;
   repeated InteractionEndpoint interaction_endpoints = 5;
+}
+
+message SubscribeServerEventsRequest {
+  string daemon_id = 1;
+  string computer_id = 2;
+  repeated string agent_ids = 3;
+  EventCursor cursor = 4;
+  repeated string targets = 5;
+  string request_id = 6;
+}
+
+message ServerEvent {
+  reserved 1000 to 1999;
+
+  string event_id = 1;
+  int64 sequence = 2;
+  string aggregate_id = 3;
+  string target = 4;
+  string kind = 5; // run_assigned | agent_control | message | task | reminder | activity | mcp_resource | ping
+  int64 created_time_unix = 6;
+  int32 protocol_version = 7;
+  string request_id = 8;
+
+  oneof payload {
+    Run run = 20;
+    AgentControlOperation agent_control = 21;
+    CollaborationMessage message = 22;
+    Task task = 23;
+    ReminderRecord reminder = 24;
+    ActivityRecord activity = 25;
+    McpResourceUpdate mcp_resource_update = 26;
+  }
+}
+
+message SubscribeServerEventsResponse {
+  ServerEvent event = 1;
+}
+
+message SubscribeActivityResponse {
+  CollaborationEvent event = 1;
 }
 
 service DaemonControlService {
@@ -54,9 +95,12 @@ service DaemonControlService {
   rpc CreateTaskGraph(CreateTaskGraphRequest) returns (CreateTaskGraphResponse);
   rpc ListTaskGraph(ListTaskGraphRequest) returns (ListTaskGraphResponse);
   rpc UpdateTaskGraph(UpdateTaskGraphRequest) returns (UpdateTaskGraphResponse);
+  rpc RenewTaskClaimLease(RenewTaskClaimLeaseRequest) returns (RenewTaskClaimLeaseResponse);
+  rpc ReleaseTask(ReleaseTaskRequest) returns (ReleaseTaskResponse);
   rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
   rpc PublishCoordinationRecord(PublishCoordinationRecordRequest) returns (PublishCoordinationRecordResponse);
   rpc ListCoordinationRecords(ListCoordinationRecordsRequest) returns (ListCoordinationRecordsResponse);
+  rpc CounterProposeNegotiation(CounterProposeNegotiationRequest) returns (CounterProposeNegotiationResponse);
   rpc ListAgentMemory(ListAgentMemoryRequest) returns (ListAgentMemoryResponse);
   rpc UpsertAgentMemory(UpsertAgentMemoryRequest) returns (UpsertAgentMemoryResponse);
   rpc GetAgentProfile(GetAgentProfileRequest) returns (GetAgentProfileResponse);
@@ -76,7 +120,13 @@ service DaemonControlService {
   rpc GetReminderLog(GetReminderLogRequest) returns (GetReminderLogResponse);
   rpc UploadAttachment(UploadAttachmentRequest) returns (UploadAttachmentResponse);
   rpc GetAttachment(GetAttachmentRequest) returns (GetAttachmentResponse);
+  rpc ListOutboundDeliveries(ListOutboundDeliveriesRequest) returns (ListOutboundDeliveriesResponse);
+  rpc RetryOutboundDelivery(RetryOutboundDeliveryRequest) returns (RetryOutboundDeliveryResponse);
   rpc LogActivity(LogActivityRequest) returns (LogActivityResponse);
   rpc ListActivity(ListActivityRequest) returns (ListActivityResponse);
   rpc ListEventsSince(ListEventsSinceRequest) returns (ListEventsSinceResponse);
+  rpc SubscribeServerEvents(SubscribeServerEventsRequest) returns (stream SubscribeServerEventsResponse);
+  rpc SubscribeActivity(SubscribeActivityRequest) returns (stream SubscribeActivityResponse);
+  rpc SubscribeMcpResource(SubscribeMcpResourceRequest) returns (SubscribeMcpResourceResponse);
+  rpc ListMcpResourceUpdates(ListMcpResourceUpdatesRequest) returns (ListMcpResourceUpdatesResponse);
 }

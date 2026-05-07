@@ -1,7 +1,7 @@
 # Protocol Capability Review
 
-Status: review draft
-Date: 2026-05-07
+Status: review passed with additive fixes
+Date: 2026-05-08
 
 ## Purpose
 
@@ -43,6 +43,7 @@ All files keep package `nekode.daemon.v1` and Go package
 | --- | --- |
 | Multiple runtime products, including OpenCode | `Runtime.kind`, `RuntimeProfile.kind`, and agent runtime fields remain strings instead of closed enums. |
 | Server connection, machine lock, registration, heartbeat | `RegisterComputer`, `HeartbeatComputer`, `Lease`, `ComputerInfo`, and `ComputerInventory`. |
+| Server-to-daemon command/event delivery | `SubscribeServerEvents` streams `ServerEvent` envelopes for assigned runs, agent controls, messages, tasks, reminders, activity, MCP resource updates, and pings. |
 | Runtime discovery and launch queue visibility | `Runtime`, `AgentStatusSnapshot`, `Run`, `RunStep`, and activity records can report queued/running/blocked states. |
 | Agent-scoped token/CLI bridge injection | Represented by `RuntimeProfile`, `EnvVar.secret`, `Workspace`, and memory/workspace boundaries. |
 | Public join-to-write and permission checks | `Permission`, `ChannelRecord`, `InteractionEndpoint`, and task/message mutation requests carry actor and endpoint ids. |
@@ -50,6 +51,29 @@ All files keep package `nekode.daemon.v1` and Go package
 | Reminder snooze/update/log | `SnoozeReminder`, `UpdateReminder`, `GetReminderLog`, `ReminderEvent`, and recurrence fields. |
 | Reconnect-preserved online status | `Lease`, heartbeat, and `AgentStatusSnapshot` separate daemon liveness from agent activity. |
 | Silent failed claim behavior | `ClaimCollaborationTaskRequest.silent_on_conflict` and response conflict fields make this a machine-visible client choice. |
+
+## External Review Fixes
+
+Two external reviews were incorporated before implementation resumed. Some
+findings were already covered by existing fields (`request_id`, `Lease`,
+`Runtime.capabilities`, `MemoryRecord.version/scope`, reminder recurrence and
+timezone), but the following real gaps were fixed additively:
+
+| Review concern | Protocol resolution |
+| --- | --- |
+| Server push / daemon pull missing | Added `SubscribeServerEvents` and `ServerEvent` in `service.proto`. |
+| Idempotency naming inconsistent | Added `idempotency_key` and `RequestContext` to state-changing requests while keeping existing `request_id`. |
+| Agent start/control needs lease semantics | `ControlAgentRequest` now carries lease id and TTL; `ControlAgentResponse` returns a `Lease`. |
+| Event replay needs sequence and version | `EventCursor`, `ActivityRecord`, and `CollaborationEvent` now include protocol version, sequence, and aggregate id fields. |
+| Message/activity pagination needs cursor semantics | Message, activity, coordination, and run list requests/responses now expose cursor/page token fields. |
+| Release gate needs release confirmation | Added `ReleaseTask` and release fields on `Task`. |
+| Webhook/IM outbound delivery needs tracking | Added `OutboundDeliveryRecord`, list, and retry RPCs. |
+| MCP needs resource subscription semantics | Added MCP resource subscription/update messages and RPCs. |
+| Claim lease needs renewal | Added `RenewTaskClaimLease`. |
+| Permission needs scope | Added `Permission.scope`. |
+| Handoff needs richer context | Added context task ids, file paths, and task graph references to `RoleHandoff`. |
+| Large attachments need URL flow | Added presigned upload/download URL fields while keeping bytes for small payloads. |
+| Future field reuse needs visible guardrails | Added `reserved 1000 to 1999` ranges to long-lived messages for extension discipline. |
 
 ## Collaboration Semantics Check
 
@@ -65,8 +89,8 @@ those concepts:
 | Task claim, reviewer claim, silent conflict | `Task.claim_policy`, `ClaimCollaborationTaskRequest`, `ClaimCollaborationTaskResponse` |
 | Role assignment and handoff between agents | `AgentRoleAssignment`, `RoleHandoff` |
 | Verification evidence for review | `VerificationResult`, `AcceptanceEvidence` |
-| Release gate before tag/deploy | `ReleaseGate` |
-| Scope/deadline negotiation | `ScopeNegotiation`, `DeadlineNegotiation` |
+| Release gate before tag/deploy | `ReleaseGate`, `ReleaseTask` |
+| Scope/deadline negotiation | `ScopeNegotiation`, `DeadlineNegotiation`, `CounterProposeNegotiation` |
 | Memory as durable context rather than only chat history | `MemoryRecord`, `ListAgentMemory`, `UpsertAgentMemory` |
 | Link structured records back into chat/event streams | `CollaborationMessage.coordination_record_id`, `ActivityRecord.coordination_record_id`, `CollaborationEvent.coordination_record_id` |
 
@@ -98,4 +122,3 @@ Before daemon/Web implementation resumes, reviewers should confirm:
 - memory records can point to local `MEMORY.md`/`notes/` paths or server-owned
   records without forcing one storage design;
 - non-Web endpoints can create messages/tasks through the same target model.
-

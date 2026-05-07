@@ -2,9 +2,13 @@ syntax = "proto3";
 
 package nekode.daemon.v1;
 
+import "nekode/daemon/v1/common.proto";
+
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message AttachmentRecord {
+  reserved 1000 to 1999;
+
   string attachment_id = 1;
   string target = 2;
   string owner_id = 3;
@@ -13,6 +17,9 @@ message AttachmentRecord {
   int64 size_bytes = 6;
   string storage_ref = 7;
   int64 created_time_unix = 8;
+  string download_url = 9;
+  string upload_url = 10;
+  int64 expires_time_unix = 11;
 }
 message UploadAttachmentRequest {
   string target = 1;
@@ -21,9 +28,13 @@ message UploadAttachmentRequest {
   bytes content = 4;
   string owner_id = 5;
   string request_id = 6;
+  string idempotency_key = 7;
+  RequestContext context = 8;
+  bool prefer_presigned_url = 9;
 }
 message UploadAttachmentResponse {
   AttachmentRecord attachment = 1;
+  string upload_url = 2;
 }
 message GetAttachmentRequest {
   string attachment_id = 1;

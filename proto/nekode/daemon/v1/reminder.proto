@@ -2,9 +2,13 @@ syntax = "proto3";
 
 package nekode.daemon.v1;
 
+import "nekode/daemon/v1/common.proto";
+
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message ReminderRecord {
+  reserved 1000 to 1999;
+
   string reminder_id = 1;
   string target = 2;
   string schedule_kind = 3;
@@ -21,13 +25,18 @@ message ReminderRecord {
   int64 fired_time_unix = 14;
   string msg_ref = 15;
   ReminderRecurrence recurrence = 16;
+  string cancel_token = 17;
 }
 message ReminderRecurrence {
+  reserved 1000 to 1999;
+
   string rule = 1;
   string description = 2;
   string timezone = 3;
 }
 message ReminderEvent {
+  reserved 1000 to 1999;
+
   string event_id = 1;
   string reminder_id = 2;
   string event_type = 3;
@@ -52,6 +61,8 @@ message ScheduleReminderRequest {
   string timezone = 12;
   string channel = 13;
   string msg_id = 14;
+  string idempotency_key = 15;
+  RequestContext context = 16;
 }
 message ScheduleReminderResponse {
   ReminderRecord reminder = 1;
@@ -68,6 +79,9 @@ message ListRemindersResponse {
 message CancelReminderRequest {
   string reminder_id = 1;
   string request_id = 2;
+  string idempotency_key = 3;
+  RequestContext context = 4;
+  string cancel_token = 5;
 }
 message CancelReminderResponse {
   bool accepted = 1;
@@ -77,6 +91,8 @@ message SnoozeReminderRequest {
   string reminder_id = 1;
   uint32 delay_seconds = 2;
   string request_id = 3;
+  string idempotency_key = 4;
+  RequestContext context = 5;
 }
 message SnoozeReminderResponse {
   ReminderRecord reminder = 1;
@@ -89,6 +105,8 @@ message UpdateReminderRequest {
   optional string repeat = 5;
   optional string timezone = 6;
   string request_id = 7;
+  string idempotency_key = 8;
+  RequestContext context = 9;
 }
 message UpdateReminderResponse {
   ReminderRecord reminder = 1;

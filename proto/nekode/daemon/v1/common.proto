@@ -5,17 +5,24 @@ package nekode.daemon.v1;
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message Capability {
+  reserved 1000 to 1999;
+
   string name = 1;
   string description = 2;
   bool enabled = 3;
 }
 message Permission {
+  reserved 1000 to 1999;
+
   string name = 1;
   string target = 2;
   bool allowed = 3;
   string reason = 4;
+  string scope = 5; // global | channel | thread | task | message | runtime | endpoint
 }
 message Lease {
+  reserved 1000 to 1999;
+
   string lease_id = 1;
   string holder_id = 2;
   string resource_type = 3;
@@ -24,18 +31,47 @@ message Lease {
   uint32 heartbeat_after_seconds = 6;
 }
 message EventCursor {
+  reserved 1000 to 1999;
+
   string cursor = 1;
   string target = 2;
   string last_event_id = 3;
   string last_message_id = 4;
   string last_activity_id = 5;
+  int32 protocol_version = 6;
+  string snapshot_id = 7;
+  int64 sequence = 8;
+  string aggregate_id = 9;
+}
+message Actor {
+  reserved 1000 to 1999;
+
+  string actor_kind = 1; // human | agent | daemon | endpoint | system
+  string agent_id = 2;
+  string user_id = 3;
+  string daemon_id = 4;
+  string endpoint_id = 5;
+  string display_name = 6;
+}
+message RequestContext {
+  reserved 1000 to 1999;
+
+  string request_id = 1;
+  string idempotency_key = 2;
+  string trace_id = 3;
+  Actor actor = 4;
+  string source_endpoint_id = 5;
 }
 message EnvVar {
+  reserved 1000 to 1999;
+
   string name = 1;
   string value = 2;
   bool secret = 3;
 }
 message SkillRecord {
+  reserved 1000 to 1999;
+
   string id = 1;
   string name = 2;
   string description = 3;

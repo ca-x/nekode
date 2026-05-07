@@ -7,6 +7,8 @@ import "nekode/daemon/v1/common.proto";
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message Task {
+  reserved 1000 to 1999;
+
   string task_id = 1;
   string summary = 2;
   string state = 3;
@@ -49,6 +51,12 @@ message Task {
   string claim_lease_id = 28;
   string reviewer_agent_id = 29;
   string release_gate_id = 30;
+  string assigned_target = 31;
+  int64 deadline_time_unix = 32;
+  int64 released_time_unix = 33;
+  string release_version = 34;
+  string release_environment = 35;
+  string release_state = 36; // pending | released | deployed | rolled_back | failed
 }
 message CreateCollaborationTaskRequest {
   string target = 1;
@@ -56,6 +64,8 @@ message CreateCollaborationTaskRequest {
   string agent_id = 3;
   string created_by_user_id = 4;
   string request_id = 5;
+  string idempotency_key = 6;
+  RequestContext context = 7;
 }
 message CreateCollaborationTaskResponse {
   Task task = 1;
@@ -86,6 +96,8 @@ message ListTaskBoardRequest {
   string column = 5;
   uint32 limit = 6;
   EventCursor cursor = 7;
+  string request_id = 8;
+  string page_token = 9;
 }
 message ListTaskBoardResponse {
   TaskBoardSnapshot board = 1;
@@ -98,6 +110,9 @@ message ClaimCollaborationTaskRequest {
   bool silent_on_conflict = 5;
   string claim_mode = 6; // owner | reviewer | assistant
   string lease_id = 7;
+  string idempotency_key = 8;
+  RequestContext context = 9;
+  uint32 lease_ttl_seconds = 10;
 }
 message ClaimCollaborationTaskResponse {
   Task task = 1;
@@ -105,6 +120,7 @@ message ClaimCollaborationTaskResponse {
   string conflict_reason = 3;
   string current_assignee_id = 4;
   string conflict_policy = 5;
+  Lease claim_lease = 6;
 }
 message TaskEdge {
   string from_task_id = 1;
@@ -123,11 +139,16 @@ message ProposedSubtask {
   string assignee_id = 3;
   repeated string depends_on_proposed_ids = 4;
   repeated string required_capabilities = 5;
+  string assigned_target = 6;
+  string created_by_agent_id = 7;
+  int64 deadline_time_unix = 8;
 }
 message ProposeTaskSplitRequest {
   string parent_task_id = 1;
   repeated ProposedSubtask proposed_tasks = 2;
   string request_id = 3;
+  string idempotency_key = 4;
+  RequestContext context = 5;
 }
 message ProposeTaskSplitResponse {
   string proposal_id = 1;
@@ -141,6 +162,8 @@ message ApplyTaskSplitRequest {
   string proposal_id = 2;
   repeated string selected_task_ids = 3;
   string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
 }
 message ApplyTaskSplitResponse {
   Task parent_task = 1;
@@ -152,6 +175,8 @@ message CreateTaskGraphRequest {
   repeated Task subtasks = 2;
   repeated TaskEdge dependencies = 3;
   string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
 }
 message CreateTaskGraphResponse {
   TaskGraphSnapshot graph = 1;
@@ -170,8 +195,38 @@ message UpdateTaskGraphRequest {
   repeated string remove_dependencies = 4;
   optional string new_parent_task_id = 5;
   string request_id = 6;
+  string idempotency_key = 7;
+  RequestContext context = 8;
 }
 message UpdateTaskGraphResponse {
   Task task = 1;
   int64 new_graph_version = 2;
+}
+message RenewTaskClaimLeaseRequest {
+  string task_id = 1;
+  string lease_id = 2;
+  string agent_id = 3;
+  string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+  uint32 lease_ttl_seconds = 7;
+}
+message RenewTaskClaimLeaseResponse {
+  bool accepted = 1;
+  Task task = 2;
+  Lease lease = 3;
+}
+message ReleaseTaskRequest {
+  string task_id = 1;
+  string release_gate_id = 2;
+  string release_note = 3;
+  string release_version = 4;
+  string release_environment = 5;
+  string request_id = 6;
+  string idempotency_key = 7;
+  RequestContext context = 8;
+}
+message ReleaseTaskResponse {
+  Task task = 1;
+  int64 released_time_unix = 2;
 }

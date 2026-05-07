@@ -87,6 +87,7 @@ type Permission struct {
 	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
 	Allowed       bool                   `protobuf:"varint,3,opt,name=allowed,proto3" json:"allowed,omitempty"`
 	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Scope         string                 `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"` // global | channel | thread | task | message | runtime | endpoint
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,6 +146,13 @@ func (x *Permission) GetAllowed() bool {
 func (x *Permission) GetReason() string {
 	if x != nil {
 		return x.Reason
+	}
+	return ""
+}
+
+func (x *Permission) GetScope() string {
+	if x != nil {
+		return x.Scope
 	}
 	return ""
 }
@@ -234,14 +242,18 @@ func (x *Lease) GetHeartbeatAfterSeconds() uint32 {
 }
 
 type EventCursor struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Cursor         string                 `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Target         string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	LastEventId    string                 `protobuf:"bytes,3,opt,name=last_event_id,json=lastEventId,proto3" json:"last_event_id,omitempty"`
-	LastMessageId  string                 `protobuf:"bytes,4,opt,name=last_message_id,json=lastMessageId,proto3" json:"last_message_id,omitempty"`
-	LastActivityId string                 `protobuf:"bytes,5,opt,name=last_activity_id,json=lastActivityId,proto3" json:"last_activity_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Cursor          string                 `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Target          string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	LastEventId     string                 `protobuf:"bytes,3,opt,name=last_event_id,json=lastEventId,proto3" json:"last_event_id,omitempty"`
+	LastMessageId   string                 `protobuf:"bytes,4,opt,name=last_message_id,json=lastMessageId,proto3" json:"last_message_id,omitempty"`
+	LastActivityId  string                 `protobuf:"bytes,5,opt,name=last_activity_id,json=lastActivityId,proto3" json:"last_activity_id,omitempty"`
+	ProtocolVersion int32                  `protobuf:"varint,6,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	SnapshotId      string                 `protobuf:"bytes,7,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	Sequence        int64                  `protobuf:"varint,8,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId     string                 `protobuf:"bytes,9,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *EventCursor) Reset() {
@@ -309,6 +321,194 @@ func (x *EventCursor) GetLastActivityId() string {
 	return ""
 }
 
+func (x *EventCursor) GetProtocolVersion() int32 {
+	if x != nil {
+		return x.ProtocolVersion
+	}
+	return 0
+}
+
+func (x *EventCursor) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+func (x *EventCursor) GetSequence() int64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *EventCursor) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
+type Actor struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ActorKind     string                 `protobuf:"bytes,1,opt,name=actor_kind,json=actorKind,proto3" json:"actor_kind,omitempty"` // human | agent | daemon | endpoint | system
+	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DaemonId      string                 `protobuf:"bytes,4,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
+	EndpointId    string                 `protobuf:"bytes,5,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,6,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Actor) Reset() {
+	*x = Actor{}
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Actor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Actor) ProtoMessage() {}
+
+func (x *Actor) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Actor.ProtoReflect.Descriptor instead.
+func (*Actor) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Actor) GetActorKind() string {
+	if x != nil {
+		return x.ActorKind
+	}
+	return ""
+}
+
+func (x *Actor) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *Actor) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Actor) GetDaemonId() string {
+	if x != nil {
+		return x.DaemonId
+	}
+	return ""
+}
+
+func (x *Actor) GetEndpointId() string {
+	if x != nil {
+		return x.EndpointId
+	}
+	return ""
+}
+
+func (x *Actor) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+type RequestContext struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RequestId        string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey   string                 `protobuf:"bytes,2,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	TraceId          string                 `protobuf:"bytes,3,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	Actor            *Actor                 `protobuf:"bytes,4,opt,name=actor,proto3" json:"actor,omitempty"`
+	SourceEndpointId string                 `protobuf:"bytes,5,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RequestContext) Reset() {
+	*x = RequestContext{}
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestContext) ProtoMessage() {}
+
+func (x *RequestContext) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestContext.ProtoReflect.Descriptor instead.
+func (*RequestContext) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *RequestContext) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RequestContext) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *RequestContext) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+func (x *RequestContext) GetActor() *Actor {
+	if x != nil {
+		return x.Actor
+	}
+	return nil
+}
+
+func (x *RequestContext) GetSourceEndpointId() string {
+	if x != nil {
+		return x.SourceEndpointId
+	}
+	return ""
+}
+
 type EnvVar struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -320,7 +520,7 @@ type EnvVar struct {
 
 func (x *EnvVar) Reset() {
 	*x = EnvVar{}
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -332,7 +532,7 @@ func (x *EnvVar) String() string {
 func (*EnvVar) ProtoMessage() {}
 
 func (x *EnvVar) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -345,7 +545,7 @@ func (x *EnvVar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvVar.ProtoReflect.Descriptor instead.
 func (*EnvVar) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{4}
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *EnvVar) GetName() string {
@@ -385,7 +585,7 @@ type SkillRecord struct {
 
 func (x *SkillRecord) Reset() {
 	*x = SkillRecord{}
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -397,7 +597,7 @@ func (x *SkillRecord) String() string {
 func (*SkillRecord) ProtoMessage() {}
 
 func (x *SkillRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -410,7 +610,7 @@ func (x *SkillRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillRecord.ProtoReflect.Descriptor instead.
 func (*SkillRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{5}
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SkillRecord) GetId() string {
@@ -473,18 +673,19 @@ var File_nekode_daemon_v1_common_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\x1dnekode/daemon/v1/common.proto\x12\x10nekode.daemon.v1\"\\\n" +
+	"\x1dnekode/daemon/v1/common.proto\x12\x10nekode.daemon.v1\"d\n" +
 	"\n" +
 	"Capability\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
-	"\aenabled\x18\x03 \x01(\bR\aenabled\"j\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabledJ\x06\b\xe8\a\x10\xd0\x0f\"\x88\x01\n" +
 	"\n" +
 	"Permission\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x18\n" +
 	"\aallowed\x18\x03 \x01(\bR\aallowed\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\"\xe9\x01\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x14\n" +
+	"\x05scope\x18\x05 \x01(\tR\x05scopeJ\x06\b\xe8\a\x10\xd0\x0f\"\xf1\x01\n" +
 	"\x05Lease\x12\x19\n" +
 	"\blease_id\x18\x01 \x01(\tR\aleaseId\x12\x1b\n" +
 	"\tholder_id\x18\x02 \x01(\tR\bholderId\x12#\n" +
@@ -492,17 +693,38 @@ const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"\vresource_id\x18\x04 \x01(\tR\n" +
 	"resourceId\x12*\n" +
 	"\x11expires_time_unix\x18\x05 \x01(\x03R\x0fexpiresTimeUnix\x126\n" +
-	"\x17heartbeat_after_seconds\x18\x06 \x01(\rR\x15heartbeatAfterSeconds\"\xb3\x01\n" +
+	"\x17heartbeat_after_seconds\x18\x06 \x01(\rR\x15heartbeatAfterSecondsJ\x06\b\xe8\a\x10\xd0\x0f\"\xc6\x02\n" +
 	"\vEventCursor\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\"\n" +
 	"\rlast_event_id\x18\x03 \x01(\tR\vlastEventId\x12&\n" +
 	"\x0flast_message_id\x18\x04 \x01(\tR\rlastMessageId\x12(\n" +
-	"\x10last_activity_id\x18\x05 \x01(\tR\x0elastActivityId\"J\n" +
+	"\x10last_activity_id\x18\x05 \x01(\tR\x0elastActivityId\x12)\n" +
+	"\x10protocol_version\x18\x06 \x01(\x05R\x0fprotocolVersion\x12\x1f\n" +
+	"\vsnapshot_id\x18\a \x01(\tR\n" +
+	"snapshotId\x12\x1a\n" +
+	"\bsequence\x18\b \x01(\x03R\bsequence\x12!\n" +
+	"\faggregate_id\x18\t \x01(\tR\vaggregateIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xc3\x01\n" +
+	"\x05Actor\x12\x1d\n" +
+	"\n" +
+	"actor_kind\x18\x01 \x01(\tR\tactorKind\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1b\n" +
+	"\tdaemon_id\x18\x04 \x01(\tR\bdaemonId\x12\x1f\n" +
+	"\vendpoint_id\x18\x05 \x01(\tR\n" +
+	"endpointId\x12!\n" +
+	"\fdisplay_name\x18\x06 \x01(\tR\vdisplayNameJ\x06\b\xe8\a\x10\xd0\x0f\"\xd8\x01\n" +
+	"\x0eRequestContext\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x02 \x01(\tR\x0eidempotencyKey\x12\x19\n" +
+	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12-\n" +
+	"\x05actor\x18\x04 \x01(\v2\x17.nekode.daemon.v1.ActorR\x05actor\x12,\n" +
+	"\x12source_endpoint_id\x18\x05 \x01(\tR\x10sourceEndpointIdJ\x06\b\xe8\a\x10\xd0\x0f\"R\n" +
 	"\x06EnvVar\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
-	"\x06secret\x18\x03 \x01(\bR\x06secret\"\xd8\x01\n" +
+	"\x06secret\x18\x03 \x01(\bR\x06secretJ\x06\b\xe8\a\x10\xd0\x0f\"\xe0\x01\n" +
 	"\vSkillRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -511,7 +733,7 @@ const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"\aenabled\x18\x05 \x01(\bR\aenabled\x12\x16\n" +
 	"\x06always\x18\x06 \x01(\bR\x06always\x12\x1a\n" +
 	"\beligible\x18\a \x01(\bR\beligible\x12\x1b\n" +
-	"\tfile_path\x18\b \x01(\tR\bfilePathB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\tfile_path\x18\b \x01(\tR\bfilePathJ\x06\b\xe8\a\x10\xd0\x0fB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_common_proto_rawDescOnce sync.Once
@@ -525,21 +747,24 @@ func file_nekode_daemon_v1_common_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_common_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_nekode_daemon_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_nekode_daemon_v1_common_proto_goTypes = []any{
-	(*Capability)(nil),  // 0: nekode.daemon.v1.Capability
-	(*Permission)(nil),  // 1: nekode.daemon.v1.Permission
-	(*Lease)(nil),       // 2: nekode.daemon.v1.Lease
-	(*EventCursor)(nil), // 3: nekode.daemon.v1.EventCursor
-	(*EnvVar)(nil),      // 4: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil), // 5: nekode.daemon.v1.SkillRecord
+	(*Capability)(nil),     // 0: nekode.daemon.v1.Capability
+	(*Permission)(nil),     // 1: nekode.daemon.v1.Permission
+	(*Lease)(nil),          // 2: nekode.daemon.v1.Lease
+	(*EventCursor)(nil),    // 3: nekode.daemon.v1.EventCursor
+	(*Actor)(nil),          // 4: nekode.daemon.v1.Actor
+	(*RequestContext)(nil), // 5: nekode.daemon.v1.RequestContext
+	(*EnvVar)(nil),         // 6: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),    // 7: nekode.daemon.v1.SkillRecord
 }
 var file_nekode_daemon_v1_common_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4, // 0: nekode.daemon.v1.RequestContext.actor:type_name -> nekode.daemon.v1.Actor
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_common_proto_init() }
@@ -553,7 +778,7 @@ func file_nekode_daemon_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_common_proto_rawDesc), len(file_nekode_daemon_v1_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

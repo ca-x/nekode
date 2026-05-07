@@ -39,6 +39,7 @@ type ReminderRecord struct {
 	FiredTimeUnix int64                  `protobuf:"varint,14,opt,name=fired_time_unix,json=firedTimeUnix,proto3" json:"fired_time_unix,omitempty"`
 	MsgRef        string                 `protobuf:"bytes,15,opt,name=msg_ref,json=msgRef,proto3" json:"msg_ref,omitempty"`
 	Recurrence    *ReminderRecurrence    `protobuf:"bytes,16,opt,name=recurrence,proto3" json:"recurrence,omitempty"`
+	CancelToken   string                 `protobuf:"bytes,17,opt,name=cancel_token,json=cancelToken,proto3" json:"cancel_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -183,6 +184,13 @@ func (x *ReminderRecord) GetRecurrence() *ReminderRecurrence {
 		return x.Recurrence
 	}
 	return nil
+}
+
+func (x *ReminderRecord) GetCancelToken() string {
+	if x != nil {
+		return x.CancelToken
+	}
+	return ""
 }
 
 type ReminderRecurrence struct {
@@ -346,23 +354,25 @@ func (x *ReminderEvent) GetDetail() string {
 }
 
 type ScheduleReminderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	ScheduleKind  string                 `protobuf:"bytes,3,opt,name=schedule_kind,json=scheduleKind,proto3" json:"schedule_kind,omitempty"`
-	Schedule      string                 `protobuf:"bytes,4,opt,name=schedule,proto3" json:"schedule,omitempty"`
-	Prompt        string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
-	Skills        []string               `protobuf:"bytes,6,rep,name=skills,proto3" json:"skills,omitempty"`
-	RequestId     string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	Title         string                 `protobuf:"bytes,8,opt,name=title,proto3" json:"title,omitempty"`
-	DelaySeconds  uint32                 `protobuf:"varint,9,opt,name=delay_seconds,json=delaySeconds,proto3" json:"delay_seconds,omitempty"`
-	FireAt        string                 `protobuf:"bytes,10,opt,name=fire_at,json=fireAt,proto3" json:"fire_at,omitempty"`
-	Repeat        string                 `protobuf:"bytes,11,opt,name=repeat,proto3" json:"repeat,omitempty"`
-	Timezone      string                 `protobuf:"bytes,12,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	Channel       string                 `protobuf:"bytes,13,opt,name=channel,proto3" json:"channel,omitempty"`
-	MsgId         string                 `protobuf:"bytes,14,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Target         string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ScheduleKind   string                 `protobuf:"bytes,3,opt,name=schedule_kind,json=scheduleKind,proto3" json:"schedule_kind,omitempty"`
+	Schedule       string                 `protobuf:"bytes,4,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	Prompt         string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Skills         []string               `protobuf:"bytes,6,rep,name=skills,proto3" json:"skills,omitempty"`
+	RequestId      string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Title          string                 `protobuf:"bytes,8,opt,name=title,proto3" json:"title,omitempty"`
+	DelaySeconds   uint32                 `protobuf:"varint,9,opt,name=delay_seconds,json=delaySeconds,proto3" json:"delay_seconds,omitempty"`
+	FireAt         string                 `protobuf:"bytes,10,opt,name=fire_at,json=fireAt,proto3" json:"fire_at,omitempty"`
+	Repeat         string                 `protobuf:"bytes,11,opt,name=repeat,proto3" json:"repeat,omitempty"`
+	Timezone       string                 `protobuf:"bytes,12,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Channel        string                 `protobuf:"bytes,13,opt,name=channel,proto3" json:"channel,omitempty"`
+	MsgId          string                 `protobuf:"bytes,14,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,15,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,16,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ScheduleReminderRequest) Reset() {
@@ -491,6 +501,20 @@ func (x *ScheduleReminderRequest) GetMsgId() string {
 		return x.MsgId
 	}
 	return ""
+}
+
+func (x *ScheduleReminderRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *ScheduleReminderRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type ScheduleReminderResponse struct {
@@ -650,11 +674,14 @@ func (x *ListRemindersResponse) GetReminders() []*ReminderRecord {
 }
 
 type CancelReminderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ReminderId    string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
-	RequestId     string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ReminderId     string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	CancelToken    string                 `protobuf:"bytes,5,opt,name=cancel_token,json=cancelToken,proto3" json:"cancel_token,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *CancelReminderRequest) Reset() {
@@ -697,6 +724,27 @@ func (x *CancelReminderRequest) GetReminderId() string {
 func (x *CancelReminderRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *CancelReminderRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *CancelReminderRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *CancelReminderRequest) GetCancelToken() string {
+	if x != nil {
+		return x.CancelToken
 	}
 	return ""
 }
@@ -754,12 +802,14 @@ func (x *CancelReminderResponse) GetReminder() *ReminderRecord {
 }
 
 type SnoozeReminderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ReminderId    string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
-	DelaySeconds  uint32                 `protobuf:"varint,2,opt,name=delay_seconds,json=delaySeconds,proto3" json:"delay_seconds,omitempty"`
-	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ReminderId     string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
+	DelaySeconds   uint32                 `protobuf:"varint,2,opt,name=delay_seconds,json=delaySeconds,proto3" json:"delay_seconds,omitempty"`
+	RequestId      string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SnoozeReminderRequest) Reset() {
@@ -813,6 +863,20 @@ func (x *SnoozeReminderRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *SnoozeReminderRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *SnoozeReminderRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type SnoozeReminderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Reminder      *ReminderRecord        `protobuf:"bytes,1,opt,name=reminder,proto3" json:"reminder,omitempty"`
@@ -858,16 +922,18 @@ func (x *SnoozeReminderResponse) GetReminder() *ReminderRecord {
 }
 
 type UpdateReminderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ReminderId    string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
-	Title         *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
-	FireAt        *string                `protobuf:"bytes,3,opt,name=fire_at,json=fireAt,proto3,oneof" json:"fire_at,omitempty"`
-	DelaySeconds  *uint32                `protobuf:"varint,4,opt,name=delay_seconds,json=delaySeconds,proto3,oneof" json:"delay_seconds,omitempty"`
-	Repeat        *string                `protobuf:"bytes,5,opt,name=repeat,proto3,oneof" json:"repeat,omitempty"`
-	Timezone      *string                `protobuf:"bytes,6,opt,name=timezone,proto3,oneof" json:"timezone,omitempty"`
-	RequestId     string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ReminderId     string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
+	Title          *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
+	FireAt         *string                `protobuf:"bytes,3,opt,name=fire_at,json=fireAt,proto3,oneof" json:"fire_at,omitempty"`
+	DelaySeconds   *uint32                `protobuf:"varint,4,opt,name=delay_seconds,json=delaySeconds,proto3,oneof" json:"delay_seconds,omitempty"`
+	Repeat         *string                `protobuf:"bytes,5,opt,name=repeat,proto3,oneof" json:"repeat,omitempty"`
+	Timezone       *string                `protobuf:"bytes,6,opt,name=timezone,proto3,oneof" json:"timezone,omitempty"`
+	RequestId      string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateReminderRequest) Reset() {
@@ -947,6 +1013,20 @@ func (x *UpdateReminderRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *UpdateReminderRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UpdateReminderRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type UpdateReminderResponse struct {
@@ -1093,7 +1173,7 @@ var File_nekode_daemon_v1_reminder_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\n" +
-	"\x1fnekode/daemon/v1/reminder.proto\x12\x10nekode.daemon.v1\"\x9b\x04\n" +
+	"\x1fnekode/daemon/v1/reminder.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xc6\x04\n" +
 	"\x0eReminderRecord\x12\x1f\n" +
 	"\vreminder_id\x18\x01 \x01(\tR\n" +
 	"reminderId\x12\x16\n" +
@@ -1115,11 +1195,12 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\amsg_ref\x18\x0f \x01(\tR\x06msgRef\x12D\n" +
 	"\n" +
 	"recurrence\x18\x10 \x01(\v2$.nekode.daemon.v1.ReminderRecurrenceR\n" +
-	"recurrence\"f\n" +
+	"recurrence\x12!\n" +
+	"\fcancel_token\x18\x11 \x01(\tR\vcancelTokenJ\x06\b\xe8\a\x10\xd0\x0f\"n\n" +
 	"\x12ReminderRecurrence\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1a\n" +
-	"\btimezone\x18\x03 \x01(\tR\btimezone\"\x99\x02\n" +
+	"\btimezone\x18\x03 \x01(\tR\btimezoneJ\x06\b\xe8\a\x10\xd0\x0f\"\xa1\x02\n" +
 	"\rReminderEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +
 	"\vreminder_id\x18\x02 \x01(\tR\n" +
@@ -1131,7 +1212,7 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\bactor_id\x18\x05 \x01(\tR\aactorId\x12,\n" +
 	"\x12occurred_time_unix\x18\x06 \x01(\x03R\x10occurredTimeUnix\x12-\n" +
 	"\x13next_fire_time_unix\x18\a \x01(\x03R\x10nextFireTimeUnix\x12\x16\n" +
-	"\x06detail\x18\b \x01(\tR\x06detail\"\x8e\x03\n" +
+	"\x06detail\x18\b \x01(\tR\x06detailJ\x06\b\xe8\a\x10\xd0\x0f\"\xf3\x03\n" +
 	"\x17ScheduleReminderRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
@@ -1148,7 +1229,9 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\x06repeat\x18\v \x01(\tR\x06repeat\x12\x1a\n" +
 	"\btimezone\x18\f \x01(\tR\btimezone\x12\x18\n" +
 	"\achannel\x18\r \x01(\tR\achannel\x12\x15\n" +
-	"\x06msg_id\x18\x0e \x01(\tR\x05msgId\"X\n" +
+	"\x06msg_id\x18\x0e \x01(\tR\x05msgId\x12'\n" +
+	"\x0fidempotency_key\x18\x0f \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"X\n" +
 	"\x18ScheduleReminderResponse\x12<\n" +
 	"\breminder\x18\x01 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"\x8b\x01\n" +
 	"\x14ListRemindersRequest\x12\x16\n" +
@@ -1157,23 +1240,28 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\bstatuses\x18\x03 \x03(\tR\bstatuses\x12)\n" +
 	"\x10include_canceled\x18\x04 \x01(\bR\x0fincludeCanceled\"W\n" +
 	"\x15ListRemindersResponse\x12>\n" +
-	"\treminders\x18\x01 \x03(\v2 .nekode.daemon.v1.ReminderRecordR\treminders\"W\n" +
+	"\treminders\x18\x01 \x03(\v2 .nekode.daemon.v1.ReminderRecordR\treminders\"\xdf\x01\n" +
 	"\x15CancelReminderRequest\x12\x1f\n" +
 	"\vreminder_id\x18\x01 \x01(\tR\n" +
 	"reminderId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tR\trequestId\"r\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12!\n" +
+	"\fcancel_token\x18\x05 \x01(\tR\vcancelToken\"r\n" +
 	"\x16CancelReminderResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12<\n" +
-	"\breminder\x18\x02 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"|\n" +
+	"\breminder\x18\x02 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"\xe1\x01\n" +
 	"\x15SnoozeReminderRequest\x12\x1f\n" +
 	"\vreminder_id\x18\x01 \x01(\tR\n" +
 	"reminderId\x12#\n" +
 	"\rdelay_seconds\x18\x02 \x01(\rR\fdelaySeconds\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x03 \x01(\tR\trequestId\"V\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"V\n" +
 	"\x16SnoozeReminderResponse\x12<\n" +
-	"\breminder\x18\x01 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"\xb8\x02\n" +
+	"\breminder\x18\x01 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"\x9d\x03\n" +
 	"\x15UpdateReminderRequest\x12\x1f\n" +
 	"\vreminder_id\x18\x01 \x01(\tR\n" +
 	"reminderId\x12\x19\n" +
@@ -1183,7 +1271,9 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\x06repeat\x18\x05 \x01(\tH\x03R\x06repeat\x88\x01\x01\x12\x1f\n" +
 	"\btimezone\x18\x06 \x01(\tH\x04R\btimezone\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\a \x01(\tR\trequestIdB\b\n" +
+	"request_id\x18\a \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontextB\b\n" +
 	"\x06_titleB\n" +
 	"\n" +
 	"\b_fire_atB\x10\n" +
@@ -1229,20 +1319,25 @@ var file_nekode_daemon_v1_reminder_proto_goTypes = []any{
 	(*UpdateReminderResponse)(nil),   // 12: nekode.daemon.v1.UpdateReminderResponse
 	(*GetReminderLogRequest)(nil),    // 13: nekode.daemon.v1.GetReminderLogRequest
 	(*GetReminderLogResponse)(nil),   // 14: nekode.daemon.v1.GetReminderLogResponse
+	(*RequestContext)(nil),           // 15: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_reminder_proto_depIdxs = []int32{
-	1, // 0: nekode.daemon.v1.ReminderRecord.recurrence:type_name -> nekode.daemon.v1.ReminderRecurrence
-	0, // 1: nekode.daemon.v1.ScheduleReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	0, // 2: nekode.daemon.v1.ListRemindersResponse.reminders:type_name -> nekode.daemon.v1.ReminderRecord
-	0, // 3: nekode.daemon.v1.CancelReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	0, // 4: nekode.daemon.v1.SnoozeReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	0, // 5: nekode.daemon.v1.UpdateReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	2, // 6: nekode.daemon.v1.GetReminderLogResponse.events:type_name -> nekode.daemon.v1.ReminderEvent
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	1,  // 0: nekode.daemon.v1.ReminderRecord.recurrence:type_name -> nekode.daemon.v1.ReminderRecurrence
+	15, // 1: nekode.daemon.v1.ScheduleReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 2: nekode.daemon.v1.ScheduleReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	0,  // 3: nekode.daemon.v1.ListRemindersResponse.reminders:type_name -> nekode.daemon.v1.ReminderRecord
+	15, // 4: nekode.daemon.v1.CancelReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 5: nekode.daemon.v1.CancelReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	15, // 6: nekode.daemon.v1.SnoozeReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 7: nekode.daemon.v1.SnoozeReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	15, // 8: nekode.daemon.v1.UpdateReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0,  // 9: nekode.daemon.v1.UpdateReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	2,  // 10: nekode.daemon.v1.GetReminderLogResponse.events:type_name -> nekode.daemon.v1.ReminderEvent
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_reminder_proto_init() }
@@ -1250,6 +1345,7 @@ func file_nekode_daemon_v1_reminder_proto_init() {
 	if File_nekode_daemon_v1_reminder_proto != nil {
 		return
 	}
+	file_nekode_daemon_v1_common_proto_init()
 	file_nekode_daemon_v1_reminder_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

@@ -732,6 +732,9 @@ type CollaborationMessage struct {
 	MetadataJson         string                 `protobuf:"bytes,15,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
 	CoordinationRecordId string                 `protobuf:"bytes,16,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
 	MemoryRecordId       string                 `protobuf:"bytes,17,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	Sender               *Actor                 `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
+	Sequence             int64                  `protobuf:"varint,19,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId          string                 `protobuf:"bytes,20,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -885,10 +888,35 @@ func (x *CollaborationMessage) GetMemoryRecordId() string {
 	return ""
 }
 
+func (x *CollaborationMessage) GetSender() *Actor {
+	if x != nil {
+		return x.Sender
+	}
+	return nil
+}
+
+func (x *CollaborationMessage) GetSequence() int64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *CollaborationMessage) GetAggregateId() string {
+	if x != nil {
+		return x.AggregateId
+	}
+	return ""
+}
+
 type ReadMessagesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	PageToken     string                 `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageSize      uint32                 `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	AfterSequence int64                  `protobuf:"varint,6,opt,name=after_sequence,json=afterSequence,proto3" json:"after_sequence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -937,9 +965,39 @@ func (x *ReadMessagesRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ReadMessagesRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+func (x *ReadMessagesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ReadMessagesRequest) GetPageSize() uint32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ReadMessagesRequest) GetAfterSequence() int64 {
+	if x != nil {
+		return x.AfterSequence
+	}
+	return 0
+}
+
 type ReadMessagesResponse struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
 	Messages      []*CollaborationMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	NextCursor    *EventCursor            `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	NextPageToken string                  `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -981,6 +1039,20 @@ func (x *ReadMessagesResponse) GetMessages() []*CollaborationMessage {
 	return nil
 }
 
+func (x *ReadMessagesResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
+func (x *ReadMessagesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 type SendMessageRequest struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Target               string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
@@ -997,6 +1069,9 @@ type SendMessageRequest struct {
 	MetadataJson         string                 `protobuf:"bytes,12,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
 	CoordinationRecordId string                 `protobuf:"bytes,13,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
 	MemoryRecordId       string                 `protobuf:"bytes,14,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	IdempotencyKey       string                 `protobuf:"bytes,15,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context              *RequestContext        `protobuf:"bytes,16,opt,name=context,proto3" json:"context,omitempty"`
+	OutboundPolicy       string                 `protobuf:"bytes,17,opt,name=outbound_policy,json=outboundPolicy,proto3" json:"outbound_policy,omitempty"` // none | source_only | all_bound_endpoints | selected_endpoints
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1125,6 +1200,27 @@ func (x *SendMessageRequest) GetCoordinationRecordId() string {
 func (x *SendMessageRequest) GetMemoryRecordId() string {
 	if x != nil {
 		return x.MemoryRecordId
+	}
+	return ""
+}
+
+func (x *SendMessageRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *SendMessageRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *SendMessageRequest) GetOutboundPolicy() string {
+	if x != nil {
+		return x.OutboundPolicy
 	}
 	return ""
 }
@@ -1288,6 +1384,8 @@ type SaveMessageRequest struct {
 	SavedByAgentId string                 `protobuf:"bytes,3,opt,name=saved_by_agent_id,json=savedByAgentId,proto3" json:"saved_by_agent_id,omitempty"`
 	SavedByUserId  string                 `protobuf:"bytes,4,opt,name=saved_by_user_id,json=savedByUserId,proto3" json:"saved_by_user_id,omitempty"`
 	RequestId      string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1357,6 +1455,20 @@ func (x *SaveMessageRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *SaveMessageRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *SaveMessageRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type SaveMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Saved         bool                   `protobuf:"varint,1,opt,name=saved,proto3" json:"saved,omitempty"`
@@ -1416,6 +1528,8 @@ type UnsaveMessageRequest struct {
 	SavedByAgentId string                 `protobuf:"bytes,3,opt,name=saved_by_agent_id,json=savedByAgentId,proto3" json:"saved_by_agent_id,omitempty"`
 	SavedByUserId  string                 `protobuf:"bytes,4,opt,name=saved_by_user_id,json=savedByUserId,proto3" json:"saved_by_user_id,omitempty"`
 	RequestId      string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1483,6 +1597,20 @@ func (x *UnsaveMessageRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *UnsaveMessageRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UnsaveMessageRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type UnsaveMessageResponse struct {
@@ -1650,12 +1778,14 @@ func (x *ListSavedMessagesResponse) GetSavedMessages() []*SavedMessageRecord {
 }
 
 type FollowThreadRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Target         string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *FollowThreadRequest) Reset() {
@@ -1709,6 +1839,20 @@ func (x *FollowThreadRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *FollowThreadRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *FollowThreadRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type FollowThreadResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
@@ -1754,12 +1898,14 @@ func (x *FollowThreadResponse) GetAccepted() bool {
 }
 
 type UnfollowThreadRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Target         string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UnfollowThreadRequest) Reset() {
@@ -1813,6 +1959,20 @@ func (x *UnfollowThreadRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *UnfollowThreadRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UnfollowThreadRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type UnfollowThreadResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
@@ -1857,11 +2017,391 @@ func (x *UnfollowThreadResponse) GetAccepted() bool {
 	return false
 }
 
+type OutboundDeliveryRecord struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	DeliveryId        string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
+	Target            string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	MessageId         string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	EndpointId        string                 `protobuf:"bytes,4,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	EndpointKind      string                 `protobuf:"bytes,5,opt,name=endpoint_kind,json=endpointKind,proto3" json:"endpoint_kind,omitempty"` // webhook | im | mcp | api | custom
+	ExternalMessageId string                 `protobuf:"bytes,6,opt,name=external_message_id,json=externalMessageId,proto3" json:"external_message_id,omitempty"`
+	Status            string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"` // pending | delivered | failed | retrying | canceled
+	AttemptCount      uint32                 `protobuf:"varint,8,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	NextRetryTimeUnix int64                  `protobuf:"varint,9,opt,name=next_retry_time_unix,json=nextRetryTimeUnix,proto3" json:"next_retry_time_unix,omitempty"`
+	DeliveredTimeUnix int64                  `protobuf:"varint,10,opt,name=delivered_time_unix,json=deliveredTimeUnix,proto3" json:"delivered_time_unix,omitempty"`
+	LastError         string                 `protobuf:"bytes,11,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	RequestId         string                 `protobuf:"bytes,12,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *OutboundDeliveryRecord) Reset() {
+	*x = OutboundDeliveryRecord{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutboundDeliveryRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutboundDeliveryRecord) ProtoMessage() {}
+
+func (x *OutboundDeliveryRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutboundDeliveryRecord.ProtoReflect.Descriptor instead.
+func (*OutboundDeliveryRecord) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *OutboundDeliveryRecord) GetDeliveryId() string {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetEndpointId() string {
+	if x != nil {
+		return x.EndpointId
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetEndpointKind() string {
+	if x != nil {
+		return x.EndpointKind
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetExternalMessageId() string {
+	if x != nil {
+		return x.ExternalMessageId
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetAttemptCount() uint32 {
+	if x != nil {
+		return x.AttemptCount
+	}
+	return 0
+}
+
+func (x *OutboundDeliveryRecord) GetNextRetryTimeUnix() int64 {
+	if x != nil {
+		return x.NextRetryTimeUnix
+	}
+	return 0
+}
+
+func (x *OutboundDeliveryRecord) GetDeliveredTimeUnix() int64 {
+	if x != nil {
+		return x.DeliveredTimeUnix
+	}
+	return 0
+}
+
+func (x *OutboundDeliveryRecord) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *OutboundDeliveryRecord) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type ListOutboundDeliveriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	EndpointId    string                 `protobuf:"bytes,3,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	Statuses      []string               `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	Limit         uint32                 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOutboundDeliveriesRequest) Reset() {
+	*x = ListOutboundDeliveriesRequest{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOutboundDeliveriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOutboundDeliveriesRequest) ProtoMessage() {}
+
+func (x *ListOutboundDeliveriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOutboundDeliveriesRequest.ProtoReflect.Descriptor instead.
+func (*ListOutboundDeliveriesRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListOutboundDeliveriesRequest) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *ListOutboundDeliveriesRequest) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *ListOutboundDeliveriesRequest) GetEndpointId() string {
+	if x != nil {
+		return x.EndpointId
+	}
+	return ""
+}
+
+func (x *ListOutboundDeliveriesRequest) GetStatuses() []string {
+	if x != nil {
+		return x.Statuses
+	}
+	return nil
+}
+
+func (x *ListOutboundDeliveriesRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListOutboundDeliveriesRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+type ListOutboundDeliveriesResponse struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Deliveries    []*OutboundDeliveryRecord `protobuf:"bytes,1,rep,name=deliveries,proto3" json:"deliveries,omitempty"`
+	NextCursor    *EventCursor              `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOutboundDeliveriesResponse) Reset() {
+	*x = ListOutboundDeliveriesResponse{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOutboundDeliveriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOutboundDeliveriesResponse) ProtoMessage() {}
+
+func (x *ListOutboundDeliveriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOutboundDeliveriesResponse.ProtoReflect.Descriptor instead.
+func (*ListOutboundDeliveriesResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListOutboundDeliveriesResponse) GetDeliveries() []*OutboundDeliveryRecord {
+	if x != nil {
+		return x.Deliveries
+	}
+	return nil
+}
+
+func (x *ListOutboundDeliveriesResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
+type RetryOutboundDeliveryRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	DeliveryId     string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RetryOutboundDeliveryRequest) Reset() {
+	*x = RetryOutboundDeliveryRequest{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryOutboundDeliveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryOutboundDeliveryRequest) ProtoMessage() {}
+
+func (x *RetryOutboundDeliveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryOutboundDeliveryRequest.ProtoReflect.Descriptor instead.
+func (*RetryOutboundDeliveryRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *RetryOutboundDeliveryRequest) GetDeliveryId() string {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return ""
+}
+
+func (x *RetryOutboundDeliveryRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *RetryOutboundDeliveryRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *RetryOutboundDeliveryRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type RetryOutboundDeliveryResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Delivery      *OutboundDeliveryRecord `protobuf:"bytes,1,opt,name=delivery,proto3" json:"delivery,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryOutboundDeliveryResponse) Reset() {
+	*x = RetryOutboundDeliveryResponse{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryOutboundDeliveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryOutboundDeliveryResponse) ProtoMessage() {}
+
+func (x *RetryOutboundDeliveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryOutboundDeliveryResponse.ProtoReflect.Descriptor instead.
+func (*RetryOutboundDeliveryResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *RetryOutboundDeliveryResponse) GetDelivery() *OutboundDeliveryRecord {
+	if x != nil {
+		return x.Delivery
+	}
+	return nil
+}
+
 var File_nekode_daemon_v1_collaboration_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\n" +
-	"$nekode/daemon/v1/collaboration.proto\x12\x10nekode.daemon.v1\x1a!nekode/daemon/v1/attachment.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xe2\x02\n" +
+	"$nekode/daemon/v1/collaboration.proto\x12\x10nekode.daemon.v1\x1a!nekode/daemon/v1/attachment.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xea\x02\n" +
 	"\rChannelRecord\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
@@ -1874,7 +2414,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"sourceKind\x12\x1f\n" +
 	"\vexternal_id\x18\b \x01(\tR\n" +
 	"externalId\x12@\n" +
-	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\"\x82\x03\n" +
+	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"\x8a\x03\n" +
 	"\x13InteractionEndpoint\x12\x1f\n" +
 	"\vendpoint_id\x18\x01 \x01(\tR\n" +
 	"endpointId\x12\x12\n" +
@@ -1888,7 +2428,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\vconfig_json\x18\t \x01(\tR\n" +
 	"configJson\x12@\n" +
 	"\fcapabilities\x18\n" +
-	" \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\"7\n" +
+	" \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"7\n" +
 	"\x1fListInteractionEndpointsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\"g\n" +
 	" ListInteractionEndpointsResponse\x12C\n" +
@@ -1896,7 +2436,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x13ListChannelsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\"S\n" +
 	"\x14ListChannelsResponse\x12;\n" +
-	"\bchannels\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\bchannels\"\xab\x02\n" +
+	"\bchannels\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\bchannels\"\xb3\x02\n" +
 	"\fThreadRecord\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1b\n" +
 	"\tthread_id\x18\x02 \x01(\tR\bthreadId\x12\x14\n" +
@@ -1907,7 +2447,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\rmessage_count\x18\x06 \x01(\rR\fmessageCount\x12*\n" +
 	"\x11created_time_unix\x18\a \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\b \x01(\x03R\x0fupdatedTimeUnix\x12\x1a\n" +
-	"\bfollowed\x18\t \x01(\bR\bfollowed\"O\n" +
+	"\bfollowed\x18\t \x01(\bR\bfollowedJ\x06\b\xe8\a\x10\xd0\x0f\"O\n" +
 	"\x12ListThreadsRequest\x12#\n" +
 	"\rtarget_prefix\x18\x01 \x01(\tR\ftargetPrefix\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\rR\x05limit\"O\n" +
@@ -1916,7 +2456,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x10GetThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\"K\n" +
 	"\x11GetThreadResponse\x126\n" +
-	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xb4\x05\n" +
+	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xac\x06\n" +
 	"\x14CollaborationMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
@@ -1938,12 +2478,23 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x13external_message_id\x18\x0e \x01(\tR\x11externalMessageId\x12#\n" +
 	"\rmetadata_json\x18\x0f \x01(\tR\fmetadataJson\x124\n" +
 	"\x16coordination_record_id\x18\x10 \x01(\tR\x14coordinationRecordId\x12(\n" +
-	"\x10memory_record_id\x18\x11 \x01(\tR\x0ememoryRecordId\"C\n" +
+	"\x10memory_record_id\x18\x11 \x01(\tR\x0ememoryRecordId\x12/\n" +
+	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06sender\x12\x1a\n" +
+	"\bsequence\x18\x13 \x01(\x03R\bsequence\x12!\n" +
+	"\faggregate_id\x18\x14 \x01(\tR\vaggregateIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xdd\x01\n" +
 	"\x13ReadMessagesRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\rR\x05limit\"Z\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken\x12\x1b\n" +
+	"\tpage_size\x18\x05 \x01(\rR\bpageSize\x12%\n" +
+	"\x0eafter_sequence\x18\x06 \x01(\x03R\rafterSequence\"\xc2\x01\n" +
 	"\x14ReadMessagesResponse\x12B\n" +
-	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\"\xa5\x04\n" +
+	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\x12&\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\"\xb3\x05\n" +
 	"\x12SendMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
@@ -1960,7 +2511,10 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x0esender_user_id\x18\v \x01(\tR\fsenderUserId\x12#\n" +
 	"\rmetadata_json\x18\f \x01(\tR\fmetadataJson\x124\n" +
 	"\x16coordination_record_id\x18\r \x01(\tR\x14coordinationRecordId\x12(\n" +
-	"\x10memory_record_id\x18\x0e \x01(\tR\x0ememoryRecordId\"s\n" +
+	"\x10memory_record_id\x18\x0e \x01(\tR\x0ememoryRecordId\x12'\n" +
+	"\x0fidempotency_key\x18\x0f \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12'\n" +
+	"\x0foutbound_policy\x18\x11 \x01(\tR\x0eoutboundPolicy\"s\n" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
 	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xd0\x02\n" +
@@ -1973,7 +2527,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x11saved_by_agent_id\x18\x05 \x01(\tR\x0esavedByAgentId\x12'\n" +
 	"\x10saved_by_user_id\x18\x06 \x01(\tR\rsavedByUserId\x12&\n" +
 	"\x0fsaved_time_unix\x18\a \x01(\x03R\rsavedTimeUnix\x12@\n" +
-	"\amessage\x18\b \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xbe\x01\n" +
+	"\amessage\x18\b \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xa3\x02\n" +
 	"\x12SaveMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
@@ -1981,10 +2535,12 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x11saved_by_agent_id\x18\x03 \x01(\tR\x0esavedByAgentId\x12'\n" +
 	"\x10saved_by_user_id\x18\x04 \x01(\tR\rsavedByUserId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x05 \x01(\tR\trequestId\"v\n" +
+	"request_id\x18\x05 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"v\n" +
 	"\x13SaveMessageResponse\x12\x14\n" +
 	"\x05saved\x18\x01 \x01(\bR\x05saved\x12I\n" +
-	"\rsaved_message\x18\x02 \x01(\v2$.nekode.daemon.v1.SavedMessageRecordR\fsavedMessage\"\xc0\x01\n" +
+	"\rsaved_message\x18\x02 \x01(\v2$.nekode.daemon.v1.SavedMessageRecordR\fsavedMessage\"\xa5\x02\n" +
 	"\x14UnsaveMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
@@ -1992,7 +2548,9 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x11saved_by_agent_id\x18\x03 \x01(\tR\x0esavedByAgentId\x12'\n" +
 	"\x10saved_by_user_id\x18\x04 \x01(\tR\rsavedByUserId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x05 \x01(\tR\trequestId\"|\n" +
+	"request_id\x18\x05 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"|\n" +
 	"\x15UnsaveMessageResponse\x12\x18\n" +
 	"\aremoved\x18\x01 \x01(\bR\aremoved\x12I\n" +
 	"\rsaved_message\x18\x02 \x01(\v2$.nekode.daemon.v1.SavedMessageRecordR\fsavedMessage\"\x9c\x01\n" +
@@ -2002,21 +2560,68 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x10saved_by_user_id\x18\x03 \x01(\tR\rsavedByUserId\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\rR\x05limit\"h\n" +
 	"\x19ListSavedMessagesResponse\x12K\n" +
-	"\x0esaved_messages\x18\x01 \x03(\v2$.nekode.daemon.v1.SavedMessageRecordR\rsavedMessages\"g\n" +
+	"\x0esaved_messages\x18\x01 \x03(\v2$.nekode.daemon.v1.SavedMessageRecordR\rsavedMessages\"\xcc\x01\n" +
 	"\x13FollowThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x03 \x01(\tR\trequestId\"2\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"2\n" +
 	"\x14FollowThreadResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"i\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xce\x01\n" +
 	"\x15UnfollowThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x03 \x01(\tR\trequestId\"4\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"4\n" +
 	"\x16UnfollowThreadResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\bacceptedB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xca\x03\n" +
+	"\x16OutboundDeliveryRecord\x12\x1f\n" +
+	"\vdelivery_id\x18\x01 \x01(\tR\n" +
+	"deliveryId\x12\x16\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x03 \x01(\tR\tmessageId\x12\x1f\n" +
+	"\vendpoint_id\x18\x04 \x01(\tR\n" +
+	"endpointId\x12#\n" +
+	"\rendpoint_kind\x18\x05 \x01(\tR\fendpointKind\x12.\n" +
+	"\x13external_message_id\x18\x06 \x01(\tR\x11externalMessageId\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12#\n" +
+	"\rattempt_count\x18\b \x01(\rR\fattemptCount\x12/\n" +
+	"\x14next_retry_time_unix\x18\t \x01(\x03R\x11nextRetryTimeUnix\x12.\n" +
+	"\x13delivered_time_unix\x18\n" +
+	" \x01(\x03R\x11deliveredTimeUnix\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\v \x01(\tR\tlastError\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\f \x01(\tR\trequestIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xe0\x01\n" +
+	"\x1dListOutboundDeliveriesRequest\x12\x16\n" +
+	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1f\n" +
+	"\vendpoint_id\x18\x03 \x01(\tR\n" +
+	"endpointId\x12\x1a\n" +
+	"\bstatuses\x18\x04 \x03(\tR\bstatuses\x12\x14\n" +
+	"\x05limit\x18\x05 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x06 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\xaa\x01\n" +
+	"\x1eListOutboundDeliveriesResponse\x12H\n" +
+	"\n" +
+	"deliveries\x18\x01 \x03(\v2(.nekode.daemon.v1.OutboundDeliveryRecordR\n" +
+	"deliveries\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\xc3\x01\n" +
+	"\x1cRetryOutboundDeliveryRequest\x12\x1f\n" +
+	"\vdelivery_id\x18\x01 \x01(\tR\n" +
+	"deliveryId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"e\n" +
+	"\x1dRetryOutboundDeliveryResponse\x12D\n" +
+	"\bdelivery\x18\x01 \x01(\v2(.nekode.daemon.v1.OutboundDeliveryRecordR\bdeliveryB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_collaboration_proto_rawDescOnce sync.Once
@@ -2030,7 +2635,7 @@ func file_nekode_daemon_v1_collaboration_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_collaboration_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_nekode_daemon_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
 	(*ChannelRecord)(nil),                    // 0: nekode.daemon.v1.ChannelRecord
 	(*InteractionEndpoint)(nil),              // 1: nekode.daemon.v1.InteractionEndpoint
@@ -2059,28 +2664,49 @@ var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
 	(*FollowThreadResponse)(nil),             // 24: nekode.daemon.v1.FollowThreadResponse
 	(*UnfollowThreadRequest)(nil),            // 25: nekode.daemon.v1.UnfollowThreadRequest
 	(*UnfollowThreadResponse)(nil),           // 26: nekode.daemon.v1.UnfollowThreadResponse
-	(*Capability)(nil),                       // 27: nekode.daemon.v1.Capability
-	(*AttachmentRecord)(nil),                 // 28: nekode.daemon.v1.AttachmentRecord
+	(*OutboundDeliveryRecord)(nil),           // 27: nekode.daemon.v1.OutboundDeliveryRecord
+	(*ListOutboundDeliveriesRequest)(nil),    // 28: nekode.daemon.v1.ListOutboundDeliveriesRequest
+	(*ListOutboundDeliveriesResponse)(nil),   // 29: nekode.daemon.v1.ListOutboundDeliveriesResponse
+	(*RetryOutboundDeliveryRequest)(nil),     // 30: nekode.daemon.v1.RetryOutboundDeliveryRequest
+	(*RetryOutboundDeliveryResponse)(nil),    // 31: nekode.daemon.v1.RetryOutboundDeliveryResponse
+	(*Capability)(nil),                       // 32: nekode.daemon.v1.Capability
+	(*AttachmentRecord)(nil),                 // 33: nekode.daemon.v1.AttachmentRecord
+	(*Actor)(nil),                            // 34: nekode.daemon.v1.Actor
+	(*EventCursor)(nil),                      // 35: nekode.daemon.v1.EventCursor
+	(*RequestContext)(nil),                   // 36: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_collaboration_proto_depIdxs = []int32{
-	27, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
-	27, // 1: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
+	32, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
+	32, // 1: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
 	1,  // 2: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
 	0,  // 3: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
 	6,  // 4: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
 	6,  // 5: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
-	28, // 6: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
-	11, // 7: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	11, // 8: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	11, // 9: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	16, // 10: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	16, // 11: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	16, // 12: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	33, // 6: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
+	34, // 7: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
+	35, // 8: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	11, // 9: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	35, // 10: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 11: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	11, // 12: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	11, // 13: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	36, // 14: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	16, // 15: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	36, // 16: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	16, // 17: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	16, // 18: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
+	36, // 19: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	36, // 20: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	35, // 21: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	27, // 22: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	35, // 23: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 24: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	27, // 25: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_collaboration_proto_init() }
@@ -2096,7 +2722,7 @@ func file_nekode_daemon_v1_collaboration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_collaboration_proto_rawDesc), len(file_nekode_daemon_v1_collaboration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

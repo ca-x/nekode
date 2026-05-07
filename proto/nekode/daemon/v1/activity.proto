@@ -7,6 +7,8 @@ import "nekode/daemon/v1/common.proto";
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message ActivityRecord {
+  reserved 1000 to 1999;
+
   string activity_id = 1;
   string target = 2;
   string agent_id = 3;
@@ -18,6 +20,9 @@ message ActivityRecord {
   string step_id = 9;
   string coordination_record_id = 10;
   string memory_record_id = 11;
+  int64 sequence = 12;
+  string aggregate_id = 13;
+  int32 protocol_version = 14;
 }
 message LogActivityRequest {
   string target = 1;
@@ -28,6 +33,8 @@ message LogActivityRequest {
   string run_id = 6;
   string step_id = 7;
   string request_id = 8;
+  string idempotency_key = 9;
+  RequestContext context = 10;
 }
 message LogActivityResponse {
   ActivityRecord activity = 1;
@@ -37,16 +44,25 @@ message ListActivityRequest {
   string agent_id = 2;
   uint32 limit = 3;
   EventCursor cursor = 4;
+  int64 from_sequence = 5;
+  string aggregate_id = 6;
+  string page_token = 7;
 }
 message ListActivityResponse {
   repeated ActivityRecord activities = 1;
   EventCursor next_cursor = 2;
+  string next_page_token = 3;
 }
 message ListEventsSinceRequest {
   EventCursor cursor = 1;
   uint32 limit = 2;
+  int64 from_sequence = 3;
+  string aggregate_id = 4;
+  string page_token = 5;
 }
 message CollaborationEvent {
+  reserved 1000 to 1999;
+
   string event_id = 1;
   string target = 2;
   string kind = 3;
@@ -58,8 +74,26 @@ message CollaborationEvent {
   string attachment_id = 9;
   string coordination_record_id = 10;
   string memory_record_id = 11;
+  int64 sequence = 12;
+  string aggregate_id = 13;
+  int32 protocol_version = 14;
+  string source_endpoint_id = 15;
 }
 message ListEventsSinceResponse {
   repeated CollaborationEvent events = 1;
   EventCursor next_cursor = 2;
+  string next_page_token = 3;
+}
+message SubscribeActivityRequest {
+  EventCursor cursor = 1;
+  int64 from_sequence = 2;
+  string aggregate_id = 3;
+  repeated string targets = 4;
+  string request_id = 5;
+}
+message ActivityAck {
+  string event_id = 1;
+  int64 sequence = 2;
+  string aggregate_id = 3;
+  string request_id = 4;
 }

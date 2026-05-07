@@ -724,6 +724,8 @@ type UpdateAgentProfileRequest struct {
 	AvatarMimeType string                 `protobuf:"bytes,5,opt,name=avatar_mime_type,json=avatarMimeType,proto3" json:"avatar_mime_type,omitempty"`
 	AvatarContent  []byte                 `protobuf:"bytes,6,opt,name=avatar_content,json=avatarContent,proto3" json:"avatar_content,omitempty"`
 	RequestId      string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -807,6 +809,20 @@ func (x *UpdateAgentProfileRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *UpdateAgentProfileRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UpdateAgentProfileRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type UpdateAgentProfileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Profile       *AgentProfile          `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
@@ -852,12 +868,14 @@ func (x *UpdateAgentProfileResponse) GetProfile() *AgentProfile {
 }
 
 type SetAgentEnvRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Env           []*EnvVar              `protobuf:"bytes,2,rep,name=env,proto3" json:"env,omitempty"`
-	RequestId     string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AgentId        string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Env            []*EnvVar              `protobuf:"bytes,2,rep,name=env,proto3" json:"env,omitempty"`
+	RequestId      string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SetAgentEnvRequest) Reset() {
@@ -909,6 +927,20 @@ func (x *SetAgentEnvRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *SetAgentEnvRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *SetAgentEnvRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type SetAgentEnvResponse struct {
@@ -1264,6 +1296,10 @@ type ControlAgentRequest struct {
 	Reason             string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	RequestedByAgentId string                 `protobuf:"bytes,6,opt,name=requested_by_agent_id,json=requestedByAgentId,proto3" json:"requested_by_agent_id,omitempty"`
 	RequestId          string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	LeaseId            string                 `protobuf:"bytes,8,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	LeaseTtlSeconds    uint32                 `protobuf:"varint,9,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
+	IdempotencyKey     string                 `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context            *RequestContext        `protobuf:"bytes,11,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1347,11 +1383,40 @@ func (x *ControlAgentRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *ControlAgentRequest) GetLeaseId() string {
+	if x != nil {
+		return x.LeaseId
+	}
+	return ""
+}
+
+func (x *ControlAgentRequest) GetLeaseTtlSeconds() uint32 {
+	if x != nil {
+		return x.LeaseTtlSeconds
+	}
+	return 0
+}
+
+func (x *ControlAgentRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *ControlAgentRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 type ControlAgentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
 	Operation     *AgentControlOperation `protobuf:"bytes,2,opt,name=operation,proto3" json:"operation,omitempty"`
 	Profile       *AgentProfile          `protobuf:"bytes,3,opt,name=profile,proto3" json:"profile,omitempty"`
+	Lease         *Lease                 `protobuf:"bytes,4,opt,name=lease,proto3" json:"lease,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1407,6 +1472,13 @@ func (x *ControlAgentResponse) GetProfile() *AgentProfile {
 	return nil
 }
 
+func (x *ControlAgentResponse) GetLease() *Lease {
+	if x != nil {
+		return x.Lease
+	}
+	return nil
+}
+
 type SendAgentDirectMessageRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	AgentId           string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -1416,6 +1488,8 @@ type SendAgentDirectMessageRequest struct {
 	RequestId         string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	AttachmentIds     []string               `protobuf:"bytes,6,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
 	ReplyToMessageId  string                 `protobuf:"bytes,7,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
+	IdempotencyKey    string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context           *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1497,6 +1571,20 @@ func (x *SendAgentDirectMessageRequest) GetReplyToMessageId() string {
 		return x.ReplyToMessageId
 	}
 	return ""
+}
+
+func (x *SendAgentDirectMessageRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *SendAgentDirectMessageRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type SendAgentDirectMessageResponse struct {
@@ -1732,11 +1820,13 @@ func (x *AgentStatusSnapshot) GetExpiresTimeUnix() int64 {
 }
 
 type UpdateAgentStatusRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        *AgentStatusSnapshot   `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	RequestId     string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Status         *AgentStatusSnapshot   `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	RequestId      string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,3,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext        `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateAgentStatusRequest) Reset() {
@@ -1781,6 +1871,20 @@ func (x *UpdateAgentStatusRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *UpdateAgentStatusRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UpdateAgentStatusRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
 }
 
 type UpdateAgentStatusResponse struct {
@@ -1935,7 +2039,7 @@ var File_nekode_daemon_v1_agent_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x1cnekode/daemon/v1/agent.proto\x12\x10nekode.daemon.v1\x1a$nekode/daemon/v1/collaboration.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xaf\x02\n" +
+	"\x1cnekode/daemon/v1/agent.proto\x12\x10nekode.daemon.v1\x1a$nekode/daemon/v1/collaboration.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xb7\x02\n" +
 	"\x13AgentRoleAssignment\x12\x17\n" +
 	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -1945,7 +2049,7 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x06active\x18\x06 \x01(\bR\x06active\x12,\n" +
 	"\x12assigned_time_unix\x18\a \x01(\x03R\x10assignedTimeUnix\x12/\n" +
 	"\x14assigned_by_agent_id\x18\b \x01(\tR\x11assignedByAgentId\x12-\n" +
-	"\x13assigned_by_user_id\x18\t \x01(\tR\x10assignedByUserId\"\x86\b\n" +
+	"\x13assigned_by_user_id\x18\t \x01(\tR\x10assignedByUserIdJ\x06\b\xe8\a\x10\xd0\x0f\"\x8e\b\n" +
 	"\fAgentProfile\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -1976,11 +2080,11 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x05roles\x18\x17 \x03(\v2%.nekode.daemon.v1.AgentRoleAssignmentR\x05roles\x12\x1f\n" +
 	"\vmemory_root\x18\x18 \x01(\tR\n" +
 	"memoryRoot\x12+\n" +
-	"\x11coordination_tags\x18\x19 \x03(\tR\x10coordinationTags\"3\n" +
+	"\x11coordination_tags\x18\x19 \x03(\tR\x10coordinationTagsJ\x06\b\xe8\a\x10\xd0\x0f\"3\n" +
 	"\x16GetAgentProfileRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\"S\n" +
 	"\x17GetAgentProfileResponse\x128\n" +
-	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"\xbf\x02\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"\xa4\x03\n" +
 	"\x19UpdateAgentProfileRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12%\n" +
@@ -1989,16 +2093,20 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x10avatar_mime_type\x18\x05 \x01(\tR\x0eavatarMimeType\x12%\n" +
 	"\x0eavatar_content\x18\x06 \x01(\fR\ravatarContent\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\a \x01(\tR\trequestIdB\x0f\n" +
+	"request_id\x18\a \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontextB\x0f\n" +
 	"\r_display_nameB\x0e\n" +
 	"\f_description\"V\n" +
 	"\x1aUpdateAgentProfileResponse\x128\n" +
-	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"z\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"\xdf\x01\n" +
 	"\x12SetAgentEnvRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12*\n" +
 	"\x03env\x18\x02 \x03(\v2\x18.nekode.daemon.v1.EnvVarR\x03env\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x03 \x01(\tR\trequestId\"O\n" +
+	"request_id\x18\x03 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"O\n" +
 	"\x13SetAgentEnvResponse\x128\n" +
 	"\aprofile\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"0\n" +
 	"\x18ListAgentProfilesRequest\x12\x14\n" +
@@ -2009,7 +2117,7 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\rR\x05limit\"I\n" +
 	"\x14ListAgentDMsResponse\x121\n" +
-	"\x03dms\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\x03dms\"\x9b\x03\n" +
+	"\x03dms\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\x03dms\"\xa3\x03\n" +
 	"\x15AgentControlOperation\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1f\n" +
@@ -2022,7 +2130,7 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x15requested_by_agent_id\x18\b \x01(\tR\x12requestedByAgentId\x12*\n" +
 	"\x11created_time_unix\x18\t \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\n" +
-	" \x01(\x03R\x0fupdatedTimeUnix\"\xa7\x02\n" +
+	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xd3\x03\n" +
 	"\x13ControlAgentRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
@@ -2032,11 +2140,17 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x121\n" +
 	"\x15requested_by_agent_id\x18\x06 \x01(\tR\x12requestedByAgentId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\a \x01(\tR\trequestId\"\xb3\x01\n" +
+	"request_id\x18\a \x01(\tR\trequestId\x12\x19\n" +
+	"\blease_id\x18\b \x01(\tR\aleaseId\x12*\n" +
+	"\x11lease_ttl_seconds\x18\t \x01(\rR\x0fleaseTtlSeconds\x12'\n" +
+	"\x0fidempotency_key\x18\n" +
+	" \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\v \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"\xe2\x01\n" +
 	"\x14ControlAgentResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12E\n" +
 	"\toperation\x18\x02 \x01(\v2'.nekode.daemon.v1.AgentControlOperationR\toperation\x128\n" +
-	"\aprofile\x18\x03 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\"\xa1\x02\n" +
+	"\aprofile\x18\x03 \x01(\v2\x1e.nekode.daemon.v1.AgentProfileR\aprofile\x12-\n" +
+	"\x05lease\x18\x04 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\"\x86\x03\n" +
 	"\x1dSendAgentDirectMessageRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12&\n" +
@@ -2045,10 +2159,12 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\x05 \x01(\tR\trequestId\x12%\n" +
 	"\x0eattachment_ids\x18\x06 \x03(\tR\rattachmentIds\x12-\n" +
-	"\x13reply_to_message_id\x18\a \x01(\tR\x10replyToMessageId\"~\n" +
+	"\x13reply_to_message_id\x18\a \x01(\tR\x10replyToMessageId\x12'\n" +
+	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"~\n" +
 	"\x1eSendAgentDirectMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
-	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xb9\x05\n" +
+	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xc1\x05\n" +
 	"\x13AgentStatusSnapshot\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
@@ -2070,11 +2186,13 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\bseverity\x18\x0f \x01(\tR\bseverity\x12*\n" +
 	"\x11started_time_unix\x18\x10 \x01(\x03R\x0fstartedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\x11 \x01(\x03R\x0fupdatedTimeUnix\x12*\n" +
-	"\x11expires_time_unix\x18\x12 \x01(\x03R\x0fexpiresTimeUnix\"x\n" +
+	"\x11expires_time_unix\x18\x12 \x01(\x03R\x0fexpiresTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xdd\x01\n" +
 	"\x18UpdateAgentStatusRequest\x12=\n" +
 	"\x06status\x18\x01 \x01(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\x06status\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tR\trequestId\"Z\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"Z\n" +
 	"\x19UpdateAgentStatusResponse\x12=\n" +
 	"\x06status\x18\x01 \x01(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\x06status\"c\n" +
 	"\x18ListAgentStatusesRequest\x12\x19\n" +
@@ -2168,8 +2286,10 @@ var file_nekode_daemon_v1_agent_proto_goTypes = []any{
 	(*SkillRecord)(nil),                    // 27: nekode.daemon.v1.SkillRecord
 	(*Capability)(nil),                     // 28: nekode.daemon.v1.Capability
 	(*Permission)(nil),                     // 29: nekode.daemon.v1.Permission
-	(*ChannelRecord)(nil),                  // 30: nekode.daemon.v1.ChannelRecord
-	(*CollaborationMessage)(nil),           // 31: nekode.daemon.v1.CollaborationMessage
+	(*RequestContext)(nil),                 // 30: nekode.daemon.v1.RequestContext
+	(*ChannelRecord)(nil),                  // 31: nekode.daemon.v1.ChannelRecord
+	(*Lease)(nil),                          // 32: nekode.daemon.v1.Lease
+	(*CollaborationMessage)(nil),           // 33: nekode.daemon.v1.CollaborationMessage
 }
 var file_nekode_daemon_v1_agent_proto_depIdxs = []int32{
 	26, // 0: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
@@ -2179,27 +2299,33 @@ var file_nekode_daemon_v1_agent_proto_depIdxs = []int32{
 	21, // 4: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
 	4,  // 5: nekode.daemon.v1.AgentProfile.roles:type_name -> nekode.daemon.v1.AgentRoleAssignment
 	5,  // 6: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	5,  // 7: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	26, // 8: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
-	5,  // 9: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	5,  // 10: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
-	30, // 11: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
-	0,  // 12: nekode.daemon.v1.AgentControlOperation.action:type_name -> nekode.daemon.v1.AgentControlAction
-	0,  // 13: nekode.daemon.v1.ControlAgentRequest.action:type_name -> nekode.daemon.v1.AgentControlAction
-	16, // 14: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
-	5,  // 15: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	31, // 16: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	1,  // 17: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
-	2,  // 18: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
-	3,  // 19: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
-	21, // 20: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	21, // 21: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	21, // 22: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	30, // 7: nekode.daemon.v1.UpdateAgentProfileRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	5,  // 8: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	26, // 9: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
+	30, // 10: nekode.daemon.v1.SetAgentEnvRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	5,  // 11: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	5,  // 12: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
+	31, // 13: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
+	0,  // 14: nekode.daemon.v1.AgentControlOperation.action:type_name -> nekode.daemon.v1.AgentControlAction
+	0,  // 15: nekode.daemon.v1.ControlAgentRequest.action:type_name -> nekode.daemon.v1.AgentControlAction
+	30, // 16: nekode.daemon.v1.ControlAgentRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	16, // 17: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
+	5,  // 18: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	32, // 19: nekode.daemon.v1.ControlAgentResponse.lease:type_name -> nekode.daemon.v1.Lease
+	30, // 20: nekode.daemon.v1.SendAgentDirectMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	33, // 21: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	1,  // 22: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
+	2,  // 23: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
+	3,  // 24: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
+	21, // 25: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	30, // 26: nekode.daemon.v1.UpdateAgentStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	21, // 27: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	21, // 28: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_agent_proto_init() }

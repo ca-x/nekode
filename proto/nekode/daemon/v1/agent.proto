@@ -8,6 +8,8 @@ import "nekode/daemon/v1/common.proto";
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message AgentRoleAssignment {
+  reserved 1000 to 1999;
+
   string role_id = 1;
   string name = 2; // implementer | reviewer | designer | releaser | observer | custom
   string scope = 3; // server | channel | thread | task | run
@@ -19,6 +21,8 @@ message AgentRoleAssignment {
   string assigned_by_user_id = 9;
 }
 message AgentProfile {
+  reserved 1000 to 1999;
+
   string agent_id = 1;
   string name = 2;
   string display_name = 3;
@@ -59,6 +63,8 @@ message UpdateAgentProfileRequest {
   string avatar_mime_type = 5;
   bytes avatar_content = 6;
   string request_id = 7;
+  string idempotency_key = 8;
+  RequestContext context = 9;
 }
 message UpdateAgentProfileResponse {
   AgentProfile profile = 1;
@@ -67,6 +73,8 @@ message SetAgentEnvRequest {
   string agent_id = 1;
   repeated EnvVar env = 2;
   string request_id = 3;
+  string idempotency_key = 4;
+  RequestContext context = 5;
 }
 message SetAgentEnvResponse {
   AgentProfile profile = 1;
@@ -92,6 +100,8 @@ enum AgentControlAction {
   AGENT_CONTROL_ACTION_RESTART_FULL_RESET = 4;
 }
 message AgentControlOperation {
+  reserved 1000 to 1999;
+
   string operation_id = 1;
   string agent_id = 2;
   string computer_id = 3;
@@ -111,11 +121,16 @@ message ControlAgentRequest {
   string reason = 5;
   string requested_by_agent_id = 6;
   string request_id = 7;
+  string lease_id = 8;
+  uint32 lease_ttl_seconds = 9;
+  string idempotency_key = 10;
+  RequestContext context = 11;
 }
 message ControlAgentResponse {
   bool accepted = 1;
   AgentControlOperation operation = 2;
   AgentProfile profile = 3;
+  Lease lease = 4;
 }
 message SendAgentDirectMessageRequest {
   string agent_id = 1;
@@ -125,6 +140,8 @@ message SendAgentDirectMessageRequest {
   string request_id = 5;
   repeated string attachment_ids = 6;
   string reply_to_message_id = 7;
+  string idempotency_key = 8;
+  RequestContext context = 9;
 }
 message SendAgentDirectMessageResponse {
   bool accepted = 1;
@@ -166,6 +183,8 @@ enum AgentHealth {
   AGENT_HEALTH_OFFLINE = 7;
 }
 message AgentStatusSnapshot {
+  reserved 1000 to 1999;
+
   string agent_id = 1;
   string computer_id = 2;
   string runtime_profile_id = 3;
@@ -188,6 +207,8 @@ message AgentStatusSnapshot {
 message UpdateAgentStatusRequest {
   AgentStatusSnapshot status = 1;
   string request_id = 2;
+  string idempotency_key = 3;
+  RequestContext context = 4;
 }
 message UpdateAgentStatusResponse {
   AgentStatusSnapshot status = 1;

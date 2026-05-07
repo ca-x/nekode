@@ -7,6 +7,8 @@ import "nekode/daemon/v1/common.proto";
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
 message WorkPlanItem {
+  reserved 1000 to 1999;
+
   string item_id = 1;
   string summary = 2;
   string status = 3; // pending | in_progress | completed | blocked | skipped
@@ -19,6 +21,8 @@ message WorkPlanItem {
 }
 
 message WorkPlan {
+  reserved 1000 to 1999;
+
   string plan_id = 1;
   string target = 2;
   string thread_id = 3;
@@ -32,6 +36,8 @@ message WorkPlan {
 }
 
 message ProgressUpdate {
+  reserved 1000 to 1999;
+
   string update_id = 1;
   string target = 2;
   string task_id = 3;
@@ -46,6 +52,8 @@ message ProgressUpdate {
 }
 
 message VerificationResult {
+  reserved 1000 to 1999;
+
   string verification_id = 1;
   string kind = 2; // command | test | build | lint | smoke | review | manual
   string command = 3;
@@ -58,6 +66,8 @@ message VerificationResult {
 }
 
 message AcceptanceEvidence {
+  reserved 1000 to 1999;
+
   string evidence_id = 1;
   string target = 2;
   string task_id = 3;
@@ -73,6 +83,8 @@ message AcceptanceEvidence {
 }
 
 message ReleaseGate {
+  reserved 1000 to 1999;
+
   string release_gate_id = 1;
   string target = 2;
   string task_id = 3;
@@ -86,6 +98,8 @@ message ReleaseGate {
 }
 
 message RoleHandoff {
+  reserved 1000 to 1999;
+
   string handoff_id = 1;
   string target = 2;
   string task_id = 3;
@@ -97,9 +111,28 @@ message RoleHandoff {
   string status = 9; // proposed | accepted | declined | canceled | completed
   int64 created_time_unix = 10;
   int64 accepted_time_unix = 11;
+  repeated string context_task_ids = 12;
+  repeated string file_paths = 13;
+  string task_graph_id = 14;
+  int64 task_graph_version = 15;
+}
+
+message NegotiationCounterProposal {
+  reserved 1000 to 1999;
+
+  string counter_proposal_id = 1;
+  string proposed_by_agent_id = 2;
+  string proposed_by_user_id = 3;
+  string reason = 4;
+  int64 proposed_deadline_unix = 5;
+  repeated string included_scope = 6;
+  repeated string deferred_scope = 7;
+  int64 created_time_unix = 8;
 }
 
 message DeadlineNegotiation {
+  reserved 1000 to 1999;
+
   string negotiation_id = 1;
   string target = 2;
   string task_id = 3;
@@ -110,9 +143,13 @@ message DeadlineNegotiation {
   string reason = 8;
   string status = 9; // proposed | accepted | rejected | superseded
   int64 decided_time_unix = 10;
+  repeated NegotiationCounterProposal counter_proposals = 11;
+  string accepted_counter_proposal_id = 12;
 }
 
 message ScopeNegotiation {
+  reserved 1000 to 1999;
+
   string negotiation_id = 1;
   string target = 2;
   string task_id = 3;
@@ -123,9 +160,13 @@ message ScopeNegotiation {
   string reason = 8;
   string status = 9; // proposed | accepted | rejected | superseded
   int64 decided_time_unix = 10;
+  repeated NegotiationCounterProposal counter_proposals = 11;
+  string accepted_counter_proposal_id = 12;
 }
 
 message CoordinationRecord {
+  reserved 1000 to 1999;
+
   string coordination_id = 1;
   string target = 2;
   string thread_id = 3;
@@ -135,6 +176,8 @@ message CoordinationRecord {
   string kind = 7; // work_plan | progress_update | acceptance_evidence | release_gate | role_handoff | deadline_negotiation | scope_negotiation
   int64 created_time_unix = 8;
   string request_id = 9;
+  string idempotency_key = 10;
+  RequestContext context = 11;
 
   oneof payload {
     WorkPlan work_plan = 20;
@@ -150,6 +193,8 @@ message CoordinationRecord {
 message PublishCoordinationRecordRequest {
   CoordinationRecord record = 1;
   string request_id = 2;
+  string idempotency_key = 3;
+  RequestContext context = 4;
 }
 
 message PublishCoordinationRecordResponse {
@@ -164,9 +209,24 @@ message ListCoordinationRecordsRequest {
   string actor_agent_id = 4;
   uint32 limit = 5;
   EventCursor cursor = 6;
+  string page_token = 7;
 }
 
 message ListCoordinationRecordsResponse {
   repeated CoordinationRecord records = 1;
   EventCursor next_cursor = 2;
+  string next_page_token = 3;
+}
+
+message CounterProposeNegotiationRequest {
+  string negotiation_id = 1;
+  string negotiation_kind = 2; // deadline | scope
+  NegotiationCounterProposal counter_proposal = 3;
+  string request_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+}
+
+message CounterProposeNegotiationResponse {
+  CoordinationRecord record = 1;
 }

@@ -31,6 +31,9 @@ type AttachmentRecord struct {
 	SizeBytes       int64                  `protobuf:"varint,6,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
 	StorageRef      string                 `protobuf:"bytes,7,opt,name=storage_ref,json=storageRef,proto3" json:"storage_ref,omitempty"`
 	CreatedTimeUnix int64                  `protobuf:"varint,8,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	DownloadUrl     string                 `protobuf:"bytes,9,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	UploadUrl       string                 `protobuf:"bytes,10,opt,name=upload_url,json=uploadUrl,proto3" json:"upload_url,omitempty"`
+	ExpiresTimeUnix int64                  `protobuf:"varint,11,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -121,16 +124,40 @@ func (x *AttachmentRecord) GetCreatedTimeUnix() int64 {
 	return 0
 }
 
+func (x *AttachmentRecord) GetDownloadUrl() string {
+	if x != nil {
+		return x.DownloadUrl
+	}
+	return ""
+}
+
+func (x *AttachmentRecord) GetUploadUrl() string {
+	if x != nil {
+		return x.UploadUrl
+	}
+	return ""
+}
+
+func (x *AttachmentRecord) GetExpiresTimeUnix() int64 {
+	if x != nil {
+		return x.ExpiresTimeUnix
+	}
+	return 0
+}
+
 type UploadAttachmentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Filename      string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
-	MimeType      string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
-	Content       []byte                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
-	OwnerId       string                 `protobuf:"bytes,5,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	RequestId     string                 `protobuf:"bytes,6,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Target             string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	Filename           string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	MimeType           string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	Content            []byte                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	OwnerId            string                 `protobuf:"bytes,5,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	RequestId          string                 `protobuf:"bytes,6,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey     string                 `protobuf:"bytes,7,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context            *RequestContext        `protobuf:"bytes,8,opt,name=context,proto3" json:"context,omitempty"`
+	PreferPresignedUrl bool                   `protobuf:"varint,9,opt,name=prefer_presigned_url,json=preferPresignedUrl,proto3" json:"prefer_presigned_url,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UploadAttachmentRequest) Reset() {
@@ -205,9 +232,31 @@ func (x *UploadAttachmentRequest) GetRequestId() string {
 	return ""
 }
 
+func (x *UploadAttachmentRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UploadAttachmentRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *UploadAttachmentRequest) GetPreferPresignedUrl() bool {
+	if x != nil {
+		return x.PreferPresignedUrl
+	}
+	return false
+}
+
 type UploadAttachmentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Attachment    *AttachmentRecord      `protobuf:"bytes,1,opt,name=attachment,proto3" json:"attachment,omitempty"`
+	UploadUrl     string                 `protobuf:"bytes,2,opt,name=upload_url,json=uploadUrl,proto3" json:"upload_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,6 +296,13 @@ func (x *UploadAttachmentResponse) GetAttachment() *AttachmentRecord {
 		return x.Attachment
 	}
 	return nil
+}
+
+func (x *UploadAttachmentResponse) GetUploadUrl() string {
+	if x != nil {
+		return x.UploadUrl
+	}
+	return ""
 }
 
 type GetAttachmentRequest struct {
@@ -365,7 +421,7 @@ var File_nekode_daemon_v1_attachment_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_attachment_proto_rawDesc = "" +
 	"\n" +
-	"!nekode/daemon/v1/attachment.proto\x12\x10nekode.daemon.v1\"\x8f\x02\n" +
+	"!nekode/daemon/v1/attachment.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\x85\x03\n" +
 	"\x10AttachmentRecord\x12#\n" +
 	"\rattachment_id\x18\x01 \x01(\tR\fattachmentId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x19\n" +
@@ -376,7 +432,12 @@ const file_nekode_daemon_v1_attachment_proto_rawDesc = "" +
 	"size_bytes\x18\x06 \x01(\x03R\tsizeBytes\x12\x1f\n" +
 	"\vstorage_ref\x18\a \x01(\tR\n" +
 	"storageRef\x12*\n" +
-	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnix\"\xbe\x01\n" +
+	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnix\x12!\n" +
+	"\fdownload_url\x18\t \x01(\tR\vdownloadUrl\x12\x1d\n" +
+	"\n" +
+	"upload_url\x18\n" +
+	" \x01(\tR\tuploadUrl\x12*\n" +
+	"\x11expires_time_unix\x18\v \x01(\x03R\x0fexpiresTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xd5\x02\n" +
 	"\x17UploadAttachmentRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x1b\n" +
@@ -384,11 +445,16 @@ const file_nekode_daemon_v1_attachment_proto_rawDesc = "" +
 	"\acontent\x18\x04 \x01(\fR\acontent\x12\x19\n" +
 	"\bowner_id\x18\x05 \x01(\tR\aownerId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x06 \x01(\tR\trequestId\"^\n" +
+	"request_id\x18\x06 \x01(\tR\trequestId\x12'\n" +
+	"\x0fidempotency_key\x18\a \x01(\tR\x0eidempotencyKey\x12:\n" +
+	"\acontext\x18\b \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x120\n" +
+	"\x14prefer_presigned_url\x18\t \x01(\bR\x12preferPresignedUrl\"}\n" +
 	"\x18UploadAttachmentResponse\x12B\n" +
 	"\n" +
 	"attachment\x18\x01 \x01(\v2\".nekode.daemon.v1.AttachmentRecordR\n" +
-	"attachment\"\x81\x01\n" +
+	"attachment\x12\x1d\n" +
+	"\n" +
+	"upload_url\x18\x02 \x01(\tR\tuploadUrl\"\x81\x01\n" +
 	"\x14GetAttachmentRequest\x12#\n" +
 	"\rattachment_id\x18\x01 \x01(\tR\fattachmentId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12,\n" +
@@ -418,15 +484,17 @@ var file_nekode_daemon_v1_attachment_proto_goTypes = []any{
 	(*UploadAttachmentResponse)(nil), // 2: nekode.daemon.v1.UploadAttachmentResponse
 	(*GetAttachmentRequest)(nil),     // 3: nekode.daemon.v1.GetAttachmentRequest
 	(*GetAttachmentResponse)(nil),    // 4: nekode.daemon.v1.GetAttachmentResponse
+	(*RequestContext)(nil),           // 5: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_attachment_proto_depIdxs = []int32{
-	0, // 0: nekode.daemon.v1.UploadAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
-	0, // 1: nekode.daemon.v1.GetAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	5, // 0: nekode.daemon.v1.UploadAttachmentRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0, // 1: nekode.daemon.v1.UploadAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
+	0, // 2: nekode.daemon.v1.GetAttachmentResponse.attachment:type_name -> nekode.daemon.v1.AttachmentRecord
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_attachment_proto_init() }
@@ -434,6 +502,7 @@ func file_nekode_daemon_v1_attachment_proto_init() {
 	if File_nekode_daemon_v1_attachment_proto != nil {
 		return
 	}
+	file_nekode_daemon_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
