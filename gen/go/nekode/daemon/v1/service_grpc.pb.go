@@ -22,6 +22,7 @@ const (
 	DaemonControlService_RegisterComputer_FullMethodName              = "/nekode.daemon.v1.DaemonControlService/RegisterComputer"
 	DaemonControlService_HeartbeatComputer_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/HeartbeatComputer"
 	DaemonControlService_SyncComputerInventory_FullMethodName         = "/nekode.daemon.v1.DaemonControlService/SyncComputerInventory"
+	DaemonControlService_ListRuntimePresets_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ListRuntimePresets"
 	DaemonControlService_AcquireStartPermit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/AcquireStartPermit"
 	DaemonControlService_ReleaseStartPermit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ReleaseStartPermit"
 	DaemonControlService_FetchAssignedRuns_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
@@ -114,6 +115,9 @@ type DaemonControlServiceClient interface {
 	HeartbeatComputer(ctx context.Context, in *HeartbeatComputerRequest, opts ...grpc.CallOption) (*HeartbeatComputerResponse, error)
 	// Replace the server-visible runtime/workspace inventory for a computer.
 	SyncComputerInventory(ctx context.Context, in *SyncComputerInventoryRequest, opts ...grpc.CallOption) (*SyncComputerInventoryResponse, error)
+	// List known runtime presets. Runtime kind remains an open string; this RPC
+	// only publishes the server's built-in catalog for UI/setup guidance.
+	ListRuntimePresets(ctx context.Context, in *ListRuntimePresetsRequest, opts ...grpc.CallOption) (*ListRuntimePresetsResponse, error)
 	// Acquire an exclusive launch permit before starting an agent run.
 	AcquireStartPermit(ctx context.Context, in *AcquireStartPermitRequest, opts ...grpc.CallOption) (*AcquireStartPermitResponse, error)
 	// Release a launch permit that is no longer needed.
@@ -297,6 +301,16 @@ func (c *daemonControlServiceClient) SyncComputerInventory(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SyncComputerInventoryResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_SyncComputerInventory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ListRuntimePresets(ctx context.Context, in *ListRuntimePresetsRequest, opts ...grpc.CallOption) (*ListRuntimePresetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRuntimePresetsResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ListRuntimePresets_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1077,6 +1091,9 @@ type DaemonControlServiceServer interface {
 	HeartbeatComputer(context.Context, *HeartbeatComputerRequest) (*HeartbeatComputerResponse, error)
 	// Replace the server-visible runtime/workspace inventory for a computer.
 	SyncComputerInventory(context.Context, *SyncComputerInventoryRequest) (*SyncComputerInventoryResponse, error)
+	// List known runtime presets. Runtime kind remains an open string; this RPC
+	// only publishes the server's built-in catalog for UI/setup guidance.
+	ListRuntimePresets(context.Context, *ListRuntimePresetsRequest) (*ListRuntimePresetsResponse, error)
 	// Acquire an exclusive launch permit before starting an agent run.
 	AcquireStartPermit(context.Context, *AcquireStartPermitRequest) (*AcquireStartPermitResponse, error)
 	// Release a launch permit that is no longer needed.
@@ -1244,6 +1261,9 @@ func (UnimplementedDaemonControlServiceServer) HeartbeatComputer(context.Context
 }
 func (UnimplementedDaemonControlServiceServer) SyncComputerInventory(context.Context, *SyncComputerInventoryRequest) (*SyncComputerInventoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SyncComputerInventory not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ListRuntimePresets(context.Context, *ListRuntimePresetsRequest) (*ListRuntimePresetsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRuntimePresets not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) AcquireStartPermit(context.Context, *AcquireStartPermitRequest) (*AcquireStartPermitResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AcquireStartPermit not implemented")
@@ -1538,6 +1558,24 @@ func _DaemonControlService_SyncComputerInventory_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).SyncComputerInventory(ctx, req.(*SyncComputerInventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ListRuntimePresets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRuntimePresetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ListRuntimePresets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ListRuntimePresets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ListRuntimePresets(ctx, req.(*ListRuntimePresetsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2878,6 +2916,10 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SyncComputerInventory",
 			Handler:    _DaemonControlService_SyncComputerInventory_Handler,
+		},
+		{
+			MethodName: "ListRuntimePresets",
+			Handler:    _DaemonControlService_ListRuntimePresets_Handler,
 		},
 		{
 			MethodName: "AcquireStartPermit",

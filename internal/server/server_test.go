@@ -415,6 +415,33 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		t.Fatalf("daemon info initial diagnostics = %+v, want idle with zero agents", infoBody)
 	}
 
+	presets := doGET(t, s, "/api/runtime-presets?includeExperimental=true", token)
+	if presets.Code != http.StatusOK {
+		t.Fatalf("runtime presets status = %d body=%s", presets.Code, presets.Body.String())
+	}
+	var presetBody struct {
+		Items []struct {
+			Kind             string `json:"kind"`
+			SlockSupported   bool   `json:"slockSupported"`
+			MulticaSupported bool   `json:"multicaSupported"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(presets.Body.Bytes(), &presetBody); err != nil {
+		t.Fatalf("decode runtime presets: %v", err)
+	}
+	gotKinds := map[string]bool{}
+	for _, item := range presetBody.Items {
+		gotKinds[item.Kind] = true
+		if item.Kind == "codex" && (!item.SlockSupported || !item.MulticaSupported) {
+			t.Fatalf("codex preset = %+v, want slock and multica support", item)
+		}
+	}
+	for _, kind := range []string{"codex", "claude", "opencode", "kimi", "gemini", "cursor-agent", "copilot", "openclaw", "hermes", "pi", "kiro-cli"} {
+		if !gotKinds[kind] {
+			t.Fatalf("runtime presets missing %q; got=%v", kind, gotKinds)
+		}
+	}
+
 	if _, err := s.daemon.UpdateAgentStatus(context.Background(), &daemonv1.UpdateAgentStatusRequest{
 		Status: &daemonv1.AgentStatusSnapshot{
 			AgentId:       "agent-1",

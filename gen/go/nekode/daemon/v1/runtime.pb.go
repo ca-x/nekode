@@ -548,6 +548,276 @@ func (x *RuntimeProfile) GetCapabilities() []*Capability {
 	return nil
 }
 
+type RuntimePreset struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Open runtime adapter kind. This is a catalog of known values, not a closed
+	// enum; daemons and users may still report custom runtime kinds.
+	Kind             string        `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	DisplayName      string        `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Provider         string        `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	DefaultModel     string        `protobuf:"bytes,4,opt,name=default_model,json=defaultModel,proto3" json:"default_model,omitempty"`
+	Command          string        `protobuf:"bytes,5,opt,name=command,proto3" json:"command,omitempty"`
+	Aliases          []string      `protobuf:"bytes,6,rep,name=aliases,proto3" json:"aliases,omitempty"`
+	DefaultArgs      []string      `protobuf:"bytes,7,rep,name=default_args,json=defaultArgs,proto3" json:"default_args,omitempty"`
+	EnvVarNames      []string      `protobuf:"bytes,8,rep,name=env_var_names,json=envVarNames,proto3" json:"env_var_names,omitempty"`
+	InstallHint      []string      `protobuf:"bytes,9,rep,name=install_hint,json=installHint,proto3" json:"install_hint,omitempty"`
+	Capabilities     []*Capability `protobuf:"bytes,10,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	SlockSupported   bool          `protobuf:"varint,11,opt,name=slock_supported,json=slockSupported,proto3" json:"slock_supported,omitempty"`
+	MulticaSupported bool          `protobuf:"varint,12,opt,name=multica_supported,json=multicaSupported,proto3" json:"multica_supported,omitempty"`
+	Recommended      bool          `protobuf:"varint,13,opt,name=recommended,proto3" json:"recommended,omitempty"`
+	Description      string        `protobuf:"bytes,14,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RuntimePreset) Reset() {
+	*x = RuntimePreset{}
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RuntimePreset) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RuntimePreset) ProtoMessage() {}
+
+func (x *RuntimePreset) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RuntimePreset.ProtoReflect.Descriptor instead.
+func (*RuntimePreset) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RuntimePreset) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *RuntimePreset) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *RuntimePreset) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *RuntimePreset) GetDefaultModel() string {
+	if x != nil {
+		return x.DefaultModel
+	}
+	return ""
+}
+
+func (x *RuntimePreset) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
+}
+
+func (x *RuntimePreset) GetAliases() []string {
+	if x != nil {
+		return x.Aliases
+	}
+	return nil
+}
+
+func (x *RuntimePreset) GetDefaultArgs() []string {
+	if x != nil {
+		return x.DefaultArgs
+	}
+	return nil
+}
+
+func (x *RuntimePreset) GetEnvVarNames() []string {
+	if x != nil {
+		return x.EnvVarNames
+	}
+	return nil
+}
+
+func (x *RuntimePreset) GetInstallHint() []string {
+	if x != nil {
+		return x.InstallHint
+	}
+	return nil
+}
+
+func (x *RuntimePreset) GetCapabilities() []*Capability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *RuntimePreset) GetSlockSupported() bool {
+	if x != nil {
+		return x.SlockSupported
+	}
+	return false
+}
+
+func (x *RuntimePreset) GetMulticaSupported() bool {
+	if x != nil {
+		return x.MulticaSupported
+	}
+	return false
+}
+
+func (x *RuntimePreset) GetRecommended() bool {
+	if x != nil {
+		return x.Recommended
+	}
+	return false
+}
+
+func (x *RuntimePreset) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type ListRuntimePresetsRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	IncludeExperimental bool                   `protobuf:"varint,1,opt,name=include_experimental,json=includeExperimental,proto3" json:"include_experimental,omitempty"`
+	KindPrefix          string                 `protobuf:"bytes,2,opt,name=kind_prefix,json=kindPrefix,proto3" json:"kind_prefix,omitempty"`
+	Limit               uint32                 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor              *EventCursor           `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *ListRuntimePresetsRequest) Reset() {
+	*x = ListRuntimePresetsRequest{}
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRuntimePresetsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRuntimePresetsRequest) ProtoMessage() {}
+
+func (x *ListRuntimePresetsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRuntimePresetsRequest.ProtoReflect.Descriptor instead.
+func (*ListRuntimePresetsRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListRuntimePresetsRequest) GetIncludeExperimental() bool {
+	if x != nil {
+		return x.IncludeExperimental
+	}
+	return false
+}
+
+func (x *ListRuntimePresetsRequest) GetKindPrefix() string {
+	if x != nil {
+		return x.KindPrefix
+	}
+	return ""
+}
+
+func (x *ListRuntimePresetsRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListRuntimePresetsRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+type ListRuntimePresetsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Presets       []*RuntimePreset       `protobuf:"bytes,1,rep,name=presets,proto3" json:"presets,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRuntimePresetsResponse) Reset() {
+	*x = ListRuntimePresetsResponse{}
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRuntimePresetsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRuntimePresetsResponse) ProtoMessage() {}
+
+func (x *ListRuntimePresetsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRuntimePresetsResponse.ProtoReflect.Descriptor instead.
+func (*ListRuntimePresetsResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListRuntimePresetsResponse) GetPresets() []*RuntimePreset {
+	if x != nil {
+		return x.Presets
+	}
+	return nil
+}
+
+func (x *ListRuntimePresetsResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
 type Runtime struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	RuntimeId   string                 `protobuf:"bytes,1,opt,name=runtime_id,json=runtimeId,proto3" json:"runtime_id,omitempty"`
@@ -574,7 +844,7 @@ type Runtime struct {
 
 func (x *Runtime) Reset() {
 	*x = Runtime{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[2]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -586,7 +856,7 @@ func (x *Runtime) String() string {
 func (*Runtime) ProtoMessage() {}
 
 func (x *Runtime) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[2]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -599,7 +869,7 @@ func (x *Runtime) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Runtime.ProtoReflect.Descriptor instead.
 func (*Runtime) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{2}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Runtime) GetRuntimeId() string {
@@ -733,7 +1003,7 @@ type ComputerInventory struct {
 
 func (x *ComputerInventory) Reset() {
 	*x = ComputerInventory{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[3]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -745,7 +1015,7 @@ func (x *ComputerInventory) String() string {
 func (*ComputerInventory) ProtoMessage() {}
 
 func (x *ComputerInventory) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[3]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -758,7 +1028,7 @@ func (x *ComputerInventory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComputerInventory.ProtoReflect.Descriptor instead.
 func (*ComputerInventory) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{3}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ComputerInventory) GetWorkspaces() []*Workspace {
@@ -809,7 +1079,7 @@ type ComputerInfo struct {
 
 func (x *ComputerInfo) Reset() {
 	*x = ComputerInfo{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -821,7 +1091,7 @@ func (x *ComputerInfo) String() string {
 func (*ComputerInfo) ProtoMessage() {}
 
 func (x *ComputerInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -834,7 +1104,7 @@ func (x *ComputerInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComputerInfo.ProtoReflect.Descriptor instead.
 func (*ComputerInfo) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{4}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ComputerInfo) GetDaemonId() string {
@@ -934,7 +1204,7 @@ type RegisterComputerRequest struct {
 
 func (x *RegisterComputerRequest) Reset() {
 	*x = RegisterComputerRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -946,7 +1216,7 @@ func (x *RegisterComputerRequest) String() string {
 func (*RegisterComputerRequest) ProtoMessage() {}
 
 func (x *RegisterComputerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -959,7 +1229,7 @@ func (x *RegisterComputerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterComputerRequest.ProtoReflect.Descriptor instead.
 func (*RegisterComputerRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{5}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RegisterComputerRequest) GetInfo() *ComputerInfo {
@@ -1008,7 +1278,7 @@ type RegisterComputerResponse struct {
 
 func (x *RegisterComputerResponse) Reset() {
 	*x = RegisterComputerResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1020,7 +1290,7 @@ func (x *RegisterComputerResponse) String() string {
 func (*RegisterComputerResponse) ProtoMessage() {}
 
 func (x *RegisterComputerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1033,7 +1303,7 @@ func (x *RegisterComputerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterComputerResponse.ProtoReflect.Descriptor instead.
 func (*RegisterComputerResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{6}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RegisterComputerResponse) GetAccepted() bool {
@@ -1076,7 +1346,7 @@ type HeartbeatComputerRequest struct {
 
 func (x *HeartbeatComputerRequest) Reset() {
 	*x = HeartbeatComputerRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1088,7 +1358,7 @@ func (x *HeartbeatComputerRequest) String() string {
 func (*HeartbeatComputerRequest) ProtoMessage() {}
 
 func (x *HeartbeatComputerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1101,7 +1371,7 @@ func (x *HeartbeatComputerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatComputerRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatComputerRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{7}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *HeartbeatComputerRequest) GetInfo() *ComputerInfo {
@@ -1179,7 +1449,7 @@ type HeartbeatComputerResponse struct {
 
 func (x *HeartbeatComputerResponse) Reset() {
 	*x = HeartbeatComputerResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[8]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1191,7 +1461,7 @@ func (x *HeartbeatComputerResponse) String() string {
 func (*HeartbeatComputerResponse) ProtoMessage() {}
 
 func (x *HeartbeatComputerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[8]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1204,7 +1474,7 @@ func (x *HeartbeatComputerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatComputerResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatComputerResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{8}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *HeartbeatComputerResponse) GetAccepted() bool {
@@ -1270,7 +1540,7 @@ type Run struct {
 
 func (x *Run) Reset() {
 	*x = Run{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[9]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1282,7 +1552,7 @@ func (x *Run) String() string {
 func (*Run) ProtoMessage() {}
 
 func (x *Run) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[9]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1295,7 +1565,7 @@ func (x *Run) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Run.ProtoReflect.Descriptor instead.
 func (*Run) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{9}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Run) GetRunId() string {
@@ -1463,7 +1733,7 @@ type RunStep struct {
 
 func (x *RunStep) Reset() {
 	*x = RunStep{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[10]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1475,7 +1745,7 @@ func (x *RunStep) String() string {
 func (*RunStep) ProtoMessage() {}
 
 func (x *RunStep) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[10]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1488,7 +1758,7 @@ func (x *RunStep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunStep.ProtoReflect.Descriptor instead.
 func (*RunStep) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{10}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *RunStep) GetStepId() string {
@@ -1574,7 +1844,7 @@ type FetchAssignedRunsRequest struct {
 
 func (x *FetchAssignedRunsRequest) Reset() {
 	*x = FetchAssignedRunsRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[11]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1586,7 +1856,7 @@ func (x *FetchAssignedRunsRequest) String() string {
 func (*FetchAssignedRunsRequest) ProtoMessage() {}
 
 func (x *FetchAssignedRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[11]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1599,7 +1869,7 @@ func (x *FetchAssignedRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FetchAssignedRunsRequest.ProtoReflect.Descriptor instead.
 func (*FetchAssignedRunsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{11}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *FetchAssignedRunsRequest) GetComputerId() string {
@@ -1647,7 +1917,7 @@ type FetchAssignedRunsResponse struct {
 
 func (x *FetchAssignedRunsResponse) Reset() {
 	*x = FetchAssignedRunsResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[12]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1659,7 +1929,7 @@ func (x *FetchAssignedRunsResponse) String() string {
 func (*FetchAssignedRunsResponse) ProtoMessage() {}
 
 func (x *FetchAssignedRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[12]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1672,7 +1942,7 @@ func (x *FetchAssignedRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FetchAssignedRunsResponse.ProtoReflect.Descriptor instead.
 func (*FetchAssignedRunsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{12}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *FetchAssignedRunsResponse) GetRuns() []*Run {
@@ -1708,7 +1978,7 @@ type UpdateRunStatusRequest struct {
 
 func (x *UpdateRunStatusRequest) Reset() {
 	*x = UpdateRunStatusRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[13]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1720,7 +1990,7 @@ func (x *UpdateRunStatusRequest) String() string {
 func (*UpdateRunStatusRequest) ProtoMessage() {}
 
 func (x *UpdateRunStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[13]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1733,7 +2003,7 @@ func (x *UpdateRunStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRunStatusRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRunStatusRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{13}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UpdateRunStatusRequest) GetRunId() string {
@@ -1824,7 +2094,7 @@ type UpdateRunStatusResponse struct {
 
 func (x *UpdateRunStatusResponse) Reset() {
 	*x = UpdateRunStatusResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[14]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1836,7 +2106,7 @@ func (x *UpdateRunStatusResponse) String() string {
 func (*UpdateRunStatusResponse) ProtoMessage() {}
 
 func (x *UpdateRunStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[14]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1849,7 +2119,7 @@ func (x *UpdateRunStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRunStatusResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRunStatusResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{14}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateRunStatusResponse) GetAccepted() bool {
@@ -1888,7 +2158,7 @@ type RenewRunLeaseRequest struct {
 
 func (x *RenewRunLeaseRequest) Reset() {
 	*x = RenewRunLeaseRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[15]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1900,7 +2170,7 @@ func (x *RenewRunLeaseRequest) String() string {
 func (*RenewRunLeaseRequest) ProtoMessage() {}
 
 func (x *RenewRunLeaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[15]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1913,7 +2183,7 @@ func (x *RenewRunLeaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewRunLeaseRequest.ProtoReflect.Descriptor instead.
 func (*RenewRunLeaseRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{15}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RenewRunLeaseRequest) GetRunId() string {
@@ -1977,7 +2247,7 @@ type RenewRunLeaseResponse struct {
 
 func (x *RenewRunLeaseResponse) Reset() {
 	*x = RenewRunLeaseResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[16]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1989,7 +2259,7 @@ func (x *RenewRunLeaseResponse) String() string {
 func (*RenewRunLeaseResponse) ProtoMessage() {}
 
 func (x *RenewRunLeaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[16]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2002,7 +2272,7 @@ func (x *RenewRunLeaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenewRunLeaseResponse.ProtoReflect.Descriptor instead.
 func (*RenewRunLeaseResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{16}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RenewRunLeaseResponse) GetAccepted() bool {
@@ -2046,7 +2316,7 @@ type AppendRunStepRequest struct {
 
 func (x *AppendRunStepRequest) Reset() {
 	*x = AppendRunStepRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[17]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2058,7 +2328,7 @@ func (x *AppendRunStepRequest) String() string {
 func (*AppendRunStepRequest) ProtoMessage() {}
 
 func (x *AppendRunStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[17]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2071,7 +2341,7 @@ func (x *AppendRunStepRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendRunStepRequest.ProtoReflect.Descriptor instead.
 func (*AppendRunStepRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{17}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *AppendRunStepRequest) GetStep() *RunStep {
@@ -2120,7 +2390,7 @@ type AppendRunStepResponse struct {
 
 func (x *AppendRunStepResponse) Reset() {
 	*x = AppendRunStepResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[18]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2132,7 +2402,7 @@ func (x *AppendRunStepResponse) String() string {
 func (*AppendRunStepResponse) ProtoMessage() {}
 
 func (x *AppendRunStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[18]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2145,7 +2415,7 @@ func (x *AppendRunStepResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendRunStepResponse.ProtoReflect.Descriptor instead.
 func (*AppendRunStepResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{18}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AppendRunStepResponse) GetAccepted() bool {
@@ -2182,7 +2452,7 @@ type ListRunsRequest struct {
 
 func (x *ListRunsRequest) Reset() {
 	*x = ListRunsRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[19]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2194,7 +2464,7 @@ func (x *ListRunsRequest) String() string {
 func (*ListRunsRequest) ProtoMessage() {}
 
 func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[19]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2207,7 +2477,7 @@ func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{19}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListRunsRequest) GetTarget() string {
@@ -2255,7 +2525,7 @@ type ListRunsResponse struct {
 
 func (x *ListRunsResponse) Reset() {
 	*x = ListRunsResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[20]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2267,7 +2537,7 @@ func (x *ListRunsResponse) String() string {
 func (*ListRunsResponse) ProtoMessage() {}
 
 func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[20]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2280,7 +2550,7 @@ func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListRunsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{20}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListRunsResponse) GetRuns() []*Run {
@@ -2306,7 +2576,7 @@ type GetRunRequest struct {
 
 func (x *GetRunRequest) Reset() {
 	*x = GetRunRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[21]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2318,7 +2588,7 @@ func (x *GetRunRequest) String() string {
 func (*GetRunRequest) ProtoMessage() {}
 
 func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[21]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2331,7 +2601,7 @@ func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRunRequest.ProtoReflect.Descriptor instead.
 func (*GetRunRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{21}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *GetRunRequest) GetRunId() string {
@@ -2351,7 +2621,7 @@ type GetRunResponse struct {
 
 func (x *GetRunResponse) Reset() {
 	*x = GetRunResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[22]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2363,7 +2633,7 @@ func (x *GetRunResponse) String() string {
 func (*GetRunResponse) ProtoMessage() {}
 
 func (x *GetRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[22]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2376,7 +2646,7 @@ func (x *GetRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRunResponse.ProtoReflect.Descriptor instead.
 func (*GetRunResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{22}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetRunResponse) GetRun() *Run {
@@ -2406,7 +2676,7 @@ type WorkspaceTreeEntry struct {
 
 func (x *WorkspaceTreeEntry) Reset() {
 	*x = WorkspaceTreeEntry{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[23]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2418,7 +2688,7 @@ func (x *WorkspaceTreeEntry) String() string {
 func (*WorkspaceTreeEntry) ProtoMessage() {}
 
 func (x *WorkspaceTreeEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[23]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2431,7 +2701,7 @@ func (x *WorkspaceTreeEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceTreeEntry.ProtoReflect.Descriptor instead.
 func (*WorkspaceTreeEntry) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{23}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *WorkspaceTreeEntry) GetPath() string {
@@ -2482,7 +2752,7 @@ type ListWorkspaceTreeRequest struct {
 
 func (x *ListWorkspaceTreeRequest) Reset() {
 	*x = ListWorkspaceTreeRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[24]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2494,7 +2764,7 @@ func (x *ListWorkspaceTreeRequest) String() string {
 func (*ListWorkspaceTreeRequest) ProtoMessage() {}
 
 func (x *ListWorkspaceTreeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[24]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2507,7 +2777,7 @@ func (x *ListWorkspaceTreeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkspaceTreeRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkspaceTreeRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{24}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListWorkspaceTreeRequest) GetWorkspaceId() string {
@@ -2550,7 +2820,7 @@ type ListWorkspaceTreeResponse struct {
 
 func (x *ListWorkspaceTreeResponse) Reset() {
 	*x = ListWorkspaceTreeResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[25]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2562,7 +2832,7 @@ func (x *ListWorkspaceTreeResponse) String() string {
 func (*ListWorkspaceTreeResponse) ProtoMessage() {}
 
 func (x *ListWorkspaceTreeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[25]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2575,7 +2845,7 @@ func (x *ListWorkspaceTreeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkspaceTreeResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkspaceTreeResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{25}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListWorkspaceTreeResponse) GetWorkspaceId() string {
@@ -2618,7 +2888,7 @@ type ReadWorkspaceFileRequest struct {
 
 func (x *ReadWorkspaceFileRequest) Reset() {
 	*x = ReadWorkspaceFileRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[26]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2630,7 +2900,7 @@ func (x *ReadWorkspaceFileRequest) String() string {
 func (*ReadWorkspaceFileRequest) ProtoMessage() {}
 
 func (x *ReadWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[26]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2643,7 +2913,7 @@ func (x *ReadWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadWorkspaceFileRequest.ProtoReflect.Descriptor instead.
 func (*ReadWorkspaceFileRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{26}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ReadWorkspaceFileRequest) GetWorkspaceId() string {
@@ -2680,7 +2950,7 @@ type ReadWorkspaceFileResponse struct {
 
 func (x *ReadWorkspaceFileResponse) Reset() {
 	*x = ReadWorkspaceFileResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[27]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2692,7 +2962,7 @@ func (x *ReadWorkspaceFileResponse) String() string {
 func (*ReadWorkspaceFileResponse) ProtoMessage() {}
 
 func (x *ReadWorkspaceFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[27]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2705,7 +2975,7 @@ func (x *ReadWorkspaceFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadWorkspaceFileResponse.ProtoReflect.Descriptor instead.
 func (*ReadWorkspaceFileResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{27}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ReadWorkspaceFileResponse) GetWorkspaceId() string {
@@ -2759,7 +3029,7 @@ type McpResourceSubscription struct {
 
 func (x *McpResourceSubscription) Reset() {
 	*x = McpResourceSubscription{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[28]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2771,7 +3041,7 @@ func (x *McpResourceSubscription) String() string {
 func (*McpResourceSubscription) ProtoMessage() {}
 
 func (x *McpResourceSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[28]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2784,7 +3054,7 @@ func (x *McpResourceSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use McpResourceSubscription.ProtoReflect.Descriptor instead.
 func (*McpResourceSubscription) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{28}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *McpResourceSubscription) GetSubscriptionId() string {
@@ -2859,7 +3129,7 @@ type McpResourceUpdate struct {
 
 func (x *McpResourceUpdate) Reset() {
 	*x = McpResourceUpdate{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[29]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2871,7 +3141,7 @@ func (x *McpResourceUpdate) String() string {
 func (*McpResourceUpdate) ProtoMessage() {}
 
 func (x *McpResourceUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[29]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2884,7 +3154,7 @@ func (x *McpResourceUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use McpResourceUpdate.ProtoReflect.Descriptor instead.
 func (*McpResourceUpdate) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{29}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *McpResourceUpdate) GetUpdateId() string {
@@ -2955,7 +3225,7 @@ type SubscribeMcpResourceRequest struct {
 
 func (x *SubscribeMcpResourceRequest) Reset() {
 	*x = SubscribeMcpResourceRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[30]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2967,7 +3237,7 @@ func (x *SubscribeMcpResourceRequest) String() string {
 func (*SubscribeMcpResourceRequest) ProtoMessage() {}
 
 func (x *SubscribeMcpResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[30]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2980,7 +3250,7 @@ func (x *SubscribeMcpResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeMcpResourceRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeMcpResourceRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{30}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *SubscribeMcpResourceRequest) GetSubscription() *McpResourceSubscription {
@@ -3020,7 +3290,7 @@ type SubscribeMcpResourceResponse struct {
 
 func (x *SubscribeMcpResourceResponse) Reset() {
 	*x = SubscribeMcpResourceResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[31]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3032,7 +3302,7 @@ func (x *SubscribeMcpResourceResponse) String() string {
 func (*SubscribeMcpResourceResponse) ProtoMessage() {}
 
 func (x *SubscribeMcpResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[31]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3045,7 +3315,7 @@ func (x *SubscribeMcpResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeMcpResourceResponse.ProtoReflect.Descriptor instead.
 func (*SubscribeMcpResourceResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{31}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *SubscribeMcpResourceResponse) GetSubscription() *McpResourceSubscription {
@@ -3068,7 +3338,7 @@ type CancelMcpResourceSubscriptionRequest struct {
 
 func (x *CancelMcpResourceSubscriptionRequest) Reset() {
 	*x = CancelMcpResourceSubscriptionRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[32]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3080,7 +3350,7 @@ func (x *CancelMcpResourceSubscriptionRequest) String() string {
 func (*CancelMcpResourceSubscriptionRequest) ProtoMessage() {}
 
 func (x *CancelMcpResourceSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[32]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3093,7 +3363,7 @@ func (x *CancelMcpResourceSubscriptionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CancelMcpResourceSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*CancelMcpResourceSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{32}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CancelMcpResourceSubscriptionRequest) GetSubscriptionId() string {
@@ -3141,7 +3411,7 @@ type CancelMcpResourceSubscriptionResponse struct {
 
 func (x *CancelMcpResourceSubscriptionResponse) Reset() {
 	*x = CancelMcpResourceSubscriptionResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[33]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3153,7 +3423,7 @@ func (x *CancelMcpResourceSubscriptionResponse) String() string {
 func (*CancelMcpResourceSubscriptionResponse) ProtoMessage() {}
 
 func (x *CancelMcpResourceSubscriptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[33]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3166,7 +3436,7 @@ func (x *CancelMcpResourceSubscriptionResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CancelMcpResourceSubscriptionResponse.ProtoReflect.Descriptor instead.
 func (*CancelMcpResourceSubscriptionResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{33}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CancelMcpResourceSubscriptionResponse) GetAccepted() bool {
@@ -3195,7 +3465,7 @@ type ListMcpResourceUpdatesRequest struct {
 
 func (x *ListMcpResourceUpdatesRequest) Reset() {
 	*x = ListMcpResourceUpdatesRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[34]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3207,7 +3477,7 @@ func (x *ListMcpResourceUpdatesRequest) String() string {
 func (*ListMcpResourceUpdatesRequest) ProtoMessage() {}
 
 func (x *ListMcpResourceUpdatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[34]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3220,7 +3490,7 @@ func (x *ListMcpResourceUpdatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMcpResourceUpdatesRequest.ProtoReflect.Descriptor instead.
 func (*ListMcpResourceUpdatesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{34}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListMcpResourceUpdatesRequest) GetSubscriptionId() string {
@@ -3261,7 +3531,7 @@ type ListMcpResourceUpdatesResponse struct {
 
 func (x *ListMcpResourceUpdatesResponse) Reset() {
 	*x = ListMcpResourceUpdatesResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[35]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3273,7 +3543,7 @@ func (x *ListMcpResourceUpdatesResponse) String() string {
 func (*ListMcpResourceUpdatesResponse) ProtoMessage() {}
 
 func (x *ListMcpResourceUpdatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[35]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3286,7 +3556,7 @@ func (x *ListMcpResourceUpdatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMcpResourceUpdatesResponse.ProtoReflect.Descriptor instead.
 func (*ListMcpResourceUpdatesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{35}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListMcpResourceUpdatesResponse) GetUpdates() []*McpResourceUpdate {
@@ -3317,7 +3587,7 @@ type SyncComputerInventoryRequest struct {
 
 func (x *SyncComputerInventoryRequest) Reset() {
 	*x = SyncComputerInventoryRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[36]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3329,7 +3599,7 @@ func (x *SyncComputerInventoryRequest) String() string {
 func (*SyncComputerInventoryRequest) ProtoMessage() {}
 
 func (x *SyncComputerInventoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[36]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3342,7 +3612,7 @@ func (x *SyncComputerInventoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncComputerInventoryRequest.ProtoReflect.Descriptor instead.
 func (*SyncComputerInventoryRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{36}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *SyncComputerInventoryRequest) GetInfo() *ComputerInfo {
@@ -3398,7 +3668,7 @@ type SyncComputerInventoryResponse struct {
 
 func (x *SyncComputerInventoryResponse) Reset() {
 	*x = SyncComputerInventoryResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[37]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3410,7 +3680,7 @@ func (x *SyncComputerInventoryResponse) String() string {
 func (*SyncComputerInventoryResponse) ProtoMessage() {}
 
 func (x *SyncComputerInventoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[37]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3423,7 +3693,7 @@ func (x *SyncComputerInventoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncComputerInventoryResponse.ProtoReflect.Descriptor instead.
 func (*SyncComputerInventoryResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{37}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *SyncComputerInventoryResponse) GetAccepted() bool {
@@ -3462,7 +3732,7 @@ type AcquireStartPermitRequest struct {
 
 func (x *AcquireStartPermitRequest) Reset() {
 	*x = AcquireStartPermitRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[38]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3474,7 +3744,7 @@ func (x *AcquireStartPermitRequest) String() string {
 func (*AcquireStartPermitRequest) ProtoMessage() {}
 
 func (x *AcquireStartPermitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[38]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3487,7 +3757,7 @@ func (x *AcquireStartPermitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcquireStartPermitRequest.ProtoReflect.Descriptor instead.
 func (*AcquireStartPermitRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{38}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *AcquireStartPermitRequest) GetComputerId() string {
@@ -3552,7 +3822,7 @@ type AcquireStartPermitResponse struct {
 
 func (x *AcquireStartPermitResponse) Reset() {
 	*x = AcquireStartPermitResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[39]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3564,7 +3834,7 @@ func (x *AcquireStartPermitResponse) String() string {
 func (*AcquireStartPermitResponse) ProtoMessage() {}
 
 func (x *AcquireStartPermitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[39]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3577,7 +3847,7 @@ func (x *AcquireStartPermitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcquireStartPermitResponse.ProtoReflect.Descriptor instead.
 func (*AcquireStartPermitResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{39}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *AcquireStartPermitResponse) GetGranted() bool {
@@ -3629,7 +3899,7 @@ type ReleaseStartPermitRequest struct {
 
 func (x *ReleaseStartPermitRequest) Reset() {
 	*x = ReleaseStartPermitRequest{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[40]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3641,7 +3911,7 @@ func (x *ReleaseStartPermitRequest) String() string {
 func (*ReleaseStartPermitRequest) ProtoMessage() {}
 
 func (x *ReleaseStartPermitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[40]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3654,7 +3924,7 @@ func (x *ReleaseStartPermitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseStartPermitRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseStartPermitRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{40}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ReleaseStartPermitRequest) GetLeaseId() string {
@@ -3708,7 +3978,7 @@ type ReleaseStartPermitResponse struct {
 
 func (x *ReleaseStartPermitResponse) Reset() {
 	*x = ReleaseStartPermitResponse{}
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[41]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3720,7 +3990,7 @@ func (x *ReleaseStartPermitResponse) String() string {
 func (*ReleaseStartPermitResponse) ProtoMessage() {}
 
 func (x *ReleaseStartPermitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[41]
+	mi := &file_nekode_daemon_v1_runtime_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3733,7 +4003,7 @@ func (x *ReleaseStartPermitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseStartPermitResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseStartPermitResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{41}
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ReleaseStartPermitResponse) GetAccepted() bool {
@@ -3766,7 +4036,33 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\fworkspace_id\x18\x06 \x01(\tR\vworkspaceId\x12*\n" +
 	"\x03env\x18\a \x03(\v2\x18.nekode.daemon.v1.EnvVarR\x03env\x125\n" +
 	"\x06skills\x18\b \x03(\v2\x1d.nekode.daemon.v1.SkillRecordR\x06skills\x12@\n" +
-	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"\x8a\x05\n" +
+	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"\x89\x04\n" +
+	"\rRuntimePreset\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\x12#\n" +
+	"\rdefault_model\x18\x04 \x01(\tR\fdefaultModel\x12\x18\n" +
+	"\acommand\x18\x05 \x01(\tR\acommand\x12\x18\n" +
+	"\aaliases\x18\x06 \x03(\tR\aaliases\x12!\n" +
+	"\fdefault_args\x18\a \x03(\tR\vdefaultArgs\x12\"\n" +
+	"\renv_var_names\x18\b \x03(\tR\venvVarNames\x12!\n" +
+	"\finstall_hint\x18\t \x03(\tR\vinstallHint\x12@\n" +
+	"\fcapabilities\x18\n" +
+	" \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\x12'\n" +
+	"\x0fslock_supported\x18\v \x01(\bR\x0eslockSupported\x12+\n" +
+	"\x11multica_supported\x18\f \x01(\bR\x10multicaSupported\x12 \n" +
+	"\vrecommended\x18\r \x01(\bR\vrecommended\x12 \n" +
+	"\vdescription\x18\x0e \x01(\tR\vdescriptionJ\x06\b\xe8\a\x10\xd0\x0f\"\xbc\x01\n" +
+	"\x19ListRuntimePresetsRequest\x121\n" +
+	"\x14include_experimental\x18\x01 \x01(\bR\x13includeExperimental\x12\x1f\n" +
+	"\vkind_prefix\x18\x02 \x01(\tR\n" +
+	"kindPrefix\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x97\x01\n" +
+	"\x1aListRuntimePresetsResponse\x129\n" +
+	"\apresets\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.RuntimePresetR\apresets\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\x8a\x05\n" +
 	"\aRuntime\x12\x1d\n" +
 	"\n" +
 	"runtime_id\x18\x01 \x01(\tR\truntimeId\x12\x1f\n" +
@@ -4113,7 +4409,7 @@ func file_nekode_daemon_v1_runtime_proto_rawDescGZIP() []byte {
 }
 
 var file_nekode_daemon_v1_runtime_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_nekode_daemon_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
+var file_nekode_daemon_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
 var file_nekode_daemon_v1_runtime_proto_goTypes = []any{
 	(ComputerStatus)(0),                           // 0: nekode.daemon.v1.ComputerStatus
 	(RunState)(0),                                 // 1: nekode.daemon.v1.RunState
@@ -4122,119 +4418,126 @@ var file_nekode_daemon_v1_runtime_proto_goTypes = []any{
 	(McpResourceSubscriptionStatus)(0),            // 4: nekode.daemon.v1.McpResourceSubscriptionStatus
 	(*Workspace)(nil),                             // 5: nekode.daemon.v1.Workspace
 	(*RuntimeProfile)(nil),                        // 6: nekode.daemon.v1.RuntimeProfile
-	(*Runtime)(nil),                               // 7: nekode.daemon.v1.Runtime
-	(*ComputerInventory)(nil),                     // 8: nekode.daemon.v1.ComputerInventory
-	(*ComputerInfo)(nil),                          // 9: nekode.daemon.v1.ComputerInfo
-	(*RegisterComputerRequest)(nil),               // 10: nekode.daemon.v1.RegisterComputerRequest
-	(*RegisterComputerResponse)(nil),              // 11: nekode.daemon.v1.RegisterComputerResponse
-	(*HeartbeatComputerRequest)(nil),              // 12: nekode.daemon.v1.HeartbeatComputerRequest
-	(*HeartbeatComputerResponse)(nil),             // 13: nekode.daemon.v1.HeartbeatComputerResponse
-	(*Run)(nil),                                   // 14: nekode.daemon.v1.Run
-	(*RunStep)(nil),                               // 15: nekode.daemon.v1.RunStep
-	(*FetchAssignedRunsRequest)(nil),              // 16: nekode.daemon.v1.FetchAssignedRunsRequest
-	(*FetchAssignedRunsResponse)(nil),             // 17: nekode.daemon.v1.FetchAssignedRunsResponse
-	(*UpdateRunStatusRequest)(nil),                // 18: nekode.daemon.v1.UpdateRunStatusRequest
-	(*UpdateRunStatusResponse)(nil),               // 19: nekode.daemon.v1.UpdateRunStatusResponse
-	(*RenewRunLeaseRequest)(nil),                  // 20: nekode.daemon.v1.RenewRunLeaseRequest
-	(*RenewRunLeaseResponse)(nil),                 // 21: nekode.daemon.v1.RenewRunLeaseResponse
-	(*AppendRunStepRequest)(nil),                  // 22: nekode.daemon.v1.AppendRunStepRequest
-	(*AppendRunStepResponse)(nil),                 // 23: nekode.daemon.v1.AppendRunStepResponse
-	(*ListRunsRequest)(nil),                       // 24: nekode.daemon.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),                      // 25: nekode.daemon.v1.ListRunsResponse
-	(*GetRunRequest)(nil),                         // 26: nekode.daemon.v1.GetRunRequest
-	(*GetRunResponse)(nil),                        // 27: nekode.daemon.v1.GetRunResponse
-	(*WorkspaceTreeEntry)(nil),                    // 28: nekode.daemon.v1.WorkspaceTreeEntry
-	(*ListWorkspaceTreeRequest)(nil),              // 29: nekode.daemon.v1.ListWorkspaceTreeRequest
-	(*ListWorkspaceTreeResponse)(nil),             // 30: nekode.daemon.v1.ListWorkspaceTreeResponse
-	(*ReadWorkspaceFileRequest)(nil),              // 31: nekode.daemon.v1.ReadWorkspaceFileRequest
-	(*ReadWorkspaceFileResponse)(nil),             // 32: nekode.daemon.v1.ReadWorkspaceFileResponse
-	(*McpResourceSubscription)(nil),               // 33: nekode.daemon.v1.McpResourceSubscription
-	(*McpResourceUpdate)(nil),                     // 34: nekode.daemon.v1.McpResourceUpdate
-	(*SubscribeMcpResourceRequest)(nil),           // 35: nekode.daemon.v1.SubscribeMcpResourceRequest
-	(*SubscribeMcpResourceResponse)(nil),          // 36: nekode.daemon.v1.SubscribeMcpResourceResponse
-	(*CancelMcpResourceSubscriptionRequest)(nil),  // 37: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
-	(*CancelMcpResourceSubscriptionResponse)(nil), // 38: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
-	(*ListMcpResourceUpdatesRequest)(nil),         // 39: nekode.daemon.v1.ListMcpResourceUpdatesRequest
-	(*ListMcpResourceUpdatesResponse)(nil),        // 40: nekode.daemon.v1.ListMcpResourceUpdatesResponse
-	(*SyncComputerInventoryRequest)(nil),          // 41: nekode.daemon.v1.SyncComputerInventoryRequest
-	(*SyncComputerInventoryResponse)(nil),         // 42: nekode.daemon.v1.SyncComputerInventoryResponse
-	(*AcquireStartPermitRequest)(nil),             // 43: nekode.daemon.v1.AcquireStartPermitRequest
-	(*AcquireStartPermitResponse)(nil),            // 44: nekode.daemon.v1.AcquireStartPermitResponse
-	(*ReleaseStartPermitRequest)(nil),             // 45: nekode.daemon.v1.ReleaseStartPermitRequest
-	(*ReleaseStartPermitResponse)(nil),            // 46: nekode.daemon.v1.ReleaseStartPermitResponse
-	(*EnvVar)(nil),                                // 47: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil),                           // 48: nekode.daemon.v1.SkillRecord
-	(*Capability)(nil),                            // 49: nekode.daemon.v1.Capability
-	(*AgentProfile)(nil),                          // 50: nekode.daemon.v1.AgentProfile
-	(*RequestContext)(nil),                        // 51: nekode.daemon.v1.RequestContext
-	(*Lease)(nil),                                 // 52: nekode.daemon.v1.Lease
-	(*AgentStatusSnapshot)(nil),                   // 53: nekode.daemon.v1.AgentStatusSnapshot
-	(*EventCursor)(nil),                           // 54: nekode.daemon.v1.EventCursor
+	(*RuntimePreset)(nil),                         // 7: nekode.daemon.v1.RuntimePreset
+	(*ListRuntimePresetsRequest)(nil),             // 8: nekode.daemon.v1.ListRuntimePresetsRequest
+	(*ListRuntimePresetsResponse)(nil),            // 9: nekode.daemon.v1.ListRuntimePresetsResponse
+	(*Runtime)(nil),                               // 10: nekode.daemon.v1.Runtime
+	(*ComputerInventory)(nil),                     // 11: nekode.daemon.v1.ComputerInventory
+	(*ComputerInfo)(nil),                          // 12: nekode.daemon.v1.ComputerInfo
+	(*RegisterComputerRequest)(nil),               // 13: nekode.daemon.v1.RegisterComputerRequest
+	(*RegisterComputerResponse)(nil),              // 14: nekode.daemon.v1.RegisterComputerResponse
+	(*HeartbeatComputerRequest)(nil),              // 15: nekode.daemon.v1.HeartbeatComputerRequest
+	(*HeartbeatComputerResponse)(nil),             // 16: nekode.daemon.v1.HeartbeatComputerResponse
+	(*Run)(nil),                                   // 17: nekode.daemon.v1.Run
+	(*RunStep)(nil),                               // 18: nekode.daemon.v1.RunStep
+	(*FetchAssignedRunsRequest)(nil),              // 19: nekode.daemon.v1.FetchAssignedRunsRequest
+	(*FetchAssignedRunsResponse)(nil),             // 20: nekode.daemon.v1.FetchAssignedRunsResponse
+	(*UpdateRunStatusRequest)(nil),                // 21: nekode.daemon.v1.UpdateRunStatusRequest
+	(*UpdateRunStatusResponse)(nil),               // 22: nekode.daemon.v1.UpdateRunStatusResponse
+	(*RenewRunLeaseRequest)(nil),                  // 23: nekode.daemon.v1.RenewRunLeaseRequest
+	(*RenewRunLeaseResponse)(nil),                 // 24: nekode.daemon.v1.RenewRunLeaseResponse
+	(*AppendRunStepRequest)(nil),                  // 25: nekode.daemon.v1.AppendRunStepRequest
+	(*AppendRunStepResponse)(nil),                 // 26: nekode.daemon.v1.AppendRunStepResponse
+	(*ListRunsRequest)(nil),                       // 27: nekode.daemon.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),                      // 28: nekode.daemon.v1.ListRunsResponse
+	(*GetRunRequest)(nil),                         // 29: nekode.daemon.v1.GetRunRequest
+	(*GetRunResponse)(nil),                        // 30: nekode.daemon.v1.GetRunResponse
+	(*WorkspaceTreeEntry)(nil),                    // 31: nekode.daemon.v1.WorkspaceTreeEntry
+	(*ListWorkspaceTreeRequest)(nil),              // 32: nekode.daemon.v1.ListWorkspaceTreeRequest
+	(*ListWorkspaceTreeResponse)(nil),             // 33: nekode.daemon.v1.ListWorkspaceTreeResponse
+	(*ReadWorkspaceFileRequest)(nil),              // 34: nekode.daemon.v1.ReadWorkspaceFileRequest
+	(*ReadWorkspaceFileResponse)(nil),             // 35: nekode.daemon.v1.ReadWorkspaceFileResponse
+	(*McpResourceSubscription)(nil),               // 36: nekode.daemon.v1.McpResourceSubscription
+	(*McpResourceUpdate)(nil),                     // 37: nekode.daemon.v1.McpResourceUpdate
+	(*SubscribeMcpResourceRequest)(nil),           // 38: nekode.daemon.v1.SubscribeMcpResourceRequest
+	(*SubscribeMcpResourceResponse)(nil),          // 39: nekode.daemon.v1.SubscribeMcpResourceResponse
+	(*CancelMcpResourceSubscriptionRequest)(nil),  // 40: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
+	(*CancelMcpResourceSubscriptionResponse)(nil), // 41: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
+	(*ListMcpResourceUpdatesRequest)(nil),         // 42: nekode.daemon.v1.ListMcpResourceUpdatesRequest
+	(*ListMcpResourceUpdatesResponse)(nil),        // 43: nekode.daemon.v1.ListMcpResourceUpdatesResponse
+	(*SyncComputerInventoryRequest)(nil),          // 44: nekode.daemon.v1.SyncComputerInventoryRequest
+	(*SyncComputerInventoryResponse)(nil),         // 45: nekode.daemon.v1.SyncComputerInventoryResponse
+	(*AcquireStartPermitRequest)(nil),             // 46: nekode.daemon.v1.AcquireStartPermitRequest
+	(*AcquireStartPermitResponse)(nil),            // 47: nekode.daemon.v1.AcquireStartPermitResponse
+	(*ReleaseStartPermitRequest)(nil),             // 48: nekode.daemon.v1.ReleaseStartPermitRequest
+	(*ReleaseStartPermitResponse)(nil),            // 49: nekode.daemon.v1.ReleaseStartPermitResponse
+	(*EnvVar)(nil),                                // 50: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),                           // 51: nekode.daemon.v1.SkillRecord
+	(*Capability)(nil),                            // 52: nekode.daemon.v1.Capability
+	(*EventCursor)(nil),                           // 53: nekode.daemon.v1.EventCursor
+	(*AgentProfile)(nil),                          // 54: nekode.daemon.v1.AgentProfile
+	(*RequestContext)(nil),                        // 55: nekode.daemon.v1.RequestContext
+	(*Lease)(nil),                                 // 56: nekode.daemon.v1.Lease
+	(*AgentStatusSnapshot)(nil),                   // 57: nekode.daemon.v1.AgentStatusSnapshot
 }
 var file_nekode_daemon_v1_runtime_proto_depIdxs = []int32{
-	47, // 0: nekode.daemon.v1.RuntimeProfile.env:type_name -> nekode.daemon.v1.EnvVar
-	48, // 1: nekode.daemon.v1.RuntimeProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
-	49, // 2: nekode.daemon.v1.RuntimeProfile.capabilities:type_name -> nekode.daemon.v1.Capability
-	49, // 3: nekode.daemon.v1.Runtime.capabilities:type_name -> nekode.daemon.v1.Capability
-	6,  // 4: nekode.daemon.v1.Runtime.runtime_profile:type_name -> nekode.daemon.v1.RuntimeProfile
-	5,  // 5: nekode.daemon.v1.ComputerInventory.workspaces:type_name -> nekode.daemon.v1.Workspace
-	7,  // 6: nekode.daemon.v1.ComputerInventory.runtimes:type_name -> nekode.daemon.v1.Runtime
-	50, // 7: nekode.daemon.v1.ComputerInventory.agents:type_name -> nekode.daemon.v1.AgentProfile
-	6,  // 8: nekode.daemon.v1.ComputerInventory.runtime_profiles:type_name -> nekode.daemon.v1.RuntimeProfile
-	0,  // 9: nekode.daemon.v1.ComputerInfo.status:type_name -> nekode.daemon.v1.ComputerStatus
-	49, // 10: nekode.daemon.v1.ComputerInfo.capabilities:type_name -> nekode.daemon.v1.Capability
-	9,  // 11: nekode.daemon.v1.RegisterComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
-	8,  // 12: nekode.daemon.v1.RegisterComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
-	51, // 13: nekode.daemon.v1.RegisterComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	52, // 14: nekode.daemon.v1.RegisterComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
-	9,  // 15: nekode.daemon.v1.HeartbeatComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
-	8,  // 16: nekode.daemon.v1.HeartbeatComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
-	53, // 17: nekode.daemon.v1.HeartbeatComputerRequest.agent_statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	51, // 18: nekode.daemon.v1.HeartbeatComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	52, // 19: nekode.daemon.v1.HeartbeatComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
-	1,  // 20: nekode.daemon.v1.Run.state:type_name -> nekode.daemon.v1.RunState
-	2,  // 21: nekode.daemon.v1.RunStep.kind:type_name -> nekode.daemon.v1.RunStepKind
-	3,  // 22: nekode.daemon.v1.RunStep.status:type_name -> nekode.daemon.v1.RunStepStatus
-	54, // 23: nekode.daemon.v1.FetchAssignedRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	14, // 24: nekode.daemon.v1.FetchAssignedRunsResponse.runs:type_name -> nekode.daemon.v1.Run
-	54, // 25: nekode.daemon.v1.FetchAssignedRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	1,  // 26: nekode.daemon.v1.UpdateRunStatusRequest.state:type_name -> nekode.daemon.v1.RunState
-	51, // 27: nekode.daemon.v1.UpdateRunStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	14, // 28: nekode.daemon.v1.UpdateRunStatusResponse.run:type_name -> nekode.daemon.v1.Run
-	51, // 29: nekode.daemon.v1.RenewRunLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	14, // 30: nekode.daemon.v1.RenewRunLeaseResponse.run:type_name -> nekode.daemon.v1.Run
-	52, // 31: nekode.daemon.v1.RenewRunLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
-	15, // 32: nekode.daemon.v1.AppendRunStepRequest.step:type_name -> nekode.daemon.v1.RunStep
-	51, // 33: nekode.daemon.v1.AppendRunStepRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	15, // 34: nekode.daemon.v1.AppendRunStepResponse.step:type_name -> nekode.daemon.v1.RunStep
-	54, // 35: nekode.daemon.v1.ListRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	14, // 36: nekode.daemon.v1.ListRunsResponse.runs:type_name -> nekode.daemon.v1.Run
-	54, // 37: nekode.daemon.v1.ListRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	14, // 38: nekode.daemon.v1.GetRunResponse.run:type_name -> nekode.daemon.v1.Run
-	15, // 39: nekode.daemon.v1.GetRunResponse.steps:type_name -> nekode.daemon.v1.RunStep
-	54, // 40: nekode.daemon.v1.ListWorkspaceTreeRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	28, // 41: nekode.daemon.v1.ListWorkspaceTreeResponse.entries:type_name -> nekode.daemon.v1.WorkspaceTreeEntry
-	54, // 42: nekode.daemon.v1.ListWorkspaceTreeResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	4,  // 43: nekode.daemon.v1.McpResourceSubscription.status:type_name -> nekode.daemon.v1.McpResourceSubscriptionStatus
-	33, // 44: nekode.daemon.v1.SubscribeMcpResourceRequest.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
-	51, // 45: nekode.daemon.v1.SubscribeMcpResourceRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	33, // 46: nekode.daemon.v1.SubscribeMcpResourceResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
-	51, // 47: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	33, // 48: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
-	54, // 49: nekode.daemon.v1.ListMcpResourceUpdatesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	34, // 50: nekode.daemon.v1.ListMcpResourceUpdatesResponse.updates:type_name -> nekode.daemon.v1.McpResourceUpdate
-	54, // 51: nekode.daemon.v1.ListMcpResourceUpdatesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	9,  // 52: nekode.daemon.v1.SyncComputerInventoryRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
-	8,  // 53: nekode.daemon.v1.SyncComputerInventoryRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
-	51, // 54: nekode.daemon.v1.SyncComputerInventoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	51, // 55: nekode.daemon.v1.AcquireStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	52, // 56: nekode.daemon.v1.AcquireStartPermitResponse.permit_lease:type_name -> nekode.daemon.v1.Lease
-	51, // 57: nekode.daemon.v1.ReleaseStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	58, // [58:58] is the sub-list for method output_type
-	58, // [58:58] is the sub-list for method input_type
-	58, // [58:58] is the sub-list for extension type_name
-	58, // [58:58] is the sub-list for extension extendee
-	0,  // [0:58] is the sub-list for field type_name
+	50, // 0: nekode.daemon.v1.RuntimeProfile.env:type_name -> nekode.daemon.v1.EnvVar
+	51, // 1: nekode.daemon.v1.RuntimeProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
+	52, // 2: nekode.daemon.v1.RuntimeProfile.capabilities:type_name -> nekode.daemon.v1.Capability
+	52, // 3: nekode.daemon.v1.RuntimePreset.capabilities:type_name -> nekode.daemon.v1.Capability
+	53, // 4: nekode.daemon.v1.ListRuntimePresetsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	7,  // 5: nekode.daemon.v1.ListRuntimePresetsResponse.presets:type_name -> nekode.daemon.v1.RuntimePreset
+	53, // 6: nekode.daemon.v1.ListRuntimePresetsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	52, // 7: nekode.daemon.v1.Runtime.capabilities:type_name -> nekode.daemon.v1.Capability
+	6,  // 8: nekode.daemon.v1.Runtime.runtime_profile:type_name -> nekode.daemon.v1.RuntimeProfile
+	5,  // 9: nekode.daemon.v1.ComputerInventory.workspaces:type_name -> nekode.daemon.v1.Workspace
+	10, // 10: nekode.daemon.v1.ComputerInventory.runtimes:type_name -> nekode.daemon.v1.Runtime
+	54, // 11: nekode.daemon.v1.ComputerInventory.agents:type_name -> nekode.daemon.v1.AgentProfile
+	6,  // 12: nekode.daemon.v1.ComputerInventory.runtime_profiles:type_name -> nekode.daemon.v1.RuntimeProfile
+	0,  // 13: nekode.daemon.v1.ComputerInfo.status:type_name -> nekode.daemon.v1.ComputerStatus
+	52, // 14: nekode.daemon.v1.ComputerInfo.capabilities:type_name -> nekode.daemon.v1.Capability
+	12, // 15: nekode.daemon.v1.RegisterComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
+	11, // 16: nekode.daemon.v1.RegisterComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
+	55, // 17: nekode.daemon.v1.RegisterComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	56, // 18: nekode.daemon.v1.RegisterComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
+	12, // 19: nekode.daemon.v1.HeartbeatComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
+	11, // 20: nekode.daemon.v1.HeartbeatComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
+	57, // 21: nekode.daemon.v1.HeartbeatComputerRequest.agent_statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	55, // 22: nekode.daemon.v1.HeartbeatComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	56, // 23: nekode.daemon.v1.HeartbeatComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
+	1,  // 24: nekode.daemon.v1.Run.state:type_name -> nekode.daemon.v1.RunState
+	2,  // 25: nekode.daemon.v1.RunStep.kind:type_name -> nekode.daemon.v1.RunStepKind
+	3,  // 26: nekode.daemon.v1.RunStep.status:type_name -> nekode.daemon.v1.RunStepStatus
+	53, // 27: nekode.daemon.v1.FetchAssignedRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	17, // 28: nekode.daemon.v1.FetchAssignedRunsResponse.runs:type_name -> nekode.daemon.v1.Run
+	53, // 29: nekode.daemon.v1.FetchAssignedRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	1,  // 30: nekode.daemon.v1.UpdateRunStatusRequest.state:type_name -> nekode.daemon.v1.RunState
+	55, // 31: nekode.daemon.v1.UpdateRunStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	17, // 32: nekode.daemon.v1.UpdateRunStatusResponse.run:type_name -> nekode.daemon.v1.Run
+	55, // 33: nekode.daemon.v1.RenewRunLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	17, // 34: nekode.daemon.v1.RenewRunLeaseResponse.run:type_name -> nekode.daemon.v1.Run
+	56, // 35: nekode.daemon.v1.RenewRunLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
+	18, // 36: nekode.daemon.v1.AppendRunStepRequest.step:type_name -> nekode.daemon.v1.RunStep
+	55, // 37: nekode.daemon.v1.AppendRunStepRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	18, // 38: nekode.daemon.v1.AppendRunStepResponse.step:type_name -> nekode.daemon.v1.RunStep
+	53, // 39: nekode.daemon.v1.ListRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	17, // 40: nekode.daemon.v1.ListRunsResponse.runs:type_name -> nekode.daemon.v1.Run
+	53, // 41: nekode.daemon.v1.ListRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	17, // 42: nekode.daemon.v1.GetRunResponse.run:type_name -> nekode.daemon.v1.Run
+	18, // 43: nekode.daemon.v1.GetRunResponse.steps:type_name -> nekode.daemon.v1.RunStep
+	53, // 44: nekode.daemon.v1.ListWorkspaceTreeRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	31, // 45: nekode.daemon.v1.ListWorkspaceTreeResponse.entries:type_name -> nekode.daemon.v1.WorkspaceTreeEntry
+	53, // 46: nekode.daemon.v1.ListWorkspaceTreeResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	4,  // 47: nekode.daemon.v1.McpResourceSubscription.status:type_name -> nekode.daemon.v1.McpResourceSubscriptionStatus
+	36, // 48: nekode.daemon.v1.SubscribeMcpResourceRequest.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
+	55, // 49: nekode.daemon.v1.SubscribeMcpResourceRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	36, // 50: nekode.daemon.v1.SubscribeMcpResourceResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
+	55, // 51: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	36, // 52: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
+	53, // 53: nekode.daemon.v1.ListMcpResourceUpdatesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	37, // 54: nekode.daemon.v1.ListMcpResourceUpdatesResponse.updates:type_name -> nekode.daemon.v1.McpResourceUpdate
+	53, // 55: nekode.daemon.v1.ListMcpResourceUpdatesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	12, // 56: nekode.daemon.v1.SyncComputerInventoryRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
+	11, // 57: nekode.daemon.v1.SyncComputerInventoryRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
+	55, // 58: nekode.daemon.v1.SyncComputerInventoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	55, // 59: nekode.daemon.v1.AcquireStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	56, // 60: nekode.daemon.v1.AcquireStartPermitResponse.permit_lease:type_name -> nekode.daemon.v1.Lease
+	55, // 61: nekode.daemon.v1.ReleaseStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	62, // [62:62] is the sub-list for method output_type
+	62, // [62:62] is the sub-list for method input_type
+	62, // [62:62] is the sub-list for extension type_name
+	62, // [62:62] is the sub-list for extension extendee
+	0,  // [0:62] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_runtime_proto_init() }
@@ -4250,7 +4553,7 @@ func file_nekode_daemon_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_runtime_proto_rawDesc), len(file_nekode_daemon_v1_runtime_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   42,
+			NumMessages:   45,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

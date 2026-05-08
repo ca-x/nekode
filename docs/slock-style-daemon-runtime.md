@@ -258,6 +258,9 @@ versions. Example detected runtimes:
 claude (2.1.123 (Claude Code))
 codex (codex-cli 0.128.0)
 opencode (1.14.30)
+cursor-agent (...)
+gemini (...)
+kimi (...)
 ```
 
 Required behavior:
@@ -266,6 +269,8 @@ Required behavior:
 - record kind, version, availability, and health;
 - report missing configured runtimes as unavailable instead of hiding them;
 - keep runtime kind/provider/model as strings;
+- publish known runtime kinds through the runtime preset catalog so Web setup
+  and diagnostics do not carry their own hard-coded runtime lists;
 - avoid protobuf changes for each new runtime product.
 
 ### Agent Start Event
@@ -456,7 +461,7 @@ path for later integrations:
 
 | Field | Initial values |
 | --- | --- |
-| `Runtime.kind` / `RuntimeProfile.kind` | `codex`, `claude`, `opencode`, `kimi`, `gemini`, `custom` |
+| `Runtime.kind` / `RuntimeProfile.kind` | `codex`, `claude`, `opencode`, `kimi`, `gemini`, `cursor-agent`, `copilot`, `openclaw`, `hermes`, `pi`, `kiro-cli`, `custom` |
 | `InteractionEndpoint.kind` | `web`, `cli`, `api`, `webhook`, `mcp`, `im`, `mobile`, `ide`, `custom` |
 | `RuntimeProfile.provider` / `AgentProfile.provider` | `openai`, `anthropic`, `google`, `custom` |
 | `RuntimeProfile.model` / `AgentProfile.model` | provider-specific model names |

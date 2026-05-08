@@ -19,6 +19,7 @@ import (
 	"github.com/ca-x/nekode/internal/cache"
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/daemonrpc"
+	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
 	"github.com/ca-x/nekode/internal/webdist"
@@ -155,6 +156,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/tasks/{id}/comments", s.requireAuth(s.handleCreateTaskComment))
 	s.mux.HandleFunc("GET /api/tasks/{id}/timeline", s.requireAuth(s.handleTaskTimeline))
 	s.mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
+	s.mux.HandleFunc("GET /api/runtime-presets", s.requireAuth(s.handleListRuntimePresets))
 	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
 	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))
 	s.mux.HandleFunc("GET /api/daemon/activity", s.requireAuth(s.handleDaemonActivity))
@@ -667,6 +669,12 @@ func (s *Server) handleTaskTimeline(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleListRuntimePresets(w http.ResponseWriter, r *http.Request) {
+	includeExperimental := boolQuery(r, "includeExperimental")
+	presets := runtimecatalog.List(includeExperimental, strings.TrimSpace(r.URL.Query().Get("kindPrefix")), uint32(intQuery(r, "limit", 200)))
+	writeJSON(w, http.StatusOK, map[string]any{"items": runtimePresetResponses(presets)})
+}
+
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
@@ -754,6 +762,12 @@ func intQuery(r *http.Request, name string, fallback int) int {
 	return value
 }
 
+func boolQuery(r *http.Request, name string) bool {
+	raw := strings.TrimSpace(r.URL.Query().Get(name))
+	value, err := strconv.ParseBool(raw)
+	return err == nil && value
+}
+
 func normalizedJSON(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "{}"
@@ -827,4 +841,50 @@ type taskPatchRequest struct {
 type taskCommentRequest struct {
 	Content   string `json:"content"`
 	RequestID string `json:"requestId"`
+}
+
+type runtimePresetResponse struct {
+	Kind             string   `json:"kind"`
+	DisplayName      string   `json:"displayName"`
+	Provider         string   `json:"provider"`
+	DefaultModel     string   `json:"defaultModel,omitempty"`
+	Command          string   `json:"command,omitempty"`
+	Aliases          []string `json:"aliases"`
+	DefaultArgs      []string `json:"defaultArgs"`
+	EnvVarNames      []string `json:"envVarNames"`
+	InstallHint      []string `json:"installHint"`
+	Capabilities     []string `json:"capabilities"`
+	SlockSupported   bool     `json:"slockSupported"`
+	MulticaSupported bool     `json:"multicaSupported"`
+	Recommended      bool     `json:"recommended"`
+	Description      string   `json:"description,omitempty"`
+}
+
+func runtimePresetResponses(presets []*daemonv1.RuntimePreset) []runtimePresetResponse {
+	out := make([]runtimePresetResponse, 0, len(presets))
+	for _, preset := range presets {
+		capabilities := make([]string, 0, len(preset.GetCapabilities()))
+		for _, capability := range preset.GetCapabilities() {
+			if capability.GetName() != "" {
+				capabilities = append(capabilities, capability.GetName())
+			}
+		}
+		out = append(out, runtimePresetResponse{
+			Kind:             preset.GetKind(),
+			DisplayName:      preset.GetDisplayName(),
+			Provider:         preset.GetProvider(),
+			DefaultModel:     preset.GetDefaultModel(),
+			Command:          preset.GetCommand(),
+			Aliases:          preset.GetAliases(),
+			DefaultArgs:      preset.GetDefaultArgs(),
+			EnvVarNames:      preset.GetEnvVarNames(),
+			InstallHint:      preset.GetInstallHint(),
+			Capabilities:     capabilities,
+			SlockSupported:   preset.GetSlockSupported(),
+			MulticaSupported: preset.GetMulticaSupported(),
+			Recommended:      preset.GetRecommended(),
+			Description:      preset.GetDescription(),
+		})
+	}
+	return out
 }

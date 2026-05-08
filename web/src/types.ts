@@ -148,6 +148,23 @@ export type DaemonActivityRecord = {
   createdTimeUnix?: number;
 };
 
+export type RuntimePreset = {
+  kind: string;
+  displayName: string;
+  provider: string;
+  defaultModel?: string;
+  command?: string;
+  aliases: string[];
+  defaultArgs: string[];
+  envVarNames: string[];
+  installHint: string[];
+  capabilities: string[];
+  slockSupported: boolean;
+  multicaSupported: boolean;
+  recommended: boolean;
+  description?: string;
+};
+
 export type EventCursor = {
   cursor?: string;
   target?: string;

@@ -14,6 +14,7 @@ import type {
   JsonObject,
   Message,
   ProtocolInfo,
+  RuntimePreset,
   SetupStatus,
   Task,
   TaskState,
@@ -486,6 +487,33 @@ function normalizeDaemonActivity(raw: unknown): DaemonActivityRecord {
   };
 }
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(asString).filter(Boolean) : [];
+}
+
+function normalizeRuntimePreset(raw: unknown): RuntimePreset {
+  const row = asRecord(raw);
+  const capabilities = Array.isArray(row.capabilities)
+    ? row.capabilities.map((capability) => asRecord(capability).name).map(asString).filter(Boolean)
+    : [];
+  return {
+    kind: asString(row.kind),
+    displayName: asString(row.displayName ?? row.display_name),
+    provider: asString(row.provider),
+    defaultModel: asOptionalString(row.defaultModel ?? row.default_model),
+    command: asOptionalString(row.command),
+    aliases: asStringArray(row.aliases),
+    defaultArgs: asStringArray(row.defaultArgs ?? row.default_args),
+    envVarNames: asStringArray(row.envVarNames ?? row.env_var_names),
+    installHint: asStringArray(row.installHint ?? row.install_hint),
+    capabilities,
+    slockSupported: Boolean(row.slockSupported ?? row.slock_supported),
+    multicaSupported: Boolean(row.multicaSupported ?? row.multica_supported),
+    recommended: Boolean(row.recommended),
+    description: asOptionalString(row.description)
+  };
+}
+
 function appendIfPresent(params: URLSearchParams, name: string, value: string | number | undefined) {
   if (value === undefined) return;
   const stringValue = String(value);
@@ -604,6 +632,17 @@ export class ApiClient {
     return normalizeList(
       await this.request<RawListResponse<unknown>>(`/api/daemon/activity?${params}`),
       normalizeDaemonActivity
+    );
+  }
+
+  async listRuntimePresets(filters: { includeExperimental?: boolean; kindPrefix?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.includeExperimental) params.set("includeExperimental", "true");
+    appendIfPresent(params, "kindPrefix", filters.kindPrefix);
+    appendIfPresent(params, "limit", filters.limit ?? 200);
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/runtime-presets?${params}`),
+      normalizeRuntimePreset
     );
   }
 

@@ -1176,6 +1176,56 @@ textarea {
   font-size: 0.875rem;
 }
 
+.runtime-preset-grid,
+.runtime-preset-list {
+  display: grid;
+  gap: 10px;
+}
+
+.runtime-preset-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.runtime-preset {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.runtime-preset div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.runtime-preset strong,
+.runtime-preset span {
+  overflow-wrap: anywhere;
+}
+
+.runtime-preset div:first-child span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.runtime-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.runtime-flags span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
 .status-dot {
   gap: 6px;
   color: var(--muted);

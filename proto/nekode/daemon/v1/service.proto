@@ -176,6 +176,9 @@ service DaemonControlService {
   rpc HeartbeatComputer(HeartbeatComputerRequest) returns (HeartbeatComputerResponse);
   // Replace the server-visible runtime/workspace inventory for a computer.
   rpc SyncComputerInventory(SyncComputerInventoryRequest) returns (SyncComputerInventoryResponse);
+  // List known runtime presets. Runtime kind remains an open string; this RPC
+  // only publishes the server's built-in catalog for UI/setup guidance.
+  rpc ListRuntimePresets(ListRuntimePresetsRequest) returns (ListRuntimePresetsResponse);
   // Acquire an exclusive launch permit before starting an agent run.
   rpc AcquireStartPermit(AcquireStartPermitRequest) returns (AcquireStartPermitResponse);
   // Release a launch permit that is no longer needed.

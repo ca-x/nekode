@@ -68,6 +68,20 @@ func TestDaemonControlFlow(t *testing.T) {
 		t.Fatalf("HeartbeatComputer accepted = false")
 	}
 
+	presets, err := client.ListRuntimePresets(ctx, &daemonv1.ListRuntimePresetsRequest{IncludeExperimental: true})
+	if err != nil {
+		t.Fatalf("ListRuntimePresets() error = %v", err)
+	}
+	presetKinds := map[string]bool{}
+	for _, preset := range presets.GetPresets() {
+		presetKinds[preset.GetKind()] = true
+	}
+	for _, kind := range []string{"codex", "claude", "opencode", "kimi", "gemini", "cursor-agent", "copilot", "openclaw", "hermes", "pi", "kiro-cli"} {
+		if !presetKinds[kind] {
+			t.Fatalf("ListRuntimePresets missing %q; got=%v", kind, presetKinds)
+		}
+	}
+
 	statuses, err := client.ListAgentStatuses(ctx, &daemonv1.ListAgentStatusesRequest{AgentId: "agent-1"})
 	if err != nil {
 		t.Fatalf("ListAgentStatuses() error = %v", err)

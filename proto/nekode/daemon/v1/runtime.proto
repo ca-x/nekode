@@ -118,6 +118,36 @@ message RuntimeProfile {
   repeated SkillRecord skills = 8;
   repeated Capability capabilities = 9;
 }
+message RuntimePreset {
+  reserved 1000 to 1999;
+
+  // Open runtime adapter kind. This is a catalog of known values, not a closed
+  // enum; daemons and users may still report custom runtime kinds.
+  string kind = 1;
+  string display_name = 2;
+  string provider = 3;
+  string default_model = 4;
+  string command = 5;
+  repeated string aliases = 6;
+  repeated string default_args = 7;
+  repeated string env_var_names = 8;
+  repeated string install_hint = 9;
+  repeated Capability capabilities = 10;
+  bool slock_supported = 11;
+  bool multica_supported = 12;
+  bool recommended = 13;
+  string description = 14;
+}
+message ListRuntimePresetsRequest {
+  bool include_experimental = 1;
+  string kind_prefix = 2;
+  uint32 limit = 3;
+  EventCursor cursor = 4;
+}
+message ListRuntimePresetsResponse {
+  repeated RuntimePreset presets = 1;
+  EventCursor next_cursor = 2;
+}
 message Runtime {
   reserved 1000 to 1999;
 

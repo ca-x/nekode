@@ -11,6 +11,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
 	"google.golang.org/grpc/codes"
@@ -192,6 +193,14 @@ func (s *Server) SyncComputerInventory(ctx context.Context, req *daemonv1.SyncCo
 	resp := &daemonv1.SyncComputerInventoryResponse{Accepted: true, InventoryVersion: versionID, ServerTimeUnix: now}
 	remember(ctx, s, "SyncComputerInventory", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 	return resp, nil
+}
+
+func (s *Server) ListRuntimePresets(_ context.Context, req *daemonv1.ListRuntimePresetsRequest) (*daemonv1.ListRuntimePresetsResponse, error) {
+	presets := runtimecatalog.List(req.GetIncludeExperimental(), req.GetKindPrefix(), req.GetLimit())
+	return &daemonv1.ListRuntimePresetsResponse{
+		Presets:    presets,
+		NextCursor: cursorFromCount(len(presets), req.GetKindPrefix(), s.serverID),
+	}, nil
 }
 
 func (s *Server) AcquireStartPermit(ctx context.Context, req *daemonv1.AcquireStartPermitRequest) (*daemonv1.AcquireStartPermitResponse, error) {

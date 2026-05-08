@@ -41,6 +41,7 @@ import type {
   InteractionEndpoint,
   Message,
   ProtocolInfo,
+  RuntimePreset,
   SetupStatus,
   Task,
   TaskState,
@@ -108,6 +109,51 @@ const demoAgents = [
   { id: "architect", name: "Architect", role: "System design", status: "online", color: "#7b4ee6" },
   { id: "developer", name: "Developer", role: "Implementation", status: "busy", color: "#2b79b4" },
   { id: "reviewer", name: "Reviewer", role: "Code review", status: "idle", color: "#b4432b" }
+];
+
+const fallbackRuntimePresets: RuntimePreset[] = [
+  {
+    kind: "codex",
+    displayName: "Codex CLI",
+    provider: "openai",
+    command: "codex",
+    aliases: [],
+    defaultArgs: [],
+    envVarNames: [],
+    installHint: [],
+    capabilities: ["code_execution", "file_write", "shell"],
+    slockSupported: true,
+    multicaSupported: true,
+    recommended: true
+  },
+  {
+    kind: "claude",
+    displayName: "Claude Code",
+    provider: "anthropic",
+    command: "claude",
+    aliases: [],
+    defaultArgs: [],
+    envVarNames: [],
+    installHint: [],
+    capabilities: ["code_execution", "file_write", "shell"],
+    slockSupported: true,
+    multicaSupported: true,
+    recommended: true
+  },
+  {
+    kind: "opencode",
+    displayName: "OpenCode",
+    provider: "opencode",
+    command: "opencode",
+    aliases: [],
+    defaultArgs: [],
+    envVarNames: [],
+    installHint: [],
+    capabilities: ["code_execution", "file_write", "shell"],
+    slockSupported: true,
+    multicaSupported: true,
+    recommended: true
+  }
 ];
 
 const skillItems = [
@@ -273,6 +319,7 @@ function App() {
   const [agentStatuses, setAgentStatuses] = useState<AgentStatusSnapshot[]>([]);
   const [daemonRuns, setDaemonRuns] = useState<DaemonRun[]>([]);
   const [daemonActivity, setDaemonActivity] = useState<DaemonActivityRecord[]>([]);
+  const [runtimePresets, setRuntimePresets] = useState<RuntimePreset[]>(fallbackRuntimePresets);
   const [endpoints, setEndpoints] = useState<InteractionEndpoint[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -298,6 +345,7 @@ function App() {
         agentStatusList,
         daemonRunList,
         daemonActivityList,
+        runtimePresetList,
         endpointList,
         messageList,
         taskList
@@ -324,6 +372,7 @@ function App() {
           if (isAuthError(err)) throw err;
           return { items: [] };
         }),
+        api.listRuntimePresets({ includeExperimental: true }),
         api.listInteractionEndpoints(),
         api.listMessages(target),
         api.listTasks({ target })
@@ -335,6 +384,7 @@ function App() {
       setAgentStatuses(agentStatusList.items);
       setDaemonRuns(daemonRunList.items);
       setDaemonActivity(daemonActivityList.items);
+      setRuntimePresets(runtimePresetList.items.length ? runtimePresetList.items : fallbackRuntimePresets);
       setEndpoints(endpointList.items);
       setMessages(messageList.items);
       setTasks(taskList.items);
@@ -558,7 +608,7 @@ function App() {
             onRefresh={loadData}
           />
         ) : null}
-        {view === "skills" ? <SkillsPanel /> : null}
+        {view === "skills" ? <SkillsPanel runtimePresets={runtimePresets} /> : null}
         {view === "endpoints" ? (
           <EndpointsPanel endpoints={endpoints} onCreated={loadData} />
         ) : null}
@@ -571,6 +621,7 @@ function App() {
             agentStatuses={agentStatuses}
             daemonRuns={daemonRuns}
             daemonActivity={daemonActivity}
+            runtimePresets={runtimePresets}
           />
         ) : null}
       </main>
@@ -1846,7 +1897,7 @@ function EndpointsPanel({
   );
 }
 
-function SkillsPanel() {
+function SkillsPanel({ runtimePresets }: { runtimePresets: RuntimePreset[] }) {
   return (
     <section className="two-column">
       <div className="panel">
@@ -1889,11 +1940,27 @@ function SkillsPanel() {
           <label>
             Runtime
             <select defaultValue="codex">
-              <option value="codex">Codex</option>
-              <option value="claude">Claude</option>
-              <option value="opencode">OpenCode</option>
+              {runtimePresets.map((preset) => (
+                <option key={preset.kind} value={preset.kind}>
+                  {preset.displayName || preset.kind}
+                </option>
+              ))}
             </select>
           </label>
+          <div className="runtime-preset-list">
+            {runtimePresets.slice(0, 6).map((preset) => (
+              <article className="runtime-preset" key={preset.kind}>
+                <div>
+                  <strong>{preset.displayName || preset.kind}</strong>
+                  <span>{preset.description || `${preset.provider} / ${preset.command || preset.kind}`}</span>
+                </div>
+                <div className="runtime-flags">
+                  {preset.slockSupported ? <span>Slock</span> : null}
+                  {preset.multicaSupported ? <span>Multica</span> : null}
+                </div>
+              </article>
+            ))}
+          </div>
           <label>
             Model
             <input defaultValue="CLI default" />
@@ -1915,7 +1982,8 @@ function DaemonPanel({
   latestEvent,
   agentStatuses,
   daemonRuns,
-  daemonActivity
+  daemonActivity,
+  runtimePresets
 }: {
   protocol: ProtocolInfo | null;
   daemonInfo: DaemonInfo | null;
@@ -1924,6 +1992,7 @@ function DaemonPanel({
   agentStatuses: AgentStatusSnapshot[];
   daemonRuns: DaemonRun[];
   daemonActivity: DaemonActivityRecord[];
+  runtimePresets: RuntimePreset[];
 }) {
   return (
     <section className="content-grid">
@@ -1999,6 +2068,29 @@ function DaemonPanel({
       </section>
       <MetricCard icon={Activity} label="Runs" value={String(daemonInfo?.runCount ?? daemonRuns.length)} />
       <MetricCard icon={AlertTriangle} label="Activity Logs" value={String(daemonInfo?.activityCount ?? daemonActivity.length)} />
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Runtime Catalog</p>
+            <h2>Slock.ai and Multica presets</h2>
+          </div>
+        </div>
+        <div className="runtime-preset-grid">
+          {runtimePresets.map((preset) => (
+            <article className="runtime-preset" key={preset.kind}>
+              <div>
+                <strong>{preset.displayName || preset.kind}</strong>
+                <span>{preset.description || `${preset.provider} / ${preset.command || preset.kind}`}</span>
+              </div>
+              <div className="runtime-flags">
+                {preset.slockSupported ? <span>Slock</span> : null}
+                {preset.multicaSupported ? <span>Multica</span> : null}
+                {preset.recommended ? <span>preset</span> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
       <section className="panel wide">
         <div className="panel-heading compact-heading">
           <div>
