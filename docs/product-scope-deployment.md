@@ -1,553 +1,336 @@
-# Task #93: Product Scope & Deployment
+# Nekode Product Scope, Deployment, and Acceptance
 
-**Status**: Planning  
-**Owner**: @小螃蟹  
-**Support**: @小皮丘 (Backend), @小吱吱 (Frontend)  
-**Target Completion**: 2026-05-13  
-**Priority**: P0 (Final integration and release)  
-**Blocker**: Tasks #91 and #92 must be complete
+Status: task #93 implementation baseline
+Baseline: `origin/main@10ecb3f`
+Audience: implementers, reviewers, and deployment operators
 
----
+This document defines what the current Nekode mainline can be accepted as,
+what is intentionally deferred, and how to run a repeatable smoke test before
+calling a deployment usable.
 
-## 1. Objective
+## Current Product Scope
 
-Define the complete product scope for nekode (self-hosted Slock.ai) and establish deployment architecture with:
-- Clear feature prioritization (MVP vs. future)
-- Deployment architecture and configuration
-- Operations and maintenance procedures
-- User documentation and guides
-- Acceptance testing and validation
-- Release readiness checklist
+Nekode is a self-hosted Slock-style collaboration server with a local daemon
+control plane and an operational Web console. It is not a hosted SaaS control
+plane yet.
 
----
+### Implemented MVP
 
-## 2. Product Scope
+- First-admin bootstrap, login, logout, and current-user session APIs.
+- Interaction endpoint registry for Web/API/daemon-style integrations.
+- Message create/list APIs for channel, thread, and DM-style targets.
+- Task create/list/update APIs with canonical states:
+  `todo`, `in_progress`, `blocked`, `in_review`, `done`, `canceled`.
+- Daemon gRPC minimum bridge for registration/heartbeat, message/task access,
+  server event/activity streams, task board, task claim, agent status, runs,
+  and activity/event replay.
+- Durable collaboration event log with server identity, monotonic sequence,
+  operation, and scope metadata.
+- Durable idempotency records for retried daemon/server writes.
+- Task claim/version state stored in the database rather than the browser.
+- Pluggable cache interface with Badger default, Redis option, and `none`
+  mode. Cache is projection/read-through infrastructure only.
+- React/Vite Web console under `web/` with:
+  - auth flow;
+  - typed API/DTO mapping in `web/src/api.ts`;
+  - SSE cursor/invalidation boundary;
+  - six-state board;
+  - task detail inspector;
+  - activity/event stream;
+  - daemon/server overview;
+  - Nekode logo, favicon, and web manifest assets.
 
-### 2.1 MVP Features (v1.0)
+### Explicit Non-Goals for This Milestone
 
-**Core Collaboration**:
-- [x] User authentication and authorization
-- [x] Channel creation and management
-- [x] Message sending and receiving
-- [x] Thread-based conversations
-- [x] Real-time message delivery
-- [x] User presence and typing indicators
-- [x] Message search and filtering
+- Hosted multi-tenant SaaS operations.
+- Browser WebSocket transport.
+- Browser QUIC/WebTransport.
+- Full daemon weak-network QUIC transport implementation.
+- Rich task workspace features such as descriptions, comments, attachments,
+  reactions, subscriptions, hidden columns, bulk operations, and board/list
+  switching.
+- Full permission UX and action-level denial presentation.
+- Production observability stack, backups, and automated upgrades.
 
-**Task Management**:
-- [x] Task creation and assignment
-- [x] Task status workflow (todo → in_progress → in_review → done)
-- [x] Task board (Kanban view)
-- [x] Task comments and collaboration
+## Hosted vs. Self-Hosted Boundary
 
-**User Management**:
-- [x] User creation and management
-- [x] User roles and permissions
-- [x] User profiles and avatars
-- [x] User search
+### Self-Hosted MVP
 
-**Authorization**:
-- [x] License file import/export
-- [x] User limit enforcement (2 users free, unlimited with license)
-- [x] Authorization status display
-- [x] Server Install ID binding
+The current deliverable is self-hosted:
 
-**Administration**:
-- [x] System settings
-- [x] User management interface
-- [x] Authorization management
-- [x] Logs and monitoring
+- one `nekode` server process;
+- local or containerized persistent data directory;
+- SQLite by default, with Postgres/MySQL DSN support through the storage layer;
+- embedded Badger cache by default;
+- browser console served as static Vite output or from a same-origin static
+  host;
+- local daemon gRPC listener intended for trusted daemon processes.
 
-### 2.2 Future Features (v1.1+)
+The operator owns TLS termination, DNS, reverse proxy, backups, and external
+monitoring.
 
-**Enhanced Collaboration**:
-- [ ] File attachments and sharing
-- [ ] Emoji reactions
-- [ ] Message editing and deletion
-- [ ] Message pinning
-- [ ] Channel topics and descriptions
-- [ ] Channel archiving
+### Hosted Future
 
-**Advanced Task Management**:
-- [ ] Task dependencies
-- [ ] Task priorities
-- [ ] Task due dates and reminders
-- [ ] Task templates
-- [ ] Task automation
+Hosted deployment needs separate product and security work:
 
-**Integrations**:
-- [ ] Webhook support
-- [ ] API for third-party integrations
-- [ ] Bot framework
-- [ ] External authentication (LDAP, OAuth)
+- tenant/workspace account model;
+- external auth and billing/limits;
+- public daemon enrollment flow;
+- managed storage, backup, and observability;
+- upgrade orchestration;
+- stricter per-action permission UX;
+- tenant-aware operations playbooks.
 
-**Analytics & Reporting**:
-- [ ] Usage analytics
-- [ ] User activity reports
-- [ ] Channel statistics
-- [ ] Task completion metrics
+Do not treat the current single-server configuration as a hosted SaaS design.
 
-**Performance & Scalability**:
-- [ ] Message archiving
-- [ ] Database optimization
-- [ ] Caching layer (Redis)
-- [ ] Load balancing
-- [ ] Horizontal scaling
+## Runtime and Configuration
 
----
+### Backend
 
-## 3. Deployment Architecture
+Run locally:
 
-### 3.1 Single-Server Deployment
-
-**Target Environment**:
-- Linux server (Ubuntu 20.04+, CentOS 8+)
-- Docker and Docker Compose
-- 2+ CPU cores, 4GB+ RAM
-- 20GB+ storage
-
-**Architecture**:
-```
-┌─────────────────────────────────────┐
-│         Reverse Proxy (nginx)       │
-│  (SSL/TLS, rate limiting, caching)  │
-└────────────────┬────────────────────┘
-                 │
-┌────────────────▼────────────────────┐
-│      Docker Compose Services        │
-├─────────────────────────────────────┤
-│                                     │
-│  ┌──────────────────────────────┐  │
-│  │  nekode (Go backend)         │  │
-│  │  - HTTP API (8080)           │  │
-│  │  - WebSocket (8080)          │  │
-│  │  - Health check (:8080/health)  │
-│  └──────────────────────────────┘  │
-│                                     │
-│  ┌──────────────────────────────┐  │
-│  │  SQLite Database             │  │
-│  │  - /data/nekode.db           │  │
-│  │  - Persistent volume         │  │
-│  └──────────────────────────────┘  │
-│                                     │
-│  ┌──────────────────────────────┐  │
-│  │  Logs Volume                 │  │
-│  │  - /logs/nekode.log          │  │
-│  │  - Persistent volume         │  │
-│  └──────────────────────────────┘  │
-│                                     │
-└─────────────────────────────────────┘
+```bash
+go run ./cmd/nekode serve --addr :18790 --grpc-addr 127.0.0.1:18789
 ```
 
-### 3.2 Docker Compose Configuration
+Health check:
 
-**Services**:
-- `nekode` - Main application
-- `db` - SQLite (optional, can be embedded)
-- `nginx` - Reverse proxy (optional)
-
-**Volumes**:
-- `data` - Database and configuration
-- `logs` - Application logs
-
-**Networks**:
-- `nekode-network` - Internal communication
-
-### 3.3 Configuration Management
-
-**Environment Variables**:
-```
-# Server
-NEKODE_PORT=8080
-NEKODE_BIND_HOST=0.0.0.0
-NEKODE_ENVIRONMENT=production
-
-# Database
-NEKODE_DB_PATH=/data/nekode.db
-
-# Security
-NEKODE_JWT_SECRET=<generated>
-NEKODE_ADMIN_TOKEN=<generated>
-
-# Logging
-NEKODE_LOG_LEVEL=info
-NEKODE_LOG_FILE=/logs/nekode.log
-
-# Features
-NEKODE_ENABLE_REGISTRATION=false
-NEKODE_ENABLE_OAUTH=false
+```bash
+curl http://127.0.0.1:18790/health
 ```
 
-**Configuration File** (`config.yaml`):
-```yaml
-server:
-  port: 8080
-  bind_host: 0.0.0.0
-  environment: production
+Important environment variables:
 
-database:
-  path: /data/nekode.db
-  max_connections: 10
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NEKODE_ADDR` | `:18790` | HTTP listen address |
+| `NEKODE_GRPC_ADDR` | `127.0.0.1:18789` | local daemon gRPC listen address |
+| `NEKODE_DAEMON_TRANSPORT` | `grpc` | daemon transport lane; only `grpc` is implemented |
+| `NEKODE_BASE_URL` | `http://localhost:18790` | public server URL used by clients |
+| `NEKODE_DATA_DIR` | `$HOME/.nekode` | persistent data directory |
+| `NEKODE_DB_TYPE` | `sqlite` | `sqlite`, `postgres`, or `mysql` |
+| `NEKODE_DB_DSN` | `$NEKODE_DATA_DIR/nekode.db` | database DSN |
+| `NEKODE_DB_PATH` | empty | legacy SQLite path alias if DSN is unset |
+| `NEKODE_CACHE_DRIVER` | `badger` | `badger`, `redis`, or `none` |
+| `NEKODE_CACHE_DIR` | `$NEKODE_DATA_DIR/cache` | Badger cache directory |
+| `NEKODE_CACHE_TTL` | `5m` | projection/read-through cache TTL |
+| `NEKODE_CACHE_KEY_VERSION` | `v1` | cache namespace version |
+| `NEKODE_CACHE_REDIS_ADDR` | empty | required when cache driver is `redis` |
 
-security:
-  jwt_secret: ${NEKODE_JWT_SECRET}
-  admin_token: ${NEKODE_ADMIN_TOKEN}
-  session_timeout: 24h
+### Frontend
 
-logging:
-  level: info
-  file: /logs/nekode.log
-  max_size: 100MB
-  max_backups: 10
-  max_age: 30
+Install and run development server:
 
-features:
-  enable_registration: false
-  enable_oauth: false
-  max_users_free: 2
+```bash
+cd web
+npm install
+npm run dev -- --port 18791
 ```
 
----
+The Vite dev server proxies `/api` and `/health` to
+`http://127.0.0.1:18790`.
 
-## 4. Implementation Plan
+Build static output:
 
-### Phase 1: Deployment Architecture (1-2 hours)
-
-**Tasks**:
-- [ ] Finalize Docker Compose configuration
-- [ ] Create nginx reverse proxy configuration
-- [ ] Document deployment architecture
-- [ ] Create deployment checklist
-- [ ] Create configuration templates
-
-**Acceptance**:
-- Docker Compose file is complete
-- nginx configuration is documented
-- Deployment architecture is clear
-- Configuration templates are provided
-
-### Phase 2: Installation & Setup Guide (2-3 hours)
-
-**Tasks**:
-- [ ] Create installation guide (step-by-step)
-- [ ] Create configuration guide
-- [ ] Create SSL/TLS setup guide
-- [ ] Create backup and restore procedures
-- [ ] Create troubleshooting guide
-
-**Acceptance**:
-- Installation guide is clear and complete
-- Configuration guide covers all options
-- SSL/TLS setup is documented
-- Backup/restore procedures are tested
-- Troubleshooting guide covers common issues
-
-### Phase 3: Operations & Maintenance (2-3 hours)
-
-**Tasks**:
-- [ ] Create monitoring guide
-- [ ] Create log analysis guide
-- [ ] Create performance tuning guide
-- [ ] Create upgrade procedures
-- [ ] Create disaster recovery procedures
-
-**Acceptance**:
-- Monitoring guide is complete
-- Log analysis procedures are documented
-- Performance tuning recommendations provided
-- Upgrade procedures are tested
-- Disaster recovery procedures are documented
-
-### Phase 4: User Documentation (2-3 hours)
-
-**Tasks**:
-- [ ] Create user guide (getting started)
-- [ ] Create feature documentation
-- [ ] Create FAQ
-- [ ] Create video tutorials (optional)
-- [ ] Create API documentation
-
-**Acceptance**:
-- User guide is clear and complete
-- All features are documented
-- FAQ covers common questions
-- API documentation is comprehensive
-
-### Phase 5: Testing & Validation (2-3 hours)
-
-**Tasks**:
-- [ ] Create acceptance test plan
-- [ ] Create test scenarios
-- [ ] Execute acceptance tests
-- [ ] Validate deployment procedures
-- [ ] Validate documentation accuracy
-
-**Acceptance**:
-- All acceptance tests pass
-- Deployment procedures work
-- Documentation is accurate
-- No critical issues found
-
-### Phase 6: Release Preparation (1-2 hours)
-
-**Tasks**:
-- [ ] Create release notes
-- [ ] Create changelog
-- [ ] Create version tags
-- [ ] Create release checklist
-- [ ] Prepare announcement
-
-**Acceptance**:
-- Release notes are complete
-- Changelog is accurate
-- Version tags are created
-- Release checklist is ready
-- Announcement is prepared
-
----
-
-## 5. Acceptance Testing
-
-### 5.1 Functional Testing
-
-**User Management**:
-- [ ] Create user (free tier, max 2 users)
-- [ ] Create user (with license, unlimited)
-- [ ] Edit user profile
-- [ ] Delete user
-- [ ] User login/logout
-- [ ] User password reset
-
-**Channel Management**:
-- [ ] Create channel
-- [ ] Edit channel
-- [ ] Delete channel
-- [ ] Add/remove members
-- [ ] Archive/unarchive channel
-
-**Message Management**:
-- [ ] Send message
-- [ ] Edit message
-- [ ] Delete message
-- [ ] Reply in thread
-- [ ] Search messages
-- [ ] Real-time delivery
-
-**Task Management**:
-- [ ] Create task
-- [ ] Edit task
-- [ ] Delete task
-- [ ] Change task status
-- [ ] Assign task
-- [ ] View task board
-
-**Authorization**:
-- [ ] Import license file
-- [ ] Export license information
-- [ ] View authorization status
-- [ ] Enforce user limits
-
-### 5.2 Performance Testing
-
-**Load Testing**:
-- [ ] 100 concurrent users
-- [ ] 1000 messages per minute
-- [ ] Response time < 200ms
-- [ ] WebSocket latency < 100ms
-
-**Stress Testing**:
-- [ ] Database size 1GB+
-- [ ] 10,000+ messages
-- [ ] 1000+ users
-- [ ] System stability
-
-### 5.3 Security Testing
-
-**Authentication**:
-- [ ] JWT token validation
-- [ ] Session timeout
-- [ ] Password hashing
-- [ ] CSRF protection
-
-**Authorization**:
-- [ ] User permissions enforced
-- [ ] Channel access control
-- [ ] Admin-only endpoints protected
-
-**Data Protection**:
-- [ ] Sensitive data not logged
-- [ ] Database encryption (optional)
-- [ ] Backup encryption
-
-### 5.4 Deployment Testing
-
-**Docker Deployment**:
-- [ ] Docker image builds
-- [ ] docker-compose up works
-- [ ] Services start correctly
-- [ ] Health check passes
-- [ ] Logs are accessible
-
-**Configuration**:
-- [ ] Environment variables work
-- [ ] Configuration file works
-- [ ] SSL/TLS works
-- [ ] Reverse proxy works
-
-**Backup & Restore**:
-- [ ] Backup procedure works
-- [ ] Restore procedure works
-- [ ] Data integrity verified
-
----
-
-## 6. Documentation Structure
-
-```
-docs/
-├── README.md                          # Overview
-├── INSTALLATION.md                    # Installation guide
-├── CONFIGURATION.md                   # Configuration guide
-├── USER_GUIDE.md                      # User guide
-├── ADMIN_GUIDE.md                     # Administrator guide
-├── API_DOCUMENTATION.md               # API reference
-├── DEPLOYMENT.md                      # Deployment architecture
-├── OPERATIONS.md                      # Operations & maintenance
-├── TROUBLESHOOTING.md                 # Troubleshooting guide
-├── FAQ.md                             # Frequently asked questions
-├── CHANGELOG.md                       # Version history
-├── CONTRIBUTING.md                    # Contributing guidelines
-└── LICENSE.md                         # License information
+```bash
+cd web
+npm run build
 ```
 
----
+Output is written to `web/dist/`. The build includes public favicon and web
+manifest files at the dist root.
 
-## 7. Release Checklist
+### Container Bootstrap
 
-### 7.1 Code Quality
+The current `Dockerfile` builds the Go server. `docker-compose.yml` starts a
+single server with `/data` persisted:
 
-- [ ] All code reviewed and approved
-- [ ] All tests passing (unit, integration, E2E)
-- [ ] Code coverage > 70%
-- [ ] No security vulnerabilities
-- [ ] No performance regressions
+```bash
+docker compose up --build
+```
 
-### 7.2 Documentation
+The Web console is currently a separate Vite app under `web/`. A production
+container or reverse-proxy setup must either serve `web/dist/` on the same
+origin as the API or configure equivalent `/api` routing.
 
-- [ ] Installation guide complete
-- [ ] User guide complete
-- [ ] Admin guide complete
-- [ ] API documentation complete
-- [ ] Troubleshooting guide complete
-- [ ] FAQ complete
+## Authority and Cache Rules
 
-### 7.3 Deployment
+- Database and durable event log are authoritative.
+- Browser state is not authoritative for task state, assignee, claim lease,
+  event sequence, idempotency, sessions, tokens, secrets, or config.
+- SSE events are invalidation/cursor signals, not direct UI facts.
+- Cache providers store rebuildable projections only.
+- Cache keys must include server identity, protocol version, and cache key
+  version for projection validity.
 
-- [ ] Docker image builds successfully
-- [ ] docker-compose.yml tested
-- [ ] nginx configuration tested
-- [ ] SSL/TLS setup documented
-- [ ] Backup/restore procedures tested
+## Web Realtime Acceptance
 
-### 7.4 Testing
+The Web console should recognize these stable event combinations:
 
-- [ ] Acceptance tests pass
-- [ ] Performance tests pass
-- [ ] Security tests pass
-- [ ] Deployment tests pass
-- [ ] No critical issues
+- `message/appended/target`
+- `activity/created/target`
+- `task/created/task`
+- `task/state_changed/task`
+- `task/updated/task`
+- `task/claimed/task`
 
-### 7.5 Release
+The UI should refetch server DTOs after these signals. `task/updated/task`
+means non-state task updates; claims should be treated as `task/claimed/task`.
 
-- [ ] Version number updated
-- [ ] Changelog updated
-- [ ] Release notes written
-- [ ] Git tag created
-- [ ] GitHub release created
-- [ ] Announcement prepared
+## Smoke Test Checklist
 
----
+Use a fresh data directory to avoid confusing old state with acceptance data:
 
-## 8. Success Metrics
+```bash
+export NEKODE_DATA_DIR="$(mktemp -d)"
+go run ./cmd/nekode serve --addr :18790 --grpc-addr 127.0.0.1:18789
+```
 
-- [ ] All acceptance criteria met
-- [ ] Documentation complete and accurate
-- [ ] Deployment procedures tested
-- [ ] Performance metrics met
-- [ ] Security review passed
-- [ ] Ready for production deployment
+Then open a second shell.
+The examples below use `jq` for token and task ID extraction.
 
----
+### 1. Backend Health and Protocol
 
-## 9. Timeline
+```bash
+curl -fsS http://127.0.0.1:18790/health
+curl -fsS http://127.0.0.1:18790/api/protocol
+```
 
-| Phase | Duration | Start | End |
-|-------|----------|-------|-----|
-| 1 | 1-2h | 2026-05-12 | 2026-05-12 |
-| 2 | 2-3h | 2026-05-12 | 2026-05-12 |
-| 3 | 2-3h | 2026-05-13 | 2026-05-13 |
-| 4 | 2-3h | 2026-05-13 | 2026-05-13 |
-| 5 | 2-3h | 2026-05-13 | 2026-05-13 |
-| 6 | 1-2h | 2026-05-13 | 2026-05-13 |
-| **Total** | **12-17h** | **2026-05-12** | **2026-05-13** |
+Acceptance:
 
-**Target**: Complete by 2026-05-13 EOD
+- health returns success;
+- protocol metadata is readable without auth.
 
----
+### 2. Bootstrap and Login
 
-## 10. Risks & Mitigation
+```bash
+TOKEN="$(
+  curl -fsS http://127.0.0.1:18790/api/auth/bootstrap \
+    -H 'content-type: application/json' \
+    -d '{"username":"admin","password":"secret123","displayName":"Admin"}' |
+  jq -r .token
+)"
+curl -fsS http://127.0.0.1:18790/api/auth/me \
+  -H "authorization: Bearer $TOKEN"
+```
 
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Deployment issues | Release delay | Test procedures thoroughly |
-| Documentation gaps | User confusion | Review documentation carefully |
-| Performance issues | User experience | Load test before release |
-| Security vulnerabilities | Data breach | Security review before release |
-| Compatibility issues | User problems | Test on multiple environments |
+Acceptance:
 
----
+- first bootstrap creates an admin and returns a token;
+- `/api/auth/me` returns the admin user;
+- a second bootstrap attempt is rejected.
 
-## 11. Dependencies & Blockers
+### 3. Message and Task APIs
 
-**External Dependencies**:
-- Tasks #91 and #92 must be complete
-- Docker and Docker Compose
-- nginx (optional)
+```bash
+curl -fsS http://127.0.0.1:18790/api/messages \
+  -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"target":"#general","content":"hello from smoke","role":"user","requestId":"smoke-message-1"}'
 
-**Internal Dependencies**:
-- Backend API from Task #91
-- Frontend from Task #92
-- Proto definitions
+TASK_ID="$(
+  curl -fsS http://127.0.0.1:18790/api/tasks \
+    -H "authorization: Bearer $TOKEN" \
+    -H 'content-type: application/json' \
+    -d '{"summary":"smoke task","target":"#general","state":"todo"}' |
+  jq -r .id
+)"
 
-**Blockers**:
-- None identified at this stage
+curl -fsS "http://127.0.0.1:18790/api/tasks/$TASK_ID" \
+  -X PATCH \
+  -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"state":"blocked"}'
 
----
+curl -fsS 'http://127.0.0.1:18790/api/tasks?target=%23general' \
+  -H "authorization: Bearer $TOKEN"
+```
 
-## 12. Handoff Criteria
+Acceptance:
 
-Before marking as complete:
+- message create succeeds;
+- task create succeeds;
+- task patch returns canonical `blocked`;
+- list returns the task under `#general`;
+- invalid states return `400`.
 
-- [ ] All documentation written and reviewed
-- [ ] Deployment procedures tested
-- [ ] Acceptance tests pass
-- [ ] Release checklist complete
-- [ ] Ready for production deployment
-- [ ] Team trained on operations
+### 4. Daemon Info and Durable Events
 
----
+```bash
+curl -fsS http://127.0.0.1:18790/api/daemon/info \
+  -H "authorization: Bearer $TOKEN"
 
-## 13. Notes
+curl -fsS 'http://127.0.0.1:18790/api/daemon/events?target=%23general&limit=20' \
+  -H "authorization: Bearer $TOKEN"
+```
 
-- Coordinate with @小皮丘 on backend deployment
-- Coordinate with @小吱吱 on frontend deployment
-- Keep documentation simple and clear
-- Test all procedures before release
-- Plan for future scaling and optimization
-- Consider user feedback for v1.1
+Acceptance:
 
----
+- daemon info includes `serverId`, protocol version, gRPC address, transport,
+  and cache driver;
+- event list includes message/task/activity-related durable events;
+- `sequence` values are monotonic.
 
-**Created**: 2026-05-07  
-**Last Updated**: 2026-05-07  
-**Status**: Ready for Implementation
+### 5. SSE Resume
+
+Manual command-line smoke:
+
+```bash
+timeout 10s curl -N \
+  "http://127.0.0.1:18790/api/server-events?access_token=$TOKEN&target=%23general&limit=5"
+```
+
+Acceptance:
+
+- stream emits durable events or pings;
+- event `data` includes `sequence`;
+- reconnecting with `sequence=<last-sequence>` does not replay older events.
+
+### 6. Web Console Smoke
+
+```bash
+cd web
+npm install
+npm run dev -- --port 18791
+```
+
+Open `http://127.0.0.1:18791/`.
+
+Acceptance:
+
+- bootstrap/login works;
+- Overview shows daemon/server identity;
+- Board shows six fixed states in order;
+- creating or updating a task is reflected after server refetch;
+- blocked and canceled are visually distinct;
+- Activity view shows durable event rows;
+- Task inspector shows state, target, assignee, claim lease, version, and
+  timestamps;
+- refreshing the page preserves valid SSE cursor state unless server identity
+  or protocol version changes.
+
+## Release Gate
+
+Before tagging or deploying:
+
+- `buf lint`
+- `go test ./... -count=1 -timeout=180s`
+- `go build ./...`
+- `cd web && npm ci && npm run typecheck && npm run build`
+- `git diff --check`
+- smoke checklist above completed against the intended deploy target
+
+## Remaining Backlog
+
+These are not blockers for the current MVP baseline:
+
+- query-cache architecture and UI-only state extraction;
+- task filtering/sorting/list view/column controls/bulk operations;
+- richer task detail workspace: description, comments/thread link, blocked
+  reason editor, attachments, reactions, subscriptions;
+- agent/runtime detail pages with run/step logs and lease/heartbeat/offline
+  UX;
+- action-level permission hints and settings pages;
+- hosted deployment productization;
+- WebSocket transport for browser bidirectional realtime;
+- QUIC/WebTransport for server-daemon weak-network transport lane.
