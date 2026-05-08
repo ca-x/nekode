@@ -168,6 +168,59 @@ Expected channel binding flow:
 The UI must not expose raw credential values after creation. If a credential
 needs rotation, the operator should replace it through a write-only field.
 
+## Web Display and Routing
+
+IM-origin messages are first-class Nekode messages with source metadata. They
+should be visible in Web without turning Web agent DM into a mixed global IM
+feed.
+
+### Message Metadata
+
+Inbound IM messages persist through `storage.Message` and must keep:
+
+- `SourceEndpointID`: the Nekode `InteractionEndpoint` that received the event;
+- `ExternalMessageID`: the provider message ID used for dedupe;
+- `MetadataJSON.im.provider`: provider name such as `telegram`, `qq`,
+  `feishu`, `weixin`, or `terminal`;
+- `MetadataJSON.im.endpoint_id`: copied source endpoint ID;
+- `MetadataJSON.im.conversation`: normalized external conversation record;
+- `MetadataJSON.im.sender`: normalized external sender record;
+- `MetadataJSON.im.external_message_id`: copied provider message ID;
+- `MetadataJSON.im.bound_target` and `MetadataJSON.im.bound_thread_id` when the
+  coordinator binds the source conversation to a Nekode target/thread.
+
+Web should render source badges from these normalized fields. It should not
+parse provider-specific raw payloads.
+
+### Web Placement
+
+Placement is decided by `InteractionEndpoint` plus conversation binding:
+
+- IM group conversations route to the bound Nekode channel/thread, or to the
+  configured default target when policy allows it.
+- IM private conversations route to a bound Nekode thread/inbox topic. If the
+  private conversation targets an agent, it still remains an IM-origin thread,
+  not a Web-native agent DM.
+- Web-native user-to-agent DM remains a separate Nekode direct-message/session
+  surface. It should not receive unrelated IM-origin messages.
+- If a coordinator intentionally binds an IM source and a Web thread together,
+  the shared thread may show both sources, but each IM message still keeps its
+  source badge.
+
+### Web Rendering
+
+Message rows should show:
+
+- the message body and existing attachments;
+- an IM source badge with provider, endpoint display name, external
+  conversation display name, and sender display name when available;
+- group/private source context;
+- outbound delivery status for agent replies once task #158 records it.
+
+Agent replies to IM-origin messages should display in the same Web
+channel/thread/inbox topic and be delivered back to the original IM endpoint by
+the outbound dispatcher. The adapter layer should not post the reply directly.
+
 ## Deployment Steps
 
 For each IM channel:
@@ -262,6 +315,8 @@ Before marking platform adapter work done, reviewers should check:
   intentional;
 - task #164 covers mock fixtures for Telegram, QQ, Feishu, WeChat, and
   Terminal;
+- Web display keeps IM source badges and does not mix IM-origin private chats
+  into Web-native agent DM;
 - dependencies introduced by provider SDKs are reviewed separately and are not
   added implicitly by documentation work.
 
@@ -272,6 +327,8 @@ Before marking platform adapter work done, reviewers should check:
 - Deployment steps include provider setup, callback URL, signature verification,
   and mock gate validation.
 - Provider coverage includes Telegram, QQ, Feishu, WeChat, and Terminal.
+- Web display/routing rules distinguish IM-origin threads from Web-native agent
+  DM while sharing the same `storage.Message` fact model.
 - `ConfigJSON` is documented as non-secret; credentials use secret references or
   redacted placeholders.
 - Stella reference scope and MIT attribution are explicit.
