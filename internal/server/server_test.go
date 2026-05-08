@@ -55,6 +55,152 @@ func TestProtocolEndpoint(t *testing.T) {
 	}
 }
 
+func TestSetupStatusAndWebInit(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+
+	status := doGET(t, s, "/api/auth/setup-status", "")
+	if status.Code != http.StatusOK {
+		t.Fatalf("setup status = %d body=%s", status.Code, status.Body.String())
+	}
+	var setupStatus struct {
+		Initialized      bool     `json:"initialized"`
+		WebSetupEnabled  bool     `json:"webSetupEnabled"`
+		BootstrapMethods []string `json:"bootstrapMethods"`
+		ServerID         string   `json:"serverId"`
+		DataDir          string   `json:"dataDir"`
+	}
+	if err := json.Unmarshal(status.Body.Bytes(), &setupStatus); err != nil {
+		t.Fatalf("decode setup status: %v", err)
+	}
+	if setupStatus.Initialized || !setupStatus.WebSetupEnabled || setupStatus.ServerID == "" || setupStatus.DataDir == "" {
+		t.Fatalf("setup status body = %+v", setupStatus)
+	}
+	if len(setupStatus.BootstrapMethods) != 2 || setupStatus.BootstrapMethods[0] != "env" || setupStatus.BootstrapMethods[1] != "web" {
+		t.Fatalf("bootstrap methods = %+v, want env,web", setupStatus.BootstrapMethods)
+	}
+
+	initResp := doJSON(t, s, http.MethodPost, "/api/auth/init", "", map[string]any{
+		"username":    "admin",
+		"password":    "secret123",
+		"displayName": "Admin",
+	})
+	if initResp.Code != http.StatusCreated {
+		t.Fatalf("init status = %d body=%s", initResp.Code, initResp.Body.String())
+	}
+	var tokenBody struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(initResp.Body.Bytes(), &tokenBody); err != nil {
+		t.Fatalf("decode init response: %v", err)
+	}
+	if tokenBody.Token == "" {
+		t.Fatal("init token is empty")
+	}
+	again := doJSON(t, s, http.MethodPost, "/api/auth/init", "", map[string]any{
+		"username": "other",
+		"password": "secret123",
+	})
+	if again.Code != http.StatusConflict {
+		t.Fatalf("second init status = %d body=%s, want 409", again.Code, again.Body.String())
+	}
+	status = doGET(t, s, "/api/auth/init-status", "")
+	if status.Code != http.StatusOK {
+		t.Fatalf("init-status = %d body=%s", status.Code, status.Body.String())
+	}
+	if err := json.Unmarshal(status.Body.Bytes(), &setupStatus); err != nil {
+		t.Fatalf("decode init status: %v", err)
+	}
+	if !setupStatus.Initialized {
+		t.Fatalf("initialized = false after init")
+	}
+}
+
+func TestWebSetupCanBeDisabled(t *testing.T) {
+	cfg := testConfig()
+	cfg.BootstrapDisableWeb = true
+	s := New(cfg, slog.New(slog.DiscardHandler), newTestStore(t))
+
+	status := doGET(t, s, "/api/auth/setup-status", "")
+	if status.Code != http.StatusOK {
+		t.Fatalf("setup status = %d body=%s", status.Code, status.Body.String())
+	}
+	var setupStatus struct {
+		Initialized      bool     `json:"initialized"`
+		WebSetupEnabled  bool     `json:"webSetupEnabled"`
+		BootstrapMethods []string `json:"bootstrapMethods"`
+	}
+	if err := json.Unmarshal(status.Body.Bytes(), &setupStatus); err != nil {
+		t.Fatalf("decode setup status: %v", err)
+	}
+	if setupStatus.Initialized || setupStatus.WebSetupEnabled {
+		t.Fatalf("setup status body = %+v", setupStatus)
+	}
+	if len(setupStatus.BootstrapMethods) != 1 || setupStatus.BootstrapMethods[0] != "env" {
+		t.Fatalf("bootstrap methods = %+v, want env only", setupStatus.BootstrapMethods)
+	}
+
+	initResp := doJSON(t, s, http.MethodPost, "/api/auth/init", "", map[string]any{
+		"username": "admin",
+		"password": "secret123",
+	})
+	if initResp.Code != http.StatusForbidden {
+		t.Fatalf("init disabled status = %d body=%s, want 403", initResp.Code, initResp.Body.String())
+	}
+	bootstrapResp := doJSON(t, s, http.MethodPost, "/api/auth/bootstrap", "", map[string]any{
+		"username": "admin",
+		"password": "secret123",
+	})
+	if bootstrapResp.Code != http.StatusForbidden {
+		t.Fatalf("bootstrap disabled status = %d body=%s, want 403", bootstrapResp.Code, bootstrapResp.Body.String())
+	}
+}
+
+func TestEnvironmentBootstrap(t *testing.T) {
+	cfg := testConfig()
+	cfg.BootstrapAdminUsername = "env-admin"
+	cfg.BootstrapAdminPassword = "secret123"
+	cfg.BootstrapAdminName = "Env Admin"
+	s := New(cfg, slog.New(slog.DiscardHandler), newTestStore(t))
+
+	if err := s.BootstrapFromEnvironment(context.Background()); err != nil {
+		t.Fatalf("BootstrapFromEnvironment() error = %v", err)
+	}
+	login := doJSON(t, s, http.MethodPost, "/api/auth/login", "", map[string]any{
+		"username": "env-admin",
+		"password": "secret123",
+	})
+	if login.Code != http.StatusOK {
+		t.Fatalf("login env admin status = %d body=%s", login.Code, login.Body.String())
+	}
+	if err := s.BootstrapFromEnvironment(context.Background()); err != nil {
+		t.Fatalf("BootstrapFromEnvironment(already initialized) error = %v", err)
+	}
+	count, err := s.store.CountUsers(context.Background())
+	if err != nil {
+		t.Fatalf("CountUsers() error = %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("users = %d, want 1", count)
+	}
+}
+
+func TestEnvironmentBootstrapIncompleteDoesNotCreateUser(t *testing.T) {
+	cfg := testConfig()
+	cfg.BootstrapAdminUsername = "env-admin"
+	s := New(cfg, slog.New(slog.DiscardHandler), newTestStore(t))
+
+	if err := s.BootstrapFromEnvironment(context.Background()); err != nil {
+		t.Fatalf("BootstrapFromEnvironment() error = %v", err)
+	}
+	initialized, err := s.auth.Initialized(context.Background())
+	if err != nil {
+		t.Fatalf("Initialized() error = %v", err)
+	}
+	if initialized {
+		t.Fatal("Initialized() = true, want false")
+	}
+}
+
 func TestAuthAndCoreAPIs(t *testing.T) {
 	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
 

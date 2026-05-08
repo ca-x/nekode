@@ -83,6 +83,30 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 	return s.client.User.Query().Count(ctx)
 }
 
+func (s *Store) IsInitialized(ctx context.Context) (bool, error) {
+	count, err := s.CountUsers(ctx)
+	if err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+	_, err = s.client.IdempotencyRecord.Query().
+		Where(
+			idempotencyrecord.ScopeEQ("server"),
+			idempotencyrecord.MethodEQ("bootstrap"),
+			idempotencyrecord.IdempotencyKeyEQ("first_admin"),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (s *Store) CreateUser(ctx context.Context, userModel User) (User, error) {
 	now := unixNow()
 	role := userModel.Role

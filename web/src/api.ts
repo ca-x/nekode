@@ -11,6 +11,7 @@ import type {
   JsonObject,
   Message,
   ProtocolInfo,
+  SetupStatus,
   Task,
   TaskState,
   User
@@ -406,6 +407,17 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify({ username, password, displayName })
     });
+  }
+
+  init(username: string, password: string, displayName: string) {
+    return this.request<AuthResponse>("/api/auth/init", {
+      method: "POST",
+      body: JSON.stringify({ username, password, displayName })
+    });
+  }
+
+  setupStatus() {
+    return this.request<SetupStatus>("/api/auth/setup-status");
   }
 
   login(username: string, password: string) {

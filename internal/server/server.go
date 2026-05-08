@@ -134,7 +134,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/version", s.handleVersion)
 	s.mux.HandleFunc("GET /api/protocol", s.handleProtocol)
+	s.mux.HandleFunc("GET /api/auth/setup-status", s.handleSetupStatus)
+	s.mux.HandleFunc("GET /api/auth/init-status", s.handleSetupStatus)
 	s.mux.HandleFunc("POST /api/auth/bootstrap", s.handleBootstrap)
+	s.mux.HandleFunc("POST /api/auth/init", s.handleBootstrap)
 	s.mux.HandleFunc("POST /api/auth/login", s.handleLogin)
 	s.mux.HandleFunc("POST /api/auth/logout", s.requireAuth(s.handleLogout))
 	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
@@ -173,7 +176,76 @@ func (s *Server) handleProtocol(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
+func (s *Server) BootstrapFromEnvironment(ctx context.Context) error {
+	username := strings.TrimSpace(s.cfg.BootstrapAdminUsername)
+	password := s.cfg.BootstrapAdminPassword
+	displayName := strings.TrimSpace(s.cfg.BootstrapAdminName)
+	if username == "" && strings.TrimSpace(password) == "" {
+		return nil
+	}
+	if username == "" || strings.TrimSpace(password) == "" {
+		missing := make([]string, 0, 2)
+		if username == "" {
+			missing = append(missing, "NEKODE_BOOTSTRAP_ADMIN_USERNAME")
+		}
+		if strings.TrimSpace(password) == "" {
+			missing = append(missing, "NEKODE_BOOTSTRAP_ADMIN_PASSWORD")
+		}
+		s.logger.Warn("bootstrap admin env is incomplete", "missing", strings.Join(missing, ","))
+		return nil
+	}
+	if err := validateCredentials(username, password); err != nil {
+		return err
+	}
+	_, err := s.auth.Bootstrap(ctx, username, password, displayName)
+	if errors.Is(err, auth.ErrBootstrapClosed) {
+		s.logger.Info("bootstrap admin skipped: already_initialized")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	s.logger.Info("bootstrap admin created from environment")
+	return nil
+}
+
+func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
+	initialized, err := s.auth.Initialized(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "setup status failed")
+		return
+	}
+	methods := []string{"env"}
+	if !s.cfg.BootstrapDisableWeb {
+		methods = append(methods, "web")
+	}
+	serverID, err := s.cfg.ServerID()
+	if err != nil {
+		s.logger.Warn("failed to load server id for setup status", "error", err)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"initialized":      initialized,
+		"webSetupEnabled":  !s.cfg.BootstrapDisableWeb,
+		"bootstrapMethods": methods,
+		"serverId":         serverID,
+		"dataDir":          s.cfg.DataDir,
+	})
+}
+
 func (s *Server) handleBootstrap(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.BootstrapDisableWeb {
+		initialized, err := s.auth.Initialized(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "setup status failed")
+			return
+		}
+		if initialized {
+			writeError(w, http.StatusConflict, "already_initialized")
+			return
+		}
+		writeError(w, http.StatusForbidden, "web setup is disabled")
+		return
+	}
 	var req authRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -184,7 +256,7 @@ func (s *Server) handleBootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := s.auth.Bootstrap(r.Context(), req.Username, req.Password, req.DisplayName)
 	if errors.Is(err, auth.ErrBootstrapClosed) {
-		writeError(w, http.StatusConflict, "bootstrap is already closed")
+		writeError(w, http.StatusConflict, "already_initialized")
 		return
 	}
 	if err != nil {

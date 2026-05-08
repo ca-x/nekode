@@ -13,6 +13,14 @@ export type AuthResponse = {
   user: User;
 };
 
+export type SetupStatus = {
+  initialized: boolean;
+  webSetupEnabled: boolean;
+  bootstrapMethods: string[];
+  serverId: string;
+  dataDir: string;
+};
+
 export type InteractionEndpoint = {
   id: string;
   kind: string;

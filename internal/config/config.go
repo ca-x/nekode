@@ -19,22 +19,26 @@ const (
 )
 
 type Config struct {
-	Addr            string
-	GRPCAddr        string
-	DaemonTransport string
-	BaseURL         string
-	DataDir         string
-	DBType          string
-	DBDSN           string
-	LegacyDBPath    string
-	CacheDriver     string
-	CacheDir        string
-	CacheTTL        time.Duration
-	CacheKeyVersion string
-	CacheRedisAddr  string
-	CacheRedisUser  string
-	CacheRedisPass  string
-	CacheRedisDB    int
+	Addr                   string
+	GRPCAddr               string
+	DaemonTransport        string
+	BaseURL                string
+	DataDir                string
+	DBType                 string
+	DBDSN                  string
+	LegacyDBPath           string
+	CacheDriver            string
+	CacheDir               string
+	CacheTTL               time.Duration
+	CacheKeyVersion        string
+	CacheRedisAddr         string
+	CacheRedisUser         string
+	CacheRedisPass         string
+	CacheRedisDB           int
+	BootstrapAdminUsername string
+	BootstrapAdminPassword string
+	BootstrapAdminName     string
+	BootstrapDisableWeb    bool
 }
 
 func Load() (Config, error) {
@@ -44,20 +48,23 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Addr:            env("NEKODE_ADDR", DefaultAddr),
-		GRPCAddr:        env("NEKODE_GRPC_ADDR", DefaultGRPCAddr),
-		DaemonTransport: env("NEKODE_DAEMON_TRANSPORT", "grpc"),
-		BaseURL:         env("NEKODE_BASE_URL", DefaultBaseURL),
-		DataDir:         env("NEKODE_DATA_DIR", filepath.Join(home, ".nekode")),
-		DBType:          env("NEKODE_DB_TYPE", DefaultDBType),
-		DBDSN:           strings.TrimSpace(os.Getenv("NEKODE_DB_DSN")),
-		LegacyDBPath:    strings.TrimSpace(os.Getenv("NEKODE_DB_PATH")),
-		CacheDriver:     env("NEKODE_CACHE_DRIVER", "badger"),
-		CacheDir:        strings.TrimSpace(os.Getenv("NEKODE_CACHE_DIR")),
-		CacheKeyVersion: env("NEKODE_CACHE_KEY_VERSION", "v1"),
-		CacheRedisAddr:  strings.TrimSpace(os.Getenv("NEKODE_CACHE_REDIS_ADDR")),
-		CacheRedisUser:  strings.TrimSpace(os.Getenv("NEKODE_CACHE_REDIS_USERNAME")),
-		CacheRedisPass:  strings.TrimSpace(os.Getenv("NEKODE_CACHE_REDIS_PASSWORD")),
+		Addr:                   env("NEKODE_ADDR", DefaultAddr),
+		GRPCAddr:               env("NEKODE_GRPC_ADDR", DefaultGRPCAddr),
+		DaemonTransport:        env("NEKODE_DAEMON_TRANSPORT", "grpc"),
+		BaseURL:                env("NEKODE_BASE_URL", DefaultBaseURL),
+		DataDir:                env("NEKODE_DATA_DIR", filepath.Join(home, ".nekode")),
+		DBType:                 env("NEKODE_DB_TYPE", DefaultDBType),
+		DBDSN:                  strings.TrimSpace(os.Getenv("NEKODE_DB_DSN")),
+		LegacyDBPath:           strings.TrimSpace(os.Getenv("NEKODE_DB_PATH")),
+		CacheDriver:            env("NEKODE_CACHE_DRIVER", "badger"),
+		CacheDir:               strings.TrimSpace(os.Getenv("NEKODE_CACHE_DIR")),
+		CacheKeyVersion:        env("NEKODE_CACHE_KEY_VERSION", "v1"),
+		CacheRedisAddr:         strings.TrimSpace(os.Getenv("NEKODE_CACHE_REDIS_ADDR")),
+		CacheRedisUser:         strings.TrimSpace(os.Getenv("NEKODE_CACHE_REDIS_USERNAME")),
+		CacheRedisPass:         strings.TrimSpace(os.Getenv("NEKODE_CACHE_REDIS_PASSWORD")),
+		BootstrapAdminUsername: strings.TrimSpace(os.Getenv("NEKODE_BOOTSTRAP_ADMIN_USERNAME")),
+		BootstrapAdminPassword: strings.TrimSpace(os.Getenv("NEKODE_BOOTSTRAP_ADMIN_PASSWORD")),
+		BootstrapAdminName:     strings.TrimSpace(os.Getenv("NEKODE_BOOTSTRAP_ADMIN_NAME")),
 	}
 	cacheTTL, err := durationEnv("NEKODE_CACHE_TTL", 5*time.Minute)
 	if err != nil {
@@ -69,6 +76,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.CacheRedisDB = cacheRedisDB
+	bootstrapDisableWeb, err := boolEnv("NEKODE_BOOTSTRAP_DISABLE_WEB", false)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.BootstrapDisableWeb = bootstrapDisableWeb
 	if cfg.DBDSN == "" && cfg.LegacyDBPath != "" {
 		cfg.DBDSN = cfg.LegacyDBPath
 	}
@@ -201,6 +213,18 @@ func intEnv(name string, fallback int) (int, error) {
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+	return parsed, nil
+}
+
+func boolEnv(name string, fallback bool) (bool, error) {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", name, err)
 	}
 	return parsed, nil
 }

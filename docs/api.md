@@ -1,6 +1,7 @@
 # Nekode Bootstrap API
 
-Status: task #94 backend Phase 2 plus task #98 daemon/bridge implementation
+Status: task #94 backend Phase 2 plus task #98 daemon/bridge implementation,
+with task #115 first-admin setup support.
 
 Persistence uses Ent ORM. Configure the database with:
 
@@ -22,6 +23,10 @@ Persistence uses Ent ORM. Configure the database with:
 | `NEKODE_CACHE_REDIS_USERNAME` | empty | Optional Redis username |
 | `NEKODE_CACHE_REDIS_PASSWORD` | empty | Optional Redis password |
 | `NEKODE_CACHE_REDIS_DB` | `0` | Redis DB number |
+| `NEKODE_BOOTSTRAP_ADMIN_USERNAME` | empty | Optional first-admin username for unattended bootstrap |
+| `NEKODE_BOOTSTRAP_ADMIN_PASSWORD` | empty | Optional first-admin password for unattended bootstrap |
+| `NEKODE_BOOTSTRAP_ADMIN_NAME` | empty | Optional first-admin display name |
+| `NEKODE_BOOTSTRAP_DISABLE_WEB` | `false` | Disable browser setup while still allowing env bootstrap |
 
 SQLite uses the same pure-Go `github.com/lib-x/entsqlite` driver pattern as
 Nekobot.
@@ -69,10 +74,33 @@ startup instead of silently weakening runtime behavior. Set
 
 ## Authentication
 
+### `GET /api/auth/setup-status`
+
+Returns the first-run setup state. This endpoint is intentionally readable
+before login so the Web console can choose between login, setup, or the
+operator-only disabled setup message.
+
+`GET /api/auth/init-status` is kept as a compatibility alias.
+
+Response `200`:
+
+```json
+{
+  "initialized": false,
+  "webSetupEnabled": true,
+  "bootstrapMethods": ["env", "web"],
+  "serverId": "srv_...",
+  "dataDir": "/home/user/.nekode"
+}
+```
+
 ### `POST /api/auth/bootstrap`
 
 Creates the first admin user. This endpoint only works while the user table is
-empty.
+empty and browser setup is enabled.
+
+`POST /api/auth/init` is the first-run Web setup alias and returns the same
+response shape.
 
 Request:
 
@@ -98,6 +126,10 @@ Response `201`:
   }
 }
 ```
+
+Repeat bootstrap attempts return `409 {"error":"already_initialized"}`. If
+`NEKODE_BOOTSTRAP_DISABLE_WEB=true` and the server is not initialized, browser
+bootstrap returns `403 {"error":"web setup is disabled"}`.
 
 ### `POST /api/auth/login`
 

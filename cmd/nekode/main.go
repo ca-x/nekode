@@ -95,6 +95,9 @@ func serve(args []string) error {
 	defer cacheStore.Close()
 
 	s := server.NewWithCache(cfg, slog.Default(), store, cacheStore)
+	if err := s.BootstrapFromEnvironment(ctx); err != nil {
+		return err
+	}
 	err = s.ListenAndServe(ctx)
 	if err == context.Canceled {
 		return nil

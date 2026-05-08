@@ -1129,11 +1129,35 @@ textarea {
   font-size: 1rem;
 }
 
+.setup-context {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
 .auth-form {
   display: grid;
   align-content: center;
   gap: 14px;
   padding: 28px;
+}
+
+.setup-mode-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  font-weight: 800;
 }
 
 .auth-form label,

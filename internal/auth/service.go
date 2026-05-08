@@ -60,6 +60,10 @@ func (s *Service) Bootstrap(ctx context.Context, username, password, displayName
 	return s.issueSession(ctx, user)
 }
 
+func (s *Service) Initialized(ctx context.Context) (bool, error) {
+	return s.store.IsInitialized(ctx)
+}
+
 func (s *Service) Login(ctx context.Context, username, password string) (SessionToken, error) {
 	user, err := s.store.GetUserByUsername(ctx, strings.TrimSpace(username))
 	if err != nil {

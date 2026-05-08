@@ -34,6 +34,7 @@ import type {
   InteractionEndpoint,
   Message,
   ProtocolInfo,
+  SetupStatus,
   Task,
   TaskState,
   User
@@ -503,21 +504,49 @@ function AvatarBadge({ label, color }: { label: string; color: string }) {
 }
 
 function AuthScreen({ onAuth }: { onAuth: (auth: AuthResponse) => void }) {
-  const [mode, setMode] = useState<"login" | "bootstrap">("login");
+  const [mode, setMode] = useState<"checking" | "login" | "setup" | "disabled">("checking");
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [username, setUsername] = useState("admin");
   const [displayName, setDisplayName] = useState("Admin");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const loadSetupStatus = useCallback(async () => {
+    setError("");
+    setMode("checking");
+    try {
+      const status = await api.setupStatus();
+      setSetupStatus(status);
+      if (status.initialized) {
+        setMode("login");
+      } else {
+        setMode(status.webSetupEnabled ? "setup" : "disabled");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load setup status");
+      setMode("login");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSetupStatus();
+  }, [loadSetupStatus]);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (mode === "checking" || mode === "disabled") return;
+    if (mode === "setup" && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const auth =
-        mode === "bootstrap"
-          ? await api.bootstrap(username, password, displayName)
+        mode === "setup"
+          ? await api.init(username, password, displayName)
           : await api.login(username, password);
       onAuth(auth);
     } catch (err) {
@@ -527,63 +556,105 @@ function AuthScreen({ onAuth }: { onAuth: (auth: AuthResponse) => void }) {
     }
   };
 
+  const isSetupMode = mode === "setup";
+
   return (
     <main className="auth-screen">
       <section className="auth-panel">
         <div className="auth-copy">
           <img src={brandMarkUrl} alt="" className="auth-mark" />
           <p className="eyebrow">Nekode Console</p>
-          <h1>Run a self-hosted Slock-style team surface.</h1>
+          <h1>
+            {isSetupMode
+              ? "Create the first administrator."
+              : "Run a self-hosted Slock-style team surface."}
+          </h1>
           <p>
-            Manage collaboration targets, messages, tasks, interaction endpoints, and the daemon
-            bridge from one operator-focused console.
+            {isSetupMode
+              ? "This server is not initialized yet. The setup wizard creates exactly one admin account, then signs you in."
+              : "Manage collaboration targets, messages, tasks, interaction endpoints, and the daemon bridge from one operator-focused console."}
           </p>
-        </div>
-        <form className="auth-form" onSubmit={submit}>
-          <div className="segmented" role="tablist" aria-label="Authentication mode">
-            <button
-              type="button"
-              className={mode === "login" ? "is-active" : ""}
-              onClick={() => setMode("login")}
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              className={mode === "bootstrap" ? "is-active" : ""}
-              onClick={() => setMode("bootstrap")}
-            >
-              Bootstrap
-            </button>
-          </div>
-          <label>
-            Username
-            <input value={username} onChange={(event) => setUsername(event.target.value)} />
-          </label>
-          {mode === "bootstrap" ? (
-            <label>
-              Display name
-              <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
-            </label>
-          ) : null}
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={8}
-            />
-          </label>
-          {error ? (
-            <div className="notice error" role="alert">
-              {error}
+          {setupStatus ? (
+            <div className="setup-context">
+              <span>server_id: {setupStatus.serverId || "pending"}</span>
+              <span>data_dir: {setupStatus.dataDir || "unknown"}</span>
             </div>
           ) : null}
-          <button className="primary-button" type="submit" disabled={busy}>
+        </div>
+        <form className="auth-form" onSubmit={submit}>
+          <div className="setup-mode-banner">
             <Shield size={18} aria-hidden="true" />
-            {busy ? "Working..." : mode === "bootstrap" ? "Create Admin" : "Sign In"}
-          </button>
+            {mode === "checking"
+              ? "Checking server setup"
+              : mode === "setup"
+                ? "First-run setup"
+                : mode === "disabled"
+                  ? "Web setup disabled"
+                  : "Login"}
+          </div>
+          {mode === "disabled" ? (
+            <>
+              <div className="notice" role="status">
+                Browser setup is disabled for this server. Ask the operator to provide
+                NEKODE_BOOTSTRAP_ADMIN_USERNAME and NEKODE_BOOTSTRAP_ADMIN_PASSWORD through the
+                environment, then restart Nekode.
+              </div>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => void loadSetupStatus()}
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+                Recheck
+              </button>
+            </>
+          ) : null}
+          {mode !== "disabled" ? (
+            <>
+              <label>
+                Username
+                <input value={username} onChange={(event) => setUsername(event.target.value)} />
+              </label>
+              {isSetupMode ? (
+                <label>
+                  Display name
+                  <input
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                  />
+                </label>
+              ) : null}
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={8}
+                />
+              </label>
+              {isSetupMode ? (
+                <label>
+                  Confirm password
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    minLength={8}
+                  />
+                </label>
+              ) : null}
+              {error ? (
+                <div className="notice error" role="alert">
+                  {error}
+                </div>
+              ) : null}
+              <button className="primary-button" type="submit" disabled={busy || mode === "checking"}>
+                <Shield size={18} aria-hidden="true" />
+                {busy ? "Working..." : isSetupMode ? "Create Admin" : "Sign In"}
+              </button>
+            </>
+          ) : null}
         </form>
       </section>
     </main>

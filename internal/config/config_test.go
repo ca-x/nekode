@@ -43,6 +43,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.CacheTTL != 5*time.Minute {
 		t.Fatalf("CacheTTL = %v, want 5m", cfg.CacheTTL)
 	}
+	if cfg.BootstrapDisableWeb {
+		t.Fatal("BootstrapDisableWeb = true, want false")
+	}
 }
 
 func TestLoadFromEnvironment(t *testing.T) {
@@ -59,6 +62,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 	t.Setenv("NEKODE_CACHE_REDIS_ADDR", "127.0.0.1:6379")
 	t.Setenv("NEKODE_CACHE_REDIS_DB", "2")
 	t.Setenv("NEKODE_CACHE_TTL", "30s")
+	t.Setenv("NEKODE_BOOTSTRAP_ADMIN_USERNAME", "root")
+	t.Setenv("NEKODE_BOOTSTRAP_ADMIN_PASSWORD", "secret123")
+	t.Setenv("NEKODE_BOOTSTRAP_ADMIN_NAME", "Root User")
+	t.Setenv("NEKODE_BOOTSTRAP_DISABLE_WEB", "true")
 
 	cfg, err := Load()
 	if err != nil {
@@ -90,6 +97,12 @@ func TestLoadFromEnvironment(t *testing.T) {
 	}
 	if cfg.CacheTTL != 30*time.Second {
 		t.Fatalf("CacheTTL = %v", cfg.CacheTTL)
+	}
+	if cfg.BootstrapAdminUsername != "root" || cfg.BootstrapAdminPassword != "secret123" || cfg.BootstrapAdminName != "Root User" {
+		t.Fatalf("bootstrap admin config mismatch: username=%q name=%q password_ok=%t", cfg.BootstrapAdminUsername, cfg.BootstrapAdminName, cfg.BootstrapAdminPassword == "secret123")
+	}
+	if !cfg.BootstrapDisableWeb {
+		t.Fatal("BootstrapDisableWeb = false, want true")
 	}
 }
 
@@ -142,6 +155,10 @@ func clearEnv(t *testing.T) {
 		"NEKODE_CACHE_REDIS_USERNAME",
 		"NEKODE_CACHE_REDIS_PASSWORD",
 		"NEKODE_CACHE_REDIS_DB",
+		"NEKODE_BOOTSTRAP_ADMIN_USERNAME",
+		"NEKODE_BOOTSTRAP_ADMIN_PASSWORD",
+		"NEKODE_BOOTSTRAP_ADMIN_NAME",
+		"NEKODE_BOOTSTRAP_DISABLE_WEB",
 	} {
 		t.Setenv(name, "")
 	}
