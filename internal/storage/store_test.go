@@ -638,6 +638,128 @@ func TestReminderLifecycleEventInvariants(t *testing.T) {
 	}
 }
 
+func TestCollaborationEventAndIdempotencyInvariants(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	if _, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		Kind:        "message",
+		PayloadJSON: "{}",
+	}); err == nil {
+		t.Fatal("AppendCollaborationEvent(without server) succeeded, want error")
+	}
+	first, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		ServerID:    "srv-a",
+		EventID:     "event-1",
+		Target:      "#general",
+		AggregateID: "thread-1",
+		Kind:        "message",
+		Operation:   "appended",
+		PayloadJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("AppendCollaborationEvent(first) error = %v", err)
+	}
+	second, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		ServerID:    "srv-a",
+		EventID:     "event-2",
+		Target:      "#general",
+		AggregateID: "thread-1",
+		Kind:        "task",
+		Operation:   "created",
+		PayloadJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("AppendCollaborationEvent(second) error = %v", err)
+	}
+	otherServer, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		ServerID:    "srv-b",
+		EventID:     "event-3",
+		Target:      "#general",
+		Kind:        "message",
+		Operation:   "appended",
+		PayloadJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("AppendCollaborationEvent(other server) error = %v", err)
+	}
+	if first.Sequence != 1 || second.Sequence != 2 || otherServer.Sequence != 1 {
+		t.Fatalf("sequences = first:%d second:%d other:%d, want per-server monotonic sequences", first.Sequence, second.Sequence, otherServer.Sequence)
+	}
+	if _, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		ServerID:    "srv-a",
+		EventID:     "event-1",
+		Target:      "#general",
+		Kind:        "message",
+		Operation:   "appended",
+		PayloadJSON: "{}",
+	}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("AppendCollaborationEvent(duplicate event id) error = %v, want %v", err, ErrConflict)
+	}
+	events, err := store.ListCollaborationEvents(ctx, "srv-a", "#general", "thread-1", first.Sequence, 10)
+	if err != nil {
+		t.Fatalf("ListCollaborationEvents() error = %v", err)
+	}
+	if len(events) != 1 || events[0].ID != second.ID {
+		t.Fatalf("events after first sequence = %+v, want only second event", events)
+	}
+
+	reserved, created, err := store.ReserveIdempotencyRecord(ctx, IdempotencyRecord{
+		Scope:          "http",
+		Method:         "CreateMessage",
+		ActorID:        "user-1",
+		IdempotencyKey: "idem-1",
+		RequestHash:    "hash-1",
+	})
+	if err != nil {
+		t.Fatalf("ReserveIdempotencyRecord(first) error = %v", err)
+	}
+	if !created || reserved.Status != "pending" || reserved.ExpiresUnix <= reserved.CreatedUnix {
+		t.Fatalf("reserved = %+v created=%v, want pending create with expiry", reserved, created)
+	}
+	replayed, created, err := store.ReserveIdempotencyRecord(ctx, IdempotencyRecord{
+		Scope:          "http",
+		Method:         "CreateMessage",
+		ActorID:        "user-1",
+		IdempotencyKey: "idem-1",
+		RequestHash:    "different-hash",
+	})
+	if err != nil {
+		t.Fatalf("ReserveIdempotencyRecord(replay) error = %v", err)
+	}
+	if created || replayed.ID != reserved.ID || replayed.RequestHash != "hash-1" {
+		t.Fatalf("replayed = %+v created=%v, want existing reserved record", replayed, created)
+	}
+	if err := store.CompleteIdempotencyRecord(ctx, IdempotencyRecord{
+		Scope:          "http",
+		Method:         "CreateMessage",
+		ActorID:        "user-1",
+		IdempotencyKey: "idem-1",
+		RequestHash:    "hash-1",
+		ResponseType:   "storage.Message",
+		ResponseJSON:   `{"id":"msg_1"}`,
+		ResourceType:   "message",
+		ResourceID:     "msg_1",
+	}); err != nil {
+		t.Fatalf("CompleteIdempotencyRecord() error = %v", err)
+	}
+	completed, err := store.GetIdempotencyRecord(ctx, "http", "CreateMessage", "user-1", "idem-1")
+	if err != nil {
+		t.Fatalf("GetIdempotencyRecord() error = %v", err)
+	}
+	if completed.Status != "completed" || completed.ResponseJSON == "" || completed.ResourceID != "msg_1" {
+		t.Fatalf("completed idempotency record = %+v, want completed resource response", completed)
+	}
+	if err := store.CompleteIdempotencyRecord(ctx, IdempotencyRecord{
+		Scope:          "http",
+		Method:         "CreateMessage",
+		ActorID:        "user-1",
+		IdempotencyKey: "missing",
+	}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("CompleteIdempotencyRecord(missing) error = %v, want %v", err, ErrNotFound)
+	}
+}
+
 func TestNotificationRouteResolution(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
