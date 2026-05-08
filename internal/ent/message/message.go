@@ -19,6 +19,8 @@ const (
 	FieldRole = "role"
 	// FieldContent holds the string denoting the content field in the database.
 	FieldContent = "content"
+	// FieldReplyToMessageID holds the string denoting the reply_to_message_id field in the database.
+	FieldReplyToMessageID = "reply_to_message_id"
 	// FieldSenderUserID holds the string denoting the sender_user_id field in the database.
 	FieldSenderUserID = "sender_user_id"
 	// FieldSenderAgentID holds the string denoting the sender_agent_id field in the database.
@@ -50,6 +52,7 @@ var Columns = []string{
 	FieldThreadID,
 	FieldRole,
 	FieldContent,
+	FieldReplyToMessageID,
 	FieldSenderUserID,
 	FieldSenderAgentID,
 	FieldSenderDisplayName,
@@ -81,6 +84,8 @@ var (
 	RoleValidator func(string) error
 	// ContentValidator is a validator for the "content" field. It is called by the builders before save.
 	ContentValidator func(string) error
+	// DefaultReplyToMessageID holds the default value on creation for the "reply_to_message_id" field.
+	DefaultReplyToMessageID string
 	// DefaultSenderUserID holds the default value on creation for the "sender_user_id" field.
 	DefaultSenderUserID string
 	// DefaultSenderAgentID holds the default value on creation for the "sender_agent_id" field.
@@ -129,6 +134,11 @@ func ByRole(opts ...sql.OrderTermOption) OrderOption {
 // ByContent orders the results by the content field.
 func ByContent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldContent, opts...).ToFunc()
+}
+
+// ByReplyToMessageID orders the results by the reply_to_message_id field.
+func ByReplyToMessageID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReplyToMessageID, opts...).ToFunc()
 }
 
 // BySenderUserID orders the results by the sender_user_id field.

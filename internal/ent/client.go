@@ -20,6 +20,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
+	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
@@ -43,6 +44,8 @@ type Client struct {
 	Reminder *ReminderClient
 	// ReminderEvent is the client for interacting with the ReminderEvent builders.
 	ReminderEvent *ReminderEventClient
+	// SavedMessage is the client for interacting with the SavedMessage builders.
+	SavedMessage *SavedMessageClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
@@ -68,6 +71,7 @@ func (c *Client) init() {
 	c.Message = NewMessageClient(c.config)
 	c.Reminder = NewReminderClient(c.config)
 	c.ReminderEvent = NewReminderEventClient(c.config)
+	c.SavedMessage = NewSavedMessageClient(c.config)
 	c.Session = NewSessionClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.ThreadReadState = NewThreadReadStateClient(c.config)
@@ -170,6 +174,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Message:             NewMessageClient(cfg),
 		Reminder:            NewReminderClient(cfg),
 		ReminderEvent:       NewReminderEventClient(cfg),
+		SavedMessage:        NewSavedMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
 		ThreadReadState:     NewThreadReadStateClient(cfg),
@@ -199,6 +204,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Message:             NewMessageClient(cfg),
 		Reminder:            NewReminderClient(cfg),
 		ReminderEvent:       NewReminderEventClient(cfg),
+		SavedMessage:        NewSavedMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
 		ThreadReadState:     NewThreadReadStateClient(cfg),
@@ -233,7 +239,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Reminder, c.ReminderEvent, c.Session, c.Task, c.ThreadReadState, c.User,
+		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
+		c.ThreadReadState, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -244,7 +251,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Reminder, c.ReminderEvent, c.Session, c.Task, c.ThreadReadState, c.User,
+		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
+		c.ThreadReadState, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -265,6 +273,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Reminder.mutate(ctx, m)
 	case *ReminderEventMutation:
 		return c.ReminderEvent.mutate(ctx, m)
+	case *SavedMessageMutation:
+		return c.SavedMessage.mutate(ctx, m)
 	case *SessionMutation:
 		return c.Session.mutate(ctx, m)
 	case *TaskMutation:
@@ -1076,6 +1086,139 @@ func (c *ReminderEventClient) mutate(ctx context.Context, m *ReminderEventMutati
 	}
 }
 
+// SavedMessageClient is a client for the SavedMessage schema.
+type SavedMessageClient struct {
+	config
+}
+
+// NewSavedMessageClient returns a client for the SavedMessage from the given config.
+func NewSavedMessageClient(c config) *SavedMessageClient {
+	return &SavedMessageClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `savedmessage.Hooks(f(g(h())))`.
+func (c *SavedMessageClient) Use(hooks ...Hook) {
+	c.hooks.SavedMessage = append(c.hooks.SavedMessage, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `savedmessage.Intercept(f(g(h())))`.
+func (c *SavedMessageClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SavedMessage = append(c.inters.SavedMessage, interceptors...)
+}
+
+// Create returns a builder for creating a SavedMessage entity.
+func (c *SavedMessageClient) Create() *SavedMessageCreate {
+	mutation := newSavedMessageMutation(c.config, OpCreate)
+	return &SavedMessageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SavedMessage entities.
+func (c *SavedMessageClient) CreateBulk(builders ...*SavedMessageCreate) *SavedMessageCreateBulk {
+	return &SavedMessageCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SavedMessageClient) MapCreateBulk(slice any, setFunc func(*SavedMessageCreate, int)) *SavedMessageCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SavedMessageCreateBulk{err: fmt.Errorf("calling to SavedMessageClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SavedMessageCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SavedMessageCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SavedMessage.
+func (c *SavedMessageClient) Update() *SavedMessageUpdate {
+	mutation := newSavedMessageMutation(c.config, OpUpdate)
+	return &SavedMessageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SavedMessageClient) UpdateOne(_m *SavedMessage) *SavedMessageUpdateOne {
+	mutation := newSavedMessageMutation(c.config, OpUpdateOne, withSavedMessage(_m))
+	return &SavedMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SavedMessageClient) UpdateOneID(id string) *SavedMessageUpdateOne {
+	mutation := newSavedMessageMutation(c.config, OpUpdateOne, withSavedMessageID(id))
+	return &SavedMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SavedMessage.
+func (c *SavedMessageClient) Delete() *SavedMessageDelete {
+	mutation := newSavedMessageMutation(c.config, OpDelete)
+	return &SavedMessageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SavedMessageClient) DeleteOne(_m *SavedMessage) *SavedMessageDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SavedMessageClient) DeleteOneID(id string) *SavedMessageDeleteOne {
+	builder := c.Delete().Where(savedmessage.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SavedMessageDeleteOne{builder}
+}
+
+// Query returns a query builder for SavedMessage.
+func (c *SavedMessageClient) Query() *SavedMessageQuery {
+	return &SavedMessageQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSavedMessage},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SavedMessage entity by its id.
+func (c *SavedMessageClient) Get(ctx context.Context, id string) (*SavedMessage, error) {
+	return c.Query().Where(savedmessage.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SavedMessageClient) GetX(ctx context.Context, id string) *SavedMessage {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *SavedMessageClient) Hooks() []Hook {
+	return c.hooks.SavedMessage
+}
+
+// Interceptors returns the client interceptors.
+func (c *SavedMessageClient) Interceptors() []Interceptor {
+	return c.inters.SavedMessage
+}
+
+func (c *SavedMessageClient) mutate(ctx context.Context, m *SavedMessageMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SavedMessageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SavedMessageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SavedMessageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SavedMessageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SavedMessage mutation op: %q", m.Op())
+	}
+}
+
 // SessionClient is a client for the Session schema.
 type SessionClient struct {
 	config
@@ -1612,10 +1755,11 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Reminder,
-		ReminderEvent, Session, Task, ThreadReadState, User []ent.Hook
+		ReminderEvent, SavedMessage, Session, Task, ThreadReadState, User []ent.Hook
 	}
 	inters struct {
 		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Reminder,
-		ReminderEvent, Session, Task, ThreadReadState, User []ent.Interceptor
+		ReminderEvent, SavedMessage, Session, Task, ThreadReadState,
+		User []ent.Interceptor
 	}
 )

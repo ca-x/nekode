@@ -82,6 +82,7 @@ export type Message = {
   threadId?: string;
   role: string;
   content: string;
+  replyToMessageId?: string;
   senderUserId?: string;
   senderAgentId?: string;
   senderDisplayName?: string;
@@ -105,6 +106,16 @@ export type ThreadInboxItem = {
   firstMessage: Message;
   latestMessage: Message;
   updatedUnix: number;
+};
+
+export type SavedMessage = {
+  id: string;
+  target: string;
+  messageId: string;
+  savedByUserId?: string;
+  savedByAgentId?: string;
+  createdUnix: number;
+  message: Message;
 };
 
 export type TaskState =

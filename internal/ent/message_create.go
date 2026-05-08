@@ -51,6 +51,20 @@ func (_c *MessageCreate) SetContent(v string) *MessageCreate {
 	return _c
 }
 
+// SetReplyToMessageID sets the "reply_to_message_id" field.
+func (_c *MessageCreate) SetReplyToMessageID(v string) *MessageCreate {
+	_c.mutation.SetReplyToMessageID(v)
+	return _c
+}
+
+// SetNillableReplyToMessageID sets the "reply_to_message_id" field if the given value is not nil.
+func (_c *MessageCreate) SetNillableReplyToMessageID(v *string) *MessageCreate {
+	if v != nil {
+		_c.SetReplyToMessageID(*v)
+	}
+	return _c
+}
+
 // SetSenderUserID sets the "sender_user_id" field.
 func (_c *MessageCreate) SetSenderUserID(v string) *MessageCreate {
 	_c.mutation.SetSenderUserID(v)
@@ -228,6 +242,10 @@ func (_c *MessageCreate) defaults() {
 		v := message.DefaultThreadID
 		_c.mutation.SetThreadID(v)
 	}
+	if _, ok := _c.mutation.ReplyToMessageID(); !ok {
+		v := message.DefaultReplyToMessageID
+		_c.mutation.SetReplyToMessageID(v)
+	}
 	if _, ok := _c.mutation.SenderUserID(); !ok {
 		v := message.DefaultSenderUserID
 		_c.mutation.SetSenderUserID(v)
@@ -294,6 +312,9 @@ func (_c *MessageCreate) check() error {
 		if err := message.ContentValidator(v); err != nil {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "Message.content": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.ReplyToMessageID(); !ok {
+		return &ValidationError{Name: "reply_to_message_id", err: errors.New(`ent: missing required field "Message.reply_to_message_id"`)}
 	}
 	if _, ok := _c.mutation.SenderUserID(); !ok {
 		return &ValidationError{Name: "sender_user_id", err: errors.New(`ent: missing required field "Message.sender_user_id"`)}
@@ -380,6 +401,10 @@ func (_c *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Content(); ok {
 		_spec.SetField(message.FieldContent, field.TypeString, value)
 		_node.Content = value
+	}
+	if value, ok := _c.mutation.ReplyToMessageID(); ok {
+		_spec.SetField(message.FieldReplyToMessageID, field.TypeString, value)
+		_node.ReplyToMessageID = value
 	}
 	if value, ok := _c.mutation.SenderUserID(); ok {
 		_spec.SetField(message.FieldSenderUserID, field.TypeString, value)

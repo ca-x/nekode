@@ -321,6 +321,7 @@ func (s *Server) SendMessage(ctx context.Context, req *daemonv1.SendMessageReque
 		ThreadID:          req.GetReplyToMessageId(),
 		Role:              role,
 		Content:           req.GetContent(),
+		ReplyToMessageID:  req.GetReplyToMessageId(),
 		SenderUserID:      sender.GetUserId(),
 		SenderAgentID:     sender.GetAgentId(),
 		SenderDisplayName: sender.GetDisplayName(),
@@ -361,6 +362,84 @@ func (s *Server) ReadMessages(ctx context.Context, req *daemonv1.ReadMessagesReq
 		out = append(out, messageToProto(msg))
 	}
 	return &daemonv1.ReadMessagesResponse{Messages: out, NextCursor: cursorFromCount(len(out), req.GetTarget(), s.serverID)}, nil
+}
+
+func (s *Server) SearchMessages(ctx context.Context, req *daemonv1.SearchMessagesRequest) (*daemonv1.SearchMessagesResponse, error) {
+	messages, err := s.store.SearchMessages(ctx, storage.MessageSearchOptions{
+		Query:        req.GetQuery(),
+		Target:       req.GetTarget(),
+		SenderHandle: req.GetSenderHandle(),
+		Sort:         messageSearchSortToStorage(req.GetSort()),
+		Limit:        int(req.GetLimit()),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "search messages: %v", err)
+	}
+	out := make([]*daemonv1.CollaborationMessage, 0, len(messages))
+	for _, msg := range messages {
+		out = append(out, messageToProto(msg))
+	}
+	return &daemonv1.SearchMessagesResponse{Messages: out, NextCursor: cursorFromCount(len(out), req.GetTarget(), s.serverID)}, nil
+}
+
+func (s *Server) SaveMessage(ctx context.Context, req *daemonv1.SaveMessageRequest) (*daemonv1.SaveMessageResponse, error) {
+	if resp, ok := replay(ctx, s, "SaveMessage", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.SaveMessageResponse {
+		return &daemonv1.SaveMessageResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "SaveMessage", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetTarget() == "" || req.GetMessageId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "target and message_id are required")
+	}
+	saved, err := s.store.SaveMessage(ctx, req.GetTarget(), req.GetMessageId(), req.GetSavedByUserId(), req.GetSavedByAgentId())
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "message not found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "save message: %v", err)
+	}
+	resp := &daemonv1.SaveMessageResponse{Saved: true, SavedMessage: savedMessageToProto(saved)}
+	remember(ctx, s, "SaveMessage", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) UnsaveMessage(ctx context.Context, req *daemonv1.UnsaveMessageRequest) (*daemonv1.UnsaveMessageResponse, error) {
+	if resp, ok := replay(ctx, s, "UnsaveMessage", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.UnsaveMessageResponse {
+		return &daemonv1.UnsaveMessageResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "UnsaveMessage", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetTarget() == "" || req.GetMessageId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "target and message_id are required")
+	}
+	saved, err := s.store.UnsaveMessage(ctx, req.GetTarget(), req.GetMessageId(), req.GetSavedByUserId(), req.GetSavedByAgentId())
+	if errors.Is(err, storage.ErrNotFound) {
+		return &daemonv1.UnsaveMessageResponse{Removed: false}, nil
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "unsave message: %v", err)
+	}
+	resp := &daemonv1.UnsaveMessageResponse{Removed: true, SavedMessage: savedMessageToProto(saved)}
+	remember(ctx, s, "UnsaveMessage", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) ListSavedMessages(ctx context.Context, req *daemonv1.ListSavedMessagesRequest) (*daemonv1.ListSavedMessagesResponse, error) {
+	saved, err := s.store.ListSavedMessages(ctx, req.GetTarget(), req.GetSavedByUserId(), req.GetSavedByAgentId(), int(req.GetLimit()))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list saved messages: %v", err)
+	}
+	out := make([]*daemonv1.SavedMessageRecord, 0, len(saved))
+	for _, record := range saved {
+		out = append(out, savedMessageToProto(record))
+	}
+	return &daemonv1.ListSavedMessagesResponse{SavedMessages: out, NextCursor: cursorFromCount(len(out), req.GetTarget(), s.serverID)}, nil
 }
 
 func (s *Server) CreateCollaborationTask(ctx context.Context, req *daemonv1.CreateCollaborationTaskRequest) (*daemonv1.CreateCollaborationTaskResponse, error) {
@@ -1556,6 +1635,7 @@ func messageToProto(msg storage.Message) *daemonv1.CollaborationMessage {
 		ThreadId:          msg.ThreadID,
 		Role:              msg.Role,
 		Content:           msg.Content,
+		ReplyToMessageId:  msg.ReplyToMessageID,
 		CreatedTimeUnix:   msg.CreatedUnix,
 		RequestId:         msg.RequestID,
 		SourceEndpointId:  msg.SourceEndpointID,
@@ -1585,6 +1665,30 @@ func attachmentToProto(attachment storage.Attachment) *daemonv1.AttachmentRecord
 		UploadUrl:       attachment.UploadURL,
 		ExpiresTimeUnix: attachment.ExpiresTimeUnix,
 		CreatedTimeUnix: attachment.CreatedUnix,
+	}
+}
+
+func savedMessageToProto(saved storage.SavedMessage) *daemonv1.SavedMessageRecord {
+	return &daemonv1.SavedMessageRecord{
+		SavedMessageId: saved.ID,
+		Target:         saved.Target,
+		ThreadId:       saved.Message.ThreadID,
+		MessageId:      saved.MessageID,
+		SavedByAgentId: saved.SavedByAgentID,
+		SavedByUserId:  saved.SavedByUserID,
+		SavedTimeUnix:  saved.CreatedUnix,
+		Message:        messageToProto(saved.Message),
+	}
+}
+
+func messageSearchSortToStorage(sort daemonv1.MessageSearchSort) string {
+	switch sort {
+	case daemonv1.MessageSearchSort_MESSAGE_SEARCH_SORT_RECENT:
+		return "recent"
+	case daemonv1.MessageSearchSort_MESSAGE_SEARCH_SORT_RELEVANCE:
+		return "relevance"
+	default:
+		return ""
 	}
 }
 

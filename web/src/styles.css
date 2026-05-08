@@ -651,7 +651,11 @@ textarea {
 }
 
 .inbox-row-header strong,
-.inbox-row-main p {
+.inbox-row-main p,
+.search-results span,
+.saved-message-list span,
+.reply-chip span,
+.reference-chip span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -687,6 +691,39 @@ textarea {
   background: var(--primary);
   font-size: 0.8125rem;
   font-weight: 800;
+}
+
+.message-search {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(120px, 160px) minmax(120px, 140px) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.search-results,
+.saved-message-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search-results button,
+.saved-message-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-subtle);
+  text-align: left;
+}
+
+.search-results button {
+  grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
 }
 
 .message-bubble {
@@ -734,8 +771,16 @@ textarea {
 
 .message-bubble header span {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-size: 0.8125rem;
+}
+
+.message-bubble header a {
+  display: inline-flex;
+  color: var(--muted);
 }
 
 .message-bubble p {
@@ -780,6 +825,13 @@ textarea {
 .attachment-grid,
 .draft-attachments {
   display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
 }
@@ -888,6 +940,47 @@ textarea {
   border: 0;
   color: var(--muted);
   background: transparent;
+}
+
+.message-actions button,
+.reference-chip,
+.reply-chip button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 0.8125rem;
+}
+
+.message-actions button.is-saved {
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border-color: #c5e7de;
+}
+
+.reference-chip,
+.reply-chip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.reference-chip {
+  margin-bottom: 10px;
+  text-align: left;
 }
 
 .composer {
@@ -1968,6 +2061,11 @@ textarea {
   color: var(--primary-strong);
   background: var(--surface);
   font-weight: 700;
+}
+
+.muted-line {
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 .grammar-heading {

@@ -24,6 +24,8 @@ type Message struct {
 	Role string `json:"role,omitempty"`
 	// Content holds the value of the "content" field.
 	Content string `json:"content,omitempty"`
+	// ReplyToMessageID holds the value of the "reply_to_message_id" field.
+	ReplyToMessageID string `json:"reply_to_message_id,omitempty"`
 	// SenderUserID holds the value of the "sender_user_id" field.
 	SenderUserID string `json:"sender_user_id,omitempty"`
 	// SenderAgentID holds the value of the "sender_agent_id" field.
@@ -54,7 +56,7 @@ func (*Message) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case message.FieldCreatedUnix:
 			values[i] = new(sql.NullInt64)
-		case message.FieldID, message.FieldTarget, message.FieldThreadID, message.FieldRole, message.FieldContent, message.FieldSenderUserID, message.FieldSenderAgentID, message.FieldSenderDisplayName, message.FieldSenderKind, message.FieldSourceEndpointID, message.FieldExternalMessageID, message.FieldMetadataJSON, message.FieldAttachmentsJSON, message.FieldRequestID:
+		case message.FieldID, message.FieldTarget, message.FieldThreadID, message.FieldRole, message.FieldContent, message.FieldReplyToMessageID, message.FieldSenderUserID, message.FieldSenderAgentID, message.FieldSenderDisplayName, message.FieldSenderKind, message.FieldSourceEndpointID, message.FieldExternalMessageID, message.FieldMetadataJSON, message.FieldAttachmentsJSON, message.FieldRequestID:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -100,6 +102,12 @@ func (_m *Message) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field content", values[i])
 			} else if value.Valid {
 				_m.Content = value.String
+			}
+		case message.FieldReplyToMessageID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reply_to_message_id", values[i])
+			} else if value.Valid {
+				_m.ReplyToMessageID = value.String
 			}
 		case message.FieldSenderUserID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -208,6 +216,9 @@ func (_m *Message) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("content=")
 	builder.WriteString(_m.Content)
+	builder.WriteString(", ")
+	builder.WriteString("reply_to_message_id=")
+	builder.WriteString(_m.ReplyToMessageID)
 	builder.WriteString(", ")
 	builder.WriteString("sender_user_id=")
 	builder.WriteString(_m.SenderUserID)

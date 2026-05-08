@@ -147,6 +147,7 @@ var (
 		{Name: "thread_id", Type: field.TypeString, Default: ""},
 		{Name: "role", Type: field.TypeString},
 		{Name: "content", Type: field.TypeString},
+		{Name: "reply_to_message_id", Type: field.TypeString, Default: ""},
 		{Name: "sender_user_id", Type: field.TypeString, Default: ""},
 		{Name: "sender_agent_id", Type: field.TypeString, Default: ""},
 		{Name: "sender_display_name", Type: field.TypeString, Default: ""},
@@ -167,17 +168,22 @@ var (
 			{
 				Name:    "message_target_created_unix_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[14], MessagesColumns[0]},
+				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[15], MessagesColumns[0]},
 			},
 			{
 				Name:    "message_thread_id_created_unix_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[2], MessagesColumns[14], MessagesColumns[0]},
+				Columns: []*schema.Column{MessagesColumns[2], MessagesColumns[15], MessagesColumns[0]},
+			},
+			{
+				Name:    "message_reply_to_message_id",
+				Unique:  false,
+				Columns: []*schema.Column{MessagesColumns[5]},
 			},
 			{
 				Name:    "message_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[13]},
+				Columns: []*schema.Column{MessagesColumns[14]},
 			},
 		},
 	}
@@ -252,6 +258,43 @@ var (
 				Name:    "reminderevent_event_type_occurred_time_unix",
 				Unique:  false,
 				Columns: []*schema.Column{ReminderEventsColumns[2], ReminderEventsColumns[5]},
+			},
+		},
+	}
+	// SavedMessagesColumns holds the columns for the "saved_messages" table.
+	SavedMessagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "message_id", Type: field.TypeString},
+		{Name: "saved_by_user_id", Type: field.TypeString, Default: ""},
+		{Name: "saved_by_agent_id", Type: field.TypeString, Default: ""},
+		{Name: "created_unix", Type: field.TypeInt64},
+	}
+	// SavedMessagesTable holds the schema information for the "saved_messages" table.
+	SavedMessagesTable = &schema.Table{
+		Name:       "saved_messages",
+		Columns:    SavedMessagesColumns,
+		PrimaryKey: []*schema.Column{SavedMessagesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "savedmessage_target_message_id_saved_by_user_id_saved_by_agent_id",
+				Unique:  true,
+				Columns: []*schema.Column{SavedMessagesColumns[1], SavedMessagesColumns[2], SavedMessagesColumns[3], SavedMessagesColumns[4]},
+			},
+			{
+				Name:    "savedmessage_saved_by_user_id_created_unix_id",
+				Unique:  false,
+				Columns: []*schema.Column{SavedMessagesColumns[3], SavedMessagesColumns[5], SavedMessagesColumns[0]},
+			},
+			{
+				Name:    "savedmessage_saved_by_agent_id_created_unix_id",
+				Unique:  false,
+				Columns: []*schema.Column{SavedMessagesColumns[4], SavedMessagesColumns[5], SavedMessagesColumns[0]},
+			},
+			{
+				Name:    "savedmessage_target_created_unix_id",
+				Unique:  false,
+				Columns: []*schema.Column{SavedMessagesColumns[1], SavedMessagesColumns[5], SavedMessagesColumns[0]},
 			},
 		},
 	}
@@ -393,6 +436,7 @@ var (
 		MessagesTable,
 		RemindersTable,
 		ReminderEventsTable,
+		SavedMessagesTable,
 		SessionsTable,
 		TasksTable,
 		ThreadReadStatesTable,

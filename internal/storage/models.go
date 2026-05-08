@@ -67,6 +67,7 @@ type Message struct {
 	ThreadID          string       `json:"threadId,omitempty"`
 	Role              string       `json:"role"`
 	Content           string       `json:"content"`
+	ReplyToMessageID  string       `json:"replyToMessageId,omitempty"`
 	SenderUserID      string       `json:"senderUserId,omitempty"`
 	SenderAgentID     string       `json:"senderAgentId,omitempty"`
 	SenderDisplayName string       `json:"senderDisplayName,omitempty"`
@@ -104,6 +105,24 @@ type ThreadInboxItem struct {
 	FirstMessage      Message `json:"firstMessage"`
 	LatestMessage     Message `json:"latestMessage"`
 	UpdatedUnix       int64   `json:"updatedUnix"`
+}
+
+type MessageSearchOptions struct {
+	Query        string
+	Target       string
+	SenderHandle string
+	Sort         string
+	Limit        int
+}
+
+type SavedMessage struct {
+	ID             string  `json:"id"`
+	Target         string  `json:"target"`
+	MessageID      string  `json:"messageId"`
+	SavedByUserID  string  `json:"savedByUserId,omitempty"`
+	SavedByAgentID string  `json:"savedByAgentId,omitempty"`
+	CreatedUnix    int64   `json:"createdUnix"`
+	Message        Message `json:"message"`
 }
 
 type Task struct {

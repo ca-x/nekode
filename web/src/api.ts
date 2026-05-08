@@ -24,6 +24,7 @@ import type {
   ReminderScheduleKind,
   ReminderStatus,
   RuntimePreset,
+  SavedMessage,
   SetupStatus,
   Task,
   TaskState,
@@ -104,6 +105,56 @@ type RawCollaborationEvent = {
   run?: unknown;
   runStep?: unknown;
   run_step?: unknown;
+};
+
+type RawMessage = {
+  id?: unknown;
+  messageId?: unknown;
+  message_id?: unknown;
+  target?: unknown;
+  threadId?: unknown;
+  thread_id?: unknown;
+  role?: unknown;
+  content?: unknown;
+  replyToMessageId?: unknown;
+  reply_to_message_id?: unknown;
+  senderUserId?: unknown;
+  sender_user_id?: unknown;
+  senderAgentId?: unknown;
+  sender_agent_id?: unknown;
+  senderDisplayName?: unknown;
+  sender_display_name?: unknown;
+  senderKind?: unknown;
+  sender_kind?: unknown;
+  sourceEndpointId?: unknown;
+  source_endpoint_id?: unknown;
+  externalMessageId?: unknown;
+  external_message_id?: unknown;
+  metadataJson?: unknown;
+  metadata_json?: unknown;
+  attachments?: unknown;
+  requestId?: unknown;
+  request_id?: unknown;
+  createdUnix?: unknown;
+  created_time_unix?: unknown;
+  createdTimeUnix?: unknown;
+};
+
+type RawSavedMessage = {
+  id?: unknown;
+  savedMessageId?: unknown;
+  saved_message_id?: unknown;
+  target?: unknown;
+  messageId?: unknown;
+  message_id?: unknown;
+  savedByUserId?: unknown;
+  saved_by_user_id?: unknown;
+  savedByAgentId?: unknown;
+  saved_by_agent_id?: unknown;
+  createdUnix?: unknown;
+  savedTimeUnix?: unknown;
+  saved_time_unix?: unknown;
+  message?: unknown;
 };
 
 type EventTransport = {
@@ -323,17 +374,18 @@ function normalizeAttachment(raw: unknown): Attachment {
 }
 
 function normalizeMessage(raw: unknown): Message {
-  const row = asRecord(raw);
+  const row = asRecord(raw) as RawMessage;
   return {
     id: asString(row.id ?? row.messageId ?? row.message_id),
     target: asString(row.target),
     threadId: asOptionalString(row.threadId ?? row.thread_id),
-    role: asString(row.role),
+    role: asString(row.role) || "user",
     content: asString(row.content),
+    replyToMessageId: asOptionalString(row.replyToMessageId ?? row.reply_to_message_id),
     senderUserId: asOptionalString(row.senderUserId ?? row.sender_user_id),
     senderAgentId: asOptionalString(row.senderAgentId ?? row.sender_agent_id),
     senderDisplayName: asOptionalString(row.senderDisplayName ?? row.sender_display_name),
-    senderKind: asString(row.senderKind ?? row.sender_kind),
+    senderKind: asString(row.senderKind ?? row.sender_kind) || "user",
     sourceEndpointId: asOptionalString(row.sourceEndpointId ?? row.source_endpoint_id),
     externalMessageId: asOptionalString(row.externalMessageId ?? row.external_message_id),
     metadataJson: asOptionalString(row.metadataJson ?? row.metadata_json),
@@ -456,6 +508,19 @@ function normalizeReminderEvent(raw: unknown): ReminderEvent {
     occurredTimeUnix: asNumber(row.occurredTimeUnix ?? row.occurred_time_unix),
     nextFireTimeUnix: asNumber(row.nextFireTimeUnix ?? row.next_fire_time_unix) || undefined,
     detail: asOptionalString(row.detail)
+  };
+}
+
+function normalizeSavedMessage(raw: unknown): SavedMessage {
+  const row = asRecord(raw) as RawSavedMessage;
+  return {
+    id: asString(row.id ?? row.savedMessageId ?? row.saved_message_id),
+    target: asString(row.target),
+    messageId: asString(row.messageId ?? row.message_id),
+    savedByUserId: asOptionalString(row.savedByUserId ?? row.saved_by_user_id),
+    savedByAgentId: asOptionalString(row.savedByAgentId ?? row.saved_by_agent_id),
+    createdUnix: asNumber(row.createdUnix ?? row.savedTimeUnix ?? row.saved_time_unix),
+    message: normalizeMessage(row.message)
   };
 }
 
@@ -885,12 +950,25 @@ export class ApiClient {
     );
   }
 
+  searchMessages(filters: { query?: string; target?: string; sender?: string; sort?: "recent" | "relevance"; limit?: number }) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "q", filters.query);
+    appendIfPresent(params, "target", filters.target);
+    appendIfPresent(params, "sender", filters.sender);
+    appendIfPresent(params, "sort", filters.sort ?? "recent");
+    appendIfPresent(params, "limit", filters.limit ?? 50);
+    return this.request<RawListResponse<unknown>>(`/api/messages/search?${params}`).then((response) =>
+      normalizeList(response, normalizeMessage)
+    );
+  }
+
   async createMessage(input: {
     target: string;
     content: string;
     role?: string;
     threadId?: string;
     attachmentIds?: string[];
+    replyToMessageId?: string;
     sourceEndpointId?: string;
     requestId?: string;
   }) {
@@ -922,6 +1000,26 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify({ targetPrefix: input.targetPrefix ?? "" })
     });
+  }
+
+  listSavedMessages(target: string, limit = 50) {
+    return this.request<RawListResponse<unknown>>(
+      `/api/messages/saved?target=${encodeURIComponent(target)}&limit=${limit}`
+    ).then((response) => normalizeList(response, normalizeSavedMessage));
+  }
+
+  saveMessage(messageId: string, target: string) {
+    return this.request<unknown>(
+      `/api/messages/${encodeURIComponent(messageId)}/save?target=${encodeURIComponent(target)}`,
+      { method: "POST", body: JSON.stringify({}) }
+    ).then(normalizeSavedMessage);
+  }
+
+  unsaveMessage(messageId: string, target: string) {
+    return this.request<unknown>(
+      `/api/messages/${encodeURIComponent(messageId)}/save?target=${encodeURIComponent(target)}`,
+      { method: "DELETE", body: JSON.stringify({}) }
+    );
   }
 
   async listTasks(filters: { state?: TaskState | "all"; target?: string; limit?: number }) {

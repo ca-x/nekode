@@ -24,6 +24,9 @@ type Reminder func(*sql.Selector)
 // ReminderEvent is the predicate function for reminderevent builders.
 type ReminderEvent func(*sql.Selector)
 
+// SavedMessage is the predicate function for savedmessage builders.
+type SavedMessage func(*sql.Selector)
+
 // Session is the predicate function for session builders.
 type Session func(*sql.Selector)
 

@@ -9,6 +9,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
+	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/schema"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
@@ -180,40 +181,44 @@ func init() {
 	messageDescContent := messageFields[4].Descriptor()
 	// message.ContentValidator is a validator for the "content" field. It is called by the builders before save.
 	message.ContentValidator = messageDescContent.Validators[0].(func(string) error)
+	// messageDescReplyToMessageID is the schema descriptor for reply_to_message_id field.
+	messageDescReplyToMessageID := messageFields[5].Descriptor()
+	// message.DefaultReplyToMessageID holds the default value on creation for the reply_to_message_id field.
+	message.DefaultReplyToMessageID = messageDescReplyToMessageID.Default.(string)
 	// messageDescSenderUserID is the schema descriptor for sender_user_id field.
-	messageDescSenderUserID := messageFields[5].Descriptor()
+	messageDescSenderUserID := messageFields[6].Descriptor()
 	// message.DefaultSenderUserID holds the default value on creation for the sender_user_id field.
 	message.DefaultSenderUserID = messageDescSenderUserID.Default.(string)
 	// messageDescSenderAgentID is the schema descriptor for sender_agent_id field.
-	messageDescSenderAgentID := messageFields[6].Descriptor()
+	messageDescSenderAgentID := messageFields[7].Descriptor()
 	// message.DefaultSenderAgentID holds the default value on creation for the sender_agent_id field.
 	message.DefaultSenderAgentID = messageDescSenderAgentID.Default.(string)
 	// messageDescSenderDisplayName is the schema descriptor for sender_display_name field.
-	messageDescSenderDisplayName := messageFields[7].Descriptor()
+	messageDescSenderDisplayName := messageFields[8].Descriptor()
 	// message.DefaultSenderDisplayName holds the default value on creation for the sender_display_name field.
 	message.DefaultSenderDisplayName = messageDescSenderDisplayName.Default.(string)
 	// messageDescSenderKind is the schema descriptor for sender_kind field.
-	messageDescSenderKind := messageFields[8].Descriptor()
+	messageDescSenderKind := messageFields[9].Descriptor()
 	// message.SenderKindValidator is a validator for the "sender_kind" field. It is called by the builders before save.
 	message.SenderKindValidator = messageDescSenderKind.Validators[0].(func(string) error)
 	// messageDescSourceEndpointID is the schema descriptor for source_endpoint_id field.
-	messageDescSourceEndpointID := messageFields[9].Descriptor()
+	messageDescSourceEndpointID := messageFields[10].Descriptor()
 	// message.DefaultSourceEndpointID holds the default value on creation for the source_endpoint_id field.
 	message.DefaultSourceEndpointID = messageDescSourceEndpointID.Default.(string)
 	// messageDescExternalMessageID is the schema descriptor for external_message_id field.
-	messageDescExternalMessageID := messageFields[10].Descriptor()
+	messageDescExternalMessageID := messageFields[11].Descriptor()
 	// message.DefaultExternalMessageID holds the default value on creation for the external_message_id field.
 	message.DefaultExternalMessageID = messageDescExternalMessageID.Default.(string)
 	// messageDescMetadataJSON is the schema descriptor for metadata_json field.
-	messageDescMetadataJSON := messageFields[11].Descriptor()
+	messageDescMetadataJSON := messageFields[12].Descriptor()
 	// message.DefaultMetadataJSON holds the default value on creation for the metadata_json field.
 	message.DefaultMetadataJSON = messageDescMetadataJSON.Default.(string)
 	// messageDescAttachmentsJSON is the schema descriptor for attachments_json field.
-	messageDescAttachmentsJSON := messageFields[12].Descriptor()
+	messageDescAttachmentsJSON := messageFields[13].Descriptor()
 	// message.DefaultAttachmentsJSON holds the default value on creation for the attachments_json field.
 	message.DefaultAttachmentsJSON = messageDescAttachmentsJSON.Default.(string)
 	// messageDescRequestID is the schema descriptor for request_id field.
-	messageDescRequestID := messageFields[13].Descriptor()
+	messageDescRequestID := messageFields[14].Descriptor()
 	// message.DefaultRequestID holds the default value on creation for the request_id field.
 	message.DefaultRequestID = messageDescRequestID.Default.(string)
 	// messageDescID is the schema descriptor for id field.
@@ -320,6 +325,28 @@ func init() {
 	remindereventDescID := remindereventFields[0].Descriptor()
 	// reminderevent.DefaultID holds the default value on creation for the id field.
 	reminderevent.DefaultID = remindereventDescID.Default.(func() string)
+	savedmessageFields := schema.SavedMessage{}.Fields()
+	_ = savedmessageFields
+	// savedmessageDescTarget is the schema descriptor for target field.
+	savedmessageDescTarget := savedmessageFields[1].Descriptor()
+	// savedmessage.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	savedmessage.TargetValidator = savedmessageDescTarget.Validators[0].(func(string) error)
+	// savedmessageDescMessageID is the schema descriptor for message_id field.
+	savedmessageDescMessageID := savedmessageFields[2].Descriptor()
+	// savedmessage.MessageIDValidator is a validator for the "message_id" field. It is called by the builders before save.
+	savedmessage.MessageIDValidator = savedmessageDescMessageID.Validators[0].(func(string) error)
+	// savedmessageDescSavedByUserID is the schema descriptor for saved_by_user_id field.
+	savedmessageDescSavedByUserID := savedmessageFields[3].Descriptor()
+	// savedmessage.DefaultSavedByUserID holds the default value on creation for the saved_by_user_id field.
+	savedmessage.DefaultSavedByUserID = savedmessageDescSavedByUserID.Default.(string)
+	// savedmessageDescSavedByAgentID is the schema descriptor for saved_by_agent_id field.
+	savedmessageDescSavedByAgentID := savedmessageFields[4].Descriptor()
+	// savedmessage.DefaultSavedByAgentID holds the default value on creation for the saved_by_agent_id field.
+	savedmessage.DefaultSavedByAgentID = savedmessageDescSavedByAgentID.Default.(string)
+	// savedmessageDescID is the schema descriptor for id field.
+	savedmessageDescID := savedmessageFields[0].Descriptor()
+	// savedmessage.DefaultID holds the default value on creation for the id field.
+	savedmessage.DefaultID = savedmessageDescID.Default.(func() string)
 	sessionFields := schema.Session{}.Fields()
 	_ = sessionFields
 	// sessionDescTokenHash is the schema descriptor for token_hash field.

@@ -156,7 +156,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/channels", s.requireAuth(s.handleListChannels))
 	s.mux.HandleFunc("GET /api/channels/{target}/members", s.requireAuth(s.handleListChannelMembers))
 	s.mux.HandleFunc("GET /api/messages", s.requireAuth(s.handleListMessages))
+	s.mux.HandleFunc("GET /api/messages/search", s.requireAuth(s.handleSearchMessages))
+	s.mux.HandleFunc("GET /api/messages/saved", s.requireAuth(s.handleListSavedMessages))
 	s.mux.HandleFunc("POST /api/messages", s.requireAuth(s.handleCreateMessage))
+	s.mux.HandleFunc("POST /api/messages/{id}/save", s.requireAuth(s.handleSaveMessage))
+	s.mux.HandleFunc("DELETE /api/messages/{id}/save", s.requireAuth(s.handleUnsaveMessage))
 	s.mux.HandleFunc("GET /api/inbox/threads", s.requireAuth(s.handleListThreadInbox))
 	s.mux.HandleFunc("POST /api/inbox/threads/{threadID}/read", s.requireAuth(s.handleMarkThreadRead))
 	s.mux.HandleFunc("POST /api/inbox/threads/read-all", s.requireAuth(s.handleMarkThreadInboxRead))
@@ -693,6 +697,21 @@ func firstNonEmptyString(values ...string) string {
 	return ""
 }
 
+func (s *Server) handleSearchMessages(w http.ResponseWriter, r *http.Request) {
+	messages, err := s.store.SearchMessages(r.Context(), storage.MessageSearchOptions{
+		Query:        strings.TrimSpace(r.URL.Query().Get("q")),
+		Target:       strings.TrimSpace(r.URL.Query().Get("target")),
+		SenderHandle: strings.TrimSpace(r.URL.Query().Get("sender")),
+		Sort:         strings.TrimSpace(r.URL.Query().Get("sort")),
+		Limit:        intQuery(r, "limit", 50),
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "search messages failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": messages})
+}
+
 func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 	var req messageRequest
 	if !decodeJSON(w, r, &req) {
@@ -723,6 +742,7 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		ThreadID:          strings.TrimSpace(req.ThreadID),
 		Role:              role,
 		Content:           content,
+		ReplyToMessageID:  strings.TrimSpace(req.ReplyToMessageID),
 		SenderUserID:      principal.User.ID,
 		SenderDisplayName: principal.User.DisplayName,
 		SenderKind:        "human",
@@ -791,6 +811,60 @@ func (s *Server) handleMarkThreadInboxRead(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleSaveMessage(w http.ResponseWriter, r *http.Request) {
+	target := strings.TrimSpace(r.URL.Query().Get("target"))
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	saved, err := s.store.SaveMessage(r.Context(), target, r.PathValue("id"), principal.User.ID, "")
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "message not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "save message failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, saved)
+}
+
+func (s *Server) handleUnsaveMessage(w http.ResponseWriter, r *http.Request) {
+	target := strings.TrimSpace(r.URL.Query().Get("target"))
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	saved, err := s.store.UnsaveMessage(r.Context(), target, r.PathValue("id"), principal.User.ID, "")
+	if errors.Is(err, storage.ErrNotFound) {
+		writeJSON(w, http.StatusOK, map[string]bool{"removed": false})
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "unsave message failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"removed": true, "savedMessage": saved})
+}
+
+func (s *Server) handleListSavedMessages(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context())
+	saved, err := s.store.ListSavedMessages(
+		r.Context(),
+		strings.TrimSpace(r.URL.Query().Get("target")),
+		principal.User.ID,
+		"",
+		intQuery(r, "limit", 50),
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list saved messages failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": saved})
 }
 
 func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
@@ -1538,6 +1612,7 @@ type messageRequest struct {
 	ThreadID          string   `json:"threadId"`
 	Role              string   `json:"role"`
 	Content           string   `json:"content"`
+	ReplyToMessageID  string   `json:"replyToMessageId"`
 	AttachmentIDs     []string `json:"attachmentIds"`
 	SourceEndpointID  string   `json:"sourceEndpointId"`
 	ExternalMessageID string   `json:"externalMessageId"`

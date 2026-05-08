@@ -18,6 +18,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/predicate"
+	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
@@ -307,6 +309,7 @@ func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Messag
 		SetThreadID(messageModel.ThreadID).
 		SetRole(messageModel.Role).
 		SetContent(messageModel.Content).
+		SetReplyToMessageID(messageModel.ReplyToMessageID).
 		SetSenderUserID(messageModel.SenderUserID).
 		SetSenderAgentID(messageModel.SenderAgentID).
 		SetSenderDisplayName(messageModel.SenderDisplayName).
@@ -323,6 +326,21 @@ func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Messag
 	row, err := create.Save(ctx)
 	if ent.IsConstraintError(err) {
 		return Message{}, ErrConflict
+	}
+	if err != nil {
+		return Message{}, err
+	}
+	return messageFromEnt(row), nil
+}
+
+func (s *Store) GetMessage(ctx context.Context, target, id string) (Message, error) {
+	query := s.client.Message.Query().Where(message.IDEQ(id))
+	if target != "" {
+		query.Where(message.TargetEQ(target))
+	}
+	row, err := query.Only(ctx)
+	if ent.IsNotFound(err) {
+		return Message{}, ErrNotFound
 	}
 	if err != nil {
 		return Message{}, err
@@ -352,6 +370,155 @@ func (s *Store) ListMessages(ctx context.Context, target, threadID string, limit
 		messages = append(messages, messageFromEnt(row))
 	}
 	return messages, nil
+}
+
+func (s *Store) SearchMessages(ctx context.Context, opts MessageSearchOptions) ([]Message, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 50
+	}
+	query := s.client.Message.Query()
+	if opts.Target != "" {
+		query.Where(message.TargetEQ(opts.Target))
+	}
+	search := strings.TrimSpace(opts.Query)
+	if search != "" {
+		query.Where(message.Or(
+			message.IDContainsFold(search),
+			message.ContentContainsFold(search),
+			message.SenderDisplayNameContainsFold(search),
+			message.SenderAgentIDContainsFold(strings.TrimPrefix(search, "@")),
+			message.SenderUserIDContainsFold(strings.TrimPrefix(search, "@")),
+		))
+	}
+	if sender := strings.TrimPrefix(strings.TrimSpace(opts.SenderHandle), "@"); sender != "" {
+		query.Where(message.Or(
+			message.SenderDisplayNameContainsFold(sender),
+			message.SenderAgentIDContainsFold(sender),
+			message.SenderUserIDContainsFold(sender),
+		))
+	}
+	order := []message.OrderOption{message.ByCreatedUnix(sql.OrderDesc()), message.ByID(sql.OrderDesc())}
+	if strings.EqualFold(opts.Sort, "relevance") && search != "" {
+		order = []message.OrderOption{
+			message.BySenderDisplayName(sql.OrderDesc()),
+			message.ByCreatedUnix(sql.OrderDesc()),
+			message.ByID(sql.OrderDesc()),
+		}
+	}
+	rows, err := query.Order(order...).Limit(opts.Limit).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]Message, 0, len(rows))
+	for _, row := range rows {
+		messages = append(messages, messageFromEnt(row))
+	}
+	return messages, nil
+}
+
+func (s *Store) SaveMessage(ctx context.Context, target, messageID, userID, agentID string) (SavedMessage, error) {
+	messageModel, err := s.GetMessage(ctx, target, messageID)
+	if err != nil {
+		return SavedMessage{}, err
+	}
+	now := unixNow()
+	create := s.client.SavedMessage.Create().
+		SetTarget(messageModel.Target).
+		SetMessageID(messageModel.ID).
+		SetSavedByUserID(userID).
+		SetSavedByAgentID(agentID).
+		SetCreatedUnix(now)
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
+		return s.GetSavedMessage(ctx, messageModel.Target, messageModel.ID, userID, agentID)
+	}
+	if err != nil {
+		return SavedMessage{}, err
+	}
+	return s.savedMessageFromEnt(ctx, row)
+}
+
+func (s *Store) GetSavedMessage(ctx context.Context, target, messageID, userID, agentID string) (SavedMessage, error) {
+	row, err := s.savedMessageQuery(target, userID, agentID).
+		Where(savedmessage.MessageIDEQ(messageID)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return SavedMessage{}, ErrNotFound
+	}
+	if err != nil {
+		return SavedMessage{}, err
+	}
+	return s.savedMessageFromEnt(ctx, row)
+}
+
+func (s *Store) UnsaveMessage(ctx context.Context, target, messageID, userID, agentID string) (SavedMessage, error) {
+	saved, err := s.GetSavedMessage(ctx, target, messageID, userID, agentID)
+	if err != nil {
+		return SavedMessage{}, err
+	}
+	_, err = s.client.SavedMessage.Delete().
+		Where(savedMessagePredicates(target, userID, agentID, savedmessage.MessageIDEQ(messageID))...).
+		Exec(ctx)
+	if err != nil {
+		return SavedMessage{}, err
+	}
+	return saved, nil
+}
+
+func (s *Store) ListSavedMessages(ctx context.Context, target, userID, agentID string, limit int) ([]SavedMessage, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := s.savedMessageQuery(target, userID, agentID).
+		Order(savedmessage.ByCreatedUnix(sql.OrderDesc()), savedmessage.ByID(sql.OrderDesc())).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	saved := make([]SavedMessage, 0, len(rows))
+	for _, row := range rows {
+		record, err := s.savedMessageFromEnt(ctx, row)
+		if err != nil {
+			return nil, err
+		}
+		saved = append(saved, record)
+	}
+	return saved, nil
+}
+
+func (s *Store) savedMessageQuery(target, userID, agentID string) *ent.SavedMessageQuery {
+	return s.client.SavedMessage.Query().Where(savedMessagePredicates(target, userID, agentID)...)
+}
+
+func savedMessagePredicates(target, userID, agentID string, extra ...predicate.SavedMessage) []predicate.SavedMessage {
+	predicates := []predicate.SavedMessage{}
+	if target != "" {
+		predicates = append(predicates, savedmessage.TargetEQ(target))
+	}
+	if userID != "" {
+		predicates = append(predicates, savedmessage.SavedByUserIDEQ(userID))
+	}
+	if agentID != "" {
+		predicates = append(predicates, savedmessage.SavedByAgentIDEQ(agentID))
+	}
+	return append(predicates, extra...)
+}
+
+func (s *Store) savedMessageFromEnt(ctx context.Context, row *ent.SavedMessage) (SavedMessage, error) {
+	msg, err := s.GetMessage(ctx, row.Target, row.MessageID)
+	if err != nil {
+		return SavedMessage{}, err
+	}
+	return SavedMessage{
+		ID:             row.ID,
+		Target:         row.Target,
+		MessageID:      row.MessageID,
+		SavedByUserID:  row.SavedByUserID,
+		SavedByAgentID: row.SavedByAgentID,
+		CreatedUnix:    row.CreatedUnix,
+		Message:        msg,
+	}, nil
 }
 
 func (s *Store) ListThreadInbox(ctx context.Context, userID, targetPrefix string, limit int) ([]ThreadInboxItem, error) {
@@ -1019,6 +1186,7 @@ func messageFromEnt(row *ent.Message) Message {
 		ThreadID:          row.ThreadID,
 		Role:              row.Role,
 		Content:           row.Content,
+		ReplyToMessageID:  row.ReplyToMessageID,
 		SenderUserID:      row.SenderUserID,
 		SenderAgentID:     row.SenderAgentID,
 		SenderDisplayName: row.SenderDisplayName,

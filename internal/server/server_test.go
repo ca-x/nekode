@@ -265,6 +265,25 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if message.Code != http.StatusCreated {
 		t.Fatalf("create message status = %d body=%s", message.Code, message.Body.String())
 	}
+	var messageBody storage.Message
+	if err := json.Unmarshal(message.Body.Bytes(), &messageBody); err != nil {
+		t.Fatalf("decode message: %v", err)
+	}
+	reply := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
+		"target":           "#general",
+		"content":          "reply with reference",
+		"replyToMessageId": messageBody.ID,
+	})
+	if reply.Code != http.StatusCreated {
+		t.Fatalf("create reply status = %d body=%s", reply.Code, reply.Body.String())
+	}
+	var replyBody storage.Message
+	if err := json.Unmarshal(reply.Body.Bytes(), &replyBody); err != nil {
+		t.Fatalf("decode reply: %v", err)
+	}
+	if replyBody.ReplyToMessageID != messageBody.ID {
+		t.Fatalf("replyToMessageId = %q, want %q", replyBody.ReplyToMessageID, messageBody.ID)
+	}
 
 	messages := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/messages?target=%23general", nil)
@@ -272,6 +291,24 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	s.Handler().ServeHTTP(messages, req)
 	if messages.Code != http.StatusOK {
 		t.Fatalf("list messages status = %d body=%s", messages.Code, messages.Body.String())
+	}
+	search := doGET(t, s, "/api/messages/search?target=%23general&q=reference&sort=recent", token)
+	if search.Code != http.StatusOK {
+		t.Fatalf("search messages status = %d body=%s", search.Code, search.Body.String())
+	}
+	assertJSONItems(t, search.Body.Bytes(), 1)
+	save := doJSON(t, s, http.MethodPost, "/api/messages/"+messageBody.ID+"/save?target=%23general", token, map[string]any{})
+	if save.Code != http.StatusOK {
+		t.Fatalf("save message status = %d body=%s", save.Code, save.Body.String())
+	}
+	saved := doGET(t, s, "/api/messages/saved?target=%23general", token)
+	if saved.Code != http.StatusOK {
+		t.Fatalf("list saved messages status = %d body=%s", saved.Code, saved.Body.String())
+	}
+	assertJSONItems(t, saved.Body.Bytes(), 1)
+	unsave := doJSON(t, s, http.MethodDelete, "/api/messages/"+messageBody.ID+"/save?target=%23general", token, map[string]any{})
+	if unsave.Code != http.StatusOK {
+		t.Fatalf("unsave message status = %d body=%s", unsave.Code, unsave.Body.String())
 	}
 
 	attachmentResp := doMultipartAttachment(t, s, token, "#general", "preview.html", "text/html", "<strong>safe</strong>")

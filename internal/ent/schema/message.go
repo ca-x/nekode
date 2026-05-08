@@ -17,6 +17,7 @@ func (Message) Fields() []ent.Field {
 		field.String("thread_id").Default(""),
 		field.String("role").NotEmpty(),
 		field.String("content").NotEmpty(),
+		field.String("reply_to_message_id").Default(""),
 		field.String("sender_user_id").Default(""),
 		field.String("sender_agent_id").Default(""),
 		field.String("sender_display_name").Default(""),
@@ -34,6 +35,7 @@ func (Message) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("target", "created_unix", "id"),
 		index.Fields("thread_id", "created_unix", "id"),
+		index.Fields("reply_to_message_id"),
 		index.Fields("request_id"),
 	}
 }

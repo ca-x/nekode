@@ -82,6 +82,11 @@ func Content(v string) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldContent, v))
 }
 
+// ReplyToMessageID applies equality check predicate on the "reply_to_message_id" field. It's identical to ReplyToMessageIDEQ.
+func ReplyToMessageID(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldReplyToMessageID, v))
+}
+
 // SenderUserID applies equality check predicate on the "sender_user_id" field. It's identical to SenderUserIDEQ.
 func SenderUserID(v string) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldSenderUserID, v))
@@ -390,6 +395,71 @@ func ContentEqualFold(v string) predicate.Message {
 // ContentContainsFold applies the ContainsFold predicate on the "content" field.
 func ContentContainsFold(v string) predicate.Message {
 	return predicate.Message(sql.FieldContainsFold(FieldContent, v))
+}
+
+// ReplyToMessageIDEQ applies the EQ predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDNEQ applies the NEQ predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDNEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDIn applies the In predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldReplyToMessageID, vs...))
+}
+
+// ReplyToMessageIDNotIn applies the NotIn predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDNotIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldReplyToMessageID, vs...))
+}
+
+// ReplyToMessageIDGT applies the GT predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDGT(v string) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDGTE applies the GTE predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDGTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDLT applies the LT predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDLT(v string) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDLTE applies the LTE predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDLTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDContains applies the Contains predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDContains(v string) predicate.Message {
+	return predicate.Message(sql.FieldContains(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDHasPrefix applies the HasPrefix predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDHasPrefix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasPrefix(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDHasSuffix applies the HasSuffix predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDHasSuffix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasSuffix(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDEqualFold applies the EqualFold predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDEqualFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldEqualFold(FieldReplyToMessageID, v))
+}
+
+// ReplyToMessageIDContainsFold applies the ContainsFold predicate on the "reply_to_message_id" field.
+func ReplyToMessageIDContainsFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldContainsFold(FieldReplyToMessageID, v))
 }
 
 // SenderUserIDEQ applies the EQ predicate on the "sender_user_id" field.

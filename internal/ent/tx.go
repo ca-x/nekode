@@ -24,6 +24,8 @@ type Tx struct {
 	Reminder *ReminderClient
 	// ReminderEvent is the client for interacting with the ReminderEvent builders.
 	ReminderEvent *ReminderEventClient
+	// SavedMessage is the client for interacting with the SavedMessage builders.
+	SavedMessage *SavedMessageClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
@@ -169,6 +171,7 @@ func (tx *Tx) init() {
 	tx.Message = NewMessageClient(tx.config)
 	tx.Reminder = NewReminderClient(tx.config)
 	tx.ReminderEvent = NewReminderEventClient(tx.config)
+	tx.SavedMessage = NewSavedMessageClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.ThreadReadState = NewThreadReadStateClient(tx.config)

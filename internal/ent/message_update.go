@@ -83,6 +83,20 @@ func (_u *MessageUpdate) SetNillableContent(v *string) *MessageUpdate {
 	return _u
 }
 
+// SetReplyToMessageID sets the "reply_to_message_id" field.
+func (_u *MessageUpdate) SetReplyToMessageID(v string) *MessageUpdate {
+	_u.mutation.SetReplyToMessageID(v)
+	return _u
+}
+
+// SetNillableReplyToMessageID sets the "reply_to_message_id" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillableReplyToMessageID(v *string) *MessageUpdate {
+	if v != nil {
+		_u.SetReplyToMessageID(*v)
+	}
+	return _u
+}
+
 // SetSenderUserID sets the "sender_user_id" field.
 func (_u *MessageUpdate) SetSenderUserID(v string) *MessageUpdate {
 	_u.mutation.SetSenderUserID(v)
@@ -311,6 +325,9 @@ func (_u *MessageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Content(); ok {
 		_spec.SetField(message.FieldContent, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.ReplyToMessageID(); ok {
+		_spec.SetField(message.FieldReplyToMessageID, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.SenderUserID(); ok {
 		_spec.SetField(message.FieldSenderUserID, field.TypeString, value)
 	}
@@ -416,6 +433,20 @@ func (_u *MessageUpdateOne) SetContent(v string) *MessageUpdateOne {
 func (_u *MessageUpdateOne) SetNillableContent(v *string) *MessageUpdateOne {
 	if v != nil {
 		_u.SetContent(*v)
+	}
+	return _u
+}
+
+// SetReplyToMessageID sets the "reply_to_message_id" field.
+func (_u *MessageUpdateOne) SetReplyToMessageID(v string) *MessageUpdateOne {
+	_u.mutation.SetReplyToMessageID(v)
+	return _u
+}
+
+// SetNillableReplyToMessageID sets the "reply_to_message_id" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillableReplyToMessageID(v *string) *MessageUpdateOne {
+	if v != nil {
+		_u.SetReplyToMessageID(*v)
 	}
 	return _u
 }
@@ -677,6 +708,9 @@ func (_u *MessageUpdateOne) sqlSave(ctx context.Context) (_node *Message, err er
 	}
 	if value, ok := _u.mutation.Content(); ok {
 		_spec.SetField(message.FieldContent, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReplyToMessageID(); ok {
+		_spec.SetField(message.FieldReplyToMessageID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.SenderUserID(); ok {
 		_spec.SetField(message.FieldSenderUserID, field.TypeString, value)

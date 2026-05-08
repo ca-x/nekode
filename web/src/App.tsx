@@ -3,12 +3,14 @@ import {
   AlertTriangle,
   AtSign,
   Bell,
+  Bookmark,
   Bot,
   CheckCircle2,
   CheckSquare,
   Circle,
   CircleX,
   Columns3,
+  CornerUpLeft,
   Copy,
   Download,
   Eye,
@@ -18,6 +20,7 @@ import {
   Image,
   Inbox,
   LayoutGrid,
+  Link2,
   List,
   ListFilter,
   Loader2,
@@ -59,6 +62,7 @@ import type {
   Reminder,
   ReminderEvent,
   RuntimePreset,
+  SavedMessage,
   SetupStatus,
   Task,
   TaskState,
@@ -432,6 +436,10 @@ function compactId(value?: string) {
   return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-6)}` : value;
 }
 
+function messagePermalink(message: Message) {
+  return `#${encodeURIComponent(message.target)}:${encodeURIComponent(message.id)}`;
+}
+
 function healthClass(value?: string) {
   const normalized = (value || "unknown").toLowerCase();
   if (normalized === "ok" || normalized === "online" || normalized === "running") return "is-ok";
@@ -481,6 +489,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadInbox, setThreadInbox] = useState<ThreadInboxItem[]>([]);
   const [activeThread, setActiveThread] = useState<ThreadInboxItem | null>(null);
+  const [savedMessages, setSavedMessages] = useState<SavedMessage[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -522,6 +531,7 @@ function App() {
           return { items: [] };
         }),
         api.listMessages(messageTarget, 50, messageThreadID),
+        api.listSavedMessages(messageTarget),
         api.listThreadInbox({ limit: 100 }),
         api.listTasks({ target }),
         api.listReminders({ target, includeCanceled: true, limit: 100 })
@@ -535,6 +545,7 @@ function App() {
         channelList,
         channelMemberList,
         messageList,
+        savedMessageList,
         inboxList,
         taskList,
         reminderList
@@ -547,6 +558,7 @@ function App() {
       setChannels(channelList.items.length ? channelList.items : fallbackChannels());
       setChannelMembers(channelMemberList.items);
       setMessages(messageList.items);
+      setSavedMessages(savedMessageList.items);
       setThreadInbox(inboxList.items);
       setTasks(taskList.items);
       setReminders(reminderList.items);
@@ -670,6 +682,8 @@ function App() {
     setDaemonActivity([]);
     setChannels([]);
     setChannelMembers([]);
+    setMessages([]);
+    setSavedMessages([]);
     setThreadInbox([]);
     setActiveThread(null);
     setReminders([]);
@@ -835,6 +849,7 @@ function App() {
             target={activeThread?.target ?? target}
             thread={activeThread}
             messages={messages}
+            savedMessages={savedMessages}
             endpoints={endpoints}
             onClearThread={() => setActiveThread(null)}
             onMarkThreadRead={activeThread ? () => markThreadRead(activeThread) : undefined}
@@ -1324,6 +1339,7 @@ function MessagesPanel({
   target,
   thread,
   messages,
+  savedMessages,
   endpoints,
   onClearThread,
   onMarkThreadRead,
@@ -1334,6 +1350,7 @@ function MessagesPanel({
   target: string;
   thread: ThreadInboxItem | null;
   messages: Message[];
+  savedMessages: SavedMessage[];
   endpoints: InteractionEndpoint[];
   onClearThread: () => void;
   onMarkThreadRead?: () => Promise<void>;
@@ -1346,6 +1363,11 @@ function MessagesPanel({
   const [draftAttachments, setDraftAttachments] = useState<Attachment[]>([]);
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
   const [lightboxAttachment, setLightboxAttachment] = useState<Attachment | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [senderFilter, setSenderFilter] = useState("");
+  const [searchSort, setSearchSort] = useState<"recent" | "relevance">("recent");
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
@@ -1356,6 +1378,17 @@ function MessagesPanel({
     () => ordered.filter((message) => selectedMessageIds.has(message.id)),
     [ordered, selectedMessageIds]
   );
+  const messageById = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
+  const savedIds = useMemo(() => new Set(savedMessages.map((item) => item.messageId)), [savedMessages]);
+  const mentionOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const message of messages) {
+      const name = message.senderDisplayName || message.senderAgentId || message.senderUserId;
+      if (name) names.add(name.replace(/^@/, ""));
+    }
+    for (const agent of demoAgents) names.add(agent.name);
+    return [...names].sort((left, right) => left.localeCompare(right));
+  }, [messages]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -1367,11 +1400,13 @@ function MessagesPanel({
         threadId: thread?.threadId,
         content: content.trim() || "(attachment)",
         attachmentIds: draftAttachments.map((attachment) => attachment.id),
+        replyToMessageId: replyTo?.id,
         sourceEndpointId,
         requestId: makeRequestId("msg")
       });
       setContent("");
       setDraftAttachments([]);
+      setReplyTo(null);
       await onCreated();
     } finally {
       setBusy(false);
@@ -1454,6 +1489,36 @@ function MessagesPanel({
     link.click();
   };
 
+  const runSearch = async (event: FormEvent) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    const sender = senderFilter.trim();
+    if (!query && !sender) {
+      setSearchResults([]);
+      return;
+    }
+    setBusy(true);
+    try {
+      const results = await api.searchMessages({ query, sender, sort: searchSort, target, limit: 25 });
+      setSearchResults(results.items);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleSaved = async (message: Message) => {
+    if (savedIds.has(message.id)) {
+      await api.unsaveMessage(message.id, target);
+    } else {
+      await api.saveMessage(message.id, target);
+    }
+    await onCreated();
+  };
+
+  const addMention = (name: string) => {
+    setContent((current) => `${current}${current && !current.endsWith(" ") ? " " : ""}@${name} `);
+  };
+
   return (
     <section className="two-column">
       <div className="panel message-panel">
@@ -1476,6 +1541,45 @@ function MessagesPanel({
             </div>
           ) : null}
         </div>
+        <form className="message-search" onSubmit={runSearch}>
+          <label className="search-field">
+            <Search size={16} aria-hidden="true" />
+            <input
+              aria-label="Search messages"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search messages"
+            />
+          </label>
+          <input
+            aria-label="Sender filter"
+            value={senderFilter}
+            onChange={(event) => setSenderFilter(event.target.value)}
+            placeholder="@sender"
+          />
+          <select
+            aria-label="Search sort"
+            value={searchSort}
+            onChange={(event) => setSearchSort(event.target.value as "recent" | "relevance")}
+          >
+            <option value="recent">Recent</option>
+            <option value="relevance">Relevance</option>
+          </select>
+          <button className="secondary-button" type="submit" disabled={busy}>
+            <Search size={16} aria-hidden="true" />
+            Search
+          </button>
+        </form>
+        {searchResults.length ? (
+          <div className="search-results" aria-label="Message search results">
+            {searchResults.map((message) => (
+              <button key={message.id} type="button" onClick={() => setReplyTo(message)}>
+                <strong>{message.senderDisplayName || message.senderKind}</strong>
+                <span>{message.content}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="message-list" role="log" aria-label="Messages">
           {feed.length ? (
             feed.map((item) => {
@@ -1506,6 +1610,10 @@ function MessagesPanel({
                   selected={selectedMessageIds.has(item.message.id)}
                   onToggleSelected={toggleSelected}
                   onPreviewAttachment={setLightboxAttachment}
+                  replyMessage={item.message.replyToMessageId ? messageById.get(item.message.replyToMessageId) : undefined}
+                  saved={savedIds.has(item.message.id)}
+                  onReply={() => setReplyTo(item.message)}
+                  onToggleSaved={() => void toggleSaved(item.message)}
                 />
               );
             })
@@ -1530,6 +1638,15 @@ function MessagesPanel({
           </div>
         ) : null}
         <form className="composer" onSubmit={submit}>
+          {replyTo ? (
+            <div className="reply-chip">
+              <CornerUpLeft size={14} aria-hidden="true" />
+              <span>{replyTo.content}</span>
+              <button type="button" aria-label="Clear reply reference" onClick={() => setReplyTo(null)}>
+                <CircleX size={14} aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
           <textarea
             aria-label="Message content"
             value={content}
@@ -1594,6 +1711,8 @@ function MessagesPanel({
         channel={channel}
         members={channelMembers}
         onMention={(name) => setContent((current) => `${current}${current ? " " : ""}@${name} `)}
+        savedMessages={savedMessages}
+        onSavedSelect={(message) => setReplyTo(message)}
       />
     </section>
   );
@@ -1602,11 +1721,15 @@ function MessagesPanel({
 function ChannelAccessPanel({
   channel,
   members,
-  onMention
+  onMention,
+  savedMessages,
+  onSavedSelect
 }: {
   channel: Channel | null;
   members: ChannelMember[];
   onMention: (name: string) => void;
+  savedMessages: SavedMessage[];
+  onSavedSelect: (message: Message) => void;
 }) {
   const visibility = channel?.visibility ?? "public";
   const role = channel?.currentUserRole ?? "member";
@@ -1648,6 +1771,19 @@ function ChannelAccessPanel({
             {member.displayName}
           </button>
         ))}
+      </div>
+      <p className="eyebrow grammar-heading">Saved</p>
+      <div className="saved-message-list">
+        {savedMessages.length ? (
+          savedMessages.map((item) => (
+            <button key={item.id} type="button" onClick={() => onSavedSelect(item.message)}>
+              <Bookmark size={14} aria-hidden="true" />
+              <span>{item.message.content}</span>
+            </button>
+          ))
+        ) : (
+          <span className="muted-line">No saved messages</span>
+        )}
       </div>
       <p className="eyebrow grammar-heading">Target Grammar</p>
       <dl className="definition-list">
@@ -1704,13 +1840,21 @@ function MessageBubble({
   compact,
   selected,
   onToggleSelected,
-  onPreviewAttachment
+  onPreviewAttachment,
+  replyMessage,
+  saved,
+  onReply,
+  onToggleSaved
 }: {
   message: Message;
   compact?: boolean;
   selected?: boolean;
   onToggleSelected?: (messageId: string) => void;
   onPreviewAttachment?: (attachment: Attachment) => void;
+  replyMessage?: Message;
+  saved?: boolean;
+  onReply?: () => void;
+  onToggleSaved?: () => void;
 }) {
   const classes = [
     "message-bubble",
@@ -1734,8 +1878,19 @@ function MessageBubble({
           </button>
         ) : null}
         <strong>{message.senderDisplayName || message.senderKind}</strong>
-        <span>{unixTime(message.createdUnix)}</span>
+        <span>
+          <a href={messagePermalink(message)} title="Message permalink">
+            <Link2 size={13} aria-hidden="true" />
+          </a>
+          {unixTime(message.createdUnix)}
+        </span>
       </header>
+      {replyMessage ? (
+        <button className="reference-chip" type="button" onClick={onReply}>
+          <CornerUpLeft size={14} aria-hidden="true" />
+          <span>{replyMessage.content}</span>
+        </button>
+      ) : null}
       <p>{message.content}</p>
       {message.attachments?.length && onPreviewAttachment ? (
         <div className="attachment-grid">
@@ -1744,6 +1899,16 @@ function MessageBubble({
           ))}
         </div>
       ) : null}
+      <footer className="message-actions">
+        <button type="button" onClick={onReply}>
+          <CornerUpLeft size={14} aria-hidden="true" />
+          Reply
+        </button>
+        <button type="button" className={saved ? "is-saved" : ""} onClick={onToggleSaved}>
+          <Bookmark size={14} aria-hidden="true" />
+          {saved ? "Saved" : "Save"}
+        </button>
+      </footer>
     </article>
   );
 }
