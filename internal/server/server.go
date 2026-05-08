@@ -23,6 +23,7 @@ import (
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
 	"github.com/ca-x/nekode/internal/imcoord"
+	"github.com/ca-x/nekode/internal/imfeishu"
 	"github.com/ca-x/nekode/internal/immedia"
 	"github.com/ca-x/nekode/internal/impolicy"
 	"github.com/ca-x/nekode/internal/imtelegram"
@@ -158,6 +159,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/im/providers", s.requireAuth(s.handleListIMProviders))
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
 	s.mux.HandleFunc("POST /api/im/telegram/{endpointID}/webhook", s.handleTelegramWebhook)
+	s.mux.HandleFunc("POST /api/im/feishu/{endpointID}/callback", s.handleFeishuCallback)
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
 	s.mux.HandleFunc("PATCH /api/interaction-endpoints/{id}", s.requireAuth(s.handleUpdateInteractionEndpoint))
@@ -525,6 +527,68 @@ func (s *Server) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":        true,
+		"ignored":   result.Ignored,
+		"reason":    result.Reason,
+		"messageId": result.Message.ID,
+	})
+}
+
+func (s *Server) handleFeishuCallback(w http.ResponseWriter, r *http.Request) {
+	endpointID := strings.TrimSpace(r.PathValue("endpointID"))
+	if endpointID == "" {
+		writeError(w, http.StatusBadRequest, "endpointID is required")
+		return
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), endpointID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") || !strings.EqualFold(endpoint.Provider, imadapter.ProviderFeishu) {
+		writeError(w, http.StatusBadRequest, "interaction endpoint is not a Feishu IM endpoint")
+		return
+	}
+	if !endpoint.InboundEnabled {
+		writeError(w, http.StatusForbidden, "interaction endpoint inbound is disabled")
+		return
+	}
+	cfg, err := imfeishu.ConfigFromEndpoint(endpoint)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read feishu callback failed")
+		return
+	}
+	result, err := (imfeishu.Callback{
+		Config:      cfg,
+		Normalizer:  imadapter.Normalizer{},
+		Coordinator: imcoord.New(s.store, nil),
+	}).Handle(r.Context(), r.Header, body)
+	if errors.Is(err, imfeishu.ErrUnauthorizedCallback) {
+		writeError(w, http.StatusUnauthorized, "invalid feishu verification token")
+		return
+	}
+	if errors.Is(err, imfeishu.ErrEncryptedUnsupported) {
+		writeError(w, http.StatusBadRequest, "encrypted feishu callbacks are not supported yet")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if result.Challenge != "" {
+		writeJSON(w, http.StatusOK, map[string]string{"challenge": result.Challenge})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

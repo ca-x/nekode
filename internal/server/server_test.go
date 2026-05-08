@@ -580,6 +580,97 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 		t.Fatalf("stored Telegram message = %+v webhook=%+v", storedTelegram, telegramWebhookBody)
 	}
 
+	feishuEndpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "feishu",
+		"displayName":     "Feishu Ops",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "verification_token",
+		"configJson":      `{"app_id":"cli_a","app_secret":"secret-a","verification_token":"verify-token","default_target":"#ops","default_thread_id":"fs-thread","group_mode":"mention"}`,
+	})
+	if feishuEndpoint.Code != http.StatusCreated {
+		t.Fatalf("create Feishu endpoint status = %d body=%s", feishuEndpoint.Code, feishuEndpoint.Body.String())
+	}
+	var feishuEndpointBody storage.InteractionEndpoint
+	if err := json.Unmarshal(feishuEndpoint.Body.Bytes(), &feishuEndpointBody); err != nil {
+		t.Fatalf("decode Feishu endpoint: %v", err)
+	}
+	feishuChallenge := doJSON(t, s, http.MethodPost, "/api/im/feishu/"+feishuEndpointBody.ID+"/callback", "", map[string]any{
+		"challenge": "challenge-code",
+		"token":     "verify-token",
+		"type":      "url_verification",
+	})
+	if feishuChallenge.Code != http.StatusOK || !strings.Contains(feishuChallenge.Body.String(), "challenge-code") {
+		t.Fatalf("Feishu challenge status = %d body=%s", feishuChallenge.Code, feishuChallenge.Body.String())
+	}
+	badFeishuChallenge := doJSON(t, s, http.MethodPost, "/api/im/feishu/"+feishuEndpointBody.ID+"/callback", "", map[string]any{
+		"challenge": "challenge-code",
+		"token":     "wrong",
+		"type":      "url_verification",
+	})
+	if badFeishuChallenge.Code != http.StatusUnauthorized {
+		t.Fatalf("bad Feishu challenge status = %d body=%s", badFeishuChallenge.Code, badFeishuChallenge.Body.String())
+	}
+	feishuPayload := map[string]any{
+		"schema": "2.0",
+		"header": map[string]any{
+			"event_id":   "evt-1",
+			"event_type": "im.message.receive_v1",
+			"token":      "verify-token",
+		},
+		"event": map[string]any{
+			"sender": map[string]any{
+				"sender_id": map[string]any{
+					"open_id":  "ou_alice",
+					"union_id": "on_alice",
+				},
+				"sender_type": "user",
+			},
+			"message": map[string]any{
+				"message_id":   "om_msg_1",
+				"chat_id":      "oc_ops",
+				"chat_type":    "group",
+				"message_type": "text",
+				"content":      `{"text":"@_user_1 run smoke"}`,
+				"mentions":     []map[string]any{{"key": "@_user_1", "name": "Nekode"}},
+			},
+		},
+	}
+	var feishuWebhookBody bytes.Buffer
+	if err := json.NewEncoder(&feishuWebhookBody).Encode(feishuPayload); err != nil {
+		t.Fatalf("encode Feishu callback: %v", err)
+	}
+	feishuWebhook := httptest.NewRecorder()
+	feishuReq := httptest.NewRequest(http.MethodPost, "/api/im/feishu/"+feishuEndpointBody.ID+"/callback", &feishuWebhookBody)
+	feishuReq.Header.Set("Content-Type", "application/json")
+	s.Handler().ServeHTTP(feishuWebhook, feishuReq)
+	if feishuWebhook.Code != http.StatusOK {
+		t.Fatalf("Feishu callback status = %d body=%s", feishuWebhook.Code, feishuWebhook.Body.String())
+	}
+	var feishuWebhookResult struct {
+		OK        bool   `json:"ok"`
+		MessageID string `json:"messageId"`
+	}
+	if err := json.Unmarshal(feishuWebhook.Body.Bytes(), &feishuWebhookResult); err != nil {
+		t.Fatalf("decode Feishu callback: %v", err)
+	}
+	storedFeishu, err := s.store.GetMessage(context.Background(), "#ops", feishuWebhookResult.MessageID)
+	if err != nil {
+		t.Fatalf("GetMessage(feishu) error = %v", err)
+	}
+	if !feishuWebhookResult.OK ||
+		storedFeishu.SourceEndpointID != feishuEndpointBody.ID ||
+		storedFeishu.ExternalMessageID != "om_msg_1" ||
+		storedFeishu.ThreadID != "fs-thread" ||
+		storedFeishu.Content != "run smoke" {
+		t.Fatalf("stored Feishu message = %+v webhook=%+v", storedFeishu, feishuWebhookResult)
+	}
+	encryptedFeishu := doJSON(t, s, http.MethodPost, "/api/im/feishu/"+feishuEndpointBody.ID+"/callback", "", map[string]any{"encrypt": "ciphertext"})
+	if encryptedFeishu.Code != http.StatusBadRequest || !strings.Contains(encryptedFeishu.Body.String(), "encrypted") {
+		t.Fatalf("encrypted Feishu status = %d body=%s", encryptedFeishu.Code, encryptedFeishu.Body.String())
+	}
+
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
 		"target":  "#general",
 		"content": "hello",

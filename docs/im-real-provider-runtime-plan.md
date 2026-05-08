@@ -5,8 +5,9 @@ Reference baseline: CherryHQ/stella at `120eced`
 
 ## Current Truth
 
-Nekode does not yet have real Telegram, QQ, Feishu, or WeChat provider
-runtimes. The current IM code provides:
+Nekode now has real local Terminal, Telegram webhook, and Feishu callback thin
+runtimes. QQ and WeChat remain separate runtime tasks. The shared IM boundary
+provides:
 
 - provider schemas, validation, and credential redaction;
 - inbound `iminbound.RawEvent` and normalizer contracts;
@@ -25,9 +26,9 @@ operator-owned credentials.
 
 | Provider | Nekode today | Live gap |
 | --- | --- | --- |
-| Terminal | Local input can be turned into `RawEvent`; outbound can render a terminal-readable line. | No end-to-end local runtime/smoke that creates endpoint, injects input, stores message, emits delivery, renders reply, and records delivery status. |
-| Telegram | Schema, config validation, normalizer, and outbound frame rendering. | No Bot API SDK/runtime, webhook secret validation, inbound HTTP handler, `sendMessage`, or live smoke. |
-| Feishu | Schema, config validation, normalizer, and mock fixtures. | No official SDK runtime, event verification/decryption, event callback/WebSocket receiver, `im.v1.message.create`, or live smoke. |
+| Terminal | Local input, normalization, storage, outbound terminal render, and delivered-status smoke are implemented. | External provider smoke does not apply. |
+| Telegram | Webhook route, secret-token validation, inbound normalization/storage, Bot API `sendMessage`, and delivery status updates are implemented. | Live bot smoke still requires operator-owned token and webhook URL. |
+| Feishu | Plain callback route, verification-token URL challenge/event auth, inbound normalization/storage, tenant token fetch, OpenAPI `im/v1/messages`, and delivery status updates are implemented. | Encrypted callback decrypt support and live tenant smoke require operator-owned app credentials/callback URL. |
 | QQ | Schema, config validation, normalizer, and outbound frame rendering. | No BotGo runtime, token refresh, event callback/WebSocket receiver, group/C2C send calls, or sandbox smoke. |
 | WeChat/Weixin | Schema, config validation, normalizer, and mock fixtures. | No confirmed official/compliant runtime path, no iLink client, no QR/auth/session flow, no polling/send runtime, and no live smoke. |
 
@@ -41,7 +42,7 @@ edge handling, but Nekode must keep provider runtimes behind the existing
 | Provider | Stella dependency/API | Stella receive path | Stella send path | Nekode decision |
 | --- | --- | --- | --- | --- |
 | Telegram | `gopkg.in/telebot.v4` | `tele.LongPoller`, handlers for commands/messages/callbacks, group-mode guard. | `Notify` sends MarkdownV2 messages, supports numeric chat IDs and `@channel`, chunks long text. | Use Stella's config, guard, normalization, and render ideas. Prefer webhook mode for server deployment because task #179 requires it and Nekode already exposes HTTP APIs; allow long polling only as an optional local-dev mode. |
-| Feishu | `github.com/larksuite/oapi-sdk-go/v3` | WebSocket client with `dispatcher.NewEventDispatcher(verificationToken, encryptKey)`, `OnP2MessageReceiveV1`, reaction handler, message ID dedupe. | `client.Im.Message.Create` with `receive_id_type` derived from `ou_`, `on_`, or `oc_` prefixes. | Use official SDK v3. Support HTTP callback verification/decryption first if deployment wants provider callbacks; keep WebSocket mode as an accepted alternative when public callback ingress is not available. |
+| Feishu | `github.com/larksuite/oapi-sdk-go/v3` | WebSocket client with `dispatcher.NewEventDispatcher(verificationToken, encryptKey)`, `OnP2MessageReceiveV1`, reaction handler, message ID dedupe. | `client.Im.Message.Create` with `receive_id_type` derived from `ou_`, `on_`, or `oc_` prefixes. | For task #180, use direct official HTTP APIs for the thin callback/send surface to avoid a broad SDK dependency: URL verification and plain `im.message.receive_v1` callbacks feed the shared normalizer, tenant token uses `/open-apis/auth/v3/tenant_access_token/internal`, and sends use `/open-apis/im/v1/messages`. Encrypted callbacks are explicitly rejected until decrypt support lands. |
 | QQ | `github.com/tencent-connect/botgo` | Token refresh, OpenAPI client, event handlers for C2C and group at-message, WebSocket session manager. | `PostGroupMessage` for `qq:group:` and `PostC2CMessage` for `qq:c2c:`/default C2C. | Use BotGo and copy Stella's target ID convention. Because BotGo README notes WebSocket is being phased down and webhook callbacks are in gray rollout, task #181 must decide the compliant receive mode before coding the runtime. |
 | WeChat/Weixin | Custom iLink REST client over `go-resty/resty/v2`; no public Go SDK in Stella. | Long polling `GetUpdates`; QR endpoints for bot login; in-memory cursor/context tokens. | `/ilink/bot/sendmessage` using `bot_token` headers and cached `context_token`. | Treat as feasibility/compliance work, not a ready production channel. Do not ship as "official WeChat" until account terms, API availability, token/session persistence, and live test environment are confirmed. |
 | Terminal | Local channel shape in Nekode, not external SDK. | Local operator input becomes the same inbound DTO shape as providers. | Render `OutboundDelivery` as terminal lines and mark status. | task #178 should finish first because it validates the runtime boundary without external accounts. |
@@ -112,10 +113,21 @@ Add a provider runtime layer that is separate from the existing mock gate:
      `setWebhook(url=<base>/api/im/telegram/<endpoint_id>/webhook,
      secret_token=<secret_token>)`.
 3. task #180 Feishu callback and send integration.
-   - Use `larksuite/oapi-sdk-go/v3`.
+   - Use official Feishu OpenAPI HTTP endpoints directly for the thin runtime
+     surface; keep `larksuite/oapi-sdk-go/v3` as the later broader SDK option
+     if encrypted event dispatch or WebSocket receive mode is needed.
    - Acceptance: verification token/encrypt key handling, callback challenge or
      WebSocket event path as selected, `im.message.receive_v1` normalization,
      dedupe, `Message.Create` send by chat/open/union ID, live tenant smoke.
+   - Implemented path: configure Feishu event callback URL as
+     `<base>/api/im/feishu/<endpoint_id>/callback`, set
+     `verification_token`, and subscribe to `im.message.receive_v1`. Nekode
+     answers URL verification challenges, validates plain callback tokens,
+     rejects encrypted payloads with an explicit unsupported error, normalizes
+     events through `imcoord`, fetches tenant access tokens, sends text with
+     OpenAPI `Message.Create`, and updates outbound delivery status. Local
+     httptest smoke covers receive/auth/send; live tenant smoke needs
+     operator-owned credentials and public callback URL.
 4. task #181 QQ and WeChat feasibility plus compliant runtime plan.
    - QQ: verify whether the account can use webhook callback now or must use
      legacy WebSocket while available; use BotGo for token/OpenAPI/send.

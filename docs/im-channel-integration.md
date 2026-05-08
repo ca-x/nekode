@@ -8,8 +8,10 @@ the deployment and attribution companion to tasks #156-#165.
 
 For real provider runtime selection and SDK/API boundaries, also read
 `docs/im-real-provider-runtime-plan.md`. The current first-version IM code is an
-adapter boundary plus mock gate, not a completed live Telegram/QQ/Feishu/WeChat
-provider runtime.
+adapter boundary plus mock gate for most providers. Terminal has a local live
+smoke gate, Telegram has a webhook/Bot API runtime, and Feishu has a plain
+callback/OpenAPI send runtime. Remaining provider runtimes must still pass
+their own receive/auth/send smoke before being described as connected.
 
 ## Design Boundary
 
@@ -91,7 +93,7 @@ Example non-secret config shape:
   "app_secret_ref": "secret:im/feishu/prod/app_secret",
   "verification_token_ref": "secret:im/feishu/prod/verification_token",
   "encrypt_key_ref": "secret:im/feishu/prod/encrypt_key",
-  "webhook_path": "/api/im/feishu/events",
+  "webhook_path": "/api/im/feishu/<endpoint_id>/callback",
   "default_target": "#general",
   "group_mode": "mention",
   "allowed_conversations": ["oc_xxx"],
@@ -309,7 +311,8 @@ For each IM channel:
    adapter path, for example:
 
    ```text
-   https://nekode.example.com/api/im/<provider>/events
+   https://nekode.example.com/api/im/telegram/<endpoint_id>/webhook
+   https://nekode.example.com/api/im/feishu/<endpoint_id>/callback
    ```
 
 4. Enable signature or token verification before accepting traffic.

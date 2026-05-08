@@ -60,6 +60,10 @@ func QQRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
 	return providerRawEvent(ProviderQQ, input)
 }
 
+func FeishuRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
+	return providerRawEvent(ProviderFeishu, input)
+}
+
 func providerRawEvent(provider string, input ProviderRawEventInput) iminbound.RawEvent {
 	return iminbound.RawEvent{
 		EndpointID:        strings.TrimSpace(input.EndpointID),

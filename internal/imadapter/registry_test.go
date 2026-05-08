@@ -25,11 +25,14 @@ func TestProviderRegistryCoversStellaProviders(t *testing.T) {
 }
 
 func TestValidateConfigAndRedact(t *testing.T) {
-	if err := ValidateConfig(ProviderFeishu, `{"app_id":"app","app_secret":"secret"}`); err != nil {
+	if err := ValidateConfig(ProviderFeishu, `{"app_id":"app","app_secret":"secret","verification_token":"verify"}`); err != nil {
 		t.Fatalf("ValidateConfig() error = %v", err)
 	}
 	if err := ValidateConfig(ProviderFeishu, `{"app_id":"app"}`); err == nil || !strings.Contains(err.Error(), "app_secret") {
 		t.Fatalf("ValidateConfig() error = %v, want missing app_secret", err)
+	}
+	if err := ValidateConfig(ProviderFeishu, `{"app_id":"app","app_secret":"secret"}`); err == nil || !strings.Contains(err.Error(), "verification_token") {
+		t.Fatalf("ValidateConfig() error = %v, want missing verification_token", err)
 	}
 	redacted, err := RedactConfig(ProviderFeishu, `{"app_id":"app","app_secret":"secret","verification_token":"verify"}`)
 	if err != nil {
