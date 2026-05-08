@@ -371,6 +371,14 @@ export type RuntimeTypeInventory = {
   installed: boolean;
   healthy: boolean;
   resolvedPath?: string;
+  availability?: string;
+  availabilityReason?: string;
+  smoke?: {
+    ok: boolean;
+    status: string;
+    category?: string;
+    detail?: string;
+  };
   capabilities: string[];
   templates: string[];
 };

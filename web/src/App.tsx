@@ -5927,11 +5927,13 @@ function DaemonPanel({
                     <strong>{runtime.displayName || runtime.kind}</strong>
                     <span>
                       {computer.displayName || computer.hostname || computer.computerId} · {runtime.templates.length} template(s)
+                      {runtime.runtimeType?.availabilityReason ? ` · ${runtime.runtimeType.availabilityReason}` : ""}
                     </span>
                   </div>
                   <div className="runtime-flags">
                     <span>{runtime.installed ? "installed" : "missing"}</span>
-                    <span>{runtime.healthy ? "healthy" : "offline"}</span>
+                    <span>{runtime.healthy ? "smoke passed" : runtime.runtimeType?.availability || "unavailable"}</span>
+                    {runtime.runtimeType?.smoke?.category ? <span>{runtime.runtimeType.smoke.category}</span> : null}
                     {runtime.templates.some((template) => template.multiInstance) ? <span>multi-instance</span> : null}
                   </div>
                 </article>

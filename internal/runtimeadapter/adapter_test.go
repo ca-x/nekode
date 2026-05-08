@@ -21,6 +21,12 @@ func TestComputerInventorySeparatesRuntimeTypesTemplatesAndBootstrapAgent(t *tes
 			return "", errors.New("not found")
 		},
 		Env: func(string) string { return "" },
+		SmokeRuntime: func(check RuntimeSmokeCheck) RuntimeSmokeResult {
+			if check.Kind == "codex" && check.Resolved == "/usr/local/bin/codex" {
+				return RuntimeSmokeResult{OK: true, Status: "passed", Category: "version", Detail: "codex-cli 0.129.0"}
+			}
+			return RuntimeSmokeResult{OK: false, Status: "failed", Category: "runtime_exit", Detail: "unexpected smoke"}
+		},
 	})
 
 	if len(inventory.GetRuntimes()) < 2 {
@@ -74,9 +80,16 @@ func TestComputerInventorySeparatesRuntimeTypesTemplatesAndBootstrapAgent(t *tes
 	assertOption(t, adapter.Template.Options, "reasoning_effort", OptionEnum, false, false)
 	assertOption(t, adapter.Template.Options, "api_token", OptionString, false, true)
 	assertOption(t, adapter.Template.Options, "system_message", OptionFreeText, false, false)
+	assertOption(t, adapter.Template.Options, "session_id", OptionString, false, false)
 	assertOption(t, adapter.Template.Options, "max_turns", OptionNumber, false, false)
 	assertOption(t, adapter.Template.Options, "allow_file_write", OptionBoolean, false, false)
 	assertOption(t, adapter.Template.Options, "workdir", OptionPath, false, false)
+	if adapter.RuntimeType.Availability != "available" || !adapter.RuntimeType.Smoke.OK {
+		t.Fatalf("availability/smoke = %q/%+v, want available smoke passed", adapter.RuntimeType.Availability, adapter.RuntimeType.Smoke)
+	}
+	if !adapter.RuntimeType.Contract.DirectRunSupported || adapter.RuntimeType.Contract.PromptInjection == "" {
+		t.Fatalf("contract = %+v, want direct-run prompt contract", adapter.RuntimeType.Contract)
+	}
 }
 
 func TestBuildWrapCommandValidatesOptions(t *testing.T) {
@@ -94,8 +107,11 @@ func TestBuildWrapCommandValidatesOptions(t *testing.T) {
 	if cmd.Command != "codex" {
 		t.Fatalf("command = %q, want codex", cmd.Command)
 	}
-	if !containsPair(cmd.Args, "--model", "gpt-5.5") || !containsPair(cmd.Args, "--reasoning-effort", "high") {
-		t.Fatalf("args = %v, want model and reasoning effort flags", cmd.Args)
+	if !containsPair(cmd.Args, "--model", "gpt-5.5") || containsValue(cmd.Args, "--reasoning-effort") {
+		t.Fatalf("args = %v, want codex model flag and no generic reasoning-effort flag", cmd.Args)
+	}
+	if !containsValue(cmd.Args, "exec") || !containsValue(cmd.Args, "--json") || !containsValue(cmd.Args, "-") {
+		t.Fatalf("args = %v, want codex exec stdin contract", cmd.Args)
 	}
 
 	if _, err := BuildWrapCommand(template, map[string]string{
@@ -135,13 +151,167 @@ func TestBuildWrapCommandDefaultsAndTrimsOptionValues(t *testing.T) {
 	if !containsPair(cmd.Args, "--model", "gpt-5.5") {
 		t.Fatalf("args = %v, want default model flag", cmd.Args)
 	}
-	if !containsPair(cmd.Args, "--reasoning-effort", "xhigh") ||
-		!containsPair(cmd.Args, "--workdir", "/tmp/nekode") ||
-		!containsPair(cmd.Args, "--system-message", "stay concise") {
-		t.Fatalf("args = %v, want trimmed option flags", cmd.Args)
+	if containsValue(cmd.Args, "--reasoning-effort") || !containsPair(cmd.Args, "--cd", "/tmp/nekode") {
+		t.Fatalf("args = %v, want codex workdir mapping and no generic reasoning flag", cmd.Args)
+	}
+	if cmd.Dir != "/tmp/nekode" || cmd.Stdin != "stay concise" {
+		t.Fatalf("dir/stdin = %q/%q, want trimmed workdir and system message stdin", cmd.Dir, cmd.Stdin)
 	}
 	if containsValue(cmd.Args, "secret-token") {
 		t.Fatalf("args = %v, sensitive api_token must not be passed as a CLI argument", cmd.Args)
+	}
+}
+
+func TestBuildWrapCommandPerRuntimeContracts(t *testing.T) {
+	tests := []struct {
+		kind       string
+		wantArgs   []string
+		wantPairs  map[string]string
+		forbidArgs []string
+		wantStdin  string
+		wantDir    string
+	}{
+		{
+			kind:       "codex",
+			wantArgs:   []string{"exec", "--json", "--skip-git-repo-check", "-"},
+			wantPairs:  map[string]string{"--model": "model-1", "--cd": "/tmp/work"},
+			forbidArgs: []string{"--reasoning-effort", "--system-message", "--system-prompt"},
+			wantStdin:  "system rules",
+			wantDir:    "/tmp/work",
+		},
+		{
+			kind:       "claude",
+			wantArgs:   []string{"--print", "--output-format"},
+			wantPairs:  map[string]string{"--model": "model-1", "--effort": "high", "--append-system-prompt": "system rules", "--resume": "session-1", "--permission-mode": "bypassPermissions"},
+			forbidArgs: []string{"--reasoning-effort", "--system-message"},
+			wantDir:    "/tmp/work",
+		},
+		{
+			kind:       "opencode",
+			wantArgs:   []string{"run", "--format", "--dangerously-skip-permissions"},
+			wantPairs:  map[string]string{"--model": "model-1", "--variant": "high", "--prompt": "system rules", "--dir": "/tmp/work", "--session": "session-1"},
+			forbidArgs: []string{"--reasoning-effort", "--system-message"},
+			wantDir:    "/tmp/work",
+		},
+		{
+			kind:       "kiro-cli",
+			wantArgs:   []string{"chat", "--no-interactive", "--trust-all-tools"},
+			wantPairs:  map[string]string{"--model": "model-1", "--resume-id": "session-1"},
+			forbidArgs: []string{"--reasoning-effort", "--system-message", "--system-prompt"},
+			wantStdin:  "system rules",
+			wantDir:    "/tmp/work",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.kind, func(t *testing.T) {
+			template := DefaultInstanceTemplate(RuntimeType{Kind: tt.kind, DisplayName: tt.kind, Command: ContractForKind(tt.kind).Command})
+			cmd, err := BuildWrapCommand(template, map[string]string{
+				"display_name":     "Runtime Bot",
+				"model":            "model-1",
+				"reasoning_effort": "high",
+				"workdir":          "/tmp/work",
+				"session_id":       "session-1",
+				"system_message":   "system rules",
+			})
+			if err != nil {
+				t.Fatalf("BuildWrapCommand() error = %v", err)
+			}
+			for _, arg := range tt.wantArgs {
+				if !containsValue(cmd.Args, arg) {
+					t.Fatalf("args = %v, want arg %q", cmd.Args, arg)
+				}
+			}
+			for key, value := range tt.wantPairs {
+				if !containsPair(cmd.Args, key, value) {
+					t.Fatalf("args = %v, want %s %s", cmd.Args, key, value)
+				}
+			}
+			for _, arg := range tt.forbidArgs {
+				if containsValue(cmd.Args, arg) {
+					t.Fatalf("args = %v, forbidden generic arg %q", cmd.Args, arg)
+				}
+			}
+			if cmd.Stdin != tt.wantStdin {
+				t.Fatalf("stdin = %q, want %q", cmd.Stdin, tt.wantStdin)
+			}
+			if cmd.Dir != tt.wantDir {
+				t.Fatalf("dir = %q, want %q", cmd.Dir, tt.wantDir)
+			}
+		})
+	}
+}
+
+func TestComputerInventoryRuntimeAvailabilityMatrix(t *testing.T) {
+	installed := map[string]string{
+		"codex":    "/usr/local/bin/codex",
+		"claude":   "/usr/local/bin/claude",
+		"opencode": "/usr/local/bin/opencode",
+		"kiro-cli": "/usr/local/bin/kiro-cli",
+	}
+	inventory := ComputerInventory(InventoryConfig{
+		ComputerID: "computer-1",
+		LookupPath: func(command string) (string, error) {
+			if path := installed[command]; path != "" {
+				return path, nil
+			}
+			return "", errors.New("not found")
+		},
+		Env: func(string) string { return "" },
+		SmokeRuntime: func(check RuntimeSmokeCheck) RuntimeSmokeResult {
+			if installed[check.Command] == "" {
+				return RuntimeSmokeResult{OK: false, Status: "failed", Category: "missing_executable", Detail: "not installed"}
+			}
+			return RuntimeSmokeResult{OK: true, Status: "passed", Category: "version", Detail: check.Kind + " version"}
+		},
+	})
+
+	available := map[string]bool{"codex": true, "claude": true, "opencode": true, "kiro-cli": true}
+	for _, runtime := range inventory.GetRuntimes() {
+		wantAvailable := available[runtime.GetKind()]
+		if runtime.GetInstalled() != wantAvailable || runtime.GetHealthy() != wantAvailable {
+			t.Fatalf("%s installed/healthy = %v/%v, want %v/%v", runtime.GetKind(), runtime.GetInstalled(), runtime.GetHealthy(), wantAvailable, wantAvailable)
+		}
+	}
+	for _, profile := range inventory.GetRuntimeProfiles() {
+		var adapter AdapterConfig
+		if err := json.Unmarshal([]byte(profile.GetAdapterConfigJson()), &adapter); err != nil {
+			t.Fatalf("decode adapter config for %s: %v", profile.GetKind(), err)
+		}
+		if adapter.RuntimeType.Kind == "custom" && adapter.RuntimeType.Availability != "unavailable" {
+			t.Fatalf("custom availability = %q, want unavailable", adapter.RuntimeType.Availability)
+		}
+		if !available[adapter.RuntimeType.Kind] && adapter.RuntimeType.Healthy {
+			t.Fatalf("%s marked healthy without installed smoke: %+v", adapter.RuntimeType.Kind, adapter.RuntimeType)
+		}
+	}
+}
+
+func TestRuntimeContractsCoverCatalogKinds(t *testing.T) {
+	directRunKinds := map[string]bool{
+		"codex":    true,
+		"claude":   true,
+		"opencode": true,
+		"kiro-cli": true,
+	}
+	for _, kind := range []string{"codex", "claude", "opencode", "kimi", "gemini", "cursor-agent", "copilot", "openclaw", "hermes", "pi", "kiro-cli", "custom"} {
+		contract := ContractForKind(kind)
+		if contract.Kind != kind {
+			t.Fatalf("%s contract kind = %q", kind, contract.Kind)
+		}
+		if contract.PromptInjection == "" || contract.SystemPromptInjection == "" || contract.SecretRedaction == "" {
+			t.Fatalf("%s contract incomplete: %+v", kind, contract)
+		}
+		if contract.DirectRunSupported != directRunKinds[kind] {
+			t.Fatalf("%s directRunSupported = %v, want %v", kind, contract.DirectRunSupported, directRunKinds[kind])
+		}
+		template := DefaultInstanceTemplate(RuntimeType{Kind: kind, DisplayName: kind, Command: firstNonEmpty(contract.Command, kind)})
+		_, err := BuildWrapCommand(template, map[string]string{"display_name": "Runtime Bot"})
+		if directRunKinds[kind] && err != nil {
+			t.Fatalf("%s BuildWrapCommand() error = %v", kind, err)
+		}
+		if !directRunKinds[kind] && err == nil {
+			t.Fatalf("%s BuildWrapCommand() error = nil, want unsupported until smoke contract exists", kind)
+		}
 	}
 }
 

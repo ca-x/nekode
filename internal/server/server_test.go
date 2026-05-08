@@ -1408,6 +1408,9 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		LookupPath: func(command string) (string, error) {
 			return "/usr/bin/" + command, nil
 		},
+		SmokeRuntime: func(check runtimeadapter.RuntimeSmokeCheck) runtimeadapter.RuntimeSmokeResult {
+			return runtimeadapter.RuntimeSmokeResult{OK: true, Status: "passed", Category: "version", Detail: check.Kind + " test version"}
+		},
 	})
 	if _, err := s.daemon.RegisterComputer(context.Background(), &daemonv1.RegisterComputerRequest{
 		Info: &daemonv1.ComputerInfo{

@@ -120,8 +120,14 @@ func TestRunSupervisorInjectsLaunchPromptSnapshot(t *testing.T) {
 		t.Fatalf("runner commands = %+v, want one runtime command", runner.commands)
 	}
 	args := runner.commands[0].Args
-	if !containsString(args, "--system-message") || !containsString(args, client.promptSnapshot.GetContent()) {
-		t.Fatalf("runner args = %+v, want launch prompt injected as system-message", args)
+	if containsString(args, "--system-message") || containsString(args, "--system-prompt") || containsString(args, "--append-system-prompt") || containsString(args, client.promptSnapshot.GetContent()) {
+		t.Fatalf("runner args = %+v, launch prompt must not use generic system-message args or leak content", args)
+	}
+	if !containsString(args, "exec") || !containsString(args, "--json") || !containsString(args, "-") {
+		t.Fatalf("runner args = %+v, want codex exec stdin contract", args)
+	}
+	if !strings.Contains(runner.commands[0].Stdin, client.promptSnapshot.GetContent()) || !strings.Contains(runner.commands[0].Stdin, "say hello") {
+		t.Fatalf("runner stdin = %q, want launch prompt and run prompt via stdin", runner.commands[0].Stdin)
 	}
 	if !containsString(runner.commands[0].Env, "NEKODE_LAUNCH_PROMPT_SNAPSHOT_ID=prompt-run-prompt") ||
 		!containsString(runner.commands[0].Env, "NEKODE_LAUNCH_PROMPT_HASH=abc123") {
@@ -134,6 +140,21 @@ func TestRunSupervisorInjectsLaunchPromptSnapshot(t *testing.T) {
 		if activity.GetKind() == "command_run" && strings.Contains(activity.GetDetail(), client.promptSnapshot.GetContent()) {
 			t.Fatalf("command_run detail leaked full launch prompt: %q", activity.GetDetail())
 		}
+	}
+}
+
+func TestRuntimeCommandSummaryRedactsRuntimeInputs(t *testing.T) {
+	summary := runtimeCommandSummary(runtimeCommand{
+		Command: "claude",
+		Args:    []string{"--print", "--system-prompt", "top secret", "please work\ntask_id=task-1"},
+		Dir:     "/tmp/work",
+		Stdin:   "stdin secret",
+	})
+	if strings.Contains(summary, "top secret") || strings.Contains(summary, "task_id=task-1") || strings.Contains(summary, "stdin secret") {
+		t.Fatalf("summary leaked runtime input: %q", summary)
+	}
+	if !strings.Contains(summary, "<redacted runtime input>") || !strings.Contains(summary, "cwd=/tmp/work") || !strings.Contains(summary, "stdin=<redacted runtime input>") {
+		t.Fatalf("summary = %q, want redaction markers and cwd", summary)
 	}
 }
 

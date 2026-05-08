@@ -1032,6 +1032,7 @@ function normalizeRuntimeInstanceTemplate(raw: unknown): RuntimeInstanceTemplate
 }
 
 function normalizeRuntimeTypeInventory(row: Record<string, unknown>): RuntimeTypeInventory {
+  const smoke = asRecord(row.smoke);
   return {
     kind: asString(row.kind),
     displayName: asString(row.displayName),
@@ -1041,6 +1042,14 @@ function normalizeRuntimeTypeInventory(row: Record<string, unknown>): RuntimeTyp
     installed: Boolean(row.installed),
     healthy: Boolean(row.healthy),
     resolvedPath: asOptionalString(row.resolvedPath),
+    availability: asOptionalString(row.availability),
+    availabilityReason: asOptionalString(row.availabilityReason),
+    smoke: Object.keys(smoke).length ? {
+      ok: Boolean(smoke.ok),
+      status: asString(smoke.status),
+      category: asOptionalString(smoke.category),
+      detail: asOptionalString(smoke.detail)
+    } : undefined,
     capabilities: asStringArray(row.capabilities),
     templates: asStringArray(row.templates)
   };

@@ -1,6 +1,7 @@
 package runtimeadapter
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
@@ -34,6 +36,7 @@ type InventoryConfig struct {
 	AgentID              string
 	LookupPath           func(string) (string, error)
 	Env                  func(string) string
+	SmokeRuntime         func(RuntimeSmokeCheck) RuntimeSmokeResult
 }
 
 type OptionSchema struct {
@@ -67,16 +70,20 @@ type InstanceTemplate struct {
 }
 
 type RuntimeType struct {
-	Kind         string   `json:"kind"`
-	DisplayName  string   `json:"displayName"`
-	Provider     string   `json:"provider"`
-	Command      string   `json:"command"`
-	Aliases      []string `json:"aliases,omitempty"`
-	Installed    bool     `json:"installed"`
-	Healthy      bool     `json:"healthy"`
-	ResolvedPath string   `json:"resolvedPath,omitempty"`
-	Capabilities []string `json:"capabilities"`
-	Templates    []string `json:"templates"`
+	Kind               string              `json:"kind"`
+	DisplayName        string              `json:"displayName"`
+	Provider           string              `json:"provider"`
+	Command            string              `json:"command"`
+	Aliases            []string            `json:"aliases,omitempty"`
+	Installed          bool                `json:"installed"`
+	Healthy            bool                `json:"healthy"`
+	ResolvedPath       string              `json:"resolvedPath,omitempty"`
+	Availability       string              `json:"availability"`
+	AvailabilityReason string              `json:"availabilityReason,omitempty"`
+	Smoke              RuntimeSmokeResult  `json:"smoke"`
+	Contract           RuntimeContractInfo `json:"contract"`
+	Capabilities       []string            `json:"capabilities"`
+	Templates          []string            `json:"templates"`
 }
 
 type AdapterConfig struct {
@@ -89,7 +96,53 @@ type WrapCommand struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 	Env     []string `json:"env,omitempty"`
+	Dir     string   `json:"dir,omitempty"`
+	Stdin   string   `json:"stdin,omitempty"`
+	Kind    string   `json:"kind,omitempty"`
 }
+
+type RuntimeSmokeCheck struct {
+	Kind        string
+	Command     string
+	Resolved    string
+	VersionArgs []string
+	Timeout     time.Duration
+}
+
+type RuntimeSmokeResult struct {
+	OK       bool   `json:"ok"`
+	Status   string `json:"status"`
+	Category string `json:"category,omitempty"`
+	Detail   string `json:"detail,omitempty"`
+}
+
+type RuntimeContractInfo struct {
+	Kind                  string   `json:"kind"`
+	Command               string   `json:"command"`
+	DirectRunSupported    bool     `json:"directRunSupported"`
+	VersionArgs           []string `json:"versionArgs,omitempty"`
+	PromptInjection       string   `json:"promptInjection"`
+	SystemPromptInjection string   `json:"systemPromptInjection"`
+	WorkspaceMapping      string   `json:"workspaceMapping"`
+	ModelMapping          string   `json:"modelMapping"`
+	ReasoningMapping      string   `json:"reasoningMapping"`
+	SessionMapping        string   `json:"sessionMapping"`
+	TimeoutPolicy         string   `json:"timeoutPolicy"`
+	ExitCodePolicy        string   `json:"exitCodePolicy"`
+	OutputPolicy          string   `json:"outputPolicy"`
+	SecretRedaction       string   `json:"secretRedaction"`
+}
+
+type runtimeContract struct {
+	RuntimeContractInfo
+	baseArgs func(values map[string]string) ([]string, string, string, []string, error)
+}
+
+const (
+	availabilityAvailable   = "available"
+	availabilityUnavailable = "unavailable"
+	availabilityUnsupported = "unsupported"
+)
 
 func ComputerInventory(cfg InventoryConfig) *daemonv1.ComputerInventory {
 	if cfg.LookupPath == nil {
@@ -136,6 +189,11 @@ func DefaultInstanceTemplate(rt RuntimeType) InstanceTemplate {
 	if command == "" {
 		command = rt.Kind
 	}
+	contract := ContractForKind(rt.Kind)
+	wrapArgs := []string{}
+	if contract.DirectRunSupported {
+		wrapArgs = append([]string(nil), runtimeContractForKind(rt.Kind).defaultArgs()...)
+	}
 	return InstanceTemplate{
 		TemplateID:    DefaultTemplateID(rt.Kind),
 		RuntimeKind:   rt.Kind,
@@ -146,7 +204,7 @@ func DefaultInstanceTemplate(rt RuntimeType) InstanceTemplate {
 		InventoryRole: "agent_instance_template",
 		Wrap: WrapSpec{
 			Command: command,
-			Args:    []string{"run"},
+			Args:    wrapArgs,
 		},
 		AgentIDPattern: rt.Kind + "-{slug}",
 		Options: []OptionSchema{
@@ -154,6 +212,7 @@ func DefaultInstanceTemplate(rt RuntimeType) InstanceTemplate {
 			{Name: "model", Label: "Model", Type: OptionString, Default: defaultModel(rt.Kind), Description: "Runtime model identifier; keep as an open string."},
 			{Name: "reasoning_effort", Label: "Reasoning effort", Type: OptionEnum, Default: "medium", Enum: []string{"low", "medium", "high", "xhigh"}, Description: "Provider-specific reasoning effort hint."},
 			{Name: "workdir", Label: "Working directory", Type: OptionPath, Description: "Workspace directory for the agent process."},
+			{Name: "session_id", Label: "Session id", Type: OptionString, Description: "Optional provider-specific session/resume identifier."},
 			{Name: "max_turns", Label: "Max turns", Type: OptionNumber, Default: "0", Description: "Optional turn budget; zero means runtime default."},
 			{Name: "allow_file_write", Label: "Allow file writes", Type: OptionBoolean, Default: "true", Description: "Whether the instance may edit files when the runtime supports it."},
 			{Name: "api_token", Label: "Runtime API token", Type: OptionString, Sensitive: true, Description: "Optional runtime credential stored as a sensitive value."},
@@ -175,6 +234,9 @@ func BuildWrapCommand(template InstanceTemplate, values map[string]string) (Wrap
 		if value == "" {
 			value = option.Default
 		}
+		if value != "" {
+			clean[option.Name] = value
+		}
 		if option.Required && value == "" {
 			return WrapCommand{}, fmt.Errorf("%s is required", option.Name)
 		}
@@ -182,23 +244,37 @@ func BuildWrapCommand(template InstanceTemplate, values map[string]string) (Wrap
 			return WrapCommand{}, err
 		}
 	}
-	args := make([]string, 0, len(template.Wrap.Args)+8)
-	args = append(args, template.Wrap.Args...)
-	appendFlag := func(name, value string) {
-		if value != "" {
-			args = append(args, "--"+name, value)
+	contract := runtimeContractForKind(template.RuntimeKind)
+	if contract.Kind != "" {
+		if !contract.DirectRunSupported {
+			return WrapCommand{}, fmt.Errorf("%s runtime is not available for direct execution: %s", template.RuntimeKind, contract.PromptInjection)
 		}
+		args, dir, stdin, env, err := contract.baseArgs(clean)
+		if err != nil {
+			return WrapCommand{}, err
+		}
+		return WrapCommand{
+			Command: strings.TrimSpace(template.Wrap.Command),
+			Args:    args,
+			Env:     append(append([]string(nil), template.Wrap.Env...), env...),
+			Dir:     dir,
+			Stdin:   stdin,
+			Kind:    template.RuntimeKind,
+		}, nil
 	}
-	appendFlag("model", valueOrDefault(template, clean, "model"))
-	appendFlag("reasoning-effort", valueOrDefault(template, clean, "reasoning_effort"))
-	appendFlag("workdir", valueOrDefault(template, clean, "workdir"))
-	if systemMessage := valueOrDefault(template, clean, "system_message"); systemMessage != "" {
-		appendFlag("system-message", systemMessage)
-	}
-	return WrapCommand{Command: template.Wrap.Command, Args: args, Env: append([]string(nil), template.Wrap.Env...)}, nil
+	return WrapCommand{
+		Command: strings.TrimSpace(template.Wrap.Command),
+		Args:    append([]string(nil), template.Wrap.Args...),
+		Env:     append([]string(nil), template.Wrap.Env...),
+		Dir:     valueOrDefault(template, clean, "workdir"),
+		Kind:    template.RuntimeKind,
+	}, nil
 }
 
 func runtimeTypeFromPreset(preset *daemonv1.RuntimePreset, cfg InventoryConfig) RuntimeType {
+	if cfg.SmokeRuntime == nil {
+		cfg.SmokeRuntime = defaultSmokeRuntime
+	}
 	command := preset.GetCommand()
 	resolved, installed := resolveCommand(command, preset.GetEnvVarNames(), cfg)
 	capabilities := capabilityNames(preset.GetCapabilities())
@@ -207,18 +283,105 @@ func runtimeTypeFromPreset(preset *daemonv1.RuntimePreset, cfg InventoryConfig) 
 	if displayName == "" {
 		displayName = kind
 	}
-	return RuntimeType{
-		Kind:         kind,
-		DisplayName:  displayName,
-		Provider:     preset.GetProvider(),
-		Command:      command,
-		Aliases:      append([]string(nil), preset.GetAliases()...),
-		Installed:    installed,
-		Healthy:      installed,
-		ResolvedPath: resolved,
-		Capabilities: capabilities,
-		Templates:    []string{DefaultTemplateID(kind)},
+	contract := ContractForKind(kind)
+	availability := availabilityUnavailable
+	reason := "executable not found"
+	smoke := RuntimeSmokeResult{OK: false, Status: "not_run", Category: "missing_executable", Detail: reason}
+	healthy := false
+	if strings.TrimSpace(command) == "" {
+		reason = "custom runtime requires an explicit command"
+		smoke = RuntimeSmokeResult{OK: false, Status: "not_run", Category: "custom_command_required", Detail: reason}
+	} else if installed && !contract.DirectRunSupported {
+		availability = availabilityUnsupported
+		reason = "direct-run contract is not verified for this runtime kind"
+		smoke = RuntimeSmokeResult{OK: false, Status: "not_run", Category: "unsupported_contract", Detail: reason}
+	} else if installed {
+		smoke = cfg.SmokeRuntime(RuntimeSmokeCheck{
+			Kind:        kind,
+			Command:     command,
+			Resolved:    resolved,
+			VersionArgs: append([]string(nil), contract.VersionArgs...),
+			Timeout:     5 * time.Second,
+		})
+		if smoke.OK {
+			availability = availabilityAvailable
+			reason = ""
+			healthy = true
+		} else {
+			availability = availabilityUnavailable
+			reason = firstNonEmpty(smoke.Detail, "executable smoke failed")
+		}
 	}
+	return RuntimeType{
+		Kind:               kind,
+		DisplayName:        displayName,
+		Provider:           preset.GetProvider(),
+		Command:            command,
+		Aliases:            append([]string(nil), preset.GetAliases()...),
+		Installed:          installed,
+		Healthy:            healthy,
+		ResolvedPath:       resolved,
+		Availability:       availability,
+		AvailabilityReason: reason,
+		Smoke:              smoke,
+		Contract:           contract,
+		Capabilities:       capabilities,
+		Templates:          []string{DefaultTemplateID(kind)},
+	}
+}
+
+func defaultSmokeRuntime(check RuntimeSmokeCheck) RuntimeSmokeResult {
+	command := firstNonEmpty(check.Resolved, check.Command)
+	if strings.TrimSpace(command) == "" {
+		return RuntimeSmokeResult{OK: false, Status: "not_run", Category: "missing_executable", Detail: "runtime command is empty"}
+	}
+	args := check.VersionArgs
+	if len(args) == 0 {
+		args = []string{"--version"}
+	}
+	timeout := check.Timeout
+	if timeout <= 0 {
+		timeout = 3 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, command, args...)
+	output, err := cmd.CombinedOutput()
+	detail := strings.TrimSpace(string(output))
+	if ctx.Err() == context.DeadlineExceeded {
+		return RuntimeSmokeResult{OK: false, Status: "failed", Category: "timeout", Detail: "version smoke timed out"}
+	}
+	if err != nil {
+		if detail != "" {
+			detail = err.Error() + ": " + detail
+		} else {
+			detail = err.Error()
+		}
+		return RuntimeSmokeResult{OK: false, Status: "failed", Category: classifySmokeFailure(detail), Detail: truncateRuntimeDetail(detail)}
+	}
+	return RuntimeSmokeResult{OK: true, Status: "passed", Category: "version", Detail: truncateRuntimeDetail(detail)}
+}
+
+func classifySmokeFailure(detail string) string {
+	lower := strings.ToLower(detail)
+	switch {
+	case strings.Contains(lower, "not found"), strings.Contains(lower, "no such file"):
+		return "missing_executable"
+	case strings.Contains(lower, "unknown option"), strings.Contains(lower, "unknown flag"), strings.Contains(lower, "invalid option"):
+		return "argv_contract"
+	case strings.Contains(lower, "auth"), strings.Contains(lower, "login"), strings.Contains(lower, "permission denied"), strings.Contains(lower, "unauthorized"):
+		return "provider_auth"
+	default:
+		return "runtime_exit"
+	}
+}
+
+func truncateRuntimeDetail(value string) string {
+	const max = 2048
+	if len(value) <= max {
+		return value
+	}
+	return value[:max] + "\n...truncated..."
 }
 
 func resolveCommand(command string, envNames []string, cfg InventoryConfig) (string, bool) {
@@ -252,6 +415,194 @@ func runtimeToProto(computerID string, rt RuntimeType, preset *daemonv1.RuntimeP
 		InstallHint:         append([]string(nil), preset.GetInstallHint()...),
 		ConfigDir:           filepath.Join(".nekode", "agents", rt.Kind),
 		Capabilities:        cloneCapabilities(preset.GetCapabilities()),
+	}
+}
+
+func ContractForKind(kind string) RuntimeContractInfo {
+	return runtimeContractForKind(kind).RuntimeContractInfo
+}
+
+func runtimeContractForKind(kind string) runtimeContract {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	common := RuntimeContractInfo{
+		Kind:               kind,
+		DirectRunSupported: true,
+		VersionArgs:        []string{"--version"},
+		TimeoutPolicy:      "daemon run timeout",
+		ExitCodePolicy:     "non-zero exit code fails the run with stdout/stderr tail",
+		OutputPolicy:       "combined stdout/stderr captured and truncated before reporting",
+		SecretRedaction:    "prompt/system-prompt values and stdin are redacted from command summaries",
+	}
+	switch kind {
+	case "codex":
+		common.Command = "codex"
+		common.VersionArgs = []string{"exec", "--help"}
+		common.PromptInjection = "stdin via `codex exec -`"
+		common.SystemPromptInjection = "prepended to stdin because Codex exec has no system prompt flag"
+		common.WorkspaceMapping = "`--cd <workdir>` plus process cwd"
+		common.ModelMapping = "`--model <model>`"
+		common.ReasoningMapping = "unsupported by CLI contract; ignored"
+		common.SessionMapping = "ephemeral exec; resume unsupported"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildCodexArgs}
+	case "claude":
+		common.Command = "claude"
+		common.VersionArgs = []string{"--help"}
+		common.PromptInjection = "positional prompt with `--print`"
+		common.SystemPromptInjection = "`--append-system-prompt <prompt>`"
+		common.WorkspaceMapping = "process cwd"
+		common.ModelMapping = "`--model <model>`"
+		common.ReasoningMapping = "`--effort <effort>`"
+		common.SessionMapping = "`--resume <session_id>`"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildClaudeArgs}
+	case "opencode":
+		common.Command = "opencode"
+		common.VersionArgs = []string{"run", "--help"}
+		common.PromptInjection = "positional message with `opencode run --format json`"
+		common.SystemPromptInjection = "`--prompt <prompt>`"
+		common.WorkspaceMapping = "`--dir <workdir>` plus process cwd"
+		common.ModelMapping = "`--model <model>`"
+		common.ReasoningMapping = "`--variant <effort>`"
+		common.SessionMapping = "`--session <session_id>`"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildOpenCodeArgs}
+	case "kiro-cli":
+		common.Command = "kiro-cli"
+		common.VersionArgs = []string{"chat", "--help"}
+		common.PromptInjection = "positional input with `kiro-cli chat --no-interactive`"
+		common.SystemPromptInjection = "prepended to prompt because chat has no system prompt flag"
+		common.WorkspaceMapping = "process cwd"
+		common.ModelMapping = "`--model <model>`"
+		common.ReasoningMapping = "unsupported by CLI contract; ignored"
+		common.SessionMapping = "`--resume-id <session_id>`"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildKiroArgs}
+	case "kimi", "gemini", "cursor-agent", "copilot", "openclaw", "hermes", "pi":
+		common.Command = kind
+		common.DirectRunSupported = false
+		common.PromptInjection = "direct-run contract not verified; runtime remains unavailable until command builder and smoke are added"
+		common.SystemPromptInjection = "not verified"
+		common.WorkspaceMapping = "not verified"
+		common.ModelMapping = "not verified"
+		common.ReasoningMapping = "not verified"
+		common.SessionMapping = "not verified"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: unsupportedRuntimeArgs}
+	case "custom":
+		common.Command = ""
+		common.DirectRunSupported = false
+		common.PromptInjection = "custom runtime requires an explicit user command before it can be smoke-tested"
+		common.SystemPromptInjection = "custom"
+		common.WorkspaceMapping = "custom"
+		common.ModelMapping = "custom"
+		common.ReasoningMapping = "custom"
+		common.SessionMapping = "custom"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: unsupportedRuntimeArgs}
+	default:
+		return runtimeContract{}
+	}
+}
+
+func (c runtimeContract) defaultArgs() []string {
+	if c.baseArgs == nil || !c.DirectRunSupported {
+		return nil
+	}
+	args, _, _, _, err := c.baseArgs(map[string]string{})
+	if err != nil {
+		return nil
+	}
+	return args
+}
+
+func buildCodexArgs(values map[string]string) ([]string, string, string, []string, error) {
+	args := []string{"exec", "--json", "--skip-git-repo-check"}
+	if model := values["model"]; model != "" {
+		args = append(args, "--model", model)
+	}
+	workdir := values["workdir"]
+	if workdir != "" {
+		args = append(args, "--cd", workdir)
+	}
+	args = append(args, "-")
+	return args, workdir, values["system_message"], nil, nil
+}
+
+func buildClaudeArgs(values map[string]string) ([]string, string, string, []string, error) {
+	args := []string{"--print", "--output-format", "stream-json", "--permission-mode", "bypassPermissions"}
+	if model := values["model"]; model != "" && model != "default" {
+		args = append(args, "--model", model)
+	}
+	if effort := values["reasoning_effort"]; effort != "" {
+		args = append(args, "--effort", effort)
+	}
+	if sessionID := values["session_id"]; sessionID != "" {
+		args = append(args, "--resume", sessionID)
+	}
+	if systemMessage := values["system_message"]; systemMessage != "" {
+		args = append(args, "--append-system-prompt", systemMessage)
+	}
+	return args, values["workdir"], "", nil, nil
+}
+
+func buildOpenCodeArgs(values map[string]string) ([]string, string, string, []string, error) {
+	args := []string{"run", "--format", "json", "--dangerously-skip-permissions"}
+	if model := values["model"]; model != "" {
+		args = append(args, "--model", model)
+	}
+	if effort := values["reasoning_effort"]; effort != "" {
+		args = append(args, "--variant", effort)
+	}
+	workdir := values["workdir"]
+	if workdir != "" {
+		args = append(args, "--dir", workdir)
+	}
+	if sessionID := values["session_id"]; sessionID != "" {
+		args = append(args, "--session", sessionID)
+	}
+	if systemMessage := values["system_message"]; systemMessage != "" {
+		args = append(args, "--prompt", systemMessage)
+	}
+	return args, workdir, "", []string{`OPENCODE_PERMISSION={"*":"allow"}`}, nil
+}
+
+func buildKiroArgs(values map[string]string) ([]string, string, string, []string, error) {
+	args := []string{"chat", "--no-interactive", "--trust-all-tools"}
+	if model := values["model"]; model != "" {
+		args = append(args, "--model", model)
+	}
+	if sessionID := values["session_id"]; sessionID != "" {
+		args = append(args, "--resume-id", sessionID)
+	}
+	return args, values["workdir"], values["system_message"], nil, nil
+}
+
+func unsupportedRuntimeArgs(map[string]string) ([]string, string, string, []string, error) {
+	return nil, "", "", nil, errors.New("runtime direct-run contract is not verified")
+}
+
+func WithRunPrompt(wrap WrapCommand, prompt string) WrapCommand {
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		return wrap
+	}
+	switch strings.ToLower(strings.TrimSpace(wrap.Kind)) {
+	case "codex":
+		wrap.Stdin = combinePrompt(wrap.Stdin, prompt)
+	case "kiro-cli":
+		wrap.Args = append(wrap.Args, combinePrompt(wrap.Stdin, prompt))
+		wrap.Stdin = ""
+	default:
+		wrap.Args = append(wrap.Args, prompt)
+	}
+	return wrap
+}
+
+func combinePrompt(systemPrompt string, prompt string) string {
+	systemPrompt = strings.TrimSpace(systemPrompt)
+	prompt = strings.TrimSpace(prompt)
+	switch {
+	case systemPrompt == "":
+		return prompt
+	case prompt == "":
+		return systemPrompt
+	default:
+		return systemPrompt + "\n\n---\n\n" + prompt
 	}
 }
 

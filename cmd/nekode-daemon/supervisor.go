@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -64,6 +65,8 @@ type runtimeCommand struct {
 	Command string
 	Args    []string
 	Env     []string
+	Dir     string
+	Stdin   string
 }
 
 type runtimeCommandResult struct {
@@ -367,6 +370,7 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 		if detail != "" {
 			errDetail += "\n" + detail
 		}
+		errDetail = "diagnostic_category=" + runtimeFailureCategory(result, errDetail) + "\n" + errDetail
 		if commandStep != nil {
 			s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_FAILED, "runtime command failed", errDetail)
 		}
@@ -625,14 +629,13 @@ func (s *runSupervisor) runtimeCommand(run *daemonv1.Run, agentID string, snapsh
 	if err != nil {
 		return runtimeCommand{}, err
 	}
-	args := append([]string(nil), wrapped.Args...)
-	if prompt := runPrompt(run); prompt != "" {
-		args = append(args, prompt)
-	}
+	wrapped = runtimeadapter.WithRunPrompt(wrapped, runPrompt(run))
 	return runtimeCommand{
 		Command: wrapped.Command,
-		Args:    args,
+		Args:    append([]string(nil), wrapped.Args...),
 		Env:     append(wrapped.Env, env...),
+		Dir:     wrapped.Dir,
+		Stdin:   wrapped.Stdin,
 	}, nil
 }
 
@@ -675,12 +678,58 @@ func runCommandEnv(cfg daemonConfig, run *daemonv1.Run, agentID string, snapshot
 func runtimeCommandSummary(cmd runtimeCommand) string {
 	parts := append([]string{cmd.Command}, cmd.Args...)
 	for i := 0; i < len(parts); i++ {
-		if parts[i] == "--system-message" && i+1 < len(parts) {
-			parts[i+1] = "<redacted launch prompt>"
+		if isRedactedRuntimeArg(parts[i]) && i+1 < len(parts) {
+			parts[i+1] = "<redacted runtime input>"
 			i++
+			continue
+		}
+		if shouldRedactRuntimeValue(parts[i]) {
+			parts[i] = "<redacted runtime input>"
 		}
 	}
-	return strings.Join(parts, " ")
+	summary := strings.Join(parts, " ")
+	if cmd.Dir != "" {
+		summary += " cwd=" + cmd.Dir
+	}
+	if cmd.Stdin != "" {
+		summary += " stdin=<redacted runtime input>"
+	}
+	return summary
+}
+
+func isRedactedRuntimeArg(arg string) bool {
+	switch arg {
+	case "--system-message", "--system-prompt", "--append-system-prompt", "--prompt":
+		return true
+	default:
+		return false
+	}
+}
+
+func shouldRedactRuntimeValue(value string) bool {
+	if strings.Contains(value, "\n") {
+		return true
+	}
+	if strings.Contains(value, "task_id=") || strings.Contains(value, "input_message_id=") {
+		return true
+	}
+	return false
+}
+
+func runtimeFailureCategory(result runtimeCommandResult, detail string) string {
+	lower := strings.ToLower(detail)
+	switch {
+	case result.ExitCode == -1 || errors.Is(result.Err, context.DeadlineExceeded):
+		return "timeout"
+	case strings.Contains(lower, "unknown option"), strings.Contains(lower, "unknown flag"), strings.Contains(lower, "invalid option"), strings.Contains(lower, "unexpected argument"):
+		return "argv_contract"
+	case strings.Contains(lower, "auth"), strings.Contains(lower, "login"), strings.Contains(lower, "unauthorized"), strings.Contains(lower, "permission denied"), strings.Contains(lower, "api key"):
+		return "provider_auth"
+	case strings.Contains(lower, "executable file not found"), strings.Contains(lower, "no such file"):
+		return "missing_executable"
+	default:
+		return "runtime_exit"
+	}
 }
 
 func nonEmptyRuntimeLines(lines ...string) []string {
@@ -699,6 +748,12 @@ func (commandRunner) Run(ctx context.Context, cmd runtimeCommand) runtimeCommand
 	}
 	command := exec.CommandContext(ctx, cmd.Command, cmd.Args...)
 	command.Env = append(os.Environ(), cmd.Env...)
+	if strings.TrimSpace(cmd.Dir) != "" {
+		command.Dir = cmd.Dir
+	}
+	if cmd.Stdin != "" {
+		command.Stdin = strings.NewReader(cmd.Stdin)
+	}
 	var output bytes.Buffer
 	command.Stdout = &output
 	command.Stderr = &output
