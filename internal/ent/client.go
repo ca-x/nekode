@@ -18,6 +18,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/reminder"
+	"github.com/ca-x/nekode/internal/ent/reminderevent"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
@@ -37,6 +39,10 @@ type Client struct {
 	InteractionEndpoint *InteractionEndpointClient
 	// Message is the client for interacting with the Message builders.
 	Message *MessageClient
+	// Reminder is the client for interacting with the Reminder builders.
+	Reminder *ReminderClient
+	// ReminderEvent is the client for interacting with the ReminderEvent builders.
+	ReminderEvent *ReminderEventClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
@@ -60,6 +66,8 @@ func (c *Client) init() {
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
 	c.InteractionEndpoint = NewInteractionEndpointClient(c.config)
 	c.Message = NewMessageClient(c.config)
+	c.Reminder = NewReminderClient(c.config)
+	c.ReminderEvent = NewReminderEventClient(c.config)
 	c.Session = NewSessionClient(c.config)
 	c.Task = NewTaskClient(c.config)
 	c.ThreadReadState = NewThreadReadStateClient(c.config)
@@ -160,6 +168,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
+		Reminder:            NewReminderClient(cfg),
+		ReminderEvent:       NewReminderEventClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
 		ThreadReadState:     NewThreadReadStateClient(cfg),
@@ -187,6 +197,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
+		Reminder:            NewReminderClient(cfg),
+		ReminderEvent:       NewReminderEventClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
 		ThreadReadState:     NewThreadReadStateClient(cfg),
@@ -221,7 +233,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Session, c.Task, c.ThreadReadState, c.User,
+		c.Reminder, c.ReminderEvent, c.Session, c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -232,7 +244,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Session, c.Task, c.ThreadReadState, c.User,
+		c.Reminder, c.ReminderEvent, c.Session, c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -249,6 +261,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.InteractionEndpoint.mutate(ctx, m)
 	case *MessageMutation:
 		return c.Message.mutate(ctx, m)
+	case *ReminderMutation:
+		return c.Reminder.mutate(ctx, m)
+	case *ReminderEventMutation:
+		return c.ReminderEvent.mutate(ctx, m)
 	case *SessionMutation:
 		return c.Session.mutate(ctx, m)
 	case *TaskMutation:
@@ -794,6 +810,272 @@ func (c *MessageClient) mutate(ctx context.Context, m *MessageMutation) (Value, 
 	}
 }
 
+// ReminderClient is a client for the Reminder schema.
+type ReminderClient struct {
+	config
+}
+
+// NewReminderClient returns a client for the Reminder from the given config.
+func NewReminderClient(c config) *ReminderClient {
+	return &ReminderClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `reminder.Hooks(f(g(h())))`.
+func (c *ReminderClient) Use(hooks ...Hook) {
+	c.hooks.Reminder = append(c.hooks.Reminder, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `reminder.Intercept(f(g(h())))`.
+func (c *ReminderClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Reminder = append(c.inters.Reminder, interceptors...)
+}
+
+// Create returns a builder for creating a Reminder entity.
+func (c *ReminderClient) Create() *ReminderCreate {
+	mutation := newReminderMutation(c.config, OpCreate)
+	return &ReminderCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Reminder entities.
+func (c *ReminderClient) CreateBulk(builders ...*ReminderCreate) *ReminderCreateBulk {
+	return &ReminderCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReminderClient) MapCreateBulk(slice any, setFunc func(*ReminderCreate, int)) *ReminderCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReminderCreateBulk{err: fmt.Errorf("calling to ReminderClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReminderCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReminderCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Reminder.
+func (c *ReminderClient) Update() *ReminderUpdate {
+	mutation := newReminderMutation(c.config, OpUpdate)
+	return &ReminderUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReminderClient) UpdateOne(_m *Reminder) *ReminderUpdateOne {
+	mutation := newReminderMutation(c.config, OpUpdateOne, withReminder(_m))
+	return &ReminderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReminderClient) UpdateOneID(id string) *ReminderUpdateOne {
+	mutation := newReminderMutation(c.config, OpUpdateOne, withReminderID(id))
+	return &ReminderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Reminder.
+func (c *ReminderClient) Delete() *ReminderDelete {
+	mutation := newReminderMutation(c.config, OpDelete)
+	return &ReminderDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReminderClient) DeleteOne(_m *Reminder) *ReminderDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReminderClient) DeleteOneID(id string) *ReminderDeleteOne {
+	builder := c.Delete().Where(reminder.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReminderDeleteOne{builder}
+}
+
+// Query returns a query builder for Reminder.
+func (c *ReminderClient) Query() *ReminderQuery {
+	return &ReminderQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReminder},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Reminder entity by its id.
+func (c *ReminderClient) Get(ctx context.Context, id string) (*Reminder, error) {
+	return c.Query().Where(reminder.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReminderClient) GetX(ctx context.Context, id string) *Reminder {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReminderClient) Hooks() []Hook {
+	return c.hooks.Reminder
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReminderClient) Interceptors() []Interceptor {
+	return c.inters.Reminder
+}
+
+func (c *ReminderClient) mutate(ctx context.Context, m *ReminderMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReminderCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReminderUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReminderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReminderDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Reminder mutation op: %q", m.Op())
+	}
+}
+
+// ReminderEventClient is a client for the ReminderEvent schema.
+type ReminderEventClient struct {
+	config
+}
+
+// NewReminderEventClient returns a client for the ReminderEvent from the given config.
+func NewReminderEventClient(c config) *ReminderEventClient {
+	return &ReminderEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `reminderevent.Hooks(f(g(h())))`.
+func (c *ReminderEventClient) Use(hooks ...Hook) {
+	c.hooks.ReminderEvent = append(c.hooks.ReminderEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `reminderevent.Intercept(f(g(h())))`.
+func (c *ReminderEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReminderEvent = append(c.inters.ReminderEvent, interceptors...)
+}
+
+// Create returns a builder for creating a ReminderEvent entity.
+func (c *ReminderEventClient) Create() *ReminderEventCreate {
+	mutation := newReminderEventMutation(c.config, OpCreate)
+	return &ReminderEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReminderEvent entities.
+func (c *ReminderEventClient) CreateBulk(builders ...*ReminderEventCreate) *ReminderEventCreateBulk {
+	return &ReminderEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReminderEventClient) MapCreateBulk(slice any, setFunc func(*ReminderEventCreate, int)) *ReminderEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReminderEventCreateBulk{err: fmt.Errorf("calling to ReminderEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReminderEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReminderEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReminderEvent.
+func (c *ReminderEventClient) Update() *ReminderEventUpdate {
+	mutation := newReminderEventMutation(c.config, OpUpdate)
+	return &ReminderEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReminderEventClient) UpdateOne(_m *ReminderEvent) *ReminderEventUpdateOne {
+	mutation := newReminderEventMutation(c.config, OpUpdateOne, withReminderEvent(_m))
+	return &ReminderEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReminderEventClient) UpdateOneID(id string) *ReminderEventUpdateOne {
+	mutation := newReminderEventMutation(c.config, OpUpdateOne, withReminderEventID(id))
+	return &ReminderEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReminderEvent.
+func (c *ReminderEventClient) Delete() *ReminderEventDelete {
+	mutation := newReminderEventMutation(c.config, OpDelete)
+	return &ReminderEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReminderEventClient) DeleteOne(_m *ReminderEvent) *ReminderEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReminderEventClient) DeleteOneID(id string) *ReminderEventDeleteOne {
+	builder := c.Delete().Where(reminderevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReminderEventDeleteOne{builder}
+}
+
+// Query returns a query builder for ReminderEvent.
+func (c *ReminderEventClient) Query() *ReminderEventQuery {
+	return &ReminderEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReminderEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ReminderEvent entity by its id.
+func (c *ReminderEventClient) Get(ctx context.Context, id string) (*ReminderEvent, error) {
+	return c.Query().Where(reminderevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReminderEventClient) GetX(ctx context.Context, id string) *ReminderEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReminderEventClient) Hooks() []Hook {
+	return c.hooks.ReminderEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReminderEventClient) Interceptors() []Interceptor {
+	return c.inters.ReminderEvent
+}
+
+func (c *ReminderEventClient) mutate(ctx context.Context, m *ReminderEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReminderEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReminderEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReminderEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReminderEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReminderEvent mutation op: %q", m.Op())
+	}
+}
+
 // SessionClient is a client for the Session schema.
 type SessionClient struct {
 	config
@@ -1329,11 +1611,11 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Session,
-		Task, ThreadReadState, User []ent.Hook
+		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Reminder,
+		ReminderEvent, Session, Task, ThreadReadState, User []ent.Hook
 	}
 	inters struct {
-		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Session,
-		Task, ThreadReadState, User []ent.Interceptor
+		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Reminder,
+		ReminderEvent, Session, Task, ThreadReadState, User []ent.Interceptor
 	}
 )

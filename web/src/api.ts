@@ -19,6 +19,10 @@ import type {
   JsonObject,
   Message,
   ProtocolInfo,
+  Reminder,
+  ReminderEvent,
+  ReminderScheduleKind,
+  ReminderStatus,
   RuntimePreset,
   SetupStatus,
   Task,
@@ -127,6 +131,8 @@ const taskStateValues = new Set<TaskState>([
 ]);
 const channelVisibilityValues = new Set<ChannelVisibility>(["public", "private", "unspecified"]);
 const channelMemberRoleValues = new Set<ChannelMemberRole>(["admin", "member", "viewer", "unspecified"]);
+const reminderStatusValues = new Set<ReminderStatus>(["active", "done", "canceled", "paused", "failed", "unspecified"]);
+const reminderScheduleKindValues = new Set<ReminderScheduleKind>(["cron", "every", "at", "rrule", "natural", "unspecified"]);
 
 const collaborationEventKindByNumber: Record<number, CollaborationEventKind> = {
   0: "unspecified",
@@ -254,7 +260,7 @@ function asNumber(value: unknown): number {
 function enumLabel(value: unknown): string {
   return asString(value)
     .toLowerCase()
-    .replace(/^(collaboration_event_kind|event_operation|event_scope_type|task_state)_/, "");
+    .replace(/^(collaboration_event_kind|event_operation|event_scope_type|task_state|reminder_status|reminder_schedule_kind|reminder_event_type|reminder_actor_type)_/, "");
 }
 
 function knownEnumLabel(value: unknown, byNumber: Record<number, string>, prefix: string): string {
@@ -373,6 +379,83 @@ function normalizeChannelMember(raw: unknown): ChannelMember {
     kind: asString(row.kind ?? member.kind ?? member.actorKind ?? member.actor_kind) || "human",
     role: normalizeChannelMemberRole(row.role),
     joinedTimeUnix: asNumber(row.joinedTimeUnix ?? row.joined_time_unix)
+  };
+}
+
+function normalizeReminderStatus(value: unknown): ReminderStatus | string {
+  if (typeof value === "number") {
+    return (
+      ({
+        1: "active",
+        2: "done",
+        3: "canceled",
+        4: "paused",
+        5: "failed"
+      } as Record<number, ReminderStatus>)[value] ?? "unspecified"
+    );
+  }
+  const label = enumLabel(value).replace(/^reminder_status_/, "") || "unspecified";
+  const normalized = label === "cancelled" ? "canceled" : label;
+  return reminderStatusValues.has(normalized as ReminderStatus) ? (normalized as ReminderStatus) : normalized;
+}
+
+function normalizeReminderScheduleKind(value: unknown): ReminderScheduleKind | string {
+  if (typeof value === "number") {
+    return (
+      ({
+        1: "cron",
+        2: "every",
+        3: "at",
+        4: "rrule",
+        5: "natural"
+      } as Record<number, ReminderScheduleKind>)[value] ?? "unspecified"
+    );
+  }
+  const label = enumLabel(value).replace(/^reminder_schedule_kind_/, "") || "unspecified";
+  return reminderScheduleKindValues.has(label as ReminderScheduleKind) ? (label as ReminderScheduleKind) : label;
+}
+
+function normalizeReminder(raw: unknown): Reminder {
+  const row = asRecord(raw);
+  const id = asString(row.id ?? row.reminderId ?? row.reminder_id);
+  return {
+    id,
+    target: asString(row.target),
+    scheduleKind: normalizeReminderScheduleKind(row.scheduleKind ?? row.schedule_kind),
+    schedule: asString(row.schedule),
+    prompt: asOptionalString(row.prompt),
+    enabled: Boolean(row.enabled),
+    nextRunUnix: asNumber(row.nextRunUnix ?? row.next_run_unix),
+    lastRunUnix: asNumber(row.lastRunUnix ?? row.last_run_unix) || undefined,
+    runCount: asNumber(row.runCount ?? row.run_count),
+    lastError: asOptionalString(row.lastError ?? row.last_error),
+    title: asString(row.title) || asString(row.prompt) || id,
+    status: normalizeReminderStatus(row.status),
+    msgRef: asOptionalString(row.msgRef ?? row.msg_ref),
+    recurrenceRule: asOptionalString(row.recurrenceRule ?? row.recurrence_rule ?? asRecord(row.recurrence).rule),
+    recurrenceDescription: asOptionalString(
+      row.recurrenceDescription ?? row.recurrence_description ?? asRecord(row.recurrence).description
+    ),
+    recurrenceTimezone: asOptionalString(
+      row.recurrenceTimezone ?? row.recurrence_timezone ?? asRecord(row.recurrence).timezone
+    ),
+    cancelToken: asOptionalString(row.cancelToken ?? row.cancel_token),
+    createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix),
+    updatedUnix: asNumber(row.updatedUnix ?? row.updated_time_unix ?? row.updatedTimeUnix)
+  };
+}
+
+function normalizeReminderEvent(raw: unknown): ReminderEvent {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id ?? row.eventId ?? row.event_id),
+    reminderId: asString(row.reminderId ?? row.reminder_id),
+    eventType: enumLabel(row.eventType ?? row.event_type) || asString(row.eventType ?? row.event_type),
+    actorType: enumLabel(row.actorType ?? row.actor_type) || asString(row.actorType ?? row.actor_type),
+    actorId: asOptionalString(row.actorId ?? row.actor_id),
+    occurredTimeUnix: asNumber(row.occurredTimeUnix ?? row.occurred_time_unix),
+    nextFireTimeUnix: asNumber(row.nextFireTimeUnix ?? row.next_fire_time_unix) || undefined,
+    detail: asOptionalString(row.detail)
   };
 }
 
@@ -847,6 +930,73 @@ export class ApiClient {
     if (filters.target) params.set("target", filters.target);
     params.set("limit", String(filters.limit ?? 100));
     return normalizeList(await this.request<RawListResponse<unknown>>(`/api/tasks?${params}`), normalizeTask);
+  }
+
+  async listReminders(filters: { target?: string; status?: ReminderStatus; includeCanceled?: boolean; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "target", filters.target);
+    appendIfPresent(params, "status", filters.status);
+    if (filters.includeCanceled) params.set("includeCanceled", "true");
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/reminders?${params}`),
+      normalizeReminder
+    );
+  }
+
+  async createReminder(input: {
+    target: string;
+    title: string;
+    prompt?: string;
+    delaySeconds?: number;
+    fireAt?: string;
+    scheduleKind?: ReminderScheduleKind | string;
+    schedule?: string;
+    timezone?: string;
+    msgRef?: string;
+  }) {
+    return normalizeReminder(await this.request<unknown>("/api/reminders", {
+      method: "POST",
+      body: JSON.stringify(input)
+    }));
+  }
+
+  async snoozeReminder(id: string, delaySeconds: number) {
+    return normalizeReminder(await this.request<unknown>(`/api/reminders/${encodeURIComponent(id)}/snooze`, {
+      method: "POST",
+      body: JSON.stringify({ delaySeconds })
+    }));
+  }
+
+  async updateReminder(
+    id: string,
+    patch: {
+      title?: string;
+      delaySeconds?: number;
+      fireAt?: string;
+      scheduleKind?: ReminderScheduleKind | string;
+      schedule?: string;
+      timezone?: string;
+    }
+  ) {
+    return normalizeReminder(await this.request<unknown>(`/api/reminders/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }));
+  }
+
+  async cancelReminder(id: string, cancelToken?: string) {
+    return normalizeReminder(await this.request<unknown>(`/api/reminders/${encodeURIComponent(id)}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ cancelToken: cancelToken ?? "" })
+    }));
+  }
+
+  async listReminderLog(id: string, limit = 100) {
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/reminders/${encodeURIComponent(id)}/log?limit=${limit}`),
+      normalizeReminderEvent
+    );
   }
 
   async createTask(input: {

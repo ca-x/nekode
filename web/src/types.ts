@@ -130,6 +130,43 @@ export type Task = {
   updatedUnix: number;
 };
 
+export type ReminderStatus = "active" | "done" | "canceled" | "paused" | "failed" | "unspecified";
+
+export type ReminderScheduleKind = "cron" | "every" | "at" | "rrule" | "natural" | "unspecified";
+
+export type Reminder = {
+  id: string;
+  target: string;
+  scheduleKind: ReminderScheduleKind | string;
+  schedule: string;
+  prompt?: string;
+  enabled: boolean;
+  nextRunUnix: number;
+  lastRunUnix?: number;
+  runCount: number;
+  lastError?: string;
+  title: string;
+  status: ReminderStatus | string;
+  msgRef?: string;
+  recurrenceRule?: string;
+  recurrenceDescription?: string;
+  recurrenceTimezone?: string;
+  cancelToken?: string;
+  createdUnix: number;
+  updatedUnix: number;
+};
+
+export type ReminderEvent = {
+  id: string;
+  reminderId: string;
+  eventType: string;
+  actorType: string;
+  actorId?: string;
+  occurredTimeUnix: number;
+  nextFireTimeUnix?: number;
+  detail?: string;
+};
+
 export type ProtocolInfo = {
   name: string;
   protoPath: string;

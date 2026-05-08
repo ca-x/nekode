@@ -181,6 +181,80 @@ var (
 			},
 		},
 	}
+	// RemindersColumns holds the columns for the "reminders" table.
+	RemindersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "schedule_kind", Type: field.TypeString, Default: "at"},
+		{Name: "schedule", Type: field.TypeString, Default: ""},
+		{Name: "prompt", Type: field.TypeString, Default: ""},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "next_run_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "last_run_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "run_count", Type: field.TypeInt64, Default: 0},
+		{Name: "last_error", Type: field.TypeString, Default: ""},
+		{Name: "title", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+		{Name: "msg_ref", Type: field.TypeString, Default: ""},
+		{Name: "recurrence_rule", Type: field.TypeString, Default: ""},
+		{Name: "recurrence_description", Type: field.TypeString, Default: ""},
+		{Name: "recurrence_timezone", Type: field.TypeString, Default: ""},
+		{Name: "cancel_token", Type: field.TypeString, Default: ""},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// RemindersTable holds the schema information for the "reminders" table.
+	RemindersTable = &schema.Table{
+		Name:       "reminders",
+		Columns:    RemindersColumns,
+		PrimaryKey: []*schema.Column{RemindersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "reminder_target_status_next_run_unix",
+				Unique:  false,
+				Columns: []*schema.Column{RemindersColumns[1], RemindersColumns[11], RemindersColumns[6]},
+			},
+			{
+				Name:    "reminder_status_next_run_unix",
+				Unique:  false,
+				Columns: []*schema.Column{RemindersColumns[11], RemindersColumns[6]},
+			},
+			{
+				Name:    "reminder_updated_unix",
+				Unique:  false,
+				Columns: []*schema.Column{RemindersColumns[18]},
+			},
+		},
+	}
+	// ReminderEventsColumns holds the columns for the "reminder_events" table.
+	ReminderEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "reminder_id", Type: field.TypeString},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "actor_type", Type: field.TypeString, Default: "system"},
+		{Name: "actor_id", Type: field.TypeString, Default: ""},
+		{Name: "occurred_time_unix", Type: field.TypeInt64},
+		{Name: "next_fire_time_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "detail", Type: field.TypeString, Default: ""},
+	}
+	// ReminderEventsTable holds the schema information for the "reminder_events" table.
+	ReminderEventsTable = &schema.Table{
+		Name:       "reminder_events",
+		Columns:    ReminderEventsColumns,
+		PrimaryKey: []*schema.Column{ReminderEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "reminderevent_reminder_id_occurred_time_unix_id",
+				Unique:  false,
+				Columns: []*schema.Column{ReminderEventsColumns[1], ReminderEventsColumns[5], ReminderEventsColumns[0]},
+			},
+			{
+				Name:    "reminderevent_event_type_occurred_time_unix",
+				Unique:  false,
+				Columns: []*schema.Column{ReminderEventsColumns[2], ReminderEventsColumns[5]},
+			},
+		},
+	}
 	// SessionsColumns holds the columns for the "sessions" table.
 	SessionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -317,6 +391,8 @@ var (
 		IdempotencyRecordsTable,
 		InteractionEndpointsTable,
 		MessagesTable,
+		RemindersTable,
+		ReminderEventsTable,
 		SessionsTable,
 		TasksTable,
 		ThreadReadStatesTable,

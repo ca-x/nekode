@@ -166,6 +166,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/tasks/{id}/comments", s.requireAuth(s.handleCreateTaskComment))
 	s.mux.HandleFunc("GET /api/tasks/{id}/timeline", s.requireAuth(s.handleTaskTimeline))
 	s.mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
+	s.mux.HandleFunc("GET /api/reminders", s.requireAuth(s.handleListReminders))
+	s.mux.HandleFunc("POST /api/reminders", s.requireAuth(s.handleCreateReminder))
+	s.mux.HandleFunc("GET /api/reminders/{id}/log", s.requireAuth(s.handleReminderLog))
+	s.mux.HandleFunc("POST /api/reminders/{id}/cancel", s.requireAuth(s.handleCancelReminder))
+	s.mux.HandleFunc("POST /api/reminders/{id}/snooze", s.requireAuth(s.handleSnoozeReminder))
+	s.mux.HandleFunc("PATCH /api/reminders/{id}", s.requireAuth(s.handleUpdateReminder))
 	s.mux.HandleFunc("GET /api/runtime-presets", s.requireAuth(s.handleListRuntimePresets))
 	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
 	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))
@@ -969,6 +975,199 @@ func (s *Server) handleTaskTimeline(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleListReminders(w http.ResponseWriter, r *http.Request) {
+	statuses := r.URL.Query()["status"]
+	reminders, err := s.store.ListReminders(r.Context(), strings.TrimSpace(r.URL.Query().Get("target")),
+		statuses, boolQuery(r, "includeCanceled"), intQuery(r, "limit", 100))
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid reminder status")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list reminders failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": reminders})
+}
+
+func (s *Server) handleCreateReminder(w http.ResponseWriter, r *http.Request) {
+	var req reminderRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	target := strings.TrimSpace(req.Target)
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	plan, err := reminderSchedulePlanFromInput(req.DelaySeconds, req.FireAt, req.ScheduleKind, req.Schedule, req.Timezone)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	title := strings.TrimSpace(req.Title)
+	prompt := strings.TrimSpace(req.Prompt)
+	if title == "" {
+		title = prompt
+	}
+	if title == "" {
+		writeError(w, http.StatusBadRequest, "title or prompt is required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	created, err := s.store.CreateReminder(r.Context(), storage.Reminder{
+		Target:                target,
+		ScheduleKind:          plan.Kind,
+		Schedule:              plan.Schedule,
+		Prompt:                prompt,
+		Enabled:               true,
+		NextRunUnix:           plan.NextRunUnix,
+		Title:                 title,
+		Status:                "active",
+		MsgRef:                strings.TrimSpace(req.MsgRef),
+		RecurrenceRule:        plan.RecurrenceRule,
+		RecurrenceDescription: plan.RecurrenceDescription,
+		RecurrenceTimezone:    plan.RecurrenceTimezone,
+		CancelToken:           storage.NewID("rtk"),
+	}, "human", principal.User.ID, "created")
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid reminder schedule")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create reminder failed")
+		return
+	}
+	if err := s.daemon.RecordReminderMutation(r.Context(), created, daemonv1.EventOperation_EVENT_OPERATION_CREATED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append reminder event failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, created)
+}
+
+func (s *Server) handleCancelReminder(w http.ResponseWriter, r *http.Request) {
+	var req cancelReminderRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	reminderID := strings.TrimSpace(r.PathValue("id"))
+	current, err := s.store.GetReminder(r.Context(), reminderID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "reminder not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "get reminder failed")
+		return
+	}
+	if current.CancelToken != "" && strings.TrimSpace(req.CancelToken) != "" && current.CancelToken != strings.TrimSpace(req.CancelToken) {
+		writeError(w, http.StatusForbidden, "invalid cancel token")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	updated, err := s.store.CancelReminder(r.Context(), reminderID, "human", principal.User.ID, "canceled")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "cancel reminder failed")
+		return
+	}
+	if err := s.daemon.RecordReminderMutation(r.Context(), updated, daemonv1.EventOperation_EVENT_OPERATION_CANCELED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append reminder event failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (s *Server) handleSnoozeReminder(w http.ResponseWriter, r *http.Request) {
+	var req snoozeReminderRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.DelaySeconds == 0 {
+		writeError(w, http.StatusBadRequest, "delaySeconds is required")
+		return
+	}
+	nextRun := time.Now().Add(time.Duration(req.DelaySeconds) * time.Second).Unix()
+	schedule := "in " + strconv.FormatUint(uint64(req.DelaySeconds), 10) + "s"
+	principal := principalFromContext(r.Context())
+	updated, err := s.store.SnoozeReminder(r.Context(), strings.TrimSpace(r.PathValue("id")),
+		nextRun, schedule, "human", principal.User.ID, "snoozed")
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "reminder not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "snooze reminder failed")
+		return
+	}
+	if err := s.daemon.RecordReminderMutation(r.Context(), updated, daemonv1.EventOperation_EVENT_OPERATION_UPDATED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append reminder event failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (s *Server) handleUpdateReminder(w http.ResponseWriter, r *http.Request) {
+	var req reminderPatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	patch := storage.ReminderPatch{Title: optionalTrimmed(req.Title)}
+	if req.DelaySeconds != nil || req.FireAt != nil || req.Schedule != nil || req.ScheduleKind != nil {
+		var delay uint32
+		if req.DelaySeconds != nil {
+			delay = *req.DelaySeconds
+		}
+		plan, err := reminderSchedulePlanFromInput(delay, optionalStringValue(req.FireAt),
+			optionalStringValue(req.ScheduleKind), optionalStringValue(req.Schedule), optionalStringValue(req.Timezone))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		patch.ScheduleKind = &plan.Kind
+		patch.Schedule = &plan.Schedule
+		patch.NextRunUnix = &plan.NextRunUnix
+		patch.RecurrenceRule = &plan.RecurrenceRule
+		patch.RecurrenceDescription = &plan.RecurrenceDescription
+		patch.RecurrenceTimezone = &plan.RecurrenceTimezone
+	} else if req.Timezone != nil {
+		timezone := strings.TrimSpace(*req.Timezone)
+		patch.RecurrenceTimezone = &timezone
+	}
+	principal := principalFromContext(r.Context())
+	updated, err := s.store.UpdateReminder(r.Context(), strings.TrimSpace(r.PathValue("id")),
+		patch, "human", principal.User.ID, "updated")
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "reminder not found")
+		return
+	}
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid reminder update")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "update reminder failed")
+		return
+	}
+	if err := s.daemon.RecordReminderMutation(r.Context(), updated, daemonv1.EventOperation_EVENT_OPERATION_UPDATED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append reminder event failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (s *Server) handleReminderLog(w http.ResponseWriter, r *http.Request) {
+	events, err := s.store.ListReminderEvents(r.Context(), strings.TrimSpace(r.PathValue("id")), intQuery(r, "limit", 100))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "reminder not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list reminder log failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": events})
+}
+
 func (s *Server) handleListRuntimePresets(w http.ResponseWriter, r *http.Request) {
 	includeExperimental := boolQuery(r, "includeExperimental")
 	presets := runtimecatalog.List(includeExperimental, strings.TrimSpace(r.URL.Query().Get("kindPrefix")), uint32(intQuery(r, "limit", 200)))
@@ -1196,6 +1395,117 @@ func optionalTrimmed(value *string) *string {
 	return &trimmed
 }
 
+func optionalStringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
+}
+
+type reminderSchedulePlan struct {
+	Kind                  string
+	Schedule              string
+	NextRunUnix           int64
+	RecurrenceRule        string
+	RecurrenceDescription string
+	RecurrenceTimezone    string
+}
+
+func reminderSchedulePlanFromInput(delaySeconds uint32, fireAt, scheduleKind, schedule, timezone string) (reminderSchedulePlan, error) {
+	if delaySeconds > 0 {
+		return reminderSchedulePlan{
+			Kind:               "at",
+			Schedule:           "in " + strconv.FormatUint(uint64(delaySeconds), 10) + "s",
+			NextRunUnix:        time.Now().Add(time.Duration(delaySeconds) * time.Second).Unix(),
+			RecurrenceTimezone: strings.TrimSpace(timezone),
+		}, nil
+	}
+	if strings.TrimSpace(fireAt) != "" {
+		nextRun, err := parseReminderFireAt(fireAt)
+		if err != nil {
+			return reminderSchedulePlan{}, err
+		}
+		return reminderSchedulePlan{
+			Kind:               "at",
+			Schedule:           strings.TrimSpace(fireAt),
+			NextRunUnix:        nextRun,
+			RecurrenceTimezone: strings.TrimSpace(timezone),
+		}, nil
+	}
+	schedule = strings.TrimSpace(schedule)
+	if schedule == "" {
+		return reminderSchedulePlan{}, errors.New("schedule is required")
+	}
+	kind := normalizeReminderScheduleKindForHTTP(scheduleKind)
+	if kind == "" {
+		kind = "natural"
+	}
+	if !validReminderScheduleKindForHTTP(kind) {
+		return reminderSchedulePlan{}, errors.New("invalid reminder schedule kind")
+	}
+	plan := reminderSchedulePlan{
+		Kind:                  kind,
+		Schedule:              schedule,
+		RecurrenceDescription: schedule,
+		RecurrenceTimezone:    strings.TrimSpace(timezone),
+	}
+	if kind == "at" {
+		nextRun, err := parseReminderFireAt(schedule)
+		if err != nil {
+			return reminderSchedulePlan{}, err
+		}
+		plan.NextRunUnix = nextRun
+	}
+	if kind == "rrule" {
+		plan.RecurrenceRule = schedule
+	}
+	return plan, nil
+}
+
+func parseReminderFireAt(value string) (int64, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0, errors.New("fireAt is required")
+	}
+	if unix, err := strconv.ParseInt(value, 10, 64); err == nil && unix > 0 {
+		return unix, nil
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04", "2006-01-02T15:04:05", "2006-01-02 15:04", "2006-01-02"} {
+		parsed, err := time.ParseInLocation(layout, value, time.Local)
+		if err == nil {
+			return parsed.Unix(), nil
+		}
+	}
+	return 0, errors.New("fireAt must be unix seconds or RFC3339 time")
+}
+
+func normalizeReminderScheduleKindForHTTP(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "reminder_schedule_kind_cron":
+		return "cron"
+	case "reminder_schedule_kind_every":
+		return "every"
+	case "reminder_schedule_kind_at":
+		return "at"
+	case "reminder_schedule_kind_rrule":
+		return "rrule"
+	case "reminder_schedule_kind_natural":
+		return "natural"
+	default:
+		return value
+	}
+}
+
+func validReminderScheduleKindForHTTP(value string) bool {
+	switch normalizeReminderScheduleKindForHTTP(value) {
+	case "cron", "every", "at", "rrule", "natural":
+		return true
+	default:
+		return false
+	}
+}
+
 func validateCredentials(username, password string) error {
 	if strings.TrimSpace(username) == "" {
 		return errors.New("username is required")
@@ -1263,6 +1573,35 @@ type taskPatchRequest struct {
 type taskCommentRequest struct {
 	Content   string `json:"content"`
 	RequestID string `json:"requestId"`
+}
+
+type reminderRequest struct {
+	Target       string `json:"target"`
+	Title        string `json:"title"`
+	Prompt       string `json:"prompt"`
+	DelaySeconds uint32 `json:"delaySeconds"`
+	FireAt       string `json:"fireAt"`
+	ScheduleKind string `json:"scheduleKind"`
+	Schedule     string `json:"schedule"`
+	Timezone     string `json:"timezone"`
+	MsgRef       string `json:"msgRef"`
+}
+
+type reminderPatchRequest struct {
+	Title        *string `json:"title"`
+	DelaySeconds *uint32 `json:"delaySeconds"`
+	FireAt       *string `json:"fireAt"`
+	ScheduleKind *string `json:"scheduleKind"`
+	Schedule     *string `json:"schedule"`
+	Timezone     *string `json:"timezone"`
+}
+
+type snoozeReminderRequest struct {
+	DelaySeconds uint32 `json:"delaySeconds"`
+}
+
+type cancelReminderRequest struct {
+	CancelToken string `json:"cancelToken"`
 }
 
 type runtimePresetResponse struct {

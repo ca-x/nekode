@@ -7,6 +7,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/reminder"
+	"github.com/ca-x/nekode/internal/ent/reminderevent"
 	"github.com/ca-x/nekode/internal/ent/schema"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
@@ -218,6 +220,106 @@ func init() {
 	messageDescID := messageFields[0].Descriptor()
 	// message.DefaultID holds the default value on creation for the id field.
 	message.DefaultID = messageDescID.Default.(func() string)
+	reminderFields := schema.Reminder{}.Fields()
+	_ = reminderFields
+	// reminderDescTarget is the schema descriptor for target field.
+	reminderDescTarget := reminderFields[1].Descriptor()
+	// reminder.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	reminder.TargetValidator = reminderDescTarget.Validators[0].(func(string) error)
+	// reminderDescScheduleKind is the schema descriptor for schedule_kind field.
+	reminderDescScheduleKind := reminderFields[2].Descriptor()
+	// reminder.DefaultScheduleKind holds the default value on creation for the schedule_kind field.
+	reminder.DefaultScheduleKind = reminderDescScheduleKind.Default.(string)
+	// reminderDescSchedule is the schema descriptor for schedule field.
+	reminderDescSchedule := reminderFields[3].Descriptor()
+	// reminder.DefaultSchedule holds the default value on creation for the schedule field.
+	reminder.DefaultSchedule = reminderDescSchedule.Default.(string)
+	// reminderDescPrompt is the schema descriptor for prompt field.
+	reminderDescPrompt := reminderFields[4].Descriptor()
+	// reminder.DefaultPrompt holds the default value on creation for the prompt field.
+	reminder.DefaultPrompt = reminderDescPrompt.Default.(string)
+	// reminderDescEnabled is the schema descriptor for enabled field.
+	reminderDescEnabled := reminderFields[5].Descriptor()
+	// reminder.DefaultEnabled holds the default value on creation for the enabled field.
+	reminder.DefaultEnabled = reminderDescEnabled.Default.(bool)
+	// reminderDescNextRunUnix is the schema descriptor for next_run_unix field.
+	reminderDescNextRunUnix := reminderFields[6].Descriptor()
+	// reminder.DefaultNextRunUnix holds the default value on creation for the next_run_unix field.
+	reminder.DefaultNextRunUnix = reminderDescNextRunUnix.Default.(int64)
+	// reminderDescLastRunUnix is the schema descriptor for last_run_unix field.
+	reminderDescLastRunUnix := reminderFields[7].Descriptor()
+	// reminder.DefaultLastRunUnix holds the default value on creation for the last_run_unix field.
+	reminder.DefaultLastRunUnix = reminderDescLastRunUnix.Default.(int64)
+	// reminderDescRunCount is the schema descriptor for run_count field.
+	reminderDescRunCount := reminderFields[8].Descriptor()
+	// reminder.DefaultRunCount holds the default value on creation for the run_count field.
+	reminder.DefaultRunCount = reminderDescRunCount.Default.(int64)
+	// reminderDescLastError is the schema descriptor for last_error field.
+	reminderDescLastError := reminderFields[9].Descriptor()
+	// reminder.DefaultLastError holds the default value on creation for the last_error field.
+	reminder.DefaultLastError = reminderDescLastError.Default.(string)
+	// reminderDescTitle is the schema descriptor for title field.
+	reminderDescTitle := reminderFields[10].Descriptor()
+	// reminder.DefaultTitle holds the default value on creation for the title field.
+	reminder.DefaultTitle = reminderDescTitle.Default.(string)
+	// reminderDescStatus is the schema descriptor for status field.
+	reminderDescStatus := reminderFields[11].Descriptor()
+	// reminder.DefaultStatus holds the default value on creation for the status field.
+	reminder.DefaultStatus = reminderDescStatus.Default.(string)
+	// reminderDescMsgRef is the schema descriptor for msg_ref field.
+	reminderDescMsgRef := reminderFields[12].Descriptor()
+	// reminder.DefaultMsgRef holds the default value on creation for the msg_ref field.
+	reminder.DefaultMsgRef = reminderDescMsgRef.Default.(string)
+	// reminderDescRecurrenceRule is the schema descriptor for recurrence_rule field.
+	reminderDescRecurrenceRule := reminderFields[13].Descriptor()
+	// reminder.DefaultRecurrenceRule holds the default value on creation for the recurrence_rule field.
+	reminder.DefaultRecurrenceRule = reminderDescRecurrenceRule.Default.(string)
+	// reminderDescRecurrenceDescription is the schema descriptor for recurrence_description field.
+	reminderDescRecurrenceDescription := reminderFields[14].Descriptor()
+	// reminder.DefaultRecurrenceDescription holds the default value on creation for the recurrence_description field.
+	reminder.DefaultRecurrenceDescription = reminderDescRecurrenceDescription.Default.(string)
+	// reminderDescRecurrenceTimezone is the schema descriptor for recurrence_timezone field.
+	reminderDescRecurrenceTimezone := reminderFields[15].Descriptor()
+	// reminder.DefaultRecurrenceTimezone holds the default value on creation for the recurrence_timezone field.
+	reminder.DefaultRecurrenceTimezone = reminderDescRecurrenceTimezone.Default.(string)
+	// reminderDescCancelToken is the schema descriptor for cancel_token field.
+	reminderDescCancelToken := reminderFields[16].Descriptor()
+	// reminder.DefaultCancelToken holds the default value on creation for the cancel_token field.
+	reminder.DefaultCancelToken = reminderDescCancelToken.Default.(string)
+	// reminderDescID is the schema descriptor for id field.
+	reminderDescID := reminderFields[0].Descriptor()
+	// reminder.DefaultID holds the default value on creation for the id field.
+	reminder.DefaultID = reminderDescID.Default.(func() string)
+	remindereventFields := schema.ReminderEvent{}.Fields()
+	_ = remindereventFields
+	// remindereventDescReminderID is the schema descriptor for reminder_id field.
+	remindereventDescReminderID := remindereventFields[1].Descriptor()
+	// reminderevent.ReminderIDValidator is a validator for the "reminder_id" field. It is called by the builders before save.
+	reminderevent.ReminderIDValidator = remindereventDescReminderID.Validators[0].(func(string) error)
+	// remindereventDescEventType is the schema descriptor for event_type field.
+	remindereventDescEventType := remindereventFields[2].Descriptor()
+	// reminderevent.EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
+	reminderevent.EventTypeValidator = remindereventDescEventType.Validators[0].(func(string) error)
+	// remindereventDescActorType is the schema descriptor for actor_type field.
+	remindereventDescActorType := remindereventFields[3].Descriptor()
+	// reminderevent.DefaultActorType holds the default value on creation for the actor_type field.
+	reminderevent.DefaultActorType = remindereventDescActorType.Default.(string)
+	// remindereventDescActorID is the schema descriptor for actor_id field.
+	remindereventDescActorID := remindereventFields[4].Descriptor()
+	// reminderevent.DefaultActorID holds the default value on creation for the actor_id field.
+	reminderevent.DefaultActorID = remindereventDescActorID.Default.(string)
+	// remindereventDescNextFireTimeUnix is the schema descriptor for next_fire_time_unix field.
+	remindereventDescNextFireTimeUnix := remindereventFields[6].Descriptor()
+	// reminderevent.DefaultNextFireTimeUnix holds the default value on creation for the next_fire_time_unix field.
+	reminderevent.DefaultNextFireTimeUnix = remindereventDescNextFireTimeUnix.Default.(int64)
+	// remindereventDescDetail is the schema descriptor for detail field.
+	remindereventDescDetail := remindereventFields[7].Descriptor()
+	// reminderevent.DefaultDetail holds the default value on creation for the detail field.
+	reminderevent.DefaultDetail = remindereventDescDetail.Default.(string)
+	// remindereventDescID is the schema descriptor for id field.
+	remindereventDescID := remindereventFields[0].Descriptor()
+	// reminderevent.DefaultID holds the default value on creation for the id field.
+	reminderevent.DefaultID = remindereventDescID.Default.(func() string)
 	sessionFields := schema.Session{}.Fields()
 	_ = sessionFields
 	// sessionDescTokenHash is the schema descriptor for token_hash field.

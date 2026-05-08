@@ -18,6 +18,12 @@ type InteractionEndpoint func(*sql.Selector)
 // Message is the predicate function for message builders.
 type Message func(*sql.Selector)
 
+// Reminder is the predicate function for reminder builders.
+type Reminder func(*sql.Selector)
+
+// ReminderEvent is the predicate function for reminderevent builders.
+type ReminderEvent func(*sql.Selector)
+
 // Session is the predicate function for session builders.
 type Session func(*sql.Selector)
 

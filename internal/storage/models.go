@@ -129,6 +129,49 @@ type TaskPatch struct {
 	BlockedReason *string
 }
 
+type Reminder struct {
+	ID                    string `json:"id"`
+	Target                string `json:"target"`
+	ScheduleKind          string `json:"scheduleKind"`
+	Schedule              string `json:"schedule"`
+	Prompt                string `json:"prompt,omitempty"`
+	Enabled               bool   `json:"enabled"`
+	NextRunUnix           int64  `json:"nextRunUnix"`
+	LastRunUnix           int64  `json:"lastRunUnix,omitempty"`
+	RunCount              int64  `json:"runCount"`
+	LastError             string `json:"lastError,omitempty"`
+	Title                 string `json:"title"`
+	Status                string `json:"status"`
+	MsgRef                string `json:"msgRef,omitempty"`
+	RecurrenceRule        string `json:"recurrenceRule,omitempty"`
+	RecurrenceDescription string `json:"recurrenceDescription,omitempty"`
+	RecurrenceTimezone    string `json:"recurrenceTimezone,omitempty"`
+	CancelToken           string `json:"cancelToken,omitempty"`
+	CreatedUnix           int64  `json:"createdUnix"`
+	UpdatedUnix           int64  `json:"updatedUnix"`
+}
+
+type ReminderPatch struct {
+	Title                 *string
+	ScheduleKind          *string
+	Schedule              *string
+	NextRunUnix           *int64
+	RecurrenceRule        *string
+	RecurrenceDescription *string
+	RecurrenceTimezone    *string
+}
+
+type ReminderEvent struct {
+	ID               string `json:"id"`
+	ReminderID       string `json:"reminderId"`
+	EventType        string `json:"eventType"`
+	ActorType        string `json:"actorType"`
+	ActorID          string `json:"actorId,omitempty"`
+	OccurredTimeUnix int64  `json:"occurredTimeUnix"`
+	NextFireTimeUnix int64  `json:"nextFireTimeUnix,omitempty"`
+	Detail           string `json:"detail,omitempty"`
+}
+
 type CollaborationEvent struct {
 	ID              string `json:"id"`
 	ServerID        string `json:"serverId"`

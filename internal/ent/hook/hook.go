@@ -57,6 +57,30 @@ func (f MessageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MessageMutation", m)
 }
 
+// The ReminderFunc type is an adapter to allow the use of ordinary
+// function as Reminder mutator.
+type ReminderFunc func(context.Context, *ent.ReminderMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReminderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReminderMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReminderMutation", m)
+}
+
+// The ReminderEventFunc type is an adapter to allow the use of ordinary
+// function as ReminderEvent mutator.
+type ReminderEventFunc func(context.Context, *ent.ReminderEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReminderEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReminderEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReminderEventMutation", m)
+}
+
 // The SessionFunc type is an adapter to allow the use of ordinary
 // function as Session mutator.
 type SessionFunc func(context.Context, *ent.SessionMutation) (ent.Value, error)

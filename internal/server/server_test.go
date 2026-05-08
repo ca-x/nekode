@@ -507,6 +507,108 @@ func readThreadInbox(t *testing.T, s *Server, token string) []storage.ThreadInbo
 	return body.Items
 }
 
+func TestReminderLifecycleWorkflow(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+	token := bootstrapToken(t, s)
+
+	createdResp := doJSON(t, s, http.MethodPost, "/api/reminders", token, map[string]any{
+		"target":       "#general",
+		"title":        "Review release notes",
+		"prompt":       "Review release notes",
+		"delaySeconds": 300,
+	})
+	if createdResp.Code != http.StatusCreated {
+		t.Fatalf("create reminder status = %d body=%s", createdResp.Code, createdResp.Body.String())
+	}
+	var reminderBody storage.Reminder
+	if err := json.Unmarshal(createdResp.Body.Bytes(), &reminderBody); err != nil {
+		t.Fatalf("decode reminder: %v", err)
+	}
+	if reminderBody.ID == "" || reminderBody.Status != "active" || reminderBody.NextRunUnix == 0 {
+		t.Fatalf("created reminder = %+v, want active scheduled reminder", reminderBody)
+	}
+
+	snoozed := doJSON(t, s, http.MethodPost, "/api/reminders/"+reminderBody.ID+"/snooze", token, map[string]any{
+		"delaySeconds": 900,
+	})
+	if snoozed.Code != http.StatusOK {
+		t.Fatalf("snooze reminder status = %d body=%s", snoozed.Code, snoozed.Body.String())
+	}
+	fireAt := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
+	updated := doJSON(t, s, http.MethodPatch, "/api/reminders/"+reminderBody.ID, token, map[string]any{
+		"title":  "Review release gate",
+		"fireAt": fireAt,
+	})
+	if updated.Code != http.StatusOK {
+		t.Fatalf("update reminder status = %d body=%s", updated.Code, updated.Body.String())
+	}
+	var updatedBody storage.Reminder
+	if err := json.Unmarshal(updated.Body.Bytes(), &updatedBody); err != nil {
+		t.Fatalf("decode updated reminder: %v", err)
+	}
+	if updatedBody.Title != "Review release gate" || updatedBody.Schedule != fireAt {
+		t.Fatalf("updated reminder = %+v, want patched title and fireAt schedule", updatedBody)
+	}
+
+	logResp := doGET(t, s, "/api/reminders/"+reminderBody.ID+"/log", token)
+	if logResp.Code != http.StatusOK {
+		t.Fatalf("reminder log status = %d body=%s", logResp.Code, logResp.Body.String())
+	}
+	assertJSONItemsAtLeast(t, logResp.Body.Bytes(), 3)
+
+	canceled := doJSON(t, s, http.MethodPost, "/api/reminders/"+reminderBody.ID+"/cancel", token, map[string]any{
+		"cancelToken": updatedBody.CancelToken,
+	})
+	if canceled.Code != http.StatusOK {
+		t.Fatalf("cancel reminder status = %d body=%s", canceled.Code, canceled.Body.String())
+	}
+	var canceledBody storage.Reminder
+	if err := json.Unmarshal(canceled.Body.Bytes(), &canceledBody); err != nil {
+		t.Fatalf("decode canceled reminder: %v", err)
+	}
+	if canceledBody.Status != "canceled" || canceledBody.Enabled {
+		t.Fatalf("canceled reminder = %+v, want disabled canceled reminder", canceledBody)
+	}
+
+	list := doGET(t, s, "/api/reminders?target=%23general&includeCanceled=true", token)
+	if list.Code != http.StatusOK {
+		t.Fatalf("list reminders status = %d body=%s", list.Code, list.Body.String())
+	}
+	assertJSONItems(t, list.Body.Bytes(), 1)
+
+	daemonCreated, err := s.daemon.ScheduleReminder(context.Background(), &daemonv1.ScheduleReminderRequest{
+		Target: "#general",
+		Title:  "Daemon reminder",
+		ScheduleSpec: &daemonv1.ScheduleReminderRequest_DelaySeconds{
+			DelaySeconds: 60,
+		},
+		Context: &daemonv1.RequestContext{
+			Actor: &daemonv1.Actor{ActorKind: daemonv1.ActorKind_ACTOR_KIND_AGENT, AgentId: "agent-1"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ScheduleReminder() error = %v", err)
+	}
+	if daemonCreated.GetReminder().GetReminderId() == "" || daemonCreated.GetReminder().GetStatus() != daemonv1.ReminderStatus_REMINDER_STATUS_ACTIVE {
+		t.Fatalf("daemon reminder = %+v, want active reminder", daemonCreated.GetReminder())
+	}
+	if _, err := s.daemon.SnoozeReminder(context.Background(), &daemonv1.SnoozeReminderRequest{
+		ReminderId:   daemonCreated.GetReminder().GetReminderId(),
+		DelaySeconds: 120,
+	}); err != nil {
+		t.Fatalf("SnoozeReminder() error = %v", err)
+	}
+	daemonLog, err := s.daemon.GetReminderLog(context.Background(), &daemonv1.GetReminderLogRequest{
+		ReminderId: daemonCreated.GetReminder().GetReminderId(),
+	})
+	if err != nil {
+		t.Fatalf("GetReminderLog() error = %v", err)
+	}
+	if len(daemonLog.GetEvents()) < 2 {
+		t.Fatalf("daemon reminder log = %+v, want create and snooze events", daemonLog.GetEvents())
+	}
+}
+
 func findHTTPMutationEvent(events []*daemonv1.CollaborationEvent, kind daemonv1.CollaborationEventKind, operation daemonv1.EventOperation) *daemonv1.CollaborationEvent {
 	for _, event := range events {
 		if event.GetKind() == kind && event.GetOperation() == operation {

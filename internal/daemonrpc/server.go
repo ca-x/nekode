@@ -554,6 +554,197 @@ func (s *Server) ClaimCollaborationTask(ctx context.Context, req *daemonv1.Claim
 	return resp, nil
 }
 
+func (s *Server) ScheduleReminder(ctx context.Context, req *daemonv1.ScheduleReminderRequest) (*daemonv1.ScheduleReminderResponse, error) {
+	if resp, ok := replay(ctx, s, "ScheduleReminder", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.ScheduleReminderResponse {
+		return &daemonv1.ScheduleReminderResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "ScheduleReminder", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	target := firstNonEmpty(req.GetTarget(), req.GetChannel())
+	if target == "" {
+		return nil, status.Error(codes.InvalidArgument, "target is required")
+	}
+	plan, err := reminderPlanFromScheduleRequest(req)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	actorType, actorID := reminderActorFromContext(req.GetContext())
+	title := firstNonEmpty(req.GetTitle(), req.GetName(), req.GetPrompt())
+	created, err := s.store.CreateReminder(ctx, storage.Reminder{
+		Target:                target,
+		ScheduleKind:          plan.Kind,
+		Schedule:              plan.Schedule,
+		Prompt:                req.GetPrompt(),
+		Enabled:               true,
+		NextRunUnix:           plan.NextRunUnix,
+		Title:                 title,
+		Status:                "active",
+		MsgRef:                req.GetMsgId(),
+		RecurrenceRule:        plan.RecurrenceRule,
+		RecurrenceDescription: plan.RecurrenceDescription,
+		RecurrenceTimezone:    plan.RecurrenceTimezone,
+		CancelToken:           storage.NewID("rtk"),
+	}, actorType, actorID, "created")
+	if errors.Is(err, storage.ErrInvalidState) {
+		return nil, status.Error(codes.InvalidArgument, "invalid reminder schedule")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "create reminder: %v", err)
+	}
+	if err := s.RecordReminderMutation(ctx, created, daemonv1.EventOperation_EVENT_OPERATION_CREATED); err != nil {
+		return nil, status.Errorf(codes.Internal, "append reminder event: %v", err)
+	}
+	resp := &daemonv1.ScheduleReminderResponse{Reminder: reminderToProto(created)}
+	remember(ctx, s, "ScheduleReminder", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) ListReminders(ctx context.Context, req *daemonv1.ListRemindersRequest) (*daemonv1.ListRemindersResponse, error) {
+	statuses := make([]string, 0, len(req.GetStatuses()))
+	for _, statusValue := range req.GetStatuses() {
+		if statusValue == daemonv1.ReminderStatus_REMINDER_STATUS_UNSPECIFIED {
+			continue
+		}
+		statuses = append(statuses, reminderStatusToStorage(statusValue))
+	}
+	reminders, err := s.store.ListReminders(ctx, req.GetTarget(), statuses, req.GetIncludeCanceled(), int(req.GetLimit()))
+	if errors.Is(err, storage.ErrInvalidState) {
+		return nil, status.Error(codes.InvalidArgument, "invalid reminder status")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list reminders: %v", err)
+	}
+	out := make([]*daemonv1.ReminderRecord, 0, len(reminders))
+	for _, reminderModel := range reminders {
+		out = append(out, reminderToProto(reminderModel))
+	}
+	return &daemonv1.ListRemindersResponse{
+		Reminders:  out,
+		NextCursor: cursorFromCount(len(out), req.GetTarget(), s.serverID),
+	}, nil
+}
+
+func (s *Server) CancelReminder(ctx context.Context, req *daemonv1.CancelReminderRequest) (*daemonv1.CancelReminderResponse, error) {
+	if resp, ok := replay(ctx, s, "CancelReminder", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.CancelReminderResponse {
+		return &daemonv1.CancelReminderResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "CancelReminder", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetReminderId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "reminder_id is required")
+	}
+	current, err := s.store.GetReminder(ctx, req.GetReminderId())
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "reminder not found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get reminder: %v", err)
+	}
+	if current.CancelToken != "" && req.GetCancelToken() != "" && current.CancelToken != req.GetCancelToken() {
+		return &daemonv1.CancelReminderResponse{Accepted: false, Reminder: reminderToProto(current)}, nil
+	}
+	actorType, actorID := reminderActorFromContext(req.GetContext())
+	updated, err := s.store.CancelReminder(ctx, req.GetReminderId(), actorType, actorID, "canceled")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cancel reminder: %v", err)
+	}
+	if err := s.RecordReminderMutation(ctx, updated, daemonv1.EventOperation_EVENT_OPERATION_CANCELED); err != nil {
+		return nil, status.Errorf(codes.Internal, "append reminder event: %v", err)
+	}
+	resp := &daemonv1.CancelReminderResponse{Accepted: true, Reminder: reminderToProto(updated)}
+	remember(ctx, s, "CancelReminder", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) SnoozeReminder(ctx context.Context, req *daemonv1.SnoozeReminderRequest) (*daemonv1.SnoozeReminderResponse, error) {
+	if resp, ok := replay(ctx, s, "SnoozeReminder", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.SnoozeReminderResponse {
+		return &daemonv1.SnoozeReminderResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "SnoozeReminder", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetReminderId() == "" || req.GetDelaySeconds() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "reminder_id and delay_seconds are required")
+	}
+	actorType, actorID := reminderActorFromContext(req.GetContext())
+	nextRun := time.Now().Add(time.Duration(req.GetDelaySeconds()) * time.Second).Unix()
+	updated, err := s.store.SnoozeReminder(ctx, req.GetReminderId(), nextRun,
+		fmt.Sprintf("in %ds", req.GetDelaySeconds()), actorType, actorID, "snoozed")
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "reminder not found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "snooze reminder: %v", err)
+	}
+	if err := s.RecordReminderMutation(ctx, updated, daemonv1.EventOperation_EVENT_OPERATION_UPDATED); err != nil {
+		return nil, status.Errorf(codes.Internal, "append reminder event: %v", err)
+	}
+	resp := &daemonv1.SnoozeReminderResponse{Reminder: reminderToProto(updated)}
+	remember(ctx, s, "SnoozeReminder", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) UpdateReminder(ctx context.Context, req *daemonv1.UpdateReminderRequest) (*daemonv1.UpdateReminderResponse, error) {
+	if resp, ok := replay(ctx, s, "UpdateReminder", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.UpdateReminderResponse {
+		return &daemonv1.UpdateReminderResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "UpdateReminder", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetReminderId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "reminder_id is required")
+	}
+	patch, err := reminderPatchFromUpdateRequest(req)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	actorType, actorID := reminderActorFromContext(req.GetContext())
+	updated, err := s.store.UpdateReminder(ctx, req.GetReminderId(), patch, actorType, actorID, "updated")
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "reminder not found")
+	}
+	if errors.Is(err, storage.ErrInvalidState) {
+		return nil, status.Error(codes.InvalidArgument, "invalid reminder update")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "update reminder: %v", err)
+	}
+	if err := s.RecordReminderMutation(ctx, updated, daemonv1.EventOperation_EVENT_OPERATION_UPDATED); err != nil {
+		return nil, status.Errorf(codes.Internal, "append reminder event: %v", err)
+	}
+	resp := &daemonv1.UpdateReminderResponse{Reminder: reminderToProto(updated)}
+	remember(ctx, s, "UpdateReminder", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) GetReminderLog(ctx context.Context, req *daemonv1.GetReminderLogRequest) (*daemonv1.GetReminderLogResponse, error) {
+	if req.GetReminderId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "reminder_id is required")
+	}
+	events, err := s.store.ListReminderEvents(ctx, req.GetReminderId(), 100)
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "reminder not found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list reminder log: %v", err)
+	}
+	out := make([]*daemonv1.ReminderEvent, 0, len(events))
+	for _, event := range events {
+		out = append(out, reminderEventToProto(event))
+	}
+	return &daemonv1.GetReminderLogResponse{Events: out}, nil
+}
+
 func (s *Server) UpdateAgentStatus(ctx context.Context, req *daemonv1.UpdateAgentStatusRequest) (*daemonv1.UpdateAgentStatusResponse, error) {
 	if resp, ok := replay(ctx, s, "UpdateAgentStatus", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.UpdateAgentStatusResponse {
 		return &daemonv1.UpdateAgentStatusResponse{}
@@ -1072,6 +1263,30 @@ func (s *Server) RecordTaskMutation(ctx context.Context, task storage.Task, oper
 	return err
 }
 
+func (s *Server) RecordReminderMutation(ctx context.Context, reminder storage.Reminder, operation daemonv1.EventOperation) error {
+	if s == nil || s.store == nil {
+		return nil
+	}
+	protoReminder := reminderToProto(reminder)
+	payload, err := protojson.Marshal(protoReminder)
+	if err != nil {
+		return err
+	}
+	_, err = s.store.AppendCollaborationEvent(ctx, storage.CollaborationEvent{
+		ServerID:        s.serverID,
+		Target:          reminder.Target,
+		AggregateID:     reminder.ID,
+		Kind:            "reminder",
+		Operation:       eventOperationToStorage(operation),
+		ScopeType:       eventScopeTypeToStorage(daemonv1.EventScopeType_EVENT_SCOPE_TYPE_TARGET),
+		ScopeID:         reminder.Target,
+		PayloadJSON:     string(payload),
+		CreatedUnix:     reminder.UpdatedUnix,
+		ProtocolVersion: int(protocolVersion),
+	})
+	return err
+}
+
 func collaborationEventToProto(event storage.CollaborationEvent) *daemonv1.CollaborationEvent {
 	operation := eventOperationFromStorage(event.Operation)
 	if operation == daemonv1.EventOperation_EVENT_OPERATION_UNSPECIFIED {
@@ -1108,6 +1323,8 @@ func collaborationEventToProto(event storage.CollaborationEvent) *daemonv1.Colla
 	} else if task, ok := taskFromEvent(event); ok {
 		out.TaskId = task.GetTaskId()
 		out.Payload = &daemonv1.CollaborationEvent_Task{Task: task}
+	} else if reminder, ok := reminderFromEvent(event); ok {
+		out.Payload = &daemonv1.CollaborationEvent_Reminder{Reminder: reminder}
 	}
 	return out
 }
@@ -1151,6 +1368,17 @@ func taskFromEvent(event storage.CollaborationEvent) (*daemonv1.Task, bool) {
 		return nil, false
 	}
 	return task, true
+}
+
+func reminderFromEvent(event storage.CollaborationEvent) (*daemonv1.ReminderRecord, bool) {
+	if event.Kind != "reminder" {
+		return nil, false
+	}
+	reminder := &daemonv1.ReminderRecord{}
+	if err := protojson.Unmarshal([]byte(event.PayloadJSON), reminder); err != nil {
+		return nil, false
+	}
+	return reminder, true
 }
 
 func collaborationEventKindFromStorage(kind string) daemonv1.CollaborationEventKind {
@@ -1422,6 +1650,46 @@ func taskToProto(task storage.Task) *daemonv1.Task {
 	}
 }
 
+func reminderToProto(reminder storage.Reminder) *daemonv1.ReminderRecord {
+	out := &daemonv1.ReminderRecord{
+		ReminderId:   reminder.ID,
+		Target:       reminder.Target,
+		ScheduleKind: reminderScheduleKindFromStorage(reminder.ScheduleKind),
+		Schedule:     reminder.Schedule,
+		Prompt:       reminder.Prompt,
+		Enabled:      reminder.Enabled,
+		NextRunUnix:  reminder.NextRunUnix,
+		LastRunUnix:  reminder.LastRunUnix,
+		RunCount:     uint32(reminder.RunCount),
+		LastError:    reminder.LastError,
+		Title:        reminder.Title,
+		Status:       reminderStatusFromStorage(reminder.Status),
+		MsgRef:       reminder.MsgRef,
+		CancelToken:  reminder.CancelToken,
+	}
+	if reminder.RecurrenceRule != "" || reminder.RecurrenceDescription != "" || reminder.RecurrenceTimezone != "" {
+		out.Recurrence = &daemonv1.ReminderRecurrence{
+			Rule:        reminder.RecurrenceRule,
+			Description: reminder.RecurrenceDescription,
+			Timezone:    reminder.RecurrenceTimezone,
+		}
+	}
+	return out
+}
+
+func reminderEventToProto(event storage.ReminderEvent) *daemonv1.ReminderEvent {
+	return &daemonv1.ReminderEvent{
+		EventId:          event.ID,
+		ReminderId:       event.ReminderID,
+		EventType:        reminderEventTypeFromStorage(event.EventType),
+		ActorType:        reminderActorTypeFromStorage(event.ActorType),
+		ActorId:          event.ActorID,
+		OccurredTimeUnix: event.OccurredTimeUnix,
+		NextFireTimeUnix: event.NextFireTimeUnix,
+		Detail:           event.Detail,
+	}
+}
+
 func actorKindToStorage(kind daemonv1.ActorKind) string {
 	switch kind {
 	case daemonv1.ActorKind_ACTOR_KIND_HUMAN:
@@ -1470,6 +1738,226 @@ func endpointAuthModeFromStorage(mode string) daemonv1.EndpointAuthMode {
 		return daemonv1.EndpointAuthMode_ENDPOINT_AUTH_MODE_NONE
 	default:
 		return daemonv1.EndpointAuthMode_ENDPOINT_AUTH_MODE_UNSPECIFIED
+	}
+}
+
+type reminderPlan struct {
+	Kind                  string
+	Schedule              string
+	NextRunUnix           int64
+	RecurrenceRule        string
+	RecurrenceDescription string
+	RecurrenceTimezone    string
+}
+
+func reminderPlanFromScheduleRequest(req *daemonv1.ScheduleReminderRequest) (reminderPlan, error) {
+	if req.GetDelaySeconds() > 0 {
+		return reminderPlan{
+			Kind:               "at",
+			Schedule:           fmt.Sprintf("in %ds", req.GetDelaySeconds()),
+			NextRunUnix:        time.Now().Add(time.Duration(req.GetDelaySeconds()) * time.Second).Unix(),
+			RecurrenceTimezone: req.GetTimezone(),
+		}, nil
+	}
+	if req.GetFireAt() != "" {
+		nextRun, err := parseReminderFireAt(req.GetFireAt())
+		if err != nil {
+			return reminderPlan{}, err
+		}
+		return reminderPlan{Kind: "at", Schedule: req.GetFireAt(), NextRunUnix: nextRun, RecurrenceTimezone: req.GetTimezone()}, nil
+	}
+	if schedule := req.GetRecurring(); schedule != nil {
+		kind := reminderScheduleKindToStorage(schedule.GetKind())
+		if kind == "" {
+			return reminderPlan{}, errors.New("recurring schedule kind is required")
+		}
+		return reminderPlan{
+			Kind:                  kind,
+			Schedule:              schedule.GetExpression(),
+			NextRunUnix:           0,
+			RecurrenceRule:        schedule.GetExpression(),
+			RecurrenceDescription: schedule.GetExpression(),
+			RecurrenceTimezone:    firstNonEmpty(schedule.GetTimezone(), req.GetTimezone()),
+		}, nil
+	}
+	return reminderPlan{}, errors.New("schedule is required")
+}
+
+func reminderPatchFromUpdateRequest(req *daemonv1.UpdateReminderRequest) (storage.ReminderPatch, error) {
+	patch := storage.ReminderPatch{}
+	if req.Title != nil {
+		value := strings.TrimSpace(req.GetTitle())
+		patch.Title = &value
+	}
+	if req.Timezone != nil {
+		value := strings.TrimSpace(req.GetTimezone())
+		patch.RecurrenceTimezone = &value
+	}
+	if req.GetDelaySeconds() > 0 {
+		kind := "at"
+		schedule := fmt.Sprintf("in %ds", req.GetDelaySeconds())
+		nextRun := time.Now().Add(time.Duration(req.GetDelaySeconds()) * time.Second).Unix()
+		patch.ScheduleKind = &kind
+		patch.Schedule = &schedule
+		patch.NextRunUnix = &nextRun
+		return patch, nil
+	}
+	if req.GetFireAt() != "" {
+		nextRun, err := parseReminderFireAt(req.GetFireAt())
+		if err != nil {
+			return storage.ReminderPatch{}, err
+		}
+		kind := "at"
+		schedule := req.GetFireAt()
+		patch.ScheduleKind = &kind
+		patch.Schedule = &schedule
+		patch.NextRunUnix = &nextRun
+		return patch, nil
+	}
+	if schedule := req.GetRecurring(); schedule != nil {
+		kind := reminderScheduleKindToStorage(schedule.GetKind())
+		if kind == "" {
+			return storage.ReminderPatch{}, errors.New("recurring schedule kind is required")
+		}
+		expression := schedule.GetExpression()
+		timezone := firstNonEmpty(schedule.GetTimezone(), req.GetTimezone())
+		patch.ScheduleKind = &kind
+		patch.Schedule = &expression
+		patch.RecurrenceRule = &expression
+		patch.RecurrenceDescription = &expression
+		patch.RecurrenceTimezone = &timezone
+	}
+	return patch, nil
+}
+
+func parseReminderFireAt(value string) (int64, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0, errors.New("fire_at is required")
+	}
+	if unix, err := strconv.ParseInt(value, 10, 64); err == nil && unix > 0 {
+		return unix, nil
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04", "2006-01-02T15:04:05", "2006-01-02 15:04", "2006-01-02"} {
+		parsed, err := time.ParseInLocation(layout, value, time.Local)
+		if err == nil {
+			return parsed.Unix(), nil
+		}
+	}
+	return 0, errors.New("fire_at must be unix seconds or RFC3339 time")
+}
+
+func reminderActorFromContext(ctx *daemonv1.RequestContext) (string, string) {
+	actor := ctx.GetActor()
+	switch actor.GetActorKind() {
+	case daemonv1.ActorKind_ACTOR_KIND_HUMAN:
+		return "human", actor.GetUserId()
+	case daemonv1.ActorKind_ACTOR_KIND_AGENT:
+		return "agent", actor.GetAgentId()
+	case daemonv1.ActorKind_ACTOR_KIND_SYSTEM, daemonv1.ActorKind_ACTOR_KIND_DAEMON:
+		return "system", firstNonEmpty(actor.GetDaemonId(), actor.GetDisplayName())
+	default:
+		return "system", ""
+	}
+}
+
+func reminderStatusToStorage(status daemonv1.ReminderStatus) string {
+	switch status {
+	case daemonv1.ReminderStatus_REMINDER_STATUS_ACTIVE:
+		return "active"
+	case daemonv1.ReminderStatus_REMINDER_STATUS_DONE:
+		return "done"
+	case daemonv1.ReminderStatus_REMINDER_STATUS_CANCELED:
+		return "canceled"
+	case daemonv1.ReminderStatus_REMINDER_STATUS_PAUSED:
+		return "paused"
+	case daemonv1.ReminderStatus_REMINDER_STATUS_FAILED:
+		return "failed"
+	default:
+		return ""
+	}
+}
+
+func reminderStatusFromStorage(status string) daemonv1.ReminderStatus {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "active":
+		return daemonv1.ReminderStatus_REMINDER_STATUS_ACTIVE
+	case "done":
+		return daemonv1.ReminderStatus_REMINDER_STATUS_DONE
+	case "canceled", "cancelled":
+		return daemonv1.ReminderStatus_REMINDER_STATUS_CANCELED
+	case "paused":
+		return daemonv1.ReminderStatus_REMINDER_STATUS_PAUSED
+	case "failed":
+		return daemonv1.ReminderStatus_REMINDER_STATUS_FAILED
+	default:
+		return daemonv1.ReminderStatus_REMINDER_STATUS_UNSPECIFIED
+	}
+}
+
+func reminderScheduleKindToStorage(kind daemonv1.ReminderScheduleKind) string {
+	switch kind {
+	case daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_CRON:
+		return "cron"
+	case daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_EVERY:
+		return "every"
+	case daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_AT:
+		return "at"
+	case daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_RRULE:
+		return "rrule"
+	case daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_NATURAL:
+		return "natural"
+	default:
+		return ""
+	}
+}
+
+func reminderScheduleKindFromStorage(kind string) daemonv1.ReminderScheduleKind {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "cron":
+		return daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_CRON
+	case "every":
+		return daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_EVERY
+	case "at":
+		return daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_AT
+	case "rrule":
+		return daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_RRULE
+	case "natural":
+		return daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_NATURAL
+	default:
+		return daemonv1.ReminderScheduleKind_REMINDER_SCHEDULE_KIND_UNSPECIFIED
+	}
+}
+
+func reminderEventTypeFromStorage(value string) daemonv1.ReminderEventType {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "created":
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_CREATED
+	case "fired":
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_FIRED
+	case "snoozed":
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_SNOOZED
+	case "updated":
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_UPDATED
+	case "canceled", "cancelled":
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_CANCELED
+	case "failed":
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_FAILED
+	default:
+		return daemonv1.ReminderEventType_REMINDER_EVENT_TYPE_UNSPECIFIED
+	}
+}
+
+func reminderActorTypeFromStorage(value string) daemonv1.ReminderActorType {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "human":
+		return daemonv1.ReminderActorType_REMINDER_ACTOR_TYPE_HUMAN
+	case "agent":
+		return daemonv1.ReminderActorType_REMINDER_ACTOR_TYPE_AGENT
+	case "system":
+		return daemonv1.ReminderActorType_REMINDER_ACTOR_TYPE_SYSTEM
+	default:
+		return daemonv1.ReminderActorType_REMINDER_ACTOR_TYPE_UNSPECIFIED
 	}
 }
 

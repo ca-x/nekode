@@ -488,6 +488,21 @@ textarea {
   width: min(640px, 100%);
 }
 
+.reminder-create-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 124px auto;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.reminder-create-form label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
 .task-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(150px, auto) minmax(170px, auto) auto auto;
@@ -1136,6 +1151,92 @@ textarea {
   border-left-width: 4px;
   border-radius: 8px;
   background: var(--surface);
+}
+
+.reminder-list {
+  display: grid;
+  gap: 10px;
+}
+
+.reminder-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.reminder-row.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(20, 107, 90, 0.12);
+}
+
+.reminder-row > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+}
+
+.reminder-row > button div {
+  display: grid;
+  min-width: 0;
+}
+
+.reminder-row strong,
+.reminder-row span,
+.reminder-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminder-row small,
+.reminder-row div span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.reminder-status {
+  min-width: 76px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--accent);
+  background: #eaf0f6;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.reminder-status.status-active {
+  color: var(--success);
+  background: var(--done-bg);
+}
+
+.reminder-status.status-canceled {
+  color: var(--canceled);
+  background: var(--canceled-bg);
+}
+
+.reminder-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reminder-inspector h2 {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
 }
 
 .task-card.is-selected {
@@ -2100,6 +2201,7 @@ textarea {
   .topbar,
   .panel-heading,
   .quick-task-form,
+  .reminder-create-form,
   .task-toolbar,
   .inbox-row,
   .composer-actions {

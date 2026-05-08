@@ -20,6 +20,10 @@ type Tx struct {
 	InteractionEndpoint *InteractionEndpointClient
 	// Message is the client for interacting with the Message builders.
 	Message *MessageClient
+	// Reminder is the client for interacting with the Reminder builders.
+	Reminder *ReminderClient
+	// ReminderEvent is the client for interacting with the ReminderEvent builders.
+	ReminderEvent *ReminderEventClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
@@ -163,6 +167,8 @@ func (tx *Tx) init() {
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
 	tx.InteractionEndpoint = NewInteractionEndpointClient(tx.config)
 	tx.Message = NewMessageClient(tx.config)
+	tx.Reminder = NewReminderClient(tx.config)
+	tx.ReminderEvent = NewReminderEventClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
 	tx.ThreadReadState = NewThreadReadStateClient(tx.config)

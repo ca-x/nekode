@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   AtSign,
+  Bell,
   Bot,
   CheckCircle2,
   CheckSquare,
@@ -55,6 +56,8 @@ import type {
   InteractionEndpoint,
   Message,
   ProtocolInfo,
+  Reminder,
+  ReminderEvent,
   RuntimePreset,
   SetupStatus,
   Task,
@@ -72,6 +75,7 @@ type ViewKey =
   | "inbox"
   | "messages"
   | "tasks"
+  | "reminders"
   | "activity"
   | "skills"
   | "settings"
@@ -131,6 +135,7 @@ const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = 
   { key: "inbox", label: "Inbox", icon: Inbox },
   { key: "messages", label: "Messages", icon: MessageSquare },
   { key: "tasks", label: "Tasks", icon: Columns3 },
+  { key: "reminders", label: "Reminders", icon: Bell },
   { key: "activity", label: "Activity", icon: Activity },
   { key: "skills", label: "Skills", icon: Sparkles },
   { key: "settings", label: "Settings", icon: Settings },
@@ -219,6 +224,12 @@ function unixTime(value?: number) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(value * 1000);
+}
+
+function datetimeLocalValue(value?: number) {
+  if (!value) return "";
+  const date = new Date(value * 1000);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 function attachmentPreviewKind(attachment: Attachment) {
@@ -359,6 +370,9 @@ function shouldInvalidateForEvent(event: CollaborationEvent, activeTarget: strin
   ) {
     return true;
   }
+  if (event.kind === "reminder" && ["created", "updated", "canceled"].includes(event.operation)) {
+    return true;
+  }
   return false;
 }
 
@@ -468,6 +482,7 @@ function App() {
   const [threadInbox, setThreadInbox] = useState<ThreadInboxItem[]>([]);
   const [activeThread, setActiveThread] = useState<ThreadInboxItem | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [target, setTarget] = useState(DEFAULT_TARGET);
 
@@ -508,7 +523,8 @@ function App() {
         }),
         api.listMessages(messageTarget, 50, messageThreadID),
         api.listThreadInbox({ limit: 100 }),
-        api.listTasks({ target })
+        api.listTasks({ target }),
+        api.listReminders({ target, includeCanceled: true, limit: 100 })
       ]);
       const [
         me,
@@ -520,7 +536,8 @@ function App() {
         channelMemberList,
         messageList,
         inboxList,
-        taskList
+        taskList,
+        reminderList
       ] = coreData;
       setUser(me);
       setSetupStatus(setupInfo);
@@ -532,6 +549,7 @@ function App() {
       setMessages(messageList.items);
       setThreadInbox(inboxList.items);
       setTasks(taskList.items);
+      setReminders(reminderList.items);
       setStatus("ready");
 
       const [
@@ -654,6 +672,7 @@ function App() {
     setChannelMembers([]);
     setThreadInbox([]);
     setActiveThread(null);
+    setReminders([]);
     setSelectedTaskId(null);
     setRealtimeStatus("disabled");
   };
@@ -799,6 +818,7 @@ function App() {
             endpoints={endpoints}
             messages={messages}
             tasks={tasks}
+            reminders={reminders}
             events={events}
           />
         ) : null}
@@ -831,6 +851,9 @@ function App() {
             onSelectTask={setSelectedTaskId}
             onChanged={loadData}
           />
+        ) : null}
+        {view === "reminders" ? (
+          <RemindersPanel target={target} reminders={reminders} onChanged={loadData} />
         ) : null}
         {view === "activity" ? (
           <ActivityPanel
@@ -1084,6 +1107,7 @@ function Overview({
   endpoints,
   messages,
   tasks,
+  reminders,
   events
 }: {
   protocol: ProtocolInfo | null;
@@ -1093,15 +1117,18 @@ function Overview({
   endpoints: InteractionEndpoint[];
   messages: Message[];
   tasks: Task[];
+  reminders: Reminder[];
   events: CollaborationEvent[];
 }) {
   const activeTasks = tasks.filter((task) => task.state !== "done" && task.state !== "canceled").length;
+  const activeReminders = reminders.filter((reminder) => reminder.status === "active").length;
   return (
     <section className="content-grid">
       <MetricCard icon={Server} label="Protocol" value={protocol?.name ?? "Unknown"} />
       <MetricCard icon={Wifi} label="Realtime" value={realtimeStatus} />
       <MetricCard icon={Settings} label="Endpoints" value={String(endpoints.length)} />
       <MetricCard icon={Columns3} label="Open Tasks" value={String(activeTasks)} />
+      <MetricCard icon={Bell} label="Active Reminders" value={String(activeReminders)} />
       <MetricCard icon={Activity} label="Loaded Events" value={String(events.length)} />
       <MetricCard icon={MessageSquare} label="Loaded Messages" value={String(messages.length)} />
       <section className="panel wide">
@@ -2135,6 +2162,298 @@ function TaskStatusReceipt({
         <X size={14} aria-hidden="true" />
       </button>
     </div>
+  );
+}
+
+function RemindersPanel({
+  target,
+  reminders,
+  onChanged
+}: {
+  target: string;
+  reminders: Reminder[];
+  onChanged: () => Promise<void>;
+}) {
+  const [title, setTitle] = useState("");
+  const [delayMinutes, setDelayMinutes] = useState(15);
+  const [selectedReminderId, setSelectedReminderId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editFireAt, setEditFireAt] = useState("");
+  const [logEvents, setLogEvents] = useState<ReminderEvent[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const ordered = useMemo(
+    () =>
+      [...reminders].sort((left, right) => {
+        const leftActive = left.status === "active" ? 0 : 1;
+        const rightActive = right.status === "active" ? 0 : 1;
+        return leftActive - rightActive || right.updatedUnix - left.updatedUnix;
+      }),
+    [reminders]
+  );
+  const selectedReminder = ordered.find((reminder) => reminder.id === selectedReminderId) ?? ordered[0] ?? null;
+
+  const loadLog = useCallback(async (reminder: Reminder | null) => {
+    if (!reminder) {
+      setLogEvents([]);
+      return;
+    }
+    try {
+      const response = await api.listReminderLog(reminder.id);
+      setLogEvents(response.items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load reminder log");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedReminder) {
+      setSelectedReminderId(null);
+      setEditTitle("");
+      setEditFireAt("");
+      setLogEvents([]);
+      return;
+    }
+    if (selectedReminderId !== selectedReminder.id) {
+      setSelectedReminderId(selectedReminder.id);
+    }
+    setEditTitle(selectedReminder.title);
+    setEditFireAt(datetimeLocalValue(selectedReminder.nextRunUnix));
+    void loadLog(selectedReminder);
+  }, [loadLog, selectedReminder, selectedReminderId]);
+
+  const createReminder = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!title.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      const created = await api.createReminder({
+        target,
+        title: title.trim(),
+        prompt: title.trim(),
+        delaySeconds: Math.max(1, delayMinutes) * 60
+      });
+      setTitle("");
+      setSelectedReminderId(created.id);
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create reminder");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const snoozeReminder = async (reminder: Reminder, minutes: number) => {
+    setBusy(true);
+    setError("");
+    try {
+      await api.snoozeReminder(reminder.id, minutes * 60);
+      await onChanged();
+      await loadLog(reminder);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to snooze reminder");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelReminder = async (reminder: Reminder) => {
+    setBusy(true);
+    setError("");
+    try {
+      await api.cancelReminder(reminder.id, reminder.cancelToken);
+      await onChanged();
+      await loadLog(reminder);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to cancel reminder");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateReminder = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedReminder || !editTitle.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.updateReminder(selectedReminder.id, {
+        title: editTitle.trim(),
+        fireAt: editFireAt || undefined
+      });
+      await onChanged();
+      await loadLog(selectedReminder);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update reminder");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="two-column">
+      <div className="panel reminder-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">{target}</p>
+            <h2>Reminder Lifecycle</h2>
+          </div>
+          <button className="secondary-button" type="button" onClick={() => void onChanged()}>
+            <RefreshCw size={16} aria-hidden="true" />
+            Refetch
+          </button>
+        </div>
+        {error ? (
+          <div className="notice error" role="alert">
+            {error}
+          </div>
+        ) : null}
+        <form className="reminder-create-form" onSubmit={createReminder}>
+          <input
+            aria-label="Reminder title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Reminder title"
+          />
+          <label>
+            Minutes
+            <input
+              type="number"
+              min={1}
+              value={delayMinutes}
+              onChange={(event) => setDelayMinutes(Number(event.target.value) || 1)}
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={busy || !title.trim()}>
+            <Bell size={16} aria-hidden="true" />
+            Schedule
+          </button>
+        </form>
+        <div className="reminder-list">
+          {ordered.length ? (
+            ordered.map((reminder) => (
+              <article
+                className={selectedReminder?.id === reminder.id ? "reminder-row is-selected" : "reminder-row"}
+                key={reminder.id}
+              >
+                <button type="button" onClick={() => setSelectedReminderId(reminder.id)}>
+                  <div>
+                    <strong>{reminder.title}</strong>
+                    <span>{reminder.schedule || reminder.scheduleKind}</span>
+                  </div>
+                  <span className={`reminder-status status-${reminder.status}`}>{reminder.status}</span>
+                  <small>{unixTime(reminder.nextRunUnix)}</small>
+                </button>
+                <div className="reminder-row-actions">
+                  <button
+                    className="mini-action-button"
+                    type="button"
+                    disabled={busy || reminder.status === "canceled"}
+                    onClick={() => void snoozeReminder(reminder, 15)}
+                  >
+                    +15m
+                  </button>
+                  <button
+                    className="mini-action-button"
+                    type="button"
+                    disabled={busy || reminder.status === "canceled"}
+                    onClick={() => void snoozeReminder(reminder, 60)}
+                  >
+                    +1h
+                  </button>
+                  <button
+                    className="mini-action-button"
+                    type="button"
+                    disabled={busy || reminder.status === "canceled"}
+                    onClick={() => void cancelReminder(reminder)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <EmptyState icon={Bell} title="No reminders scheduled" />
+          )}
+        </div>
+      </div>
+      <aside className="panel compact reminder-inspector">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Reminder Detail</p>
+            <h2>{selectedReminder?.title ?? "No reminder"}</h2>
+          </div>
+        </div>
+        {selectedReminder ? (
+          <>
+            <form className="form-stack" onSubmit={updateReminder}>
+              <label>
+                Title
+                <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+              </label>
+              <label>
+                Next fire
+                <input
+                  type="datetime-local"
+                  value={editFireAt}
+                  onChange={(event) => setEditFireAt(event.target.value)}
+                />
+              </label>
+              <button className="primary-button" type="submit" disabled={busy || !editTitle.trim()}>
+                <CheckCircle2 size={16} aria-hidden="true" />
+                Save
+              </button>
+            </form>
+            <dl className="definition-list">
+              <div>
+                <dt>ID</dt>
+                <dd>{selectedReminder.id}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{selectedReminder.status}</dd>
+              </div>
+              <div>
+                <dt>Target</dt>
+                <dd>{selectedReminder.target}</dd>
+              </div>
+              <div>
+                <dt>Runs</dt>
+                <dd>{selectedReminder.runCount}</dd>
+              </div>
+            </dl>
+            <section className="inspector-subsection" aria-label="Reminder log">
+              <div className="inspector-subheading">
+                <div>
+                  <p className="eyebrow">Log</p>
+                  <h3>{logEvents.length}</h3>
+                </div>
+                <button className="icon-button" type="button" aria-label="Refresh reminder log" onClick={() => void loadLog(selectedReminder)}>
+                  <RefreshCw size={16} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="timeline-list">
+                {logEvents.length ? (
+                  logEvents.map((event) => (
+                    <article className="timeline-row" key={event.id}>
+                      <strong>{event.eventType}</strong>
+                      <span>{event.actorType}{event.actorId ? `:${event.actorId}` : ""}</span>
+                      <span>{unixTime(event.occurredTimeUnix)} · next {unixTime(event.nextFireTimeUnix)}</span>
+                    </article>
+                  ))
+                ) : (
+                  <EmptyState icon={Activity} title="No reminder log" />
+                )}
+              </div>
+            </section>
+          </>
+        ) : (
+          <EmptyState icon={Bell} title="Select a reminder" />
+        )}
+      </aside>
+    </section>
   );
 }
 

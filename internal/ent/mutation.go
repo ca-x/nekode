@@ -15,6 +15,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/predicate"
+	"github.com/ca-x/nekode/internal/ent/reminder"
+	"github.com/ca-x/nekode/internal/ent/reminderevent"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
@@ -34,6 +36,8 @@ const (
 	TypeIdempotencyRecord   = "IdempotencyRecord"
 	TypeInteractionEndpoint = "InteractionEndpoint"
 	TypeMessage             = "Message"
+	TypeReminder            = "Reminder"
+	TypeReminderEvent       = "ReminderEvent"
 	TypeSession             = "Session"
 	TypeTask                = "Task"
 	TypeThreadReadState     = "ThreadReadState"
@@ -4126,6 +4130,2149 @@ func (m *MessageMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *MessageMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Message edge %s", name)
+}
+
+// ReminderMutation represents an operation that mutates the Reminder nodes in the graph.
+type ReminderMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *string
+	target                 *string
+	schedule_kind          *string
+	schedule               *string
+	prompt                 *string
+	enabled                *bool
+	next_run_unix          *int64
+	addnext_run_unix       *int64
+	last_run_unix          *int64
+	addlast_run_unix       *int64
+	run_count              *int64
+	addrun_count           *int64
+	last_error             *string
+	title                  *string
+	status                 *string
+	msg_ref                *string
+	recurrence_rule        *string
+	recurrence_description *string
+	recurrence_timezone    *string
+	cancel_token           *string
+	created_unix           *int64
+	addcreated_unix        *int64
+	updated_unix           *int64
+	addupdated_unix        *int64
+	clearedFields          map[string]struct{}
+	done                   bool
+	oldValue               func(context.Context) (*Reminder, error)
+	predicates             []predicate.Reminder
+}
+
+var _ ent.Mutation = (*ReminderMutation)(nil)
+
+// reminderOption allows management of the mutation configuration using functional options.
+type reminderOption func(*ReminderMutation)
+
+// newReminderMutation creates new mutation for the Reminder entity.
+func newReminderMutation(c config, op Op, opts ...reminderOption) *ReminderMutation {
+	m := &ReminderMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReminder,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReminderID sets the ID field of the mutation.
+func withReminderID(id string) reminderOption {
+	return func(m *ReminderMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Reminder
+		)
+		m.oldValue = func(ctx context.Context) (*Reminder, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Reminder.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReminder sets the old Reminder of the mutation.
+func withReminder(node *Reminder) reminderOption {
+	return func(m *ReminderMutation) {
+		m.oldValue = func(context.Context) (*Reminder, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReminderMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReminderMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Reminder entities.
+func (m *ReminderMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReminderMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReminderMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Reminder.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTarget sets the "target" field.
+func (m *ReminderMutation) SetTarget(s string) {
+	m.target = &s
+}
+
+// Target returns the value of the "target" field in the mutation.
+func (m *ReminderMutation) Target() (r string, exists bool) {
+	v := m.target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTarget returns the old "target" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldTarget(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTarget: %w", err)
+	}
+	return oldValue.Target, nil
+}
+
+// ResetTarget resets all changes to the "target" field.
+func (m *ReminderMutation) ResetTarget() {
+	m.target = nil
+}
+
+// SetScheduleKind sets the "schedule_kind" field.
+func (m *ReminderMutation) SetScheduleKind(s string) {
+	m.schedule_kind = &s
+}
+
+// ScheduleKind returns the value of the "schedule_kind" field in the mutation.
+func (m *ReminderMutation) ScheduleKind() (r string, exists bool) {
+	v := m.schedule_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScheduleKind returns the old "schedule_kind" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldScheduleKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScheduleKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScheduleKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScheduleKind: %w", err)
+	}
+	return oldValue.ScheduleKind, nil
+}
+
+// ResetScheduleKind resets all changes to the "schedule_kind" field.
+func (m *ReminderMutation) ResetScheduleKind() {
+	m.schedule_kind = nil
+}
+
+// SetSchedule sets the "schedule" field.
+func (m *ReminderMutation) SetSchedule(s string) {
+	m.schedule = &s
+}
+
+// Schedule returns the value of the "schedule" field in the mutation.
+func (m *ReminderMutation) Schedule() (r string, exists bool) {
+	v := m.schedule
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSchedule returns the old "schedule" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldSchedule(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSchedule is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSchedule requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSchedule: %w", err)
+	}
+	return oldValue.Schedule, nil
+}
+
+// ResetSchedule resets all changes to the "schedule" field.
+func (m *ReminderMutation) ResetSchedule() {
+	m.schedule = nil
+}
+
+// SetPrompt sets the "prompt" field.
+func (m *ReminderMutation) SetPrompt(s string) {
+	m.prompt = &s
+}
+
+// Prompt returns the value of the "prompt" field in the mutation.
+func (m *ReminderMutation) Prompt() (r string, exists bool) {
+	v := m.prompt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrompt returns the old "prompt" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldPrompt(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrompt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrompt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrompt: %w", err)
+	}
+	return oldValue.Prompt, nil
+}
+
+// ResetPrompt resets all changes to the "prompt" field.
+func (m *ReminderMutation) ResetPrompt() {
+	m.prompt = nil
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *ReminderMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *ReminderMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *ReminderMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// SetNextRunUnix sets the "next_run_unix" field.
+func (m *ReminderMutation) SetNextRunUnix(i int64) {
+	m.next_run_unix = &i
+	m.addnext_run_unix = nil
+}
+
+// NextRunUnix returns the value of the "next_run_unix" field in the mutation.
+func (m *ReminderMutation) NextRunUnix() (r int64, exists bool) {
+	v := m.next_run_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNextRunUnix returns the old "next_run_unix" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldNextRunUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNextRunUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNextRunUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNextRunUnix: %w", err)
+	}
+	return oldValue.NextRunUnix, nil
+}
+
+// AddNextRunUnix adds i to the "next_run_unix" field.
+func (m *ReminderMutation) AddNextRunUnix(i int64) {
+	if m.addnext_run_unix != nil {
+		*m.addnext_run_unix += i
+	} else {
+		m.addnext_run_unix = &i
+	}
+}
+
+// AddedNextRunUnix returns the value that was added to the "next_run_unix" field in this mutation.
+func (m *ReminderMutation) AddedNextRunUnix() (r int64, exists bool) {
+	v := m.addnext_run_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNextRunUnix resets all changes to the "next_run_unix" field.
+func (m *ReminderMutation) ResetNextRunUnix() {
+	m.next_run_unix = nil
+	m.addnext_run_unix = nil
+}
+
+// SetLastRunUnix sets the "last_run_unix" field.
+func (m *ReminderMutation) SetLastRunUnix(i int64) {
+	m.last_run_unix = &i
+	m.addlast_run_unix = nil
+}
+
+// LastRunUnix returns the value of the "last_run_unix" field in the mutation.
+func (m *ReminderMutation) LastRunUnix() (r int64, exists bool) {
+	v := m.last_run_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastRunUnix returns the old "last_run_unix" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldLastRunUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastRunUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastRunUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastRunUnix: %w", err)
+	}
+	return oldValue.LastRunUnix, nil
+}
+
+// AddLastRunUnix adds i to the "last_run_unix" field.
+func (m *ReminderMutation) AddLastRunUnix(i int64) {
+	if m.addlast_run_unix != nil {
+		*m.addlast_run_unix += i
+	} else {
+		m.addlast_run_unix = &i
+	}
+}
+
+// AddedLastRunUnix returns the value that was added to the "last_run_unix" field in this mutation.
+func (m *ReminderMutation) AddedLastRunUnix() (r int64, exists bool) {
+	v := m.addlast_run_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLastRunUnix resets all changes to the "last_run_unix" field.
+func (m *ReminderMutation) ResetLastRunUnix() {
+	m.last_run_unix = nil
+	m.addlast_run_unix = nil
+}
+
+// SetRunCount sets the "run_count" field.
+func (m *ReminderMutation) SetRunCount(i int64) {
+	m.run_count = &i
+	m.addrun_count = nil
+}
+
+// RunCount returns the value of the "run_count" field in the mutation.
+func (m *ReminderMutation) RunCount() (r int64, exists bool) {
+	v := m.run_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRunCount returns the old "run_count" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldRunCount(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRunCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRunCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRunCount: %w", err)
+	}
+	return oldValue.RunCount, nil
+}
+
+// AddRunCount adds i to the "run_count" field.
+func (m *ReminderMutation) AddRunCount(i int64) {
+	if m.addrun_count != nil {
+		*m.addrun_count += i
+	} else {
+		m.addrun_count = &i
+	}
+}
+
+// AddedRunCount returns the value that was added to the "run_count" field in this mutation.
+func (m *ReminderMutation) AddedRunCount() (r int64, exists bool) {
+	v := m.addrun_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRunCount resets all changes to the "run_count" field.
+func (m *ReminderMutation) ResetRunCount() {
+	m.run_count = nil
+	m.addrun_count = nil
+}
+
+// SetLastError sets the "last_error" field.
+func (m *ReminderMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *ReminderMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *ReminderMutation) ResetLastError() {
+	m.last_error = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *ReminderMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *ReminderMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *ReminderMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *ReminderMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *ReminderMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *ReminderMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetMsgRef sets the "msg_ref" field.
+func (m *ReminderMutation) SetMsgRef(s string) {
+	m.msg_ref = &s
+}
+
+// MsgRef returns the value of the "msg_ref" field in the mutation.
+func (m *ReminderMutation) MsgRef() (r string, exists bool) {
+	v := m.msg_ref
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMsgRef returns the old "msg_ref" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldMsgRef(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMsgRef is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMsgRef requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMsgRef: %w", err)
+	}
+	return oldValue.MsgRef, nil
+}
+
+// ResetMsgRef resets all changes to the "msg_ref" field.
+func (m *ReminderMutation) ResetMsgRef() {
+	m.msg_ref = nil
+}
+
+// SetRecurrenceRule sets the "recurrence_rule" field.
+func (m *ReminderMutation) SetRecurrenceRule(s string) {
+	m.recurrence_rule = &s
+}
+
+// RecurrenceRule returns the value of the "recurrence_rule" field in the mutation.
+func (m *ReminderMutation) RecurrenceRule() (r string, exists bool) {
+	v := m.recurrence_rule
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecurrenceRule returns the old "recurrence_rule" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldRecurrenceRule(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecurrenceRule is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecurrenceRule requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecurrenceRule: %w", err)
+	}
+	return oldValue.RecurrenceRule, nil
+}
+
+// ResetRecurrenceRule resets all changes to the "recurrence_rule" field.
+func (m *ReminderMutation) ResetRecurrenceRule() {
+	m.recurrence_rule = nil
+}
+
+// SetRecurrenceDescription sets the "recurrence_description" field.
+func (m *ReminderMutation) SetRecurrenceDescription(s string) {
+	m.recurrence_description = &s
+}
+
+// RecurrenceDescription returns the value of the "recurrence_description" field in the mutation.
+func (m *ReminderMutation) RecurrenceDescription() (r string, exists bool) {
+	v := m.recurrence_description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecurrenceDescription returns the old "recurrence_description" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldRecurrenceDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecurrenceDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecurrenceDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecurrenceDescription: %w", err)
+	}
+	return oldValue.RecurrenceDescription, nil
+}
+
+// ResetRecurrenceDescription resets all changes to the "recurrence_description" field.
+func (m *ReminderMutation) ResetRecurrenceDescription() {
+	m.recurrence_description = nil
+}
+
+// SetRecurrenceTimezone sets the "recurrence_timezone" field.
+func (m *ReminderMutation) SetRecurrenceTimezone(s string) {
+	m.recurrence_timezone = &s
+}
+
+// RecurrenceTimezone returns the value of the "recurrence_timezone" field in the mutation.
+func (m *ReminderMutation) RecurrenceTimezone() (r string, exists bool) {
+	v := m.recurrence_timezone
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRecurrenceTimezone returns the old "recurrence_timezone" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldRecurrenceTimezone(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRecurrenceTimezone is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRecurrenceTimezone requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRecurrenceTimezone: %w", err)
+	}
+	return oldValue.RecurrenceTimezone, nil
+}
+
+// ResetRecurrenceTimezone resets all changes to the "recurrence_timezone" field.
+func (m *ReminderMutation) ResetRecurrenceTimezone() {
+	m.recurrence_timezone = nil
+}
+
+// SetCancelToken sets the "cancel_token" field.
+func (m *ReminderMutation) SetCancelToken(s string) {
+	m.cancel_token = &s
+}
+
+// CancelToken returns the value of the "cancel_token" field in the mutation.
+func (m *ReminderMutation) CancelToken() (r string, exists bool) {
+	v := m.cancel_token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCancelToken returns the old "cancel_token" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldCancelToken(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCancelToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCancelToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCancelToken: %w", err)
+	}
+	return oldValue.CancelToken, nil
+}
+
+// ResetCancelToken resets all changes to the "cancel_token" field.
+func (m *ReminderMutation) ResetCancelToken() {
+	m.cancel_token = nil
+}
+
+// SetCreatedUnix sets the "created_unix" field.
+func (m *ReminderMutation) SetCreatedUnix(i int64) {
+	m.created_unix = &i
+	m.addcreated_unix = nil
+}
+
+// CreatedUnix returns the value of the "created_unix" field in the mutation.
+func (m *ReminderMutation) CreatedUnix() (r int64, exists bool) {
+	v := m.created_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedUnix returns the old "created_unix" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldCreatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedUnix: %w", err)
+	}
+	return oldValue.CreatedUnix, nil
+}
+
+// AddCreatedUnix adds i to the "created_unix" field.
+func (m *ReminderMutation) AddCreatedUnix(i int64) {
+	if m.addcreated_unix != nil {
+		*m.addcreated_unix += i
+	} else {
+		m.addcreated_unix = &i
+	}
+}
+
+// AddedCreatedUnix returns the value that was added to the "created_unix" field in this mutation.
+func (m *ReminderMutation) AddedCreatedUnix() (r int64, exists bool) {
+	v := m.addcreated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedUnix resets all changes to the "created_unix" field.
+func (m *ReminderMutation) ResetCreatedUnix() {
+	m.created_unix = nil
+	m.addcreated_unix = nil
+}
+
+// SetUpdatedUnix sets the "updated_unix" field.
+func (m *ReminderMutation) SetUpdatedUnix(i int64) {
+	m.updated_unix = &i
+	m.addupdated_unix = nil
+}
+
+// UpdatedUnix returns the value of the "updated_unix" field in the mutation.
+func (m *ReminderMutation) UpdatedUnix() (r int64, exists bool) {
+	v := m.updated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedUnix returns the old "updated_unix" field's value of the Reminder entity.
+// If the Reminder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderMutation) OldUpdatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedUnix: %w", err)
+	}
+	return oldValue.UpdatedUnix, nil
+}
+
+// AddUpdatedUnix adds i to the "updated_unix" field.
+func (m *ReminderMutation) AddUpdatedUnix(i int64) {
+	if m.addupdated_unix != nil {
+		*m.addupdated_unix += i
+	} else {
+		m.addupdated_unix = &i
+	}
+}
+
+// AddedUpdatedUnix returns the value that was added to the "updated_unix" field in this mutation.
+func (m *ReminderMutation) AddedUpdatedUnix() (r int64, exists bool) {
+	v := m.addupdated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpdatedUnix resets all changes to the "updated_unix" field.
+func (m *ReminderMutation) ResetUpdatedUnix() {
+	m.updated_unix = nil
+	m.addupdated_unix = nil
+}
+
+// Where appends a list predicates to the ReminderMutation builder.
+func (m *ReminderMutation) Where(ps ...predicate.Reminder) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReminderMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReminderMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Reminder, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReminderMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReminderMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Reminder).
+func (m *ReminderMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReminderMutation) Fields() []string {
+	fields := make([]string, 0, 18)
+	if m.target != nil {
+		fields = append(fields, reminder.FieldTarget)
+	}
+	if m.schedule_kind != nil {
+		fields = append(fields, reminder.FieldScheduleKind)
+	}
+	if m.schedule != nil {
+		fields = append(fields, reminder.FieldSchedule)
+	}
+	if m.prompt != nil {
+		fields = append(fields, reminder.FieldPrompt)
+	}
+	if m.enabled != nil {
+		fields = append(fields, reminder.FieldEnabled)
+	}
+	if m.next_run_unix != nil {
+		fields = append(fields, reminder.FieldNextRunUnix)
+	}
+	if m.last_run_unix != nil {
+		fields = append(fields, reminder.FieldLastRunUnix)
+	}
+	if m.run_count != nil {
+		fields = append(fields, reminder.FieldRunCount)
+	}
+	if m.last_error != nil {
+		fields = append(fields, reminder.FieldLastError)
+	}
+	if m.title != nil {
+		fields = append(fields, reminder.FieldTitle)
+	}
+	if m.status != nil {
+		fields = append(fields, reminder.FieldStatus)
+	}
+	if m.msg_ref != nil {
+		fields = append(fields, reminder.FieldMsgRef)
+	}
+	if m.recurrence_rule != nil {
+		fields = append(fields, reminder.FieldRecurrenceRule)
+	}
+	if m.recurrence_description != nil {
+		fields = append(fields, reminder.FieldRecurrenceDescription)
+	}
+	if m.recurrence_timezone != nil {
+		fields = append(fields, reminder.FieldRecurrenceTimezone)
+	}
+	if m.cancel_token != nil {
+		fields = append(fields, reminder.FieldCancelToken)
+	}
+	if m.created_unix != nil {
+		fields = append(fields, reminder.FieldCreatedUnix)
+	}
+	if m.updated_unix != nil {
+		fields = append(fields, reminder.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReminderMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case reminder.FieldTarget:
+		return m.Target()
+	case reminder.FieldScheduleKind:
+		return m.ScheduleKind()
+	case reminder.FieldSchedule:
+		return m.Schedule()
+	case reminder.FieldPrompt:
+		return m.Prompt()
+	case reminder.FieldEnabled:
+		return m.Enabled()
+	case reminder.FieldNextRunUnix:
+		return m.NextRunUnix()
+	case reminder.FieldLastRunUnix:
+		return m.LastRunUnix()
+	case reminder.FieldRunCount:
+		return m.RunCount()
+	case reminder.FieldLastError:
+		return m.LastError()
+	case reminder.FieldTitle:
+		return m.Title()
+	case reminder.FieldStatus:
+		return m.Status()
+	case reminder.FieldMsgRef:
+		return m.MsgRef()
+	case reminder.FieldRecurrenceRule:
+		return m.RecurrenceRule()
+	case reminder.FieldRecurrenceDescription:
+		return m.RecurrenceDescription()
+	case reminder.FieldRecurrenceTimezone:
+		return m.RecurrenceTimezone()
+	case reminder.FieldCancelToken:
+		return m.CancelToken()
+	case reminder.FieldCreatedUnix:
+		return m.CreatedUnix()
+	case reminder.FieldUpdatedUnix:
+		return m.UpdatedUnix()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReminderMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case reminder.FieldTarget:
+		return m.OldTarget(ctx)
+	case reminder.FieldScheduleKind:
+		return m.OldScheduleKind(ctx)
+	case reminder.FieldSchedule:
+		return m.OldSchedule(ctx)
+	case reminder.FieldPrompt:
+		return m.OldPrompt(ctx)
+	case reminder.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case reminder.FieldNextRunUnix:
+		return m.OldNextRunUnix(ctx)
+	case reminder.FieldLastRunUnix:
+		return m.OldLastRunUnix(ctx)
+	case reminder.FieldRunCount:
+		return m.OldRunCount(ctx)
+	case reminder.FieldLastError:
+		return m.OldLastError(ctx)
+	case reminder.FieldTitle:
+		return m.OldTitle(ctx)
+	case reminder.FieldStatus:
+		return m.OldStatus(ctx)
+	case reminder.FieldMsgRef:
+		return m.OldMsgRef(ctx)
+	case reminder.FieldRecurrenceRule:
+		return m.OldRecurrenceRule(ctx)
+	case reminder.FieldRecurrenceDescription:
+		return m.OldRecurrenceDescription(ctx)
+	case reminder.FieldRecurrenceTimezone:
+		return m.OldRecurrenceTimezone(ctx)
+	case reminder.FieldCancelToken:
+		return m.OldCancelToken(ctx)
+	case reminder.FieldCreatedUnix:
+		return m.OldCreatedUnix(ctx)
+	case reminder.FieldUpdatedUnix:
+		return m.OldUpdatedUnix(ctx)
+	}
+	return nil, fmt.Errorf("unknown Reminder field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReminderMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case reminder.FieldTarget:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTarget(v)
+		return nil
+	case reminder.FieldScheduleKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScheduleKind(v)
+		return nil
+	case reminder.FieldSchedule:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSchedule(v)
+		return nil
+	case reminder.FieldPrompt:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrompt(v)
+		return nil
+	case reminder.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	case reminder.FieldNextRunUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNextRunUnix(v)
+		return nil
+	case reminder.FieldLastRunUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastRunUnix(v)
+		return nil
+	case reminder.FieldRunCount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRunCount(v)
+		return nil
+	case reminder.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case reminder.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case reminder.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case reminder.FieldMsgRef:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMsgRef(v)
+		return nil
+	case reminder.FieldRecurrenceRule:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecurrenceRule(v)
+		return nil
+	case reminder.FieldRecurrenceDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecurrenceDescription(v)
+		return nil
+	case reminder.FieldRecurrenceTimezone:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRecurrenceTimezone(v)
+		return nil
+	case reminder.FieldCancelToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCancelToken(v)
+		return nil
+	case reminder.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedUnix(v)
+		return nil
+	case reminder.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Reminder field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReminderMutation) AddedFields() []string {
+	var fields []string
+	if m.addnext_run_unix != nil {
+		fields = append(fields, reminder.FieldNextRunUnix)
+	}
+	if m.addlast_run_unix != nil {
+		fields = append(fields, reminder.FieldLastRunUnix)
+	}
+	if m.addrun_count != nil {
+		fields = append(fields, reminder.FieldRunCount)
+	}
+	if m.addcreated_unix != nil {
+		fields = append(fields, reminder.FieldCreatedUnix)
+	}
+	if m.addupdated_unix != nil {
+		fields = append(fields, reminder.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReminderMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case reminder.FieldNextRunUnix:
+		return m.AddedNextRunUnix()
+	case reminder.FieldLastRunUnix:
+		return m.AddedLastRunUnix()
+	case reminder.FieldRunCount:
+		return m.AddedRunCount()
+	case reminder.FieldCreatedUnix:
+		return m.AddedCreatedUnix()
+	case reminder.FieldUpdatedUnix:
+		return m.AddedUpdatedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReminderMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case reminder.FieldNextRunUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNextRunUnix(v)
+		return nil
+	case reminder.FieldLastRunUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLastRunUnix(v)
+		return nil
+	case reminder.FieldRunCount:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRunCount(v)
+		return nil
+	case reminder.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedUnix(v)
+		return nil
+	case reminder.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Reminder numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReminderMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReminderMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReminderMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Reminder nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReminderMutation) ResetField(name string) error {
+	switch name {
+	case reminder.FieldTarget:
+		m.ResetTarget()
+		return nil
+	case reminder.FieldScheduleKind:
+		m.ResetScheduleKind()
+		return nil
+	case reminder.FieldSchedule:
+		m.ResetSchedule()
+		return nil
+	case reminder.FieldPrompt:
+		m.ResetPrompt()
+		return nil
+	case reminder.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case reminder.FieldNextRunUnix:
+		m.ResetNextRunUnix()
+		return nil
+	case reminder.FieldLastRunUnix:
+		m.ResetLastRunUnix()
+		return nil
+	case reminder.FieldRunCount:
+		m.ResetRunCount()
+		return nil
+	case reminder.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case reminder.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case reminder.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case reminder.FieldMsgRef:
+		m.ResetMsgRef()
+		return nil
+	case reminder.FieldRecurrenceRule:
+		m.ResetRecurrenceRule()
+		return nil
+	case reminder.FieldRecurrenceDescription:
+		m.ResetRecurrenceDescription()
+		return nil
+	case reminder.FieldRecurrenceTimezone:
+		m.ResetRecurrenceTimezone()
+		return nil
+	case reminder.FieldCancelToken:
+		m.ResetCancelToken()
+		return nil
+	case reminder.FieldCreatedUnix:
+		m.ResetCreatedUnix()
+		return nil
+	case reminder.FieldUpdatedUnix:
+		m.ResetUpdatedUnix()
+		return nil
+	}
+	return fmt.Errorf("unknown Reminder field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReminderMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReminderMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReminderMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReminderMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReminderMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReminderMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReminderMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Reminder unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReminderMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Reminder edge %s", name)
+}
+
+// ReminderEventMutation represents an operation that mutates the ReminderEvent nodes in the graph.
+type ReminderEventMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *string
+	reminder_id            *string
+	event_type             *string
+	actor_type             *string
+	actor_id               *string
+	occurred_time_unix     *int64
+	addoccurred_time_unix  *int64
+	next_fire_time_unix    *int64
+	addnext_fire_time_unix *int64
+	detail                 *string
+	clearedFields          map[string]struct{}
+	done                   bool
+	oldValue               func(context.Context) (*ReminderEvent, error)
+	predicates             []predicate.ReminderEvent
+}
+
+var _ ent.Mutation = (*ReminderEventMutation)(nil)
+
+// remindereventOption allows management of the mutation configuration using functional options.
+type remindereventOption func(*ReminderEventMutation)
+
+// newReminderEventMutation creates new mutation for the ReminderEvent entity.
+func newReminderEventMutation(c config, op Op, opts ...remindereventOption) *ReminderEventMutation {
+	m := &ReminderEventMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReminderEvent,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReminderEventID sets the ID field of the mutation.
+func withReminderEventID(id string) remindereventOption {
+	return func(m *ReminderEventMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ReminderEvent
+		)
+		m.oldValue = func(ctx context.Context) (*ReminderEvent, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ReminderEvent.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReminderEvent sets the old ReminderEvent of the mutation.
+func withReminderEvent(node *ReminderEvent) remindereventOption {
+	return func(m *ReminderEventMutation) {
+		m.oldValue = func(context.Context) (*ReminderEvent, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReminderEventMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReminderEventMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ReminderEvent entities.
+func (m *ReminderEventMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReminderEventMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReminderEventMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ReminderEvent.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetReminderID sets the "reminder_id" field.
+func (m *ReminderEventMutation) SetReminderID(s string) {
+	m.reminder_id = &s
+}
+
+// ReminderID returns the value of the "reminder_id" field in the mutation.
+func (m *ReminderEventMutation) ReminderID() (r string, exists bool) {
+	v := m.reminder_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReminderID returns the old "reminder_id" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldReminderID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReminderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReminderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReminderID: %w", err)
+	}
+	return oldValue.ReminderID, nil
+}
+
+// ResetReminderID resets all changes to the "reminder_id" field.
+func (m *ReminderEventMutation) ResetReminderID() {
+	m.reminder_id = nil
+}
+
+// SetEventType sets the "event_type" field.
+func (m *ReminderEventMutation) SetEventType(s string) {
+	m.event_type = &s
+}
+
+// EventType returns the value of the "event_type" field in the mutation.
+func (m *ReminderEventMutation) EventType() (r string, exists bool) {
+	v := m.event_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEventType returns the old "event_type" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldEventType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEventType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEventType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEventType: %w", err)
+	}
+	return oldValue.EventType, nil
+}
+
+// ResetEventType resets all changes to the "event_type" field.
+func (m *ReminderEventMutation) ResetEventType() {
+	m.event_type = nil
+}
+
+// SetActorType sets the "actor_type" field.
+func (m *ReminderEventMutation) SetActorType(s string) {
+	m.actor_type = &s
+}
+
+// ActorType returns the value of the "actor_type" field in the mutation.
+func (m *ReminderEventMutation) ActorType() (r string, exists bool) {
+	v := m.actor_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActorType returns the old "actor_type" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldActorType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActorType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActorType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActorType: %w", err)
+	}
+	return oldValue.ActorType, nil
+}
+
+// ResetActorType resets all changes to the "actor_type" field.
+func (m *ReminderEventMutation) ResetActorType() {
+	m.actor_type = nil
+}
+
+// SetActorID sets the "actor_id" field.
+func (m *ReminderEventMutation) SetActorID(s string) {
+	m.actor_id = &s
+}
+
+// ActorID returns the value of the "actor_id" field in the mutation.
+func (m *ReminderEventMutation) ActorID() (r string, exists bool) {
+	v := m.actor_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActorID returns the old "actor_id" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldActorID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActorID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActorID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActorID: %w", err)
+	}
+	return oldValue.ActorID, nil
+}
+
+// ResetActorID resets all changes to the "actor_id" field.
+func (m *ReminderEventMutation) ResetActorID() {
+	m.actor_id = nil
+}
+
+// SetOccurredTimeUnix sets the "occurred_time_unix" field.
+func (m *ReminderEventMutation) SetOccurredTimeUnix(i int64) {
+	m.occurred_time_unix = &i
+	m.addoccurred_time_unix = nil
+}
+
+// OccurredTimeUnix returns the value of the "occurred_time_unix" field in the mutation.
+func (m *ReminderEventMutation) OccurredTimeUnix() (r int64, exists bool) {
+	v := m.occurred_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOccurredTimeUnix returns the old "occurred_time_unix" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldOccurredTimeUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOccurredTimeUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOccurredTimeUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOccurredTimeUnix: %w", err)
+	}
+	return oldValue.OccurredTimeUnix, nil
+}
+
+// AddOccurredTimeUnix adds i to the "occurred_time_unix" field.
+func (m *ReminderEventMutation) AddOccurredTimeUnix(i int64) {
+	if m.addoccurred_time_unix != nil {
+		*m.addoccurred_time_unix += i
+	} else {
+		m.addoccurred_time_unix = &i
+	}
+}
+
+// AddedOccurredTimeUnix returns the value that was added to the "occurred_time_unix" field in this mutation.
+func (m *ReminderEventMutation) AddedOccurredTimeUnix() (r int64, exists bool) {
+	v := m.addoccurred_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOccurredTimeUnix resets all changes to the "occurred_time_unix" field.
+func (m *ReminderEventMutation) ResetOccurredTimeUnix() {
+	m.occurred_time_unix = nil
+	m.addoccurred_time_unix = nil
+}
+
+// SetNextFireTimeUnix sets the "next_fire_time_unix" field.
+func (m *ReminderEventMutation) SetNextFireTimeUnix(i int64) {
+	m.next_fire_time_unix = &i
+	m.addnext_fire_time_unix = nil
+}
+
+// NextFireTimeUnix returns the value of the "next_fire_time_unix" field in the mutation.
+func (m *ReminderEventMutation) NextFireTimeUnix() (r int64, exists bool) {
+	v := m.next_fire_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNextFireTimeUnix returns the old "next_fire_time_unix" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldNextFireTimeUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNextFireTimeUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNextFireTimeUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNextFireTimeUnix: %w", err)
+	}
+	return oldValue.NextFireTimeUnix, nil
+}
+
+// AddNextFireTimeUnix adds i to the "next_fire_time_unix" field.
+func (m *ReminderEventMutation) AddNextFireTimeUnix(i int64) {
+	if m.addnext_fire_time_unix != nil {
+		*m.addnext_fire_time_unix += i
+	} else {
+		m.addnext_fire_time_unix = &i
+	}
+}
+
+// AddedNextFireTimeUnix returns the value that was added to the "next_fire_time_unix" field in this mutation.
+func (m *ReminderEventMutation) AddedNextFireTimeUnix() (r int64, exists bool) {
+	v := m.addnext_fire_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNextFireTimeUnix resets all changes to the "next_fire_time_unix" field.
+func (m *ReminderEventMutation) ResetNextFireTimeUnix() {
+	m.next_fire_time_unix = nil
+	m.addnext_fire_time_unix = nil
+}
+
+// SetDetail sets the "detail" field.
+func (m *ReminderEventMutation) SetDetail(s string) {
+	m.detail = &s
+}
+
+// Detail returns the value of the "detail" field in the mutation.
+func (m *ReminderEventMutation) Detail() (r string, exists bool) {
+	v := m.detail
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDetail returns the old "detail" field's value of the ReminderEvent entity.
+// If the ReminderEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReminderEventMutation) OldDetail(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDetail is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDetail requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDetail: %w", err)
+	}
+	return oldValue.Detail, nil
+}
+
+// ResetDetail resets all changes to the "detail" field.
+func (m *ReminderEventMutation) ResetDetail() {
+	m.detail = nil
+}
+
+// Where appends a list predicates to the ReminderEventMutation builder.
+func (m *ReminderEventMutation) Where(ps ...predicate.ReminderEvent) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReminderEventMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReminderEventMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ReminderEvent, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReminderEventMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReminderEventMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ReminderEvent).
+func (m *ReminderEventMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReminderEventMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.reminder_id != nil {
+		fields = append(fields, reminderevent.FieldReminderID)
+	}
+	if m.event_type != nil {
+		fields = append(fields, reminderevent.FieldEventType)
+	}
+	if m.actor_type != nil {
+		fields = append(fields, reminderevent.FieldActorType)
+	}
+	if m.actor_id != nil {
+		fields = append(fields, reminderevent.FieldActorID)
+	}
+	if m.occurred_time_unix != nil {
+		fields = append(fields, reminderevent.FieldOccurredTimeUnix)
+	}
+	if m.next_fire_time_unix != nil {
+		fields = append(fields, reminderevent.FieldNextFireTimeUnix)
+	}
+	if m.detail != nil {
+		fields = append(fields, reminderevent.FieldDetail)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReminderEventMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case reminderevent.FieldReminderID:
+		return m.ReminderID()
+	case reminderevent.FieldEventType:
+		return m.EventType()
+	case reminderevent.FieldActorType:
+		return m.ActorType()
+	case reminderevent.FieldActorID:
+		return m.ActorID()
+	case reminderevent.FieldOccurredTimeUnix:
+		return m.OccurredTimeUnix()
+	case reminderevent.FieldNextFireTimeUnix:
+		return m.NextFireTimeUnix()
+	case reminderevent.FieldDetail:
+		return m.Detail()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReminderEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case reminderevent.FieldReminderID:
+		return m.OldReminderID(ctx)
+	case reminderevent.FieldEventType:
+		return m.OldEventType(ctx)
+	case reminderevent.FieldActorType:
+		return m.OldActorType(ctx)
+	case reminderevent.FieldActorID:
+		return m.OldActorID(ctx)
+	case reminderevent.FieldOccurredTimeUnix:
+		return m.OldOccurredTimeUnix(ctx)
+	case reminderevent.FieldNextFireTimeUnix:
+		return m.OldNextFireTimeUnix(ctx)
+	case reminderevent.FieldDetail:
+		return m.OldDetail(ctx)
+	}
+	return nil, fmt.Errorf("unknown ReminderEvent field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReminderEventMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case reminderevent.FieldReminderID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReminderID(v)
+		return nil
+	case reminderevent.FieldEventType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEventType(v)
+		return nil
+	case reminderevent.FieldActorType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActorType(v)
+		return nil
+	case reminderevent.FieldActorID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActorID(v)
+		return nil
+	case reminderevent.FieldOccurredTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOccurredTimeUnix(v)
+		return nil
+	case reminderevent.FieldNextFireTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNextFireTimeUnix(v)
+		return nil
+	case reminderevent.FieldDetail:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDetail(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReminderEvent field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReminderEventMutation) AddedFields() []string {
+	var fields []string
+	if m.addoccurred_time_unix != nil {
+		fields = append(fields, reminderevent.FieldOccurredTimeUnix)
+	}
+	if m.addnext_fire_time_unix != nil {
+		fields = append(fields, reminderevent.FieldNextFireTimeUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReminderEventMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case reminderevent.FieldOccurredTimeUnix:
+		return m.AddedOccurredTimeUnix()
+	case reminderevent.FieldNextFireTimeUnix:
+		return m.AddedNextFireTimeUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReminderEventMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case reminderevent.FieldOccurredTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOccurredTimeUnix(v)
+		return nil
+	case reminderevent.FieldNextFireTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNextFireTimeUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReminderEvent numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReminderEventMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReminderEventMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReminderEventMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ReminderEvent nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReminderEventMutation) ResetField(name string) error {
+	switch name {
+	case reminderevent.FieldReminderID:
+		m.ResetReminderID()
+		return nil
+	case reminderevent.FieldEventType:
+		m.ResetEventType()
+		return nil
+	case reminderevent.FieldActorType:
+		m.ResetActorType()
+		return nil
+	case reminderevent.FieldActorID:
+		m.ResetActorID()
+		return nil
+	case reminderevent.FieldOccurredTimeUnix:
+		m.ResetOccurredTimeUnix()
+		return nil
+	case reminderevent.FieldNextFireTimeUnix:
+		m.ResetNextFireTimeUnix()
+		return nil
+	case reminderevent.FieldDetail:
+		m.ResetDetail()
+		return nil
+	}
+	return fmt.Errorf("unknown ReminderEvent field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReminderEventMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReminderEventMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReminderEventMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReminderEventMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReminderEventMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReminderEventMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReminderEventMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ReminderEvent unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReminderEventMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ReminderEvent edge %s", name)
 }
 
 // SessionMutation represents an operation that mutates the Session nodes in the graph.
