@@ -486,6 +486,26 @@ func (s *Store) MarkThreadInboxRead(ctx context.Context, userID, targetPrefix st
 	return nil
 }
 
+func (s *Store) ListMessageTargets(ctx context.Context, limit int) ([]string, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+	rows, err := s.client.Message.Query().
+		Select(message.FieldTarget).
+		Unique(true).
+		Order(message.ByTarget()).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	targets := make([]string, 0, len(rows))
+	for _, row := range rows {
+		targets = append(targets, row.Target)
+	}
+	return compactTargets(targets), nil
+}
+
 func (s *Store) ListTaskComments(ctx context.Context, taskID string, limit int) ([]Message, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -658,6 +678,26 @@ func (s *Store) ListTasks(ctx context.Context, state, target string, limit int) 
 		tasks = append(tasks, taskFromEnt(row))
 	}
 	return tasks, nil
+}
+
+func (s *Store) ListTaskTargets(ctx context.Context, limit int) ([]string, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+	rows, err := s.client.Task.Query().
+		Select(task.FieldTarget).
+		Unique(true).
+		Order(task.ByTarget()).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	targets := make([]string, 0, len(rows))
+	for _, row := range rows {
+		targets = append(targets, row.Target)
+	}
+	return compactTargets(targets), nil
 }
 
 func (s *Store) UpdateTask(ctx context.Context, id string, patch TaskPatch) (Task, error) {
@@ -1067,6 +1107,23 @@ func idempotencyRecordFromEnt(row *ent.IdempotencyRecord) IdempotencyRecord {
 		CreatedUnix:    row.CreatedUnix,
 		ExpiresUnix:    row.ExpiresUnix,
 	}
+}
+
+func compactTargets(values []string) []string {
+	out := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		target := strings.TrimSpace(value)
+		if target == "" {
+			continue
+		}
+		if _, ok := seen[target]; ok {
+			continue
+		}
+		seen[target] = struct{}{}
+		out = append(out, target)
+	}
+	return out
 }
 
 func unixNow() int64 {

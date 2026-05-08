@@ -153,6 +153,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/attachments", s.requireAuth(s.handleUploadAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}", s.requireAuth(s.handleGetAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}/content", s.requireAuth(s.handleDownloadAttachment))
+	s.mux.HandleFunc("GET /api/channels", s.requireAuth(s.handleListChannels))
+	s.mux.HandleFunc("GET /api/channels/{target}/members", s.requireAuth(s.handleListChannelMembers))
 	s.mux.HandleFunc("GET /api/messages", s.requireAuth(s.handleListMessages))
 	s.mux.HandleFunc("POST /api/messages", s.requireAuth(s.handleCreateMessage))
 	s.mux.HandleFunc("GET /api/inbox/threads", s.requireAuth(s.handleListThreadInbox))
@@ -542,6 +544,29 @@ func (s *Server) handleDownloadAttachment(w http.ResponseWriter, r *http.Request
 	http.ServeContent(w, r, attachment.Filename, info.ModTime(), file)
 }
 
+func (s *Server) handleListChannels(w http.ResponseWriter, r *http.Request) {
+	channels, err := s.channelSummaries(r.Context(), principalFromContext(r.Context()).User, boolQuery(r, "joinedOnly"), intQuery(r, "limit", 100))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list channels failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": channels})
+}
+
+func (s *Server) handleListChannelMembers(w http.ResponseWriter, r *http.Request) {
+	target := strings.TrimSpace(r.PathValue("target"))
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	target = "#" + strings.TrimPrefix(target, "#")
+	if !canReadChannel(principalFromContext(r.Context()).User, target) {
+		writeError(w, http.StatusForbidden, "channel membership is private")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": s.channelMembers(principalFromContext(r.Context()).User, target)})
+}
+
 func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 	target := strings.TrimSpace(r.URL.Query().Get("target"))
 	if target == "" {
@@ -555,6 +580,111 @@ func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": messages})
+}
+
+func (s *Server) channelSummaries(ctx context.Context, user storage.User, joinedOnly bool, limit int) ([]storage.ChannelSummary, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	seen := map[string]struct{}{
+		"#general": {},
+		"#ops":     {},
+		"#release": {},
+	}
+	targets := []string{"#general", "#ops", "#release"}
+	messageTargets, err := s.store.ListMessageTargets(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	taskTargets, err := s.store.ListTaskTargets(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	for _, target := range append(messageTargets, taskTargets...) {
+		if _, ok := seen[target]; ok || !strings.HasPrefix(target, "#") {
+			continue
+		}
+		seen[target] = struct{}{}
+		targets = append(targets, target)
+	}
+	out := make([]storage.ChannelSummary, 0, len(targets))
+	for _, target := range targets {
+		role := channelRoleFor(user, target)
+		joined := role != ""
+		if joinedOnly && !joined {
+			continue
+		}
+		visibility := "public"
+		if isPrivateChannel(target) {
+			visibility = "private"
+		}
+		out = append(out, storage.ChannelSummary{
+			Target:          target,
+			DisplayName:     strings.TrimPrefix(target, "#"),
+			ChannelType:     "channel",
+			Visibility:      visibility,
+			Joined:          joined,
+			MemberCount:     len(s.channelMembers(user, target)),
+			CurrentUserRole: role,
+		})
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (s *Server) channelMembers(user storage.User, target string) []storage.ChannelMember {
+	members := []storage.ChannelMember{
+		{
+			Target:         target,
+			MemberID:       user.ID,
+			Username:       user.Username,
+			DisplayName:    firstNonEmptyString(user.DisplayName, user.Username, "Signed in user"),
+			Kind:           "human",
+			Role:           firstNonEmptyString(channelRoleFor(user, target), "viewer"),
+			JoinedTimeUnix: user.CreatedUnix,
+		},
+	}
+	if target == "#general" || target == "#release" {
+		members = append(members, storage.ChannelMember{
+			Target:         target,
+			MemberID:       "agent:onboarding",
+			DisplayName:    "Onboarding Agent",
+			Kind:           "agent",
+			Role:           "member",
+			JoinedTimeUnix: user.CreatedUnix,
+		})
+	}
+	return members
+}
+
+func canReadChannel(user storage.User, target string) bool {
+	return !isPrivateChannel(target) || channelRoleFor(user, target) != ""
+}
+
+func channelRoleFor(user storage.User, target string) string {
+	if strings.EqualFold(user.Role, "owner") || strings.EqualFold(user.Role, "admin") {
+		return "admin"
+	}
+	if isPrivateChannel(target) {
+		return ""
+	}
+	return "member"
+}
+
+func isPrivateChannel(target string) bool {
+	name := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(target), "#"))
+	return strings.HasPrefix(name, "private-") || strings.HasPrefix(name, "priv-")
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {

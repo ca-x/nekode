@@ -35,6 +35,29 @@ export type InteractionEndpoint = {
   updatedUnix: number;
 };
 
+export type ChannelVisibility = "public" | "private" | "unspecified";
+export type ChannelMemberRole = "admin" | "member" | "viewer" | "unspecified";
+
+export type Channel = {
+  target: string;
+  displayName: string;
+  channelType: string;
+  visibility: ChannelVisibility | string;
+  joined: boolean;
+  memberCount: number;
+  currentUserRole?: ChannelMemberRole | string;
+};
+
+export type ChannelMember = {
+  target: string;
+  memberId: string;
+  username?: string;
+  displayName: string;
+  kind: string;
+  role: ChannelMemberRole | string;
+  joinedTimeUnix: number;
+};
+
 export type MessageSenderKind = "user" | "agent" | "system" | "endpoint";
 
 export type Attachment = {

@@ -1753,6 +1753,39 @@ textarea {
   min-width: 0;
 }
 
+.access-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.access-summary span,
+.access-summary strong,
+.access-summary small {
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.access-summary span {
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.access-summary small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .agent-row span:not(.avatar-badge):not(.presence) {
   color: var(--muted);
   font-size: 0.8125rem;

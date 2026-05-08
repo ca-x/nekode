@@ -41,6 +41,26 @@ type InteractionEndpoint struct {
 	UpdatedUnix     int64  `json:"updatedUnix"`
 }
 
+type ChannelSummary struct {
+	Target          string `json:"target"`
+	DisplayName     string `json:"displayName"`
+	ChannelType     string `json:"channelType"`
+	Visibility      string `json:"visibility"`
+	Joined          bool   `json:"joined"`
+	MemberCount     int    `json:"memberCount"`
+	CurrentUserRole string `json:"currentUserRole,omitempty"`
+}
+
+type ChannelMember struct {
+	Target         string `json:"target"`
+	MemberID       string `json:"memberId"`
+	Username       string `json:"username,omitempty"`
+	DisplayName    string `json:"displayName"`
+	Kind           string `json:"kind"`
+	Role           string `json:"role"`
+	JoinedTimeUnix int64  `json:"joinedTimeUnix"`
+}
+
 type Message struct {
 	ID                string       `json:"id"`
 	Target            string       `json:"target"`

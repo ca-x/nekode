@@ -2,6 +2,10 @@ import type {
   Attachment,
   AuthResponse,
   AgentStatusSnapshot,
+  Channel,
+  ChannelMember,
+  ChannelMemberRole,
+  ChannelVisibility,
   CollaborationEvent,
   CollaborationEventKind,
   DaemonActivityRecord,
@@ -121,6 +125,8 @@ const taskStateValues = new Set<TaskState>([
   "done",
   "canceled"
 ]);
+const channelVisibilityValues = new Set<ChannelVisibility>(["public", "private", "unspecified"]);
+const channelMemberRoleValues = new Set<ChannelMemberRole>(["admin", "member", "viewer", "unspecified"]);
 
 const collaborationEventKindByNumber: Record<number, CollaborationEventKind> = {
   0: "unspecified",
@@ -328,6 +334,45 @@ function normalizeMessage(raw: unknown): Message {
     attachments: Array.isArray(row.attachments) ? row.attachments.map(normalizeAttachment) : undefined,
     requestId: asOptionalString(row.requestId ?? row.request_id),
     createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix)
+  };
+}
+
+function normalizeChannelVisibility(value: unknown): ChannelVisibility | string {
+  const label = enumLabel(value).replace(/^channel_visibility_/, "") || "unspecified";
+  return channelVisibilityValues.has(label as ChannelVisibility) ? (label as ChannelVisibility) : label;
+}
+
+function normalizeChannelMemberRole(value: unknown): ChannelMemberRole | string {
+  const label = enumLabel(value).replace(/^channel_member_role_/, "") || "unspecified";
+  return channelMemberRoleValues.has(label as ChannelMemberRole) ? (label as ChannelMemberRole) : label;
+}
+
+function normalizeChannel(raw: unknown): Channel {
+  const row = asRecord(raw);
+  return {
+    target: asString(row.target),
+    displayName: asString(row.displayName ?? row.display_name) || asString(row.target),
+    channelType: asString(row.channelType ?? row.channel_type) || "channel",
+    visibility: normalizeChannelVisibility(row.visibility),
+    joined: Boolean(row.joined),
+    memberCount: asNumber(row.memberCount ?? row.member_count),
+    currentUserRole: normalizeChannelMemberRole(row.currentUserRole ?? row.current_user_role)
+  };
+}
+
+function normalizeChannelMember(raw: unknown): ChannelMember {
+  const row = asRecord(raw);
+  const member = asRecord(row.member);
+  return {
+    target: asString(row.target),
+    memberId: asString(row.memberId ?? row.member_id ?? member.id ?? member.actorId ?? member.actor_id),
+    username: asOptionalString(row.username ?? member.username ?? member.handle),
+    displayName:
+      asString(row.displayName ?? row.display_name ?? member.displayName ?? member.display_name ?? member.name) ||
+      "Member",
+    kind: asString(row.kind ?? member.kind ?? member.actorKind ?? member.actor_kind) || "human",
+    role: normalizeChannelMemberRole(row.role),
+    joinedTimeUnix: asNumber(row.joinedTimeUnix ?? row.joined_time_unix)
   };
 }
 
@@ -707,6 +752,23 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify(input)
     });
+  }
+
+  async listChannels(filters: { joinedOnly?: boolean; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.joinedOnly) params.set("joinedOnly", "true");
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return normalizeList(await this.request<RawListResponse<unknown>>(`/api/channels?${params}`), normalizeChannel);
+  }
+
+  async listChannelMembers(target: string, limit = 100) {
+    const channel = target.replace(/^#/, "");
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(
+        `/api/channels/${encodeURIComponent(channel)}/members?limit=${limit}`
+      ),
+      normalizeChannelMember
+    );
   }
 
   async uploadAttachment(target: string, file: File) {

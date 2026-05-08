@@ -32,6 +32,7 @@ import {
   Server,
   Settings,
   Shield,
+  ShieldCheck,
   Sparkles,
   Square,
   X,
@@ -45,6 +46,8 @@ import type {
   AgentStatusSnapshot,
   Attachment,
   AuthResponse,
+  Channel,
+  ChannelMember,
   CollaborationEvent,
   DaemonActivityRecord,
   DaemonInfo,
@@ -124,8 +127,6 @@ const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = 
   { key: "endpoints", label: "Endpoints", icon: Settings },
   { key: "daemon", label: "Daemon", icon: Bot }
 ];
-
-const workspaceChannels = ["#general", "#ops", "#release"];
 
 const demoAgents = [
   { id: "qa", name: "QA", role: "Verifier", status: "online", color: "#b46b2b" },
@@ -414,6 +415,18 @@ function healthClass(value?: string) {
   return "is-warn";
 }
 
+function fallbackChannels(): Channel[] {
+  return ["#general", "#ops", "#release"].map((target) => ({
+    target,
+    displayName: target.replace("#", ""),
+    channelType: "channel",
+    visibility: "public",
+    joined: true,
+    memberCount: 1,
+    currentUserRole: "member"
+  }));
+}
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
   const [user, setUser] = useState<User | null>(null);
@@ -431,6 +444,8 @@ function App() {
   const [daemonActivity, setDaemonActivity] = useState<DaemonActivityRecord[]>([]);
   const [runtimePresets, setRuntimePresets] = useState<RuntimePreset[]>(fallbackRuntimePresets);
   const [endpoints, setEndpoints] = useState<InteractionEndpoint[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [channelMembers, setChannelMembers] = useState<ChannelMember[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadInbox, setThreadInbox] = useState<ThreadInboxItem[]>([]);
   const [activeThread, setActiveThread] = useState<ThreadInboxItem | null>(null);
@@ -461,15 +476,35 @@ function App() {
           return null;
         }),
         api.listInteractionEndpoints(),
+        api.listChannels({ joinedOnly: false }).catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] };
+        }),
+        api.listChannelMembers(messageTarget).catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] };
+        }),
         api.listMessages(messageTarget, 50, messageThreadID),
         api.listThreadInbox({ limit: 100 }),
         api.listTasks({ target })
       ]);
-      const [me, protocolInfo, daemonBridgeInfo, endpointList, messageList, inboxList, taskList] = coreData;
+      const [
+        me,
+        protocolInfo,
+        daemonBridgeInfo,
+        endpointList,
+        channelList,
+        channelMemberList,
+        messageList,
+        inboxList,
+        taskList
+      ] = coreData;
       setUser(me);
       setProtocol(protocolInfo);
       setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEndpoints(endpointList.items);
+      setChannels(channelList.items.length ? channelList.items : fallbackChannels());
+      setChannelMembers(channelMemberList.items);
       setMessages(messageList.items);
       setThreadInbox(inboxList.items);
       setTasks(taskList.items);
@@ -590,6 +625,8 @@ function App() {
     setAgentStatuses([]);
     setDaemonRuns([]);
     setDaemonActivity([]);
+    setChannels([]);
+    setChannelMembers([]);
     setThreadInbox([]);
     setActiveThread(null);
     setSelectedTaskId(null);
@@ -646,19 +683,20 @@ function App() {
           })}
         </nav>
         <SidebarSection title="Channels" actionLabel="Create channel">
-          {workspaceChannels.map((channel) => (
+          {(channels.length ? channels : fallbackChannels()).map((channel) => (
             <button
-              key={channel}
-              className={target === channel ? "side-link is-active" : "side-link"}
+              key={channel.target}
+              className={target === channel.target ? "side-link is-active" : "side-link"}
               type="button"
               onClick={() => {
                 setActiveThread(null);
-                setTarget(channel);
+                setTarget(channel.target);
                 setView("messages");
               }}
             >
               <Hash size={15} aria-hidden="true" />
-              <span>{channel.replace("#", "")}</span>
+              <span>{channel.displayName || channel.target.replace("#", "")}</span>
+              {channel.visibility === "private" ? <Shield size={14} aria-label="Private channel" /> : null}
             </button>
           ))}
         </SidebarSection>
@@ -755,6 +793,8 @@ function App() {
             endpoints={endpoints}
             onClearThread={() => setActiveThread(null)}
             onMarkThreadRead={activeThread ? () => markThreadRead(activeThread) : undefined}
+            channel={channels.find((item) => item.target === (activeThread?.target ?? target)) ?? null}
+            channelMembers={channelMembers}
             onCreated={loadData}
           />
         ) : null}
@@ -1221,6 +1261,8 @@ function MessagesPanel({
   endpoints,
   onClearThread,
   onMarkThreadRead,
+  channel,
+  channelMembers,
   onCreated
 }: {
   target: string;
@@ -1229,6 +1271,8 @@ function MessagesPanel({
   endpoints: InteractionEndpoint[];
   onClearThread: () => void;
   onMarkThreadRead?: () => Promise<void>;
+  channel: Channel | null;
+  channelMembers: ChannelMember[];
   onCreated: () => Promise<void>;
 }) {
   const [content, setContent] = useState("");
@@ -1480,54 +1524,81 @@ function MessagesPanel({
       {lightboxAttachment ? (
         <AttachmentLightbox attachment={lightboxAttachment} onClose={() => setLightboxAttachment(null)} />
       ) : null}
-      <aside className="panel compact">
-        <div className="panel-heading compact-heading">
-          <div>
-            <p className="eyebrow">Agents</p>
-            <h2>Room roster</h2>
-          </div>
-        </div>
-        <div className="agent-roster">
-          {demoAgents.map((agent) => (
-            <article className="agent-row" key={agent.id}>
-              <AvatarBadge label={agent.name} color={agent.color} />
-              <div>
-                <strong>{agent.name}</strong>
-                <span>{agent.role}</span>
-              </div>
-              <span className={`presence ${agent.status}`} aria-label={agent.status} />
-            </article>
-          ))}
-        </div>
-        <div className="mention-chips" aria-label="Mention shortcuts">
-          {demoAgents.map((agent) => (
-            <button
-              key={agent.id}
-              type="button"
-              onClick={() => setContent((current) => `${current}${current ? " " : ""}@${agent.name} `)}
-            >
-              <AtSign size={14} aria-hidden="true" />
-              {agent.name}
-            </button>
-          ))}
-        </div>
-        <p className="eyebrow grammar-heading">Target Grammar</p>
-        <dl className="definition-list">
-          <div>
-            <dt>Channel</dt>
-            <dd>#general</dd>
-          </div>
-          <div>
-            <dt>Thread</dt>
-            <dd>#general:msgid</dd>
-          </div>
-          <div>
-            <dt>DM</dt>
-            <dd>dm:@agent</dd>
-          </div>
-        </dl>
-      </aside>
+      <ChannelAccessPanel
+        channel={channel}
+        members={channelMembers}
+        onMention={(name) => setContent((current) => `${current}${current ? " " : ""}@${name} `)}
+      />
     </section>
+  );
+}
+
+function ChannelAccessPanel({
+  channel,
+  members,
+  onMention
+}: {
+  channel: Channel | null;
+  members: ChannelMember[];
+  onMention: (name: string) => void;
+}) {
+  const visibility = channel?.visibility ?? "public";
+  const role = channel?.currentUserRole ?? "member";
+  return (
+    <aside className="panel compact">
+      <div className="panel-heading compact-heading">
+        <div>
+          <p className="eyebrow">Access</p>
+          <h2>Channel permissions</h2>
+        </div>
+        {visibility === "private" ? <Shield size={18} aria-label="Private channel" /> : <ShieldCheck size={18} aria-label="Public channel" />}
+      </div>
+      <div className="access-summary">
+        <span>{visibility}</span>
+        <strong>{role}</strong>
+        <small>{channel?.memberCount ?? members.length} member(s)</small>
+      </div>
+      <div className="agent-roster" aria-label="Channel members">
+        {members.length ? (
+          members.map((member) => (
+            <article className="agent-row" key={`${member.kind}:${member.memberId}`}>
+              <AvatarBadge label={member.displayName} color={member.kind === "agent" ? "#2b79b4" : "#146b5a"} />
+              <div>
+                <strong>{member.displayName}</strong>
+                <span>
+                  {member.kind} · {member.role}
+                </span>
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="empty-list">No visible members</div>
+        )}
+      </div>
+      <div className="mention-chips" aria-label="Mention shortcuts">
+        {members.map((member) => (
+          <button key={member.memberId} type="button" onClick={() => onMention(member.username || member.displayName)}>
+            <AtSign size={14} aria-hidden="true" />
+            {member.displayName}
+          </button>
+        ))}
+      </div>
+      <p className="eyebrow grammar-heading">Target Grammar</p>
+      <dl className="definition-list">
+        <div>
+          <dt>Channel</dt>
+          <dd>#general</dd>
+        </div>
+        <div>
+          <dt>Thread</dt>
+          <dd>#general:msgid</dd>
+        </div>
+        <div>
+          <dt>DM</dt>
+          <dd>dm:@agent</dd>
+        </div>
+      </dl>
+    </aside>
   );
 }
 
