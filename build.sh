@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB_DIR="$ROOT_DIR/web"
 EMBED_DIR="$ROOT_DIR/internal/webdist/dist"
 OUTPUT="${1:-${OUTPUT:-$ROOT_DIR/dist/nekode}}"
+DAEMON_OUTPUT="${DAEMON_OUTPUT:-$(dirname "$OUTPUT")/nekode-daemon}"
 
 VERSION="${VERSION:-dev}"
 COMMIT="${COMMIT:-$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || printf unknown)}"
@@ -33,9 +34,10 @@ mkdir -p "$EMBED_DIR"
 find "$EMBED_DIR" -mindepth 1 -maxdepth 1 ! -name .gitkeep -exec rm -rf {} +
 cp -R "$WEB_DIR/dist/." "$EMBED_DIR/"
 
-echo "Building Nekode binary"
+echo "Building Nekode binaries"
 cd "$ROOT_DIR"
 mkdir -p "$(dirname "$OUTPUT")"
+mkdir -p "$(dirname "$DAEMON_OUTPUT")"
 
 ldflags="-s -w"
 ldflags="$ldflags -X github.com/ca-x/nekode/internal/version.Version=$VERSION"
@@ -47,7 +49,13 @@ CGO_ENABLED="$CGO_ENABLED" GOOS="$GOOS" GOARCH="$GOARCH" go build \
   -ldflags "$ldflags" \
   -o "$OUTPUT" ./cmd/nekode
 
+CGO_ENABLED="$CGO_ENABLED" GOOS="$GOOS" GOARCH="$GOARCH" go build \
+  -trimpath \
+  -ldflags "$ldflags" \
+  -o "$DAEMON_OUTPUT" ./cmd/nekode-daemon
+
 echo "Built $OUTPUT"
+echo "Built $DAEMON_OUTPUT"
 echo "Version: $VERSION"
 echo "Commit: $COMMIT"
 echo "Build time: $BUILD_TIME"
