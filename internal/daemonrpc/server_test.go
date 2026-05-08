@@ -913,6 +913,157 @@ func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 	}
 }
 
+func TestDaemonConsumedAgentEventsUpdateServerQueryViews(t *testing.T) {
+	client, cleanup := newTestClient(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	_, err := client.RegisterComputer(ctx, &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Hostname:   "test-host",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		Inventory: &daemonv1.ComputerInventory{
+			Agents: []*daemonv1.AgentProfile{
+				{
+					AgentId:          "agent-1",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-1",
+					Enabled:          true,
+				},
+			},
+		},
+		RequestId:      "register-consume-1",
+		IdempotencyKey: "register-consume-1",
+	})
+	if err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+	control, err := client.ControlAgent(ctx, &daemonv1.ControlAgentRequest{
+		AgentId:        "agent-1",
+		Action:         daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART,
+		Reason:         "test restart",
+		RequestId:      "control-consume-1",
+		IdempotencyKey: "control-consume-1",
+	})
+	if err != nil {
+		t.Fatalf("ControlAgent() error = %v", err)
+	}
+	direct, err := client.SendAgentDirectMessage(ctx, &daemonv1.SendAgentDirectMessageRequest{
+		AgentId:        "agent-1",
+		Content:        "please report",
+		RequestId:      "direct-consume-1",
+		IdempotencyKey: "direct-consume-1",
+		Sender:         &daemonv1.Actor{ActorKind: daemonv1.ActorKind_ACTOR_KIND_HUMAN, DisplayName: "Tester"},
+	})
+	if err != nil {
+		t.Fatalf("SendAgentDirectMessage() error = %v", err)
+	}
+
+	streamCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	stream, err := client.SubscribeServerEvents(streamCtx, &daemonv1.SubscribeServerEventsRequest{
+		DaemonId:   "daemon-1",
+		ComputerId: "computer-1",
+		AgentIds:   []string{"agent-1"},
+		Kinds: []daemonv1.ServerEventKind{
+			daemonv1.ServerEventKind_SERVER_EVENT_KIND_AGENT_CONTROL,
+			daemonv1.ServerEventKind_SERVER_EVENT_KIND_MESSAGE,
+		},
+		RequestId: "stream-consume-1",
+	})
+	if err != nil {
+		t.Fatalf("SubscribeServerEvents() error = %v", err)
+	}
+	eventIDs := consumeAgentEventIDs(t, stream, control.GetOperation().GetOperationId(), direct.GetMessage().GetMessageId())
+	ack, err := client.AcknowledgeServerEvents(ctx, &daemonv1.AcknowledgeServerEventsRequest{
+		DaemonId:       "daemon-1",
+		ComputerId:     "computer-1",
+		EventIds:       eventIDs,
+		RequestId:      "ack-consume-1",
+		IdempotencyKey: "ack-consume-1",
+	})
+	if err != nil {
+		t.Fatalf("AcknowledgeServerEvents() error = %v", err)
+	}
+	if !ack.GetAccepted() {
+		t.Fatalf("AcknowledgeServerEvents accepted = false")
+	}
+
+	runID := "direct-" + direct.GetMessage().GetMessageId()
+	if _, err := client.UpdateRunStatus(ctx, &daemonv1.UpdateRunStatusRequest{
+		RunId:          runID,
+		AgentId:        "agent-1",
+		State:          daemonv1.RunState_RUN_STATE_COMPLETED,
+		Summary:        "direct message completed",
+		RequestId:      "run-consume-1",
+		IdempotencyKey: "run-consume-1",
+	}); err != nil {
+		t.Fatalf("UpdateRunStatus() error = %v", err)
+	}
+	if _, err := client.LogActivity(ctx, &daemonv1.LogActivityRequest{
+		Target:         "dm:agent-1",
+		AgentId:        "agent-1",
+		Kind:           "direct_message_completed",
+		Summary:        "daemon consumed direct message",
+		RunId:          runID,
+		RequestId:      "activity-consume-1",
+		IdempotencyKey: "activity-consume-1",
+	}); err != nil {
+		t.Fatalf("LogActivity() error = %v", err)
+	}
+	if _, err := client.UpdateAgentStatus(ctx, &daemonv1.UpdateAgentStatusRequest{
+		Status: &daemonv1.AgentStatusSnapshot{
+			AgentId:          "agent-1",
+			ComputerId:       "computer-1",
+			RuntimeProfileId: "profile-agent-1",
+			Presence:         daemonv1.AgentPresence_AGENT_PRESENCE_IDLE,
+			ActivityState:    daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING,
+			Health:           daemonv1.AgentHealth_AGENT_HEALTH_OK,
+			Severity:         daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO,
+			Summary:          "direct message completed",
+			Target:           "dm:agent-1",
+			RunId:            runID,
+			OperationId:      control.GetOperation().GetOperationId(),
+		},
+		RequestId:      "status-consume-1",
+		IdempotencyKey: "status-consume-1",
+	}); err != nil {
+		t.Fatalf("UpdateAgentStatus() error = %v", err)
+	}
+
+	runs, err := client.ListRuns(ctx, &daemonv1.ListRunsRequest{AgentId: "agent-1", Limit: 10})
+	if err != nil {
+		t.Fatalf("ListRuns() error = %v", err)
+	}
+	if len(runs.GetRuns()) != 1 ||
+		runs.GetRuns()[0].GetRunId() != runID ||
+		runs.GetRuns()[0].GetState() != daemonv1.RunState_RUN_STATE_COMPLETED {
+		t.Fatalf("ListRuns() = %+v, want completed direct-message run %q", runs.GetRuns(), runID)
+	}
+	activity, err := client.ListActivity(ctx, &daemonv1.ListActivityRequest{Target: "dm:agent-1", AgentId: "agent-1", Limit: 10})
+	if err != nil {
+		t.Fatalf("ListActivity() error = %v", err)
+	}
+	if len(activity.GetActivities()) != 1 ||
+		activity.GetActivities()[0].GetKind() != "direct_message_completed" ||
+		activity.GetActivities()[0].GetRunId() != runID {
+		t.Fatalf("ListActivity() = %+v, want direct message activity for run %q", activity.GetActivities(), runID)
+	}
+	statuses, err := client.ListAgentStatuses(ctx, &daemonv1.ListAgentStatusesRequest{AgentId: "agent-1", Limit: 10})
+	if err != nil {
+		t.Fatalf("ListAgentStatuses() error = %v", err)
+	}
+	if len(statuses.GetStatuses()) != 1 ||
+		statuses.GetStatuses()[0].GetActivityState() != daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING ||
+		statuses.GetStatuses()[0].GetRunId() != runID ||
+		statuses.GetStatuses()[0].GetOperationId() != control.GetOperation().GetOperationId() {
+		t.Fatalf("ListAgentStatuses() = %+v, want waiting status for run/control", statuses.GetStatuses())
+	}
+}
+
 func assertComputerAndAgentStatus(t *testing.T, srv *Server, computerStatus daemonv1.ComputerStatus, agentPresence daemonv1.AgentPresence, agentHealth daemonv1.AgentHealth) {
 	t.Helper()
 	inventories := srv.ListComputerInventories(10)
@@ -933,6 +1084,32 @@ func assertComputerAndAgentStatus(t *testing.T, srv *Server, computerStatus daem
 	if got.GetPresence() != agentPresence || got.GetHealth() != agentHealth {
 		t.Fatalf("agent status = presence:%v health:%v summary:%q, want presence:%v health:%v", got.GetPresence(), got.GetHealth(), got.GetSummary(), agentPresence, agentHealth)
 	}
+}
+
+func consumeAgentEventIDs(t *testing.T, stream daemonv1.DaemonControlService_SubscribeServerEventsClient, wantOperationID string, wantMessageID string) []string {
+	t.Helper()
+	seen := map[string]bool{}
+	eventIDs := []string{}
+	for !seen["control"] || !seen["message"] {
+		resp, err := stream.Recv()
+		if err != nil {
+			t.Fatalf("stream Recv() error = %v", err)
+		}
+		event := resp.GetEvent()
+		switch payload := event.GetPayload().(type) {
+		case *daemonv1.ServerEvent_AgentControl:
+			if payload.AgentControl.GetOperationId() == wantOperationID {
+				seen["control"] = true
+				eventIDs = append(eventIDs, event.GetEventId())
+			}
+		case *daemonv1.ServerEvent_Message:
+			if payload.Message.GetMessageId() == wantMessageID {
+				seen["message"] = true
+				eventIDs = append(eventIDs, event.GetEventId())
+			}
+		}
+	}
+	return eventIDs
 }
 
 func setComputerLastHeartbeat(t *testing.T, srv *Server, computerID string, lastHeartbeat int64) {

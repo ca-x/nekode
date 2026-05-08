@@ -161,6 +161,114 @@ func TestRunSupervisorHandlesTerminateControl(t *testing.T) {
 	}
 }
 
+func TestRunSupervisorHandlesRestartResetControls(t *testing.T) {
+	tests := []struct {
+		name   string
+		action daemonv1.AgentControlAction
+	}{
+		{"restart", daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART},
+		{"restart_reset_session", daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION},
+		{"restart_full_reset", daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newFakeSupervisorClient()
+			canceled := make(chan struct{}, 1)
+			supervisor := newRunSupervisor(runSupervisorConfig{
+				Config: daemonConfig{
+					ComputerID:        "computer-1",
+					AgentID:           "agent-1",
+					Target:            "#LightOsClub",
+					HeartbeatInterval: time.Second,
+					RunTimeout:        time.Second,
+					MaxConcurrentRuns: 1,
+				},
+				Client: client,
+				Runner: &fakeRuntimeRunner{},
+			})
+			supervisor.running["run-1"] = &supervisedProcess{
+				RunID:   "run-1",
+				AgentID: "agent-1",
+				cancel:  func() { canceled <- struct{}{} },
+			}
+
+			err := supervisor.handleServerEvent(context.Background(), &daemonv1.ServerEvent{
+				Payload: &daemonv1.ServerEvent_AgentControl{AgentControl: &daemonv1.AgentControlOperation{
+					OperationId:      "control-" + tt.name,
+					AgentId:          "agent-1",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-1",
+					Action:           tt.action,
+					State:            daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED,
+				}},
+			})
+			if err != nil {
+				t.Fatalf("handleServerEvent(%s) error = %v", tt.name, err)
+			}
+			select {
+			case <-canceled:
+			case <-time.After(time.Second):
+				t.Fatalf("%s control did not cancel running process", tt.name)
+			}
+			if !client.hasActivity("agent_control_restart") {
+				t.Fatalf("activities = %+v, want restart activity", client.activities)
+			}
+			if got, want := client.agentActivityStates(), []daemonv1.AgentActivityState{
+				daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_RESTARTING,
+				daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING,
+			}; !sameAgentActivityStates(got, want) {
+				t.Fatalf("agent activity states = %v, want %v", got, want)
+			}
+			if client.agentStatuses[0].GetOperationId() != "control-"+tt.name ||
+				client.agentStatuses[1].GetOperationId() != "control-"+tt.name {
+				t.Fatalf("agent statuses = %+v, want operation id propagated", client.agentStatuses)
+			}
+		})
+	}
+}
+
+func TestRunSupervisorReportsUnsupportedControl(t *testing.T) {
+	client := newFakeSupervisorClient()
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "agent-1",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+		},
+		Client: client,
+		Runner: &fakeRuntimeRunner{},
+	})
+
+	err := supervisor.handleServerEvent(context.Background(), &daemonv1.ServerEvent{
+		Payload: &daemonv1.ServerEvent_AgentControl{AgentControl: &daemonv1.AgentControlOperation{
+			OperationId:      "control-unsupported",
+			AgentId:          "agent-1",
+			ComputerId:       "computer-1",
+			RuntimeProfileId: "profile-agent-1",
+			Action:           daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED,
+			State:            daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("handleServerEvent(unsupported) error = %v", err)
+	}
+	if !client.hasActivity("agent_control_unsupported") {
+		t.Fatalf("activities = %+v, want unsupported control activity", client.activities)
+	}
+	if len(client.agentStatuses) != 1 {
+		t.Fatalf("agent statuses = %+v, want one unsupported control status", client.agentStatuses)
+	}
+	got := client.agentStatuses[0]
+	if got.GetActivityState() != daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_BLOCKED ||
+		got.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_RUNTIME_ERROR ||
+		got.GetOperationId() != "control-unsupported" {
+		t.Fatalf("agent status = %+v, want blocked runtime error with operation id", got)
+	}
+}
+
 func TestRunSupervisorHandlesDirectMessage(t *testing.T) {
 	client := newFakeSupervisorClient()
 	runner := &fakeRuntimeRunner{result: runtimeCommandResult{Output: "direct ok"}}
@@ -320,7 +428,27 @@ func (c *fakeSupervisorClient) hasAgentStatus(state daemonv1.AgentActivityState)
 	return false
 }
 
+func (c *fakeSupervisorClient) agentActivityStates() []daemonv1.AgentActivityState {
+	out := make([]daemonv1.AgentActivityState, 0, len(c.agentStatuses))
+	for _, status := range c.agentStatuses {
+		out = append(out, status.GetActivityState())
+	}
+	return out
+}
+
 func sameRunStates(got []daemonv1.RunState, want []daemonv1.RunState) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func sameAgentActivityStates(got []daemonv1.AgentActivityState, want []daemonv1.AgentActivityState) bool {
 	if len(got) != len(want) {
 		return false
 	}
