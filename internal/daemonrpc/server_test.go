@@ -601,6 +601,228 @@ func TestOutboundDeliveryUsesNotificationRoutes(t *testing.T) {
 	}
 }
 
+func TestOutboundDeliveryDedupesSourceEndpointRoutes(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_outbound_dedupe")
+	srv := New(store, "srv_test")
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "feishu",
+		DisplayName:     "Feishu Ops",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	if _, err := store.CreateNotificationRoute(ctx, storage.NotificationRoute{
+		Target:     "#ops",
+		EndpointID: endpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute() error = %v", err)
+	}
+	inbound, err := store.CreateMessage(ctx, storage.Message{
+		Target:            "#ops",
+		Role:              "user",
+		Content:           "from im",
+		SenderDisplayName: "Feishu User",
+		SenderKind:        "endpoint",
+		SourceEndpointID:  endpoint.ID,
+		ExternalMessageID: "feishu-msg-1",
+		MetadataJSON:      "{}",
+		RequestID:         "incoming-feishu-msg-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(inbound) error = %v", err)
+	}
+
+	reply, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           "#ops",
+		Content:          "agent reply",
+		ReplyToMessageId: inbound.ID,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS,
+		RequestId:        "reply-dedupe-1",
+		IdempotencyKey:   "reply-dedupe-1",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage(reply) error = %v", err)
+	}
+	listed, err := srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: reply.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries() error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 1 {
+		t.Fatalf("ListOutboundDeliveries() returned %d deliveries, want source route only once", len(listed.GetDeliveries()))
+	}
+	delivery := listed.GetDeliveries()[0]
+	if delivery.GetEndpointId() != endpoint.ID || delivery.GetExternalMessageId() != "feishu-msg-1" {
+		t.Fatalf("delivery = %+v, want deduped source delivery with external message id", delivery)
+	}
+}
+
+func TestOutboundDeliverySelectedEndpointsUsesRoutesWithoutSource(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_outbound_selected")
+	srv := New(store, "srv_test")
+
+	sourceEndpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "feishu",
+		DisplayName:     "Feishu Source",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(source) error = %v", err)
+	}
+	routeEndpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "telegram",
+		DisplayName:     "Telegram Route",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(route) error = %v", err)
+	}
+	if _, err := store.CreateNotificationRoute(ctx, storage.NotificationRoute{
+		Target:     "#ops",
+		EndpointID: routeEndpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute() error = %v", err)
+	}
+	inbound, err := store.CreateMessage(ctx, storage.Message{
+		Target:            "#ops",
+		Role:              "user",
+		Content:           "from im",
+		SenderDisplayName: "Feishu User",
+		SenderKind:        "endpoint",
+		SourceEndpointID:  sourceEndpoint.ID,
+		ExternalMessageID: "feishu-msg-2",
+		MetadataJSON:      "{}",
+		RequestID:         "incoming-feishu-msg-2",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(inbound) error = %v", err)
+	}
+
+	reply, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           "#ops",
+		Content:          "selected endpoint reply",
+		ReplyToMessageId: inbound.ID,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SELECTED_ENDPOINTS,
+		RequestId:        "reply-selected-1",
+		IdempotencyKey:   "reply-selected-1",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage(reply) error = %v", err)
+	}
+	listed, err := srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: reply.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries() error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 1 {
+		t.Fatalf("ListOutboundDeliveries() returned %d deliveries, want routed delivery only", len(listed.GetDeliveries()))
+	}
+	delivery := listed.GetDeliveries()[0]
+	if delivery.GetEndpointId() != routeEndpoint.ID || delivery.GetExternalMessageId() != "" {
+		t.Fatalf("delivery = %+v, want selected routed delivery without source external id", delivery)
+	}
+}
+
+func TestOutboundDeliverySkipsDisabledRouteEndpoints(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_outbound_disabled_route")
+	srv := New(store, "srv_test")
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "telegram",
+		DisplayName:     "Telegram Disabled",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: false,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	if _, err := store.CreateNotificationRoute(ctx, storage.NotificationRoute{
+		Target:     "#ops",
+		EndpointID: endpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute() error = %v", err)
+	}
+
+	sent, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:         "#ops",
+		Content:        "route disabled",
+		OutboundPolicy: daemonv1.OutboundPolicy_OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS,
+		RequestId:      "disabled-route-1",
+		IdempotencyKey: "disabled-route-1",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage() error = %v", err)
+	}
+	listed, err := srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: sent.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries() error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 0 {
+		t.Fatalf("ListOutboundDeliveries() = %+v, want disabled route endpoint skipped", listed.GetDeliveries())
+	}
+}
+
 func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 	client, cleanup := newTestClient(t)
 	defer cleanup()

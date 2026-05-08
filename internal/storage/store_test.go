@@ -404,6 +404,251 @@ func TestNotificationRouteResolution(t *testing.T) {
 	}
 }
 
+func TestNotificationRouteResolutionDedupesThreadSpecificRoutes(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	sharedEndpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "feishu",
+		DisplayName:     "Feishu Shared",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(shared) error = %v", err)
+	}
+	disabledEndpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "terminal",
+		DisplayName:     "Terminal Disabled Route",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "none",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(disabled) error = %v", err)
+	}
+	mentionEndpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "telegram",
+		DisplayName:     "Telegram Mentions",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(mention) error = %v", err)
+	}
+
+	defaultRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: sharedEndpoint.ID,
+		EventKind:  "all",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateNotificationRoute(default) error = %v", err)
+	}
+	threadRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		ThreadID:   "thread-incident",
+		EndpointID: sharedEndpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateNotificationRoute(thread) error = %v", err)
+	}
+	if _, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: disabledEndpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    false,
+		ConfigJSON: "{}",
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute(disabled) error = %v", err)
+	}
+	mentionRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: mentionEndpoint.ID,
+		EventKind:  "mention",
+		Preference: "mentions",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateNotificationRoute(mention) error = %v", err)
+	}
+
+	messageRoutes, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#ops",
+		ThreadID:  "thread-incident",
+		EventKind: "message",
+	})
+	if err != nil {
+		t.Fatalf("ResolveNotificationRoutes(message thread) error = %v", err)
+	}
+	if len(messageRoutes) != 1 || messageRoutes[0].ID != threadRoute.ID {
+		t.Fatalf("messageRoutes = %+v, want only thread-specific route after endpoint dedupe", messageRoutes)
+	}
+
+	defaultRoutes, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#ops",
+		EventKind: "message",
+	})
+	if err != nil {
+		t.Fatalf("ResolveNotificationRoutes(default message) error = %v", err)
+	}
+	if len(defaultRoutes) != 1 || defaultRoutes[0].ID != defaultRoute.ID {
+		t.Fatalf("defaultRoutes = %+v, want default route only", defaultRoutes)
+	}
+
+	mentionRoutes, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#ops",
+		EventKind: "mention",
+	})
+	if err != nil {
+		t.Fatalf("ResolveNotificationRoutes(mention) error = %v", err)
+	}
+	if len(mentionRoutes) != 2 || mentionRoutes[0].ID != mentionRoute.ID || mentionRoutes[1].ID != defaultRoute.ID {
+		t.Fatalf("mentionRoutes = %+v, want mention route before all-events default", mentionRoutes)
+	}
+}
+
+func TestNotificationRouteValidation(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "feishu",
+		DisplayName:     "Feishu",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	validRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: endpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateNotificationRoute(valid) error = %v", err)
+	}
+
+	createCases := []struct {
+		name  string
+		route NotificationRoute
+	}{
+		{
+			name: "empty target",
+			route: NotificationRoute{
+				EndpointID: endpoint.ID,
+				EventKind:  "message",
+				Preference: "all",
+				Enabled:    true,
+				ConfigJSON: "{}",
+			},
+		},
+		{
+			name: "invalid event kind",
+			route: NotificationRoute{
+				Target:     "#ops",
+				EndpointID: endpoint.ID,
+				EventKind:  "email",
+				Preference: "all",
+				Enabled:    true,
+				ConfigJSON: "{}",
+			},
+		},
+		{
+			name: "invalid preference",
+			route: NotificationRoute{
+				Target:     "#ops",
+				EndpointID: endpoint.ID,
+				EventKind:  "message",
+				Preference: "sometimes",
+				Enabled:    true,
+				ConfigJSON: "{}",
+			},
+		},
+		{
+			name: "invalid config json",
+			route: NotificationRoute{
+				Target:     "#ops",
+				EndpointID: endpoint.ID,
+				EventKind:  "message",
+				Preference: "all",
+				Enabled:    true,
+				ConfigJSON: "{",
+			},
+		},
+	}
+	for _, tc := range createCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := store.CreateNotificationRoute(ctx, tc.route); !errors.Is(err, ErrInvalidState) {
+				t.Fatalf("CreateNotificationRoute() error = %v, want %v", err, ErrInvalidState)
+			}
+		})
+	}
+
+	if _, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: endpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("duplicate CreateNotificationRoute() error = %v, want %v", err, ErrConflict)
+	}
+	if _, err := store.ListNotificationRoutes(ctx, NotificationRouteListOptions{
+		Target:    "#ops",
+		EventKind: "email",
+		Limit:     10,
+	}); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("ListNotificationRoutes(invalid event) error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "",
+		EventKind: "message",
+	}); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("ResolveNotificationRoutes(empty target) error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#ops",
+		EventKind: "all",
+	}); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("ResolveNotificationRoutes(all event) error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.UpdateNotificationRoute(ctx, validRoute.ID, NotificationRoutePatch{
+		ConfigJSON: stringPtr("{"),
+	}); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("UpdateNotificationRoute(invalid config) error = %v, want %v", err, ErrInvalidState)
+	}
+}
+
 func TestStoreRejectsInvalidTaskState(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
