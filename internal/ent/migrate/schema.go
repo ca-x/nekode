@@ -255,6 +255,34 @@ var (
 			},
 		},
 	}
+	// ThreadReadStatesColumns holds the columns for the "thread_read_states" table.
+	ThreadReadStatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "user_id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "thread_id", Type: field.TypeString},
+		{Name: "last_read_message_id", Type: field.TypeString, Default: ""},
+		{Name: "last_read_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// ThreadReadStatesTable holds the schema information for the "thread_read_states" table.
+	ThreadReadStatesTable = &schema.Table{
+		Name:       "thread_read_states",
+		Columns:    ThreadReadStatesColumns,
+		PrimaryKey: []*schema.Column{ThreadReadStatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "threadreadstate_user_id_target_thread_id",
+				Unique:  true,
+				Columns: []*schema.Column{ThreadReadStatesColumns[1], ThreadReadStatesColumns[2], ThreadReadStatesColumns[3]},
+			},
+			{
+				Name:    "threadreadstate_user_id_updated_unix",
+				Unique:  false,
+				Columns: []*schema.Column{ThreadReadStatesColumns[1], ThreadReadStatesColumns[6]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -291,6 +319,7 @@ var (
 		MessagesTable,
 		SessionsTable,
 		TasksTable,
+		ThreadReadStatesTable,
 		UsersTable,
 	}
 )

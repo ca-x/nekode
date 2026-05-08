@@ -19,6 +19,7 @@ import type {
   SetupStatus,
   Task,
   TaskState,
+  ThreadInboxItem,
   User
 } from "./types";
 
@@ -728,11 +729,13 @@ export class ApiClient {
     return response.blob();
   }
 
-  async listMessages(target: string, limit = 50) {
+  async listMessages(target: string, limit = 50, threadId = "") {
+    const params = new URLSearchParams();
+    params.set("target", target);
+    params.set("limit", String(limit));
+    if (threadId) params.set("threadId", threadId);
     return normalizeList(
-      await this.request<RawListResponse<unknown>>(
-        `/api/messages?target=${encodeURIComponent(target)}&limit=${limit}`
-      ),
+      await this.request<RawListResponse<unknown>>(`/api/messages?${params}`),
       normalizeMessage
     );
   }
@@ -750,6 +753,30 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify(input)
     }));
+  }
+
+  listThreadInbox(filters: { targetPrefix?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.targetPrefix) params.set("targetPrefix", filters.targetPrefix);
+    params.set("limit", String(filters.limit ?? 100));
+    return this.request<ListResponse<ThreadInboxItem>>(`/api/inbox/threads?${params}`);
+  }
+
+  markThreadRead(input: { target: string; threadId: string }) {
+    return this.request<{ ok: boolean }>(
+      `/api/inbox/threads/${encodeURIComponent(input.threadId)}/read`,
+      {
+        method: "POST",
+        body: JSON.stringify({ target: input.target })
+      }
+    );
+  }
+
+  markThreadInboxRead(input: { targetPrefix?: string } = {}) {
+    return this.request<{ ok: boolean }>("/api/inbox/threads/read-all", {
+      method: "POST",
+      body: JSON.stringify({ targetPrefix: input.targetPrefix ?? "" })
+    });
   }
 
   async listTasks(filters: { state?: TaskState | "all"; target?: string; limit?: number }) {

@@ -562,6 +562,114 @@ textarea {
   padding: 4px;
 }
 
+.inbox-panel {
+  min-height: calc(100dvh - 140px);
+}
+
+.inbox-actions,
+.thread-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inbox-summary {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.inbox-summary strong {
+  color: var(--text);
+}
+
+.inbox-list {
+  display: grid;
+  gap: 10px;
+}
+
+.inbox-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.inbox-row.is-unread {
+  border-color: #b8ddd4;
+  background: #f3fbf8;
+}
+
+.inbox-row-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.inbox-row-main:hover strong {
+  color: var(--primary-strong);
+}
+
+.inbox-row-header,
+.inbox-row-meta,
+.inbox-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inbox-row-header {
+  justify-content: space-between;
+}
+
+.inbox-row-header strong,
+.inbox-row-main p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-row-main p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.inbox-row-header span,
+.inbox-row-meta {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.inbox-row-meta {
+  flex-wrap: wrap;
+}
+
+.inbox-row-actions {
+  justify-content: flex-end;
+}
+
+.unread-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
 .message-bubble {
   width: min(720px, 100%);
   padding: 12px 14px;
@@ -1902,10 +2010,17 @@ textarea {
   .panel-heading,
   .quick-task-form,
   .task-toolbar,
+  .inbox-row,
   .composer-actions {
     align-items: stretch;
     flex-direction: column;
     grid-template-columns: 1fr;
+  }
+
+  .inbox-actions,
+  .thread-actions,
+  .inbox-row-actions {
+    justify-content: flex-start;
   }
 
   .composer-actions select {

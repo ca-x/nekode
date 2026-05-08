@@ -17,6 +17,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/predicate"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/user"
 )
 
@@ -35,6 +36,7 @@ const (
 	TypeMessage             = "Message"
 	TypeSession             = "Session"
 	TypeTask                = "Task"
+	TypeThreadReadState     = "ThreadReadState"
 	TypeUser                = "User"
 )
 
@@ -5661,6 +5663,677 @@ func (m *TaskMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TaskMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Task edge %s", name)
+}
+
+// ThreadReadStateMutation represents an operation that mutates the ThreadReadState nodes in the graph.
+type ThreadReadStateMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *string
+	user_id              *string
+	target               *string
+	thread_id            *string
+	last_read_message_id *string
+	last_read_unix       *int64
+	addlast_read_unix    *int64
+	updated_unix         *int64
+	addupdated_unix      *int64
+	clearedFields        map[string]struct{}
+	done                 bool
+	oldValue             func(context.Context) (*ThreadReadState, error)
+	predicates           []predicate.ThreadReadState
+}
+
+var _ ent.Mutation = (*ThreadReadStateMutation)(nil)
+
+// threadreadstateOption allows management of the mutation configuration using functional options.
+type threadreadstateOption func(*ThreadReadStateMutation)
+
+// newThreadReadStateMutation creates new mutation for the ThreadReadState entity.
+func newThreadReadStateMutation(c config, op Op, opts ...threadreadstateOption) *ThreadReadStateMutation {
+	m := &ThreadReadStateMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeThreadReadState,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withThreadReadStateID sets the ID field of the mutation.
+func withThreadReadStateID(id string) threadreadstateOption {
+	return func(m *ThreadReadStateMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ThreadReadState
+		)
+		m.oldValue = func(ctx context.Context) (*ThreadReadState, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ThreadReadState.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withThreadReadState sets the old ThreadReadState of the mutation.
+func withThreadReadState(node *ThreadReadState) threadreadstateOption {
+	return func(m *ThreadReadStateMutation) {
+		m.oldValue = func(context.Context) (*ThreadReadState, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ThreadReadStateMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ThreadReadStateMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ThreadReadState entities.
+func (m *ThreadReadStateMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ThreadReadStateMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ThreadReadStateMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ThreadReadState.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetUserID sets the "user_id" field.
+func (m *ThreadReadStateMutation) SetUserID(s string) {
+	m.user_id = &s
+}
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *ThreadReadStateMutation) UserID() (r string, exists bool) {
+	v := m.user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUserID returns the old "user_id" field's value of the ThreadReadState entity.
+// If the ThreadReadState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThreadReadStateMutation) OldUserID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+	}
+	return oldValue.UserID, nil
+}
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *ThreadReadStateMutation) ResetUserID() {
+	m.user_id = nil
+}
+
+// SetTarget sets the "target" field.
+func (m *ThreadReadStateMutation) SetTarget(s string) {
+	m.target = &s
+}
+
+// Target returns the value of the "target" field in the mutation.
+func (m *ThreadReadStateMutation) Target() (r string, exists bool) {
+	v := m.target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTarget returns the old "target" field's value of the ThreadReadState entity.
+// If the ThreadReadState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThreadReadStateMutation) OldTarget(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTarget: %w", err)
+	}
+	return oldValue.Target, nil
+}
+
+// ResetTarget resets all changes to the "target" field.
+func (m *ThreadReadStateMutation) ResetTarget() {
+	m.target = nil
+}
+
+// SetThreadID sets the "thread_id" field.
+func (m *ThreadReadStateMutation) SetThreadID(s string) {
+	m.thread_id = &s
+}
+
+// ThreadID returns the value of the "thread_id" field in the mutation.
+func (m *ThreadReadStateMutation) ThreadID() (r string, exists bool) {
+	v := m.thread_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldThreadID returns the old "thread_id" field's value of the ThreadReadState entity.
+// If the ThreadReadState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThreadReadStateMutation) OldThreadID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldThreadID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldThreadID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldThreadID: %w", err)
+	}
+	return oldValue.ThreadID, nil
+}
+
+// ResetThreadID resets all changes to the "thread_id" field.
+func (m *ThreadReadStateMutation) ResetThreadID() {
+	m.thread_id = nil
+}
+
+// SetLastReadMessageID sets the "last_read_message_id" field.
+func (m *ThreadReadStateMutation) SetLastReadMessageID(s string) {
+	m.last_read_message_id = &s
+}
+
+// LastReadMessageID returns the value of the "last_read_message_id" field in the mutation.
+func (m *ThreadReadStateMutation) LastReadMessageID() (r string, exists bool) {
+	v := m.last_read_message_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastReadMessageID returns the old "last_read_message_id" field's value of the ThreadReadState entity.
+// If the ThreadReadState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThreadReadStateMutation) OldLastReadMessageID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastReadMessageID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastReadMessageID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastReadMessageID: %w", err)
+	}
+	return oldValue.LastReadMessageID, nil
+}
+
+// ResetLastReadMessageID resets all changes to the "last_read_message_id" field.
+func (m *ThreadReadStateMutation) ResetLastReadMessageID() {
+	m.last_read_message_id = nil
+}
+
+// SetLastReadUnix sets the "last_read_unix" field.
+func (m *ThreadReadStateMutation) SetLastReadUnix(i int64) {
+	m.last_read_unix = &i
+	m.addlast_read_unix = nil
+}
+
+// LastReadUnix returns the value of the "last_read_unix" field in the mutation.
+func (m *ThreadReadStateMutation) LastReadUnix() (r int64, exists bool) {
+	v := m.last_read_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastReadUnix returns the old "last_read_unix" field's value of the ThreadReadState entity.
+// If the ThreadReadState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThreadReadStateMutation) OldLastReadUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastReadUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastReadUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastReadUnix: %w", err)
+	}
+	return oldValue.LastReadUnix, nil
+}
+
+// AddLastReadUnix adds i to the "last_read_unix" field.
+func (m *ThreadReadStateMutation) AddLastReadUnix(i int64) {
+	if m.addlast_read_unix != nil {
+		*m.addlast_read_unix += i
+	} else {
+		m.addlast_read_unix = &i
+	}
+}
+
+// AddedLastReadUnix returns the value that was added to the "last_read_unix" field in this mutation.
+func (m *ThreadReadStateMutation) AddedLastReadUnix() (r int64, exists bool) {
+	v := m.addlast_read_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLastReadUnix resets all changes to the "last_read_unix" field.
+func (m *ThreadReadStateMutation) ResetLastReadUnix() {
+	m.last_read_unix = nil
+	m.addlast_read_unix = nil
+}
+
+// SetUpdatedUnix sets the "updated_unix" field.
+func (m *ThreadReadStateMutation) SetUpdatedUnix(i int64) {
+	m.updated_unix = &i
+	m.addupdated_unix = nil
+}
+
+// UpdatedUnix returns the value of the "updated_unix" field in the mutation.
+func (m *ThreadReadStateMutation) UpdatedUnix() (r int64, exists bool) {
+	v := m.updated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedUnix returns the old "updated_unix" field's value of the ThreadReadState entity.
+// If the ThreadReadState object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThreadReadStateMutation) OldUpdatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedUnix: %w", err)
+	}
+	return oldValue.UpdatedUnix, nil
+}
+
+// AddUpdatedUnix adds i to the "updated_unix" field.
+func (m *ThreadReadStateMutation) AddUpdatedUnix(i int64) {
+	if m.addupdated_unix != nil {
+		*m.addupdated_unix += i
+	} else {
+		m.addupdated_unix = &i
+	}
+}
+
+// AddedUpdatedUnix returns the value that was added to the "updated_unix" field in this mutation.
+func (m *ThreadReadStateMutation) AddedUpdatedUnix() (r int64, exists bool) {
+	v := m.addupdated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpdatedUnix resets all changes to the "updated_unix" field.
+func (m *ThreadReadStateMutation) ResetUpdatedUnix() {
+	m.updated_unix = nil
+	m.addupdated_unix = nil
+}
+
+// Where appends a list predicates to the ThreadReadStateMutation builder.
+func (m *ThreadReadStateMutation) Where(ps ...predicate.ThreadReadState) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ThreadReadStateMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ThreadReadStateMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ThreadReadState, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ThreadReadStateMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ThreadReadStateMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ThreadReadState).
+func (m *ThreadReadStateMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ThreadReadStateMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.user_id != nil {
+		fields = append(fields, threadreadstate.FieldUserID)
+	}
+	if m.target != nil {
+		fields = append(fields, threadreadstate.FieldTarget)
+	}
+	if m.thread_id != nil {
+		fields = append(fields, threadreadstate.FieldThreadID)
+	}
+	if m.last_read_message_id != nil {
+		fields = append(fields, threadreadstate.FieldLastReadMessageID)
+	}
+	if m.last_read_unix != nil {
+		fields = append(fields, threadreadstate.FieldLastReadUnix)
+	}
+	if m.updated_unix != nil {
+		fields = append(fields, threadreadstate.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ThreadReadStateMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case threadreadstate.FieldUserID:
+		return m.UserID()
+	case threadreadstate.FieldTarget:
+		return m.Target()
+	case threadreadstate.FieldThreadID:
+		return m.ThreadID()
+	case threadreadstate.FieldLastReadMessageID:
+		return m.LastReadMessageID()
+	case threadreadstate.FieldLastReadUnix:
+		return m.LastReadUnix()
+	case threadreadstate.FieldUpdatedUnix:
+		return m.UpdatedUnix()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ThreadReadStateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case threadreadstate.FieldUserID:
+		return m.OldUserID(ctx)
+	case threadreadstate.FieldTarget:
+		return m.OldTarget(ctx)
+	case threadreadstate.FieldThreadID:
+		return m.OldThreadID(ctx)
+	case threadreadstate.FieldLastReadMessageID:
+		return m.OldLastReadMessageID(ctx)
+	case threadreadstate.FieldLastReadUnix:
+		return m.OldLastReadUnix(ctx)
+	case threadreadstate.FieldUpdatedUnix:
+		return m.OldUpdatedUnix(ctx)
+	}
+	return nil, fmt.Errorf("unknown ThreadReadState field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ThreadReadStateMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case threadreadstate.FieldUserID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUserID(v)
+		return nil
+	case threadreadstate.FieldTarget:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTarget(v)
+		return nil
+	case threadreadstate.FieldThreadID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetThreadID(v)
+		return nil
+	case threadreadstate.FieldLastReadMessageID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastReadMessageID(v)
+		return nil
+	case threadreadstate.FieldLastReadUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastReadUnix(v)
+		return nil
+	case threadreadstate.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ThreadReadState field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ThreadReadStateMutation) AddedFields() []string {
+	var fields []string
+	if m.addlast_read_unix != nil {
+		fields = append(fields, threadreadstate.FieldLastReadUnix)
+	}
+	if m.addupdated_unix != nil {
+		fields = append(fields, threadreadstate.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ThreadReadStateMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case threadreadstate.FieldLastReadUnix:
+		return m.AddedLastReadUnix()
+	case threadreadstate.FieldUpdatedUnix:
+		return m.AddedUpdatedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ThreadReadStateMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case threadreadstate.FieldLastReadUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLastReadUnix(v)
+		return nil
+	case threadreadstate.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ThreadReadState numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ThreadReadStateMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ThreadReadStateMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ThreadReadStateMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ThreadReadState nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ThreadReadStateMutation) ResetField(name string) error {
+	switch name {
+	case threadreadstate.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case threadreadstate.FieldTarget:
+		m.ResetTarget()
+		return nil
+	case threadreadstate.FieldThreadID:
+		m.ResetThreadID()
+		return nil
+	case threadreadstate.FieldLastReadMessageID:
+		m.ResetLastReadMessageID()
+		return nil
+	case threadreadstate.FieldLastReadUnix:
+		m.ResetLastReadUnix()
+		return nil
+	case threadreadstate.FieldUpdatedUnix:
+		m.ResetUpdatedUnix()
+		return nil
+	}
+	return fmt.Errorf("unknown ThreadReadState field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ThreadReadStateMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ThreadReadStateMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ThreadReadStateMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ThreadReadStateMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ThreadReadStateMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ThreadReadStateMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ThreadReadStateMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ThreadReadState unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ThreadReadStateMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ThreadReadState edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.

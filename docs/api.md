@@ -206,7 +206,8 @@ Request:
 
 Query:
 
-- `target`: required target such as `#general`, `#general:thread`, or `dm:user`.
+- `target`: required target such as `#general` or `dm:user`.
+- `threadId`: optional parent message id. When omitted, only parent-channel messages are returned.
 - `limit`: optional, defaults to `50`.
 
 ### `POST /api/messages`
@@ -216,6 +217,7 @@ Request:
 ```json
 {
   "target": "#general",
+  "threadId": "optional-parent-message-id",
   "content": "hello",
   "role": "user",
   "sourceEndpointId": "iep_...",
@@ -224,6 +226,45 @@ Request:
   "requestId": "optional-idempotency-key"
 }
 ```
+
+## Inbox
+
+Thread inbox APIs are Web/HTTP state only and do not add daemon proto fields.
+
+### `GET /api/inbox/threads`
+
+Query:
+
+- `targetPrefix`: optional target prefix such as `#` or `dm:`.
+- `limit`: optional, defaults to `100`.
+
+Returns thread rows sorted by latest reply. Each row includes `target`, `threadId`, `topic`,
+`firstMessage`, `latestMessage`, `messageCount`, `unreadCount`, and read-state fields.
+
+### `POST /api/inbox/threads/{threadId}/read`
+
+Request:
+
+```json
+{
+  "target": "#general"
+}
+```
+
+Marks one thread read for the signed-in user.
+
+### `POST /api/inbox/threads/read-all`
+
+Request:
+
+```json
+{
+  "targetPrefix": "#"
+}
+```
+
+Marks all currently listed inbox threads read for the signed-in user. Omit `targetPrefix`
+to mark all visible thread inbox rows read.
 
 ## Tasks
 

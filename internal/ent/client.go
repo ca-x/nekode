@@ -20,6 +20,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/user"
 )
 
@@ -40,6 +41,8 @@ type Client struct {
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
+	// ThreadReadState is the client for interacting with the ThreadReadState builders.
+	ThreadReadState *ThreadReadStateClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -59,6 +62,7 @@ func (c *Client) init() {
 	c.Message = NewMessageClient(c.config)
 	c.Session = NewSessionClient(c.config)
 	c.Task = NewTaskClient(c.config)
+	c.ThreadReadState = NewThreadReadStateClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -158,6 +162,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Message:             NewMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
+		ThreadReadState:     NewThreadReadStateClient(cfg),
 		User:                NewUserClient(cfg),
 	}, nil
 }
@@ -184,6 +189,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Message:             NewMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
+		ThreadReadState:     NewThreadReadStateClient(cfg),
 		User:                NewUserClient(cfg),
 	}, nil
 }
@@ -215,7 +221,7 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Session, c.Task, c.User,
+		c.Session, c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -226,7 +232,7 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Session, c.Task, c.User,
+		c.Session, c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -247,6 +253,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Session.mutate(ctx, m)
 	case *TaskMutation:
 		return c.Task.mutate(ctx, m)
+	case *ThreadReadStateMutation:
+		return c.ThreadReadState.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
@@ -1052,6 +1060,139 @@ func (c *TaskClient) mutate(ctx context.Context, m *TaskMutation) (Value, error)
 	}
 }
 
+// ThreadReadStateClient is a client for the ThreadReadState schema.
+type ThreadReadStateClient struct {
+	config
+}
+
+// NewThreadReadStateClient returns a client for the ThreadReadState from the given config.
+func NewThreadReadStateClient(c config) *ThreadReadStateClient {
+	return &ThreadReadStateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `threadreadstate.Hooks(f(g(h())))`.
+func (c *ThreadReadStateClient) Use(hooks ...Hook) {
+	c.hooks.ThreadReadState = append(c.hooks.ThreadReadState, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `threadreadstate.Intercept(f(g(h())))`.
+func (c *ThreadReadStateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ThreadReadState = append(c.inters.ThreadReadState, interceptors...)
+}
+
+// Create returns a builder for creating a ThreadReadState entity.
+func (c *ThreadReadStateClient) Create() *ThreadReadStateCreate {
+	mutation := newThreadReadStateMutation(c.config, OpCreate)
+	return &ThreadReadStateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ThreadReadState entities.
+func (c *ThreadReadStateClient) CreateBulk(builders ...*ThreadReadStateCreate) *ThreadReadStateCreateBulk {
+	return &ThreadReadStateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ThreadReadStateClient) MapCreateBulk(slice any, setFunc func(*ThreadReadStateCreate, int)) *ThreadReadStateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ThreadReadStateCreateBulk{err: fmt.Errorf("calling to ThreadReadStateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ThreadReadStateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ThreadReadStateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ThreadReadState.
+func (c *ThreadReadStateClient) Update() *ThreadReadStateUpdate {
+	mutation := newThreadReadStateMutation(c.config, OpUpdate)
+	return &ThreadReadStateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ThreadReadStateClient) UpdateOne(_m *ThreadReadState) *ThreadReadStateUpdateOne {
+	mutation := newThreadReadStateMutation(c.config, OpUpdateOne, withThreadReadState(_m))
+	return &ThreadReadStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ThreadReadStateClient) UpdateOneID(id string) *ThreadReadStateUpdateOne {
+	mutation := newThreadReadStateMutation(c.config, OpUpdateOne, withThreadReadStateID(id))
+	return &ThreadReadStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ThreadReadState.
+func (c *ThreadReadStateClient) Delete() *ThreadReadStateDelete {
+	mutation := newThreadReadStateMutation(c.config, OpDelete)
+	return &ThreadReadStateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ThreadReadStateClient) DeleteOne(_m *ThreadReadState) *ThreadReadStateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ThreadReadStateClient) DeleteOneID(id string) *ThreadReadStateDeleteOne {
+	builder := c.Delete().Where(threadreadstate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ThreadReadStateDeleteOne{builder}
+}
+
+// Query returns a query builder for ThreadReadState.
+func (c *ThreadReadStateClient) Query() *ThreadReadStateQuery {
+	return &ThreadReadStateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeThreadReadState},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ThreadReadState entity by its id.
+func (c *ThreadReadStateClient) Get(ctx context.Context, id string) (*ThreadReadState, error) {
+	return c.Query().Where(threadreadstate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ThreadReadStateClient) GetX(ctx context.Context, id string) *ThreadReadState {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ThreadReadStateClient) Hooks() []Hook {
+	return c.hooks.ThreadReadState
+}
+
+// Interceptors returns the client interceptors.
+func (c *ThreadReadStateClient) Interceptors() []Interceptor {
+	return c.inters.ThreadReadState
+}
+
+func (c *ThreadReadStateClient) mutate(ctx context.Context, m *ThreadReadStateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ThreadReadStateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ThreadReadStateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ThreadReadStateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ThreadReadStateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ThreadReadState mutation op: %q", m.Op())
+	}
+}
+
 // UserClient is a client for the User schema.
 type UserClient struct {
 	config
@@ -1189,10 +1330,10 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Session,
-		Task, User []ent.Hook
+		Task, ThreadReadState, User []ent.Hook
 	}
 	inters struct {
 		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Session,
-		Task, User []ent.Interceptor
+		Task, ThreadReadState, User []ent.Interceptor
 	}
 )

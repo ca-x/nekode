@@ -155,6 +155,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/attachments/{id}/content", s.requireAuth(s.handleDownloadAttachment))
 	s.mux.HandleFunc("GET /api/messages", s.requireAuth(s.handleListMessages))
 	s.mux.HandleFunc("POST /api/messages", s.requireAuth(s.handleCreateMessage))
+	s.mux.HandleFunc("GET /api/inbox/threads", s.requireAuth(s.handleListThreadInbox))
+	s.mux.HandleFunc("POST /api/inbox/threads/{threadID}/read", s.requireAuth(s.handleMarkThreadRead))
+	s.mux.HandleFunc("POST /api/inbox/threads/read-all", s.requireAuth(s.handleMarkThreadInboxRead))
 	s.mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListTasks))
 	s.mux.HandleFunc("POST /api/tasks", s.requireAuth(s.handleCreateTask))
 	s.mux.HandleFunc("GET /api/tasks/{id}/comments", s.requireAuth(s.handleListTaskComments))
@@ -545,7 +548,8 @@ func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "target is required")
 		return
 	}
-	messages, err := s.store.ListMessages(r.Context(), target, intQuery(r, "limit", 50))
+	messages, err := s.store.ListMessages(r.Context(), target, strings.TrimSpace(r.URL.Query().Get("threadId")),
+		intQuery(r, "limit", 50))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list messages failed")
 		return
@@ -605,6 +609,52 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, message)
+}
+
+func (s *Server) handleListThreadInbox(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context())
+	items, err := s.store.ListThreadInbox(r.Context(), principal.User.ID,
+		strings.TrimSpace(r.URL.Query().Get("targetPrefix")), intQuery(r, "limit", 100))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list thread inbox failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (s *Server) handleMarkThreadRead(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context())
+	var req threadReadRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	target := strings.TrimSpace(req.Target)
+	threadID := strings.TrimSpace(r.PathValue("threadID"))
+	if target == "" || threadID == "" {
+		writeError(w, http.StatusBadRequest, "target and threadId are required")
+		return
+	}
+	if err := s.store.MarkThreadRead(r.Context(), principal.User.ID, target, threadID); errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "thread not found")
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "mark thread read failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleMarkThreadInboxRead(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context())
+	var req threadInboxReadRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if err := s.store.MarkThreadInboxRead(r.Context(), principal.User.ID, strings.TrimSpace(req.TargetPrefix)); err != nil {
+		writeError(w, http.StatusInternalServerError, "mark thread inbox read failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
@@ -1053,6 +1103,14 @@ type messageRequest struct {
 	ExternalMessageID string   `json:"externalMessageId"`
 	MetadataJSON      string   `json:"metadataJson"`
 	RequestID         string   `json:"requestId"`
+}
+
+type threadReadRequest struct {
+	Target string `json:"target"`
+}
+
+type threadInboxReadRequest struct {
+	TargetPrefix string `json:"targetPrefix"`
 }
 
 type taskRequest struct {

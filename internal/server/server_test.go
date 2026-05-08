@@ -414,6 +414,99 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 }
 
+func TestThreadInboxReadWorkflow(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+	token := bootstrapToken(t, s)
+
+	parentResp := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
+		"target":  "#general",
+		"content": "Thread root",
+	})
+	if parentResp.Code != http.StatusCreated {
+		t.Fatalf("create parent message status = %d body=%s", parentResp.Code, parentResp.Body.String())
+	}
+	var parent storage.Message
+	if err := json.Unmarshal(parentResp.Body.Bytes(), &parent); err != nil {
+		t.Fatalf("decode parent message: %v", err)
+	}
+	replyResp := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
+		"target":   "#general",
+		"threadId": parent.ID,
+		"content":  "First thread reply",
+	})
+	if replyResp.Code != http.StatusCreated {
+		t.Fatalf("create reply status = %d body=%s", replyResp.Code, replyResp.Body.String())
+	}
+
+	channelMessages := doGET(t, s, "/api/messages?target=%23general", token)
+	if channelMessages.Code != http.StatusOK {
+		t.Fatalf("list parent channel messages status = %d body=%s", channelMessages.Code, channelMessages.Body.String())
+	}
+	assertJSONItems(t, channelMessages.Body.Bytes(), 1)
+	threadMessages := doGET(t, s, "/api/messages?target=%23general&threadId="+parent.ID, token)
+	if threadMessages.Code != http.StatusOK {
+		t.Fatalf("list thread messages status = %d body=%s", threadMessages.Code, threadMessages.Body.String())
+	}
+	assertJSONItems(t, threadMessages.Body.Bytes(), 1)
+
+	inbox := readThreadInbox(t, s, token)
+	if len(inbox) != 1 {
+		t.Fatalf("inbox items = %+v, want one thread", inbox)
+	}
+	if inbox[0].ThreadID != parent.ID || inbox[0].Topic != "Thread root" || inbox[0].UnreadCount != 1 {
+		t.Fatalf("inbox item = %+v, want parent topic and one unread reply", inbox[0])
+	}
+
+	markRead := doJSON(t, s, http.MethodPost, "/api/inbox/threads/"+parent.ID+"/read", token, map[string]any{
+		"target": "#general",
+	})
+	if markRead.Code != http.StatusOK {
+		t.Fatalf("mark thread read status = %d body=%s", markRead.Code, markRead.Body.String())
+	}
+	inbox = readThreadInbox(t, s, token)
+	if inbox[0].UnreadCount != 0 {
+		t.Fatalf("unread after mark read = %d, want 0", inbox[0].UnreadCount)
+	}
+
+	time.Sleep(time.Second)
+	secondReply := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
+		"target":   "#general",
+		"threadId": parent.ID,
+		"content":  "Second thread reply",
+	})
+	if secondReply.Code != http.StatusCreated {
+		t.Fatalf("create second reply status = %d body=%s", secondReply.Code, secondReply.Body.String())
+	}
+	inbox = readThreadInbox(t, s, token)
+	if inbox[0].UnreadCount != 1 || inbox[0].LatestMessage.Content != "Second thread reply" {
+		t.Fatalf("inbox after second reply = %+v, want one unread latest reply", inbox[0])
+	}
+
+	markAll := doJSON(t, s, http.MethodPost, "/api/inbox/threads/read-all", token, map[string]any{})
+	if markAll.Code != http.StatusOK {
+		t.Fatalf("mark all read status = %d body=%s", markAll.Code, markAll.Body.String())
+	}
+	inbox = readThreadInbox(t, s, token)
+	if inbox[0].UnreadCount != 0 {
+		t.Fatalf("unread after mark all = %d, want 0", inbox[0].UnreadCount)
+	}
+}
+
+func readThreadInbox(t *testing.T, s *Server, token string) []storage.ThreadInboxItem {
+	t.Helper()
+	resp := doGET(t, s, "/api/inbox/threads", token)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("thread inbox status = %d body=%s", resp.Code, resp.Body.String())
+	}
+	var body struct {
+		Items []storage.ThreadInboxItem `json:"items"`
+	}
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode thread inbox: %v", err)
+	}
+	return body.Items
+}
+
 func findHTTPMutationEvent(events []*daemonv1.CollaborationEvent, kind daemonv1.CollaborationEventKind, operation daemonv1.EventOperation) *daemonv1.CollaborationEvent {
 	for _, event := range events {
 		if event.GetKind() == kind && event.GetOperation() == operation {

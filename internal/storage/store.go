@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/user"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib-x/entsqlite"
@@ -328,12 +330,17 @@ func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Messag
 	return messageFromEnt(row), nil
 }
 
-func (s *Store) ListMessages(ctx context.Context, target string, limit int) ([]Message, error) {
+func (s *Store) ListMessages(ctx context.Context, target, threadID string, limit int) ([]Message, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	rows, err := s.client.Message.Query().
-		Where(message.TargetEQ(target)).
+	query := s.client.Message.Query().Where(message.TargetEQ(target))
+	if threadID != "" {
+		query.Where(message.ThreadIDEQ(threadID))
+	} else {
+		query.Where(message.ThreadIDEQ(""))
+	}
+	rows, err := query.
 		Order(message.ByCreatedUnix(sql.OrderDesc()), message.ByID(sql.OrderDesc())).
 		Limit(limit).
 		All(ctx)
@@ -345,6 +352,138 @@ func (s *Store) ListMessages(ctx context.Context, target string, limit int) ([]M
 		messages = append(messages, messageFromEnt(row))
 	}
 	return messages, nil
+}
+
+func (s *Store) ListThreadInbox(ctx context.Context, userID, targetPrefix string, limit int) ([]ThreadInboxItem, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	scanLimit := limit * 100
+	if scanLimit < 500 {
+		scanLimit = 500
+	}
+	if scanLimit > 5000 {
+		scanLimit = 5000
+	}
+	query := s.client.Message.Query().Where(message.ThreadIDNEQ(""))
+	if strings.TrimSpace(targetPrefix) != "" {
+		query.Where(message.TargetHasPrefix(strings.TrimSpace(targetPrefix)))
+	}
+	rows, err := query.
+		Order(message.ByCreatedUnix(sql.OrderDesc()), message.ByID(sql.OrderDesc())).
+		Limit(scanLimit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	grouped := make(map[string]*ThreadInboxItem)
+	for _, row := range rows {
+		msg := messageFromEnt(row)
+		key := msg.Target + "\x00" + msg.ThreadID
+		item := grouped[key]
+		if item == nil {
+			item = &ThreadInboxItem{
+				Target:        msg.Target,
+				ThreadID:      msg.ThreadID,
+				LatestMessage: msg,
+				UpdatedUnix:   msg.CreatedUnix,
+			}
+			grouped[key] = item
+		}
+		item.MessageCount++
+		item.FirstMessage = msg
+	}
+
+	items := make([]ThreadInboxItem, 0, len(grouped))
+	for _, item := range grouped {
+		if parent, err := s.getMessage(ctx, item.ThreadID); err == nil && parent.Target == item.Target {
+			item.FirstMessage = parent
+		}
+		item.Topic = previewText(item.FirstMessage.Content, 96)
+		readState, err := s.getThreadReadState(ctx, userID, item.Target, item.ThreadID)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return nil, err
+		}
+		if err == nil {
+			item.LastReadUnix = readState.LastReadUnix
+			item.LastReadMessageID = readState.LastReadMessageID
+		}
+		unreadCount, err := s.countUnreadThreadMessages(ctx, item.Target, item.ThreadID, item.LastReadUnix, item.LastReadMessageID)
+		if err != nil {
+			return nil, err
+		}
+		item.UnreadCount = unreadCount
+		items = append(items, *item)
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].UpdatedUnix == items[j].UpdatedUnix {
+			return items[i].ThreadID > items[j].ThreadID
+		}
+		return items[i].UpdatedUnix > items[j].UpdatedUnix
+	})
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items, nil
+}
+
+func (s *Store) MarkThreadRead(ctx context.Context, userID, target, threadID string) error {
+	latest, err := s.latestThreadMessage(ctx, target, threadID)
+	if err != nil {
+		return err
+	}
+	now := unixNow()
+	affected, err := s.client.ThreadReadState.Update().
+		Where(
+			threadreadstate.UserIDEQ(userID),
+			threadreadstate.TargetEQ(target),
+			threadreadstate.ThreadIDEQ(threadID),
+		).
+		SetLastReadMessageID(latest.ID).
+		SetLastReadUnix(latest.CreatedUnix).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if err != nil {
+		return err
+	}
+	if affected > 0 {
+		return nil
+	}
+	_, err = s.client.ThreadReadState.Create().
+		SetUserID(userID).
+		SetTarget(target).
+		SetThreadID(threadID).
+		SetLastReadMessageID(latest.ID).
+		SetLastReadUnix(latest.CreatedUnix).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if ent.IsConstraintError(err) {
+		_, err = s.client.ThreadReadState.Update().
+			Where(
+				threadreadstate.UserIDEQ(userID),
+				threadreadstate.TargetEQ(target),
+				threadreadstate.ThreadIDEQ(threadID),
+			).
+			SetLastReadMessageID(latest.ID).
+			SetLastReadUnix(latest.CreatedUnix).
+			SetUpdatedUnix(now).
+			Save(ctx)
+	}
+	return err
+}
+
+func (s *Store) MarkThreadInboxRead(ctx context.Context, userID, targetPrefix string) error {
+	items, err := s.ListThreadInbox(ctx, userID, targetPrefix, 200)
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		if err := s.MarkThreadRead(ctx, userID, item.Target, item.ThreadID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Store) ListTaskComments(ctx context.Context, taskID string, limit int) ([]Message, error) {
@@ -364,6 +503,101 @@ func (s *Store) ListTaskComments(ctx context.Context, taskID string, limit int) 
 		messages = append(messages, messageFromEnt(row))
 	}
 	return messages, nil
+}
+
+type threadReadSnapshot struct {
+	LastReadMessageID string
+	LastReadUnix      int64
+}
+
+func (s *Store) getThreadReadState(ctx context.Context, userID, target, threadID string) (threadReadSnapshot, error) {
+	row, err := s.client.ThreadReadState.Query().
+		Where(
+			threadreadstate.UserIDEQ(userID),
+			threadreadstate.TargetEQ(target),
+			threadreadstate.ThreadIDEQ(threadID),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return threadReadSnapshot{}, ErrNotFound
+	}
+	if err != nil {
+		return threadReadSnapshot{}, err
+	}
+	return threadReadSnapshot{LastReadMessageID: row.LastReadMessageID, LastReadUnix: row.LastReadUnix}, nil
+}
+
+func (s *Store) countUnreadThreadMessages(ctx context.Context, target, threadID string, lastReadUnix int64, lastReadMessageID string) (int, error) {
+	if lastReadMessageID == "" {
+		query := s.client.Message.Query().
+			Where(message.TargetEQ(target), message.ThreadIDEQ(threadID))
+		if lastReadUnix > 0 {
+			query.Where(message.CreatedUnixGT(lastReadUnix))
+		}
+		return query.Count(ctx)
+	}
+	rows, err := s.client.Message.Query().
+		Where(message.TargetEQ(target), message.ThreadIDEQ(threadID)).
+		Order(message.ByCreatedUnix(sql.OrderDesc()), message.ByID(sql.OrderDesc())).
+		Limit(5000).
+		All(ctx)
+	if err != nil {
+		return 0, err
+	}
+	unread := 0
+	for _, row := range rows {
+		if row.ID == lastReadMessageID {
+			return unread, nil
+		}
+		if lastReadUnix > 0 && row.CreatedUnix < lastReadUnix {
+			return unread, nil
+		}
+		unread++
+	}
+	if lastReadUnix > 0 {
+		return unread, nil
+	}
+	return len(rows), nil
+}
+
+func (s *Store) latestThreadMessage(ctx context.Context, target, threadID string) (Message, error) {
+	row, err := s.client.Message.Query().
+		Where(message.TargetEQ(target), message.ThreadIDEQ(threadID)).
+		Order(message.ByCreatedUnix(sql.OrderDesc()), message.ByID(sql.OrderDesc())).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		parent, parentErr := s.getMessage(ctx, threadID)
+		if parentErr != nil {
+			return Message{}, parentErr
+		}
+		if parent.Target != target {
+			return Message{}, ErrNotFound
+		}
+		return parent, nil
+	}
+	if err != nil {
+		return Message{}, err
+	}
+	return messageFromEnt(row), nil
+}
+
+func (s *Store) getMessage(ctx context.Context, id string) (Message, error) {
+	row, err := s.client.Message.Query().Where(message.IDEQ(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return Message{}, ErrNotFound
+	}
+	if err != nil {
+		return Message{}, err
+	}
+	return messageFromEnt(row), nil
+}
+
+func previewText(value string, limit int) string {
+	trimmed := strings.TrimSpace(value)
+	if limit <= 0 || len([]rune(trimmed)) <= limit {
+		return trimmed
+	}
+	return string([]rune(trimmed)[:limit]) + "..."
 }
 
 func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {

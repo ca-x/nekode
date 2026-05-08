@@ -24,5 +24,8 @@ type Session func(*sql.Selector)
 // Task is the predicate function for task builders.
 type Task func(*sql.Selector)
 
+// ThreadReadState is the predicate function for threadreadstate builders.
+type ThreadReadState func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

@@ -81,6 +81,18 @@ func (f TaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskMutation", m)
 }
 
+// The ThreadReadStateFunc type is an adapter to allow the use of ordinary
+// function as ThreadReadState mutator.
+type ThreadReadStateFunc func(context.Context, *ent.ThreadReadStateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ThreadReadStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ThreadReadStateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ThreadReadStateMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

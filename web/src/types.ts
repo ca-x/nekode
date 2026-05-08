@@ -71,6 +71,19 @@ export type Message = {
   createdUnix: number;
 };
 
+export type ThreadInboxItem = {
+  target: string;
+  threadId: string;
+  topic: string;
+  messageCount: number;
+  unreadCount: number;
+  lastReadUnix: number;
+  lastReadMessageId?: string;
+  firstMessage: Message;
+  latestMessage: Message;
+  updatedUnix: number;
+};
+
 export type TaskState =
   | "todo"
   | "in_progress"

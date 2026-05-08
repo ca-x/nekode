@@ -15,6 +15,7 @@ import {
   FileText,
   Hash,
   Image,
+  Inbox,
   LayoutGrid,
   List,
   ListFilter,
@@ -55,6 +56,7 @@ import type {
   SetupStatus,
   Task,
   TaskState,
+  ThreadInboxItem,
   User
 } from "./types";
 
@@ -62,7 +64,7 @@ const TOKEN_KEY = "nekode.console.token";
 const EVENT_CURSOR_KEY = "nekode.console.serverEvents.cursorState";
 const DEFAULT_TARGET = "#general";
 
-type ViewKey = "overview" | "messages" | "tasks" | "activity" | "skills" | "endpoints" | "daemon";
+type ViewKey = "overview" | "inbox" | "messages" | "tasks" | "activity" | "skills" | "endpoints" | "daemon";
 type LoadState = "idle" | "loading" | "ready" | "error";
 type RealtimeStatus = "disabled" | "connecting" | "connected" | "error";
 type TaskViewMode = "board" | "list";
@@ -114,6 +116,7 @@ const taskSortOptions: Array<{ value: TaskSortKey; label: string }> = [
 
 const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = [
   { key: "overview", label: "Overview", icon: Activity },
+  { key: "inbox", label: "Inbox", icon: Inbox },
   { key: "messages", label: "Messages", icon: MessageSquare },
   { key: "tasks", label: "Tasks", icon: Columns3 },
   { key: "activity", label: "Activity", icon: Activity },
@@ -429,6 +432,8 @@ function App() {
   const [runtimePresets, setRuntimePresets] = useState<RuntimePreset[]>(fallbackRuntimePresets);
   const [endpoints, setEndpoints] = useState<InteractionEndpoint[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [threadInbox, setThreadInbox] = useState<ThreadInboxItem[]>([]);
+  const [activeThread, setActiveThread] = useState<ThreadInboxItem | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [target, setTarget] = useState(DEFAULT_TARGET);
@@ -446,6 +451,8 @@ function App() {
     }
     setError("");
     try {
+      const messageTarget = activeThread?.target ?? target;
+      const messageThreadID = activeThread?.threadId ?? "";
       const coreData = await Promise.all([
         api.me(),
         api.protocol(),
@@ -454,15 +461,17 @@ function App() {
           return null;
         }),
         api.listInteractionEndpoints(),
-        api.listMessages(target),
+        api.listMessages(messageTarget, 50, messageThreadID),
+        api.listThreadInbox({ limit: 100 }),
         api.listTasks({ target })
       ]);
-      const [me, protocolInfo, daemonBridgeInfo, endpointList, messageList, taskList] = coreData;
+      const [me, protocolInfo, daemonBridgeInfo, endpointList, messageList, inboxList, taskList] = coreData;
       setUser(me);
       setProtocol(protocolInfo);
       setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEndpoints(endpointList.items);
       setMessages(messageList.items);
+      setThreadInbox(inboxList.items);
       setTasks(taskList.items);
       setStatus("ready");
 
@@ -507,7 +516,7 @@ function App() {
       setError(err instanceof Error ? err.message : "Unable to load console data");
       setStatus("error");
     }
-  }, [target, token]);
+  }, [activeThread, target, token]);
 
   useEffect(() => {
     if (token) void loadData();
@@ -581,8 +590,29 @@ function App() {
     setAgentStatuses([]);
     setDaemonRuns([]);
     setDaemonActivity([]);
+    setThreadInbox([]);
+    setActiveThread(null);
     setSelectedTaskId(null);
     setRealtimeStatus("disabled");
+  };
+
+  const openThread = async (item: ThreadInboxItem) => {
+    setTarget(item.target);
+    setActiveThread(item);
+    setView("messages");
+    if (item.unreadCount > 0) {
+      await api.markThreadRead({ target: item.target, threadId: item.threadId });
+    }
+  };
+
+  const markThreadRead = async (item: ThreadInboxItem) => {
+    await api.markThreadRead({ target: item.target, threadId: item.threadId });
+    await loadData();
+  };
+
+  const markThreadInboxRead = async () => {
+    await api.markThreadInboxRead();
+    await loadData();
   };
 
   if (!token) {
@@ -622,6 +652,7 @@ function App() {
               className={target === channel ? "side-link is-active" : "side-link"}
               type="button"
               onClick={() => {
+                setActiveThread(null);
                 setTarget(channel);
                 setView("messages");
               }}
@@ -638,6 +669,7 @@ function App() {
               className="agent-link"
               type="button"
               onClick={() => {
+                setActiveThread(null);
                 setTarget(`dm:@${agent.name.toLowerCase()}`);
                 setView("messages");
               }}
@@ -674,7 +706,10 @@ function App() {
               <input
                 aria-label="Current target"
                 value={target}
-                onChange={(event) => setTarget(event.target.value)}
+                onChange={(event) => {
+                  setActiveThread(null);
+                  setTarget(event.target.value);
+                }}
                 onBlur={() => void loadData()}
               />
               <button className="secondary-button" type="button" onClick={() => void loadData()}>
@@ -704,11 +739,22 @@ function App() {
             events={events}
           />
         ) : null}
+        {view === "inbox" ? (
+          <InboxPanel
+            items={threadInbox}
+            onOpenThread={openThread}
+            onMarkRead={markThreadRead}
+            onMarkAllRead={markThreadInboxRead}
+          />
+        ) : null}
         {view === "messages" ? (
           <MessagesPanel
-            target={target}
+            target={activeThread?.target ?? target}
+            thread={activeThread}
             messages={messages}
             endpoints={endpoints}
+            onClearThread={() => setActiveThread(null)}
+            onMarkThreadRead={activeThread ? () => markThreadRead(activeThread) : undefined}
             onCreated={loadData}
           />
         ) : null}
@@ -1073,15 +1119,116 @@ function MetricCard({
   );
 }
 
+function InboxPanel({
+  items,
+  onOpenThread,
+  onMarkRead,
+  onMarkAllRead
+}: {
+  items: ThreadInboxItem[];
+  onOpenThread: (item: ThreadInboxItem) => Promise<void>;
+  onMarkRead: (item: ThreadInboxItem) => Promise<void>;
+  onMarkAllRead: () => Promise<void>;
+}) {
+  const [busyThread, setBusyThread] = useState("");
+  const unreadCount = items.reduce((sum, item) => sum + item.unreadCount, 0);
+  const nextUnread = items.find((item) => item.unreadCount > 0) ?? items[0] ?? null;
+
+  const runItemAction = async (item: ThreadInboxItem, action: (item: ThreadInboxItem) => Promise<void>) => {
+    setBusyThread(item.threadId);
+    try {
+      await action(item);
+    } finally {
+      setBusyThread("");
+    }
+  };
+
+  return (
+    <section className="panel inbox-panel">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Threads</p>
+          <h2>Inbox</h2>
+        </div>
+        <div className="inbox-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={!nextUnread}
+            onClick={() => nextUnread && runItemAction(nextUnread, onOpenThread)}
+          >
+            <Inbox size={16} aria-hidden="true" />
+            Next unread
+          </button>
+          <button className="secondary-button" type="button" disabled={!unreadCount} onClick={onMarkAllRead}>
+            <CheckCircle2 size={16} aria-hidden="true" />
+            Mark all read
+          </button>
+        </div>
+      </div>
+      <div className="inbox-summary" role="status">
+        <strong>{items.length}</strong> threads · <strong>{unreadCount}</strong> unread replies
+      </div>
+      <div className="inbox-list">
+        {items.length ? (
+          items.map((item) => (
+            <article
+              key={`${item.target}:${item.threadId}`}
+              className={item.unreadCount > 0 ? "inbox-row is-unread" : "inbox-row"}
+              onDoubleClick={() => runItemAction(item, onOpenThread)}
+            >
+              <button className="inbox-row-main" type="button" onClick={() => runItemAction(item, onOpenThread)}>
+                <div className="inbox-row-header">
+                  <strong>{item.topic || "Untitled thread"}</strong>
+                  <span>{unixTime(item.updatedUnix)}</span>
+                </div>
+                <p>{item.latestMessage.content}</p>
+                <div className="inbox-row-meta">
+                  <span>{item.target}</span>
+                  <span>{item.messageCount} replies</span>
+                  <span>{compactId(item.threadId)}</span>
+                </div>
+              </button>
+              <div className="inbox-row-actions">
+                {item.unreadCount > 0 ? <span className="unread-badge">{item.unreadCount}</span> : null}
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Mark thread read"
+                  disabled={busyThread === item.threadId || item.unreadCount === 0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void runItemAction(item, onMarkRead);
+                  }}
+                >
+                  <CheckCircle2 size={16} aria-hidden="true" />
+                </button>
+              </div>
+            </article>
+          ))
+        ) : (
+          <EmptyState icon={Inbox} title="No active threads" />
+        )}
+      </div>
+    </section>
+  );
+}
+
 function MessagesPanel({
   target,
+  thread,
   messages,
   endpoints,
+  onClearThread,
+  onMarkThreadRead,
   onCreated
 }: {
   target: string;
+  thread: ThreadInboxItem | null;
   messages: Message[];
   endpoints: InteractionEndpoint[];
+  onClearThread: () => void;
+  onMarkThreadRead?: () => Promise<void>;
   onCreated: () => Promise<void>;
 }) {
   const [content, setContent] = useState("");
@@ -1107,6 +1254,7 @@ function MessagesPanel({
     try {
       await api.createMessage({
         target,
+        threadId: thread?.threadId,
         content: content.trim() || "(attachment)",
         attachmentIds: draftAttachments.map((attachment) => attachment.id),
         sourceEndpointId,
@@ -1201,9 +1349,22 @@ function MessagesPanel({
       <div className="panel message-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">{target}</p>
-            <h2>Messages</h2>
+            <p className="eyebrow">{thread ? `${target} thread` : target}</p>
+            <h2>{thread ? thread.topic || "Thread" : "Messages"}</h2>
           </div>
+          {thread ? (
+            <div className="thread-actions">
+              <button className="secondary-button" type="button" onClick={onClearThread}>
+                Back to channel
+              </button>
+              {onMarkThreadRead ? (
+                <button className="secondary-button" type="button" onClick={() => void onMarkThreadRead()}>
+                  <CheckCircle2 size={16} aria-hidden="true" />
+                  Mark read
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <div className="message-list" role="log" aria-label="Messages">
           {feed.length ? (

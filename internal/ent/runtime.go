@@ -10,6 +10,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/schema"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/user"
 )
 
@@ -273,6 +274,32 @@ func init() {
 	taskDescID := taskFields[0].Descriptor()
 	// task.DefaultID holds the default value on creation for the id field.
 	task.DefaultID = taskDescID.Default.(func() string)
+	threadreadstateFields := schema.ThreadReadState{}.Fields()
+	_ = threadreadstateFields
+	// threadreadstateDescUserID is the schema descriptor for user_id field.
+	threadreadstateDescUserID := threadreadstateFields[1].Descriptor()
+	// threadreadstate.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	threadreadstate.UserIDValidator = threadreadstateDescUserID.Validators[0].(func(string) error)
+	// threadreadstateDescTarget is the schema descriptor for target field.
+	threadreadstateDescTarget := threadreadstateFields[2].Descriptor()
+	// threadreadstate.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	threadreadstate.TargetValidator = threadreadstateDescTarget.Validators[0].(func(string) error)
+	// threadreadstateDescThreadID is the schema descriptor for thread_id field.
+	threadreadstateDescThreadID := threadreadstateFields[3].Descriptor()
+	// threadreadstate.ThreadIDValidator is a validator for the "thread_id" field. It is called by the builders before save.
+	threadreadstate.ThreadIDValidator = threadreadstateDescThreadID.Validators[0].(func(string) error)
+	// threadreadstateDescLastReadMessageID is the schema descriptor for last_read_message_id field.
+	threadreadstateDescLastReadMessageID := threadreadstateFields[4].Descriptor()
+	// threadreadstate.DefaultLastReadMessageID holds the default value on creation for the last_read_message_id field.
+	threadreadstate.DefaultLastReadMessageID = threadreadstateDescLastReadMessageID.Default.(string)
+	// threadreadstateDescLastReadUnix is the schema descriptor for last_read_unix field.
+	threadreadstateDescLastReadUnix := threadreadstateFields[5].Descriptor()
+	// threadreadstate.DefaultLastReadUnix holds the default value on creation for the last_read_unix field.
+	threadreadstate.DefaultLastReadUnix = threadreadstateDescLastReadUnix.Default.(int64)
+	// threadreadstateDescID is the schema descriptor for id field.
+	threadreadstateDescID := threadreadstateFields[0].Descriptor()
+	// threadreadstate.DefaultID holds the default value on creation for the id field.
+	threadreadstate.DefaultID = threadreadstateDescID.Default.(func() string)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUsername is the schema descriptor for username field.

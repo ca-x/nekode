@@ -24,6 +24,8 @@ type Tx struct {
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
+	// ThreadReadState is the client for interacting with the ThreadReadState builders.
+	ThreadReadState *ThreadReadStateClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -163,6 +165,7 @@ func (tx *Tx) init() {
 	tx.Message = NewMessageClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
+	tx.ThreadReadState = NewThreadReadStateClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 

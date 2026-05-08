@@ -73,6 +73,19 @@ type Attachment struct {
 	CreatedUnix     int64  `json:"createdUnix"`
 }
 
+type ThreadInboxItem struct {
+	Target            string  `json:"target"`
+	ThreadID          string  `json:"threadId"`
+	Topic             string  `json:"topic"`
+	MessageCount      int     `json:"messageCount"`
+	UnreadCount       int     `json:"unreadCount"`
+	LastReadUnix      int64   `json:"lastReadUnix"`
+	LastReadMessageID string  `json:"lastReadMessageId,omitempty"`
+	FirstMessage      Message `json:"firstMessage"`
+	LatestMessage     Message `json:"latestMessage"`
+	UpdatedUnix       int64   `json:"updatedUnix"`
+}
+
 type Task struct {
 	ID              string `json:"id"`
 	Summary         string `json:"summary"`

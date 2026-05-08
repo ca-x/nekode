@@ -276,7 +276,7 @@ func (s *Server) ListChannels(ctx context.Context, req *daemonv1.ListChannelsReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list task channels: %v", err)
 	}
-	messages, err := s.store.ListMessages(ctx, "#general", int(req.GetLimit()))
+	messages, err := s.store.ListMessages(ctx, "#general", "", int(req.GetLimit()))
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Errorf(codes.Internal, "list messages: %v", err)
 	}
@@ -318,6 +318,7 @@ func (s *Server) SendMessage(ctx context.Context, req *daemonv1.SendMessageReque
 	sender := req.GetSender()
 	messageModel := storage.Message{
 		Target:            req.GetTarget(),
+		ThreadID:          req.GetReplyToMessageId(),
 		Role:              role,
 		Content:           req.GetContent(),
 		SenderUserID:      sender.GetUserId(),
@@ -351,7 +352,7 @@ func (s *Server) ReadMessages(ctx context.Context, req *daemonv1.ReadMessagesReq
 	if req.GetTarget() == "" {
 		return nil, status.Error(codes.InvalidArgument, "target is required")
 	}
-	messages, err := s.store.ListMessages(ctx, req.GetTarget(), int(req.GetLimit()))
+	messages, err := s.store.ListMessages(ctx, req.GetTarget(), "", int(req.GetLimit()))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list messages: %v", err)
 	}

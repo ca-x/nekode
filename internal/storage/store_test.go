@@ -73,7 +73,7 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateMessage() error = %v", err)
 	}
-	messages, err := store.ListMessages(ctx, "#general", 10)
+	messages, err := store.ListMessages(ctx, "#general", "", 10)
 	if err != nil {
 		t.Fatalf("ListMessages() error = %v", err)
 	}

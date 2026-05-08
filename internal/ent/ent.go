@@ -18,6 +18,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/user"
 )
 
@@ -85,6 +86,7 @@ func checkColumn(t, c string) error {
 			message.Table:             message.ValidColumn,
 			session.Table:             session.ValidColumn,
 			task.Table:                task.ValidColumn,
+			threadreadstate.Table:     threadreadstate.ValidColumn,
 			user.Table:                user.ValidColumn,
 		})
 	})
