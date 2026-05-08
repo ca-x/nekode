@@ -413,6 +413,130 @@ func TestMessageTaskAndActivityFlow(t *testing.T) {
 	}
 }
 
+func TestOutboundDeliveryLifecycleForIMReply(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_outbound")
+	srv := New(store, "srv_test")
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "feishu",
+		DisplayName:     "Feishu Ops",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	inbound, err := store.CreateMessage(ctx, storage.Message{
+		Target:            "#ops",
+		Role:              "user",
+		Content:           "incident update",
+		SenderDisplayName: "Feishu User",
+		SenderKind:        "endpoint",
+		SourceEndpointID:  endpoint.ID,
+		ExternalMessageID: "feishu-msg-1",
+		MetadataJSON:      `{"im":{"provider":"feishu","conversation":{"id":"chat-1","display_name":"Ops"},"sender":{"id":"user-1","display_name":"Feishu User"}}}`,
+		RequestID:         "iep-feishu:feishu-msg-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(inbound) error = %v", err)
+	}
+
+	reply, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           "#ops",
+		Content:          "acknowledged",
+		ReplyToMessageId: inbound.ID,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		RequestId:        "reply-1",
+		IdempotencyKey:   "reply-1",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage(reply) error = %v", err)
+	}
+	if !reply.GetAccepted() || reply.GetMessage().GetSourceEndpointId() != "" {
+		t.Fatalf("SendMessage(reply) = %+v, want accepted Web-visible agent reply without copied source endpoint", reply)
+	}
+
+	listed, err := srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: reply.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries() error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 1 {
+		t.Fatalf("ListOutboundDeliveries() returned %d deliveries, want 1", len(listed.GetDeliveries()))
+	}
+	delivery := listed.GetDeliveries()[0]
+	if delivery.GetEndpointId() != endpoint.ID ||
+		delivery.GetEndpointKind() != "im" ||
+		delivery.GetExternalMessageId() != "feishu-msg-1" ||
+		delivery.GetStatus() != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING {
+		t.Fatalf("delivery = %+v, want pending source-only IM delivery", delivery)
+	}
+
+	retryReq := &daemonv1.RetryOutboundDeliveryRequest{
+		DeliveryId:     delivery.GetDeliveryId(),
+		RequestId:      "retry-1",
+		IdempotencyKey: "retry-1",
+	}
+	retry, err := srv.RetryOutboundDelivery(ctx, retryReq)
+	if err != nil {
+		t.Fatalf("RetryOutboundDelivery() error = %v", err)
+	}
+	if retry.GetDelivery().GetStatus() != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_RETRYING ||
+		retry.GetDelivery().GetAttemptCount() != 1 ||
+		retry.GetDelivery().GetLastError() != "" {
+		t.Fatalf("RetryOutboundDelivery() = %+v, want retrying attempt 1 without last error", retry.GetDelivery())
+	}
+	replayed, err := srv.RetryOutboundDelivery(ctx, retryReq)
+	if err != nil {
+		t.Fatalf("RetryOutboundDelivery(replay) error = %v", err)
+	}
+	if replayed.GetDelivery().GetAttemptCount() != retry.GetDelivery().GetAttemptCount() {
+		t.Fatalf("retry replay attempt_count = %d, want %d", replayed.GetDelivery().GetAttemptCount(), retry.GetDelivery().GetAttemptCount())
+	}
+	delivered, err := srv.RecordOutboundDeliveryStatus(ctx, delivery.GetDeliveryId(), daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED, "", 12345, 0)
+	if err != nil {
+		t.Fatalf("RecordOutboundDeliveryStatus(delivered) error = %v", err)
+	}
+	if delivered.Status != "delivered" || delivered.DeliveredTimeUnix == 0 || delivered.NextRetryTimeUnix != 0 {
+		t.Fatalf("delivered status = %+v, want delivered timestamp without retry time", delivered)
+	}
+
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	seenOutboundEvent := false
+	seenDeliveredEvent := false
+	for _, event := range srv.serverEvents {
+		if event.GetKind() == daemonv1.ServerEventKind_SERVER_EVENT_KIND_OUTBOUND_DELIVERY &&
+			event.GetOutboundDelivery().GetDeliveryId() == delivery.GetDeliveryId() &&
+			event.GetTarget() == "#ops" {
+			seenOutboundEvent = true
+			if event.GetOperation() == daemonv1.EventOperation_EVENT_OPERATION_STATE_CHANGED &&
+				event.GetOutboundDelivery().GetStatus() == daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED {
+				seenDeliveredEvent = true
+			}
+		}
+	}
+	if !seenOutboundEvent {
+		t.Fatalf("serverEvents = %+v, want outbound delivery event for %s", srv.serverEvents, delivery.GetDeliveryId())
+	}
+	if !seenDeliveredEvent {
+		t.Fatalf("serverEvents = %+v, want delivered outbound status event for %s", srv.serverEvents, delivery.GetDeliveryId())
+	}
+}
+
 func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 	client, cleanup := newTestClient(t)
 	defer cleanup()

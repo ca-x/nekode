@@ -379,10 +379,92 @@ func (s *Server) SendMessage(ctx context.Context, req *daemonv1.SendMessageReque
 	if err := s.RecordMessageMutation(ctx, created, daemonv1.EventOperation_EVENT_OPERATION_APPENDED); err != nil {
 		return nil, status.Errorf(codes.Internal, "append message event: %v", err)
 	}
+	if shouldEnqueueSourceDelivery(req, messageModel.SenderKind) {
+		if _, err := s.EnqueueSourceOutboundDelivery(ctx, created); err != nil {
+			return nil, status.Errorf(codes.Internal, "enqueue outbound delivery: %v", err)
+		}
+	}
 	msg := messageToProto(created)
 	resp := &daemonv1.SendMessageResponse{Accepted: true, Message: msg}
 	remember(ctx, s, "SendMessage", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 	return resp, nil
+}
+
+func (s *Server) ListOutboundDeliveries(ctx context.Context, req *daemonv1.ListOutboundDeliveriesRequest) (*daemonv1.ListOutboundDeliveriesResponse, error) {
+	statuses := make([]string, 0, len(req.GetStatuses()))
+	for _, deliveryStatus := range req.GetStatuses() {
+		if storageStatus := outboundDeliveryStatusToStorage(deliveryStatus); storageStatus != "" {
+			statuses = append(statuses, storageStatus)
+		}
+	}
+	deliveries, err := s.store.ListOutboundDeliveries(ctx, storage.OutboundDeliveryListOptions{
+		Target:     req.GetTarget(),
+		MessageID:  req.GetMessageId(),
+		EndpointID: req.GetEndpointId(),
+		Statuses:   statuses,
+		Limit:      int(req.GetLimit()),
+	})
+	if errors.Is(err, storage.ErrInvalidState) {
+		return nil, status.Error(codes.InvalidArgument, "invalid outbound delivery status")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list outbound deliveries: %v", err)
+	}
+	out := make([]*daemonv1.OutboundDeliveryRecord, 0, len(deliveries))
+	for _, delivery := range deliveries {
+		out = append(out, outboundDeliveryToProto(delivery))
+	}
+	return &daemonv1.ListOutboundDeliveriesResponse{
+		Deliveries: out,
+		NextCursor: cursorFromCount(len(out), req.GetTarget(), s.serverID),
+	}, nil
+}
+
+func (s *Server) RetryOutboundDelivery(ctx context.Context, req *daemonv1.RetryOutboundDeliveryRequest) (*daemonv1.RetryOutboundDeliveryResponse, error) {
+	if resp, ok := replay(ctx, s, "RetryOutboundDelivery", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.RetryOutboundDeliveryResponse {
+		return &daemonv1.RetryOutboundDeliveryResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "RetryOutboundDelivery", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetDeliveryId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "delivery_id is required")
+	}
+	delivery, err := s.store.ScheduleOutboundDeliveryRetry(ctx, req.GetDeliveryId(), unixNow())
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "outbound delivery not found")
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "retry outbound delivery: %v", err)
+	}
+	s.EmitOutboundDeliveryEvent(delivery, daemonv1.EventOperation_EVENT_OPERATION_UPDATED)
+	resp := &daemonv1.RetryOutboundDeliveryResponse{Delivery: outboundDeliveryToProto(delivery)}
+	remember(ctx, s, "RetryOutboundDelivery", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) RecordOutboundDeliveryStatus(ctx context.Context, deliveryID string, statusValue daemonv1.OutboundDeliveryStatus, lastError string, nextRetryUnix, deliveredUnix int64) (storage.OutboundDelivery, error) {
+	storageStatus := outboundDeliveryStatusToStorage(statusValue)
+	if storageStatus == "" {
+		return storage.OutboundDelivery{}, storage.ErrInvalidState
+	}
+	if statusValue == daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED && deliveredUnix == 0 {
+		deliveredUnix = unixNow()
+	}
+	if statusValue != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_RETRYING {
+		nextRetryUnix = 0
+	}
+	if statusValue != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED {
+		deliveredUnix = 0
+	}
+	delivery, err := s.store.UpdateOutboundDeliveryStatus(ctx, deliveryID, storageStatus, strings.TrimSpace(lastError), nextRetryUnix, deliveredUnix)
+	if err != nil {
+		return storage.OutboundDelivery{}, err
+	}
+	s.EmitOutboundDeliveryEvent(delivery, outboundDeliveryOperation(statusValue))
+	return delivery, nil
 }
 
 func (s *Server) ReadMessages(ctx context.Context, req *daemonv1.ReadMessagesRequest) (*daemonv1.ReadMessagesResponse, error) {
@@ -1891,6 +1973,19 @@ func idempotencyCacheKey(method, requestID, idempotencyKey string) string {
 	return method + ":" + key
 }
 
+func shouldEnqueueSourceDelivery(req *daemonv1.SendMessageRequest, senderKind string) bool {
+	switch req.GetOutboundPolicy() {
+	case daemonv1.OutboundPolicy_OUTBOUND_POLICY_NONE:
+		return false
+	case daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		daemonv1.OutboundPolicy_OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS,
+		daemonv1.OutboundPolicy_OUTBOUND_POLICY_SELECTED_ENDPOINTS:
+		return true
+	default:
+		return req.GetEmitOutbound() || senderKind == "agent"
+	}
+}
+
 func (s *Server) RecordMessageMutation(ctx context.Context, msg storage.Message, operation daemonv1.EventOperation) error {
 	if s == nil || s.store == nil {
 		return nil
@@ -1914,6 +2009,99 @@ func (s *Server) RecordMessageMutation(ctx context.Context, msg storage.Message,
 		ProtocolVersion: int(protocolVersion),
 	})
 	return err
+}
+
+func (s *Server) EnqueueSourceOutboundDelivery(ctx context.Context, msg storage.Message) (storage.OutboundDelivery, error) {
+	if s == nil || s.store == nil {
+		return storage.OutboundDelivery{}, nil
+	}
+	source, ok, err := s.sourceMessageForOutbound(ctx, msg)
+	if err != nil || !ok {
+		return storage.OutboundDelivery{}, err
+	}
+	if source.SourceEndpointID == "" || source.ExternalMessageID == "" {
+		return storage.OutboundDelivery{}, nil
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(ctx, source.SourceEndpointID)
+	if errors.Is(err, storage.ErrNotFound) {
+		return storage.OutboundDelivery{}, nil
+	}
+	if err != nil {
+		return storage.OutboundDelivery{}, err
+	}
+	if !endpoint.OutboundEnabled {
+		return storage.OutboundDelivery{}, nil
+	}
+	delivery, err := s.store.CreateOutboundDelivery(ctx, storage.OutboundDelivery{
+		Target:            msg.Target,
+		MessageID:         msg.ID,
+		EndpointID:        endpoint.ID,
+		EndpointKind:      endpoint.Kind,
+		ExternalMessageID: source.ExternalMessageID,
+		Status:            "pending",
+		RequestID:         firstNonEmpty(msg.RequestID, msg.ID+":"+endpoint.ID),
+	})
+	if err != nil {
+		return storage.OutboundDelivery{}, err
+	}
+	s.EmitOutboundDeliveryEvent(delivery, daemonv1.EventOperation_EVENT_OPERATION_CREATED)
+	return delivery, nil
+}
+
+func (s *Server) sourceMessageForOutbound(ctx context.Context, msg storage.Message) (storage.Message, bool, error) {
+	if msg.SourceEndpointID != "" && msg.ExternalMessageID != "" {
+		return msg, true, nil
+	}
+	if msg.ReplyToMessageID == "" {
+		return storage.Message{}, false, nil
+	}
+	parent, err := s.store.GetMessage(ctx, msg.Target, msg.ReplyToMessageID)
+	if errors.Is(err, storage.ErrNotFound) {
+		return storage.Message{}, false, nil
+	}
+	if err != nil {
+		return storage.Message{}, false, err
+	}
+	if parent.SourceEndpointID != "" && parent.ExternalMessageID != "" {
+		return parent, true, nil
+	}
+	if parent.ThreadID == "" || parent.ThreadID == parent.ID {
+		return storage.Message{}, false, nil
+	}
+	root, err := s.store.GetMessage(ctx, parent.Target, parent.ThreadID)
+	if errors.Is(err, storage.ErrNotFound) {
+		return storage.Message{}, false, nil
+	}
+	if err != nil {
+		return storage.Message{}, false, err
+	}
+	if root.SourceEndpointID != "" && root.ExternalMessageID != "" {
+		return root, true, nil
+	}
+	return storage.Message{}, false, nil
+}
+
+func (s *Server) EmitOutboundDeliveryEvent(delivery storage.OutboundDelivery, operation daemonv1.EventOperation) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	event := s.serverEventLocked(&daemonv1.ServerEvent{
+		AggregateId: delivery.MessageID,
+		Target:      delivery.Target,
+		Kind:        daemonv1.ServerEventKind_SERVER_EVENT_KIND_OUTBOUND_DELIVERY,
+		Operation:   operation,
+		Scope: &daemonv1.EventScope{
+			ScopeType: daemonv1.EventScopeType_EVENT_SCOPE_TYPE_TARGET,
+			ScopeId:   delivery.Target,
+			Target:    delivery.Target,
+		},
+		RequestId:       delivery.RequestID,
+		Payload:         &daemonv1.ServerEvent_OutboundDelivery{OutboundDelivery: outboundDeliveryToProto(delivery)},
+		ProtocolVersion: protocolVersion,
+	})
+	s.serverEvents[event.GetEventId()] = event
 }
 
 func (s *Server) RecordTaskMutation(ctx context.Context, task storage.Task, operation daemonv1.EventOperation) error {
@@ -2250,6 +2438,23 @@ func messageToProto(msg storage.Message) *daemonv1.CollaborationMessage {
 	}
 }
 
+func outboundDeliveryToProto(delivery storage.OutboundDelivery) *daemonv1.OutboundDeliveryRecord {
+	return &daemonv1.OutboundDeliveryRecord{
+		DeliveryId:        delivery.ID,
+		Target:            delivery.Target,
+		MessageId:         delivery.MessageID,
+		EndpointId:        delivery.EndpointID,
+		EndpointKind:      delivery.EndpointKind,
+		ExternalMessageId: delivery.ExternalMessageID,
+		Status:            outboundDeliveryStatusFromStorage(delivery.Status),
+		AttemptCount:      delivery.AttemptCount,
+		NextRetryTimeUnix: delivery.NextRetryTimeUnix,
+		DeliveredTimeUnix: delivery.DeliveredTimeUnix,
+		LastError:         delivery.LastError,
+		RequestId:         delivery.RequestID,
+	}
+}
+
 func attachmentToProto(attachment storage.Attachment) *daemonv1.AttachmentRecord {
 	return &daemonv1.AttachmentRecord{
 		AttachmentId:    attachment.ID,
@@ -2287,6 +2492,51 @@ func messageSearchSortToStorage(sort daemonv1.MessageSearchSort) string {
 		return "relevance"
 	default:
 		return ""
+	}
+}
+
+func outboundDeliveryStatusToStorage(statusValue daemonv1.OutboundDeliveryStatus) string {
+	switch statusValue {
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING:
+		return "pending"
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED:
+		return "delivered"
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_FAILED:
+		return "failed"
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_RETRYING:
+		return "retrying"
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_CANCELED:
+		return "canceled"
+	default:
+		return ""
+	}
+}
+
+func outboundDeliveryStatusFromStorage(statusValue string) daemonv1.OutboundDeliveryStatus {
+	switch strings.ToLower(strings.TrimSpace(statusValue)) {
+	case "pending":
+		return daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING
+	case "delivered":
+		return daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED
+	case "failed":
+		return daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_FAILED
+	case "retrying":
+		return daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_RETRYING
+	case "canceled", "cancelled":
+		return daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_CANCELED
+	default:
+		return daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_UNSPECIFIED
+	}
+}
+
+func outboundDeliveryOperation(statusValue daemonv1.OutboundDeliveryStatus) daemonv1.EventOperation {
+	switch statusValue {
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_FAILED:
+		return daemonv1.EventOperation_EVENT_OPERATION_FAILED
+	case daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_CANCELED:
+		return daemonv1.EventOperation_EVENT_OPERATION_CANCELED
+	default:
+		return daemonv1.EventOperation_EVENT_OPERATION_STATE_CHANGED
 	}
 }
 
@@ -2416,6 +2666,9 @@ func serverEventMatches(req *daemonv1.SubscribeServerEventsRequest, event *daemo
 		return contains(req.GetAgentIds(), op.GetAgentId())
 	case *daemonv1.ServerEvent_Message:
 		return contains(req.GetAgentIds(), event.GetAggregateId()) || contains(req.GetTargets(), payload.Message.GetTarget())
+	case *daemonv1.ServerEvent_OutboundDelivery:
+		delivery := payload.OutboundDelivery
+		return contains(req.GetTargets(), delivery.GetTarget())
 	case *daemonv1.ServerEvent_Run:
 		run := payload.Run
 		if run.GetComputerId() != "" && run.GetComputerId() == req.GetComputerId() {

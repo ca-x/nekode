@@ -80,6 +80,44 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	if len(messages) != 1 || messages[0].ID != message.ID {
 		t.Fatalf("messages = %+v, want created message", messages)
 	}
+	delivery, err := store.CreateOutboundDelivery(ctx, OutboundDelivery{
+		Target:            message.Target,
+		MessageID:         message.ID,
+		EndpointID:        endpoint.ID,
+		EndpointKind:      endpoint.Kind,
+		ExternalMessageID: "im-msg-1",
+		Status:            "failed",
+		LastError:         "rate limited",
+		RequestID:         "delivery-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateOutboundDelivery() error = %v", err)
+	}
+	failedDeliveries, err := store.ListOutboundDeliveries(ctx, OutboundDeliveryListOptions{
+		Target:   "#general",
+		Statuses: []string{"failed"},
+		Limit:    10,
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries(failed) error = %v", err)
+	}
+	if len(failedDeliveries) != 1 || failedDeliveries[0].ID != delivery.ID {
+		t.Fatalf("failed deliveries = %+v, want %s", failedDeliveries, delivery.ID)
+	}
+	retryingDelivery, err := store.ScheduleOutboundDeliveryRetry(ctx, delivery.ID, time.Now().Unix())
+	if err != nil {
+		t.Fatalf("ScheduleOutboundDeliveryRetry() error = %v", err)
+	}
+	if retryingDelivery.Status != "retrying" || retryingDelivery.AttemptCount != 1 || retryingDelivery.LastError != "" {
+		t.Fatalf("retrying delivery = %+v, want retrying attempt_count=1 without last error", retryingDelivery)
+	}
+	deliveredDelivery, err := store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "delivered", "", 0, time.Now().Unix())
+	if err != nil {
+		t.Fatalf("UpdateOutboundDeliveryStatus() error = %v", err)
+	}
+	if deliveredDelivery.Status != "delivered" || deliveredDelivery.DeliveredTimeUnix == 0 {
+		t.Fatalf("delivered delivery = %+v, want delivered timestamp", deliveredDelivery)
+	}
 
 	task, err := store.CreateTask(ctx, Task{
 		Summary:         "ship backend",

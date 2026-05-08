@@ -57,6 +57,18 @@ func (f MessageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MessageMutation", m)
 }
 
+// The OutboundDeliveryFunc type is an adapter to allow the use of ordinary
+// function as OutboundDelivery mutator.
+type OutboundDeliveryFunc func(context.Context, *ent.OutboundDeliveryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OutboundDeliveryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OutboundDeliveryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OutboundDeliveryMutation", m)
+}
+
 // The ReminderFunc type is an adapter to allow the use of ordinary
 // function as Reminder mutator.
 type ReminderFunc func(context.Context, *ent.ReminderMutation) (ent.Value, error)

@@ -187,6 +187,56 @@ var (
 			},
 		},
 	}
+	// OutboundDeliveriesColumns holds the columns for the "outbound_deliveries" table.
+	OutboundDeliveriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "message_id", Type: field.TypeString},
+		{Name: "endpoint_id", Type: field.TypeString},
+		{Name: "endpoint_kind", Type: field.TypeString, Default: ""},
+		{Name: "external_message_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "attempt_count", Type: field.TypeUint32, Default: 0},
+		{Name: "next_retry_time_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "delivered_time_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "last_error", Type: field.TypeString, Default: ""},
+		{Name: "request_id", Type: field.TypeString, Default: ""},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// OutboundDeliveriesTable holds the schema information for the "outbound_deliveries" table.
+	OutboundDeliveriesTable = &schema.Table{
+		Name:       "outbound_deliveries",
+		Columns:    OutboundDeliveriesColumns,
+		PrimaryKey: []*schema.Column{OutboundDeliveriesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "outbounddelivery_target_status_updated_unix",
+				Unique:  false,
+				Columns: []*schema.Column{OutboundDeliveriesColumns[1], OutboundDeliveriesColumns[6], OutboundDeliveriesColumns[13]},
+			},
+			{
+				Name:    "outbounddelivery_message_id",
+				Unique:  false,
+				Columns: []*schema.Column{OutboundDeliveriesColumns[2]},
+			},
+			{
+				Name:    "outbounddelivery_endpoint_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{OutboundDeliveriesColumns[3], OutboundDeliveriesColumns[6]},
+			},
+			{
+				Name:    "outbounddelivery_status_next_retry_time_unix",
+				Unique:  false,
+				Columns: []*schema.Column{OutboundDeliveriesColumns[6], OutboundDeliveriesColumns[8]},
+			},
+			{
+				Name:    "outbounddelivery_request_id",
+				Unique:  false,
+				Columns: []*schema.Column{OutboundDeliveriesColumns[11]},
+			},
+		},
+	}
 	// RemindersColumns holds the columns for the "reminders" table.
 	RemindersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -434,6 +484,7 @@ var (
 		IdempotencyRecordsTable,
 		InteractionEndpointsTable,
 		MessagesTable,
+		OutboundDeliveriesTable,
 		RemindersTable,
 		ReminderEventsTable,
 		SavedMessagesTable,

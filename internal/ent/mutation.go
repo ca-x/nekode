@@ -14,6 +14,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/predicate"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
@@ -37,6 +38,7 @@ const (
 	TypeIdempotencyRecord   = "IdempotencyRecord"
 	TypeInteractionEndpoint = "InteractionEndpoint"
 	TypeMessage             = "Message"
+	TypeOutboundDelivery    = "OutboundDelivery"
 	TypeReminder            = "Reminder"
 	TypeReminderEvent       = "ReminderEvent"
 	TypeSavedMessage        = "SavedMessage"
@@ -4186,6 +4188,1154 @@ func (m *MessageMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *MessageMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Message edge %s", name)
+}
+
+// OutboundDeliveryMutation represents an operation that mutates the OutboundDelivery nodes in the graph.
+type OutboundDeliveryMutation struct {
+	config
+	op                      Op
+	typ                     string
+	id                      *string
+	target                  *string
+	message_id              *string
+	endpoint_id             *string
+	endpoint_kind           *string
+	external_message_id     *string
+	status                  *string
+	attempt_count           *uint32
+	addattempt_count        *int32
+	next_retry_time_unix    *int64
+	addnext_retry_time_unix *int64
+	delivered_time_unix     *int64
+	adddelivered_time_unix  *int64
+	last_error              *string
+	request_id              *string
+	created_unix            *int64
+	addcreated_unix         *int64
+	updated_unix            *int64
+	addupdated_unix         *int64
+	clearedFields           map[string]struct{}
+	done                    bool
+	oldValue                func(context.Context) (*OutboundDelivery, error)
+	predicates              []predicate.OutboundDelivery
+}
+
+var _ ent.Mutation = (*OutboundDeliveryMutation)(nil)
+
+// outbounddeliveryOption allows management of the mutation configuration using functional options.
+type outbounddeliveryOption func(*OutboundDeliveryMutation)
+
+// newOutboundDeliveryMutation creates new mutation for the OutboundDelivery entity.
+func newOutboundDeliveryMutation(c config, op Op, opts ...outbounddeliveryOption) *OutboundDeliveryMutation {
+	m := &OutboundDeliveryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeOutboundDelivery,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withOutboundDeliveryID sets the ID field of the mutation.
+func withOutboundDeliveryID(id string) outbounddeliveryOption {
+	return func(m *OutboundDeliveryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *OutboundDelivery
+		)
+		m.oldValue = func(ctx context.Context) (*OutboundDelivery, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().OutboundDelivery.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withOutboundDelivery sets the old OutboundDelivery of the mutation.
+func withOutboundDelivery(node *OutboundDelivery) outbounddeliveryOption {
+	return func(m *OutboundDeliveryMutation) {
+		m.oldValue = func(context.Context) (*OutboundDelivery, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m OutboundDeliveryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m OutboundDeliveryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of OutboundDelivery entities.
+func (m *OutboundDeliveryMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *OutboundDeliveryMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *OutboundDeliveryMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().OutboundDelivery.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTarget sets the "target" field.
+func (m *OutboundDeliveryMutation) SetTarget(s string) {
+	m.target = &s
+}
+
+// Target returns the value of the "target" field in the mutation.
+func (m *OutboundDeliveryMutation) Target() (r string, exists bool) {
+	v := m.target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTarget returns the old "target" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldTarget(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTarget: %w", err)
+	}
+	return oldValue.Target, nil
+}
+
+// ResetTarget resets all changes to the "target" field.
+func (m *OutboundDeliveryMutation) ResetTarget() {
+	m.target = nil
+}
+
+// SetMessageID sets the "message_id" field.
+func (m *OutboundDeliveryMutation) SetMessageID(s string) {
+	m.message_id = &s
+}
+
+// MessageID returns the value of the "message_id" field in the mutation.
+func (m *OutboundDeliveryMutation) MessageID() (r string, exists bool) {
+	v := m.message_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMessageID returns the old "message_id" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldMessageID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessageID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessageID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessageID: %w", err)
+	}
+	return oldValue.MessageID, nil
+}
+
+// ResetMessageID resets all changes to the "message_id" field.
+func (m *OutboundDeliveryMutation) ResetMessageID() {
+	m.message_id = nil
+}
+
+// SetEndpointID sets the "endpoint_id" field.
+func (m *OutboundDeliveryMutation) SetEndpointID(s string) {
+	m.endpoint_id = &s
+}
+
+// EndpointID returns the value of the "endpoint_id" field in the mutation.
+func (m *OutboundDeliveryMutation) EndpointID() (r string, exists bool) {
+	v := m.endpoint_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndpointID returns the old "endpoint_id" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldEndpointID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndpointID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndpointID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndpointID: %w", err)
+	}
+	return oldValue.EndpointID, nil
+}
+
+// ResetEndpointID resets all changes to the "endpoint_id" field.
+func (m *OutboundDeliveryMutation) ResetEndpointID() {
+	m.endpoint_id = nil
+}
+
+// SetEndpointKind sets the "endpoint_kind" field.
+func (m *OutboundDeliveryMutation) SetEndpointKind(s string) {
+	m.endpoint_kind = &s
+}
+
+// EndpointKind returns the value of the "endpoint_kind" field in the mutation.
+func (m *OutboundDeliveryMutation) EndpointKind() (r string, exists bool) {
+	v := m.endpoint_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndpointKind returns the old "endpoint_kind" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldEndpointKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndpointKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndpointKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndpointKind: %w", err)
+	}
+	return oldValue.EndpointKind, nil
+}
+
+// ResetEndpointKind resets all changes to the "endpoint_kind" field.
+func (m *OutboundDeliveryMutation) ResetEndpointKind() {
+	m.endpoint_kind = nil
+}
+
+// SetExternalMessageID sets the "external_message_id" field.
+func (m *OutboundDeliveryMutation) SetExternalMessageID(s string) {
+	m.external_message_id = &s
+}
+
+// ExternalMessageID returns the value of the "external_message_id" field in the mutation.
+func (m *OutboundDeliveryMutation) ExternalMessageID() (r string, exists bool) {
+	v := m.external_message_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalMessageID returns the old "external_message_id" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldExternalMessageID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalMessageID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalMessageID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalMessageID: %w", err)
+	}
+	return oldValue.ExternalMessageID, nil
+}
+
+// ResetExternalMessageID resets all changes to the "external_message_id" field.
+func (m *OutboundDeliveryMutation) ResetExternalMessageID() {
+	m.external_message_id = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *OutboundDeliveryMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *OutboundDeliveryMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *OutboundDeliveryMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetAttemptCount sets the "attempt_count" field.
+func (m *OutboundDeliveryMutation) SetAttemptCount(u uint32) {
+	m.attempt_count = &u
+	m.addattempt_count = nil
+}
+
+// AttemptCount returns the value of the "attempt_count" field in the mutation.
+func (m *OutboundDeliveryMutation) AttemptCount() (r uint32, exists bool) {
+	v := m.attempt_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttemptCount returns the old "attempt_count" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldAttemptCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttemptCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttemptCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttemptCount: %w", err)
+	}
+	return oldValue.AttemptCount, nil
+}
+
+// AddAttemptCount adds u to the "attempt_count" field.
+func (m *OutboundDeliveryMutation) AddAttemptCount(u int32) {
+	if m.addattempt_count != nil {
+		*m.addattempt_count += u
+	} else {
+		m.addattempt_count = &u
+	}
+}
+
+// AddedAttemptCount returns the value that was added to the "attempt_count" field in this mutation.
+func (m *OutboundDeliveryMutation) AddedAttemptCount() (r int32, exists bool) {
+	v := m.addattempt_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttemptCount resets all changes to the "attempt_count" field.
+func (m *OutboundDeliveryMutation) ResetAttemptCount() {
+	m.attempt_count = nil
+	m.addattempt_count = nil
+}
+
+// SetNextRetryTimeUnix sets the "next_retry_time_unix" field.
+func (m *OutboundDeliveryMutation) SetNextRetryTimeUnix(i int64) {
+	m.next_retry_time_unix = &i
+	m.addnext_retry_time_unix = nil
+}
+
+// NextRetryTimeUnix returns the value of the "next_retry_time_unix" field in the mutation.
+func (m *OutboundDeliveryMutation) NextRetryTimeUnix() (r int64, exists bool) {
+	v := m.next_retry_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNextRetryTimeUnix returns the old "next_retry_time_unix" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldNextRetryTimeUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNextRetryTimeUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNextRetryTimeUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNextRetryTimeUnix: %w", err)
+	}
+	return oldValue.NextRetryTimeUnix, nil
+}
+
+// AddNextRetryTimeUnix adds i to the "next_retry_time_unix" field.
+func (m *OutboundDeliveryMutation) AddNextRetryTimeUnix(i int64) {
+	if m.addnext_retry_time_unix != nil {
+		*m.addnext_retry_time_unix += i
+	} else {
+		m.addnext_retry_time_unix = &i
+	}
+}
+
+// AddedNextRetryTimeUnix returns the value that was added to the "next_retry_time_unix" field in this mutation.
+func (m *OutboundDeliveryMutation) AddedNextRetryTimeUnix() (r int64, exists bool) {
+	v := m.addnext_retry_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNextRetryTimeUnix resets all changes to the "next_retry_time_unix" field.
+func (m *OutboundDeliveryMutation) ResetNextRetryTimeUnix() {
+	m.next_retry_time_unix = nil
+	m.addnext_retry_time_unix = nil
+}
+
+// SetDeliveredTimeUnix sets the "delivered_time_unix" field.
+func (m *OutboundDeliveryMutation) SetDeliveredTimeUnix(i int64) {
+	m.delivered_time_unix = &i
+	m.adddelivered_time_unix = nil
+}
+
+// DeliveredTimeUnix returns the value of the "delivered_time_unix" field in the mutation.
+func (m *OutboundDeliveryMutation) DeliveredTimeUnix() (r int64, exists bool) {
+	v := m.delivered_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeliveredTimeUnix returns the old "delivered_time_unix" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldDeliveredTimeUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeliveredTimeUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeliveredTimeUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeliveredTimeUnix: %w", err)
+	}
+	return oldValue.DeliveredTimeUnix, nil
+}
+
+// AddDeliveredTimeUnix adds i to the "delivered_time_unix" field.
+func (m *OutboundDeliveryMutation) AddDeliveredTimeUnix(i int64) {
+	if m.adddelivered_time_unix != nil {
+		*m.adddelivered_time_unix += i
+	} else {
+		m.adddelivered_time_unix = &i
+	}
+}
+
+// AddedDeliveredTimeUnix returns the value that was added to the "delivered_time_unix" field in this mutation.
+func (m *OutboundDeliveryMutation) AddedDeliveredTimeUnix() (r int64, exists bool) {
+	v := m.adddelivered_time_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDeliveredTimeUnix resets all changes to the "delivered_time_unix" field.
+func (m *OutboundDeliveryMutation) ResetDeliveredTimeUnix() {
+	m.delivered_time_unix = nil
+	m.adddelivered_time_unix = nil
+}
+
+// SetLastError sets the "last_error" field.
+func (m *OutboundDeliveryMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *OutboundDeliveryMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *OutboundDeliveryMutation) ResetLastError() {
+	m.last_error = nil
+}
+
+// SetRequestID sets the "request_id" field.
+func (m *OutboundDeliveryMutation) SetRequestID(s string) {
+	m.request_id = &s
+}
+
+// RequestID returns the value of the "request_id" field in the mutation.
+func (m *OutboundDeliveryMutation) RequestID() (r string, exists bool) {
+	v := m.request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequestID returns the old "request_id" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldRequestID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequestID: %w", err)
+	}
+	return oldValue.RequestID, nil
+}
+
+// ResetRequestID resets all changes to the "request_id" field.
+func (m *OutboundDeliveryMutation) ResetRequestID() {
+	m.request_id = nil
+}
+
+// SetCreatedUnix sets the "created_unix" field.
+func (m *OutboundDeliveryMutation) SetCreatedUnix(i int64) {
+	m.created_unix = &i
+	m.addcreated_unix = nil
+}
+
+// CreatedUnix returns the value of the "created_unix" field in the mutation.
+func (m *OutboundDeliveryMutation) CreatedUnix() (r int64, exists bool) {
+	v := m.created_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedUnix returns the old "created_unix" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldCreatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedUnix: %w", err)
+	}
+	return oldValue.CreatedUnix, nil
+}
+
+// AddCreatedUnix adds i to the "created_unix" field.
+func (m *OutboundDeliveryMutation) AddCreatedUnix(i int64) {
+	if m.addcreated_unix != nil {
+		*m.addcreated_unix += i
+	} else {
+		m.addcreated_unix = &i
+	}
+}
+
+// AddedCreatedUnix returns the value that was added to the "created_unix" field in this mutation.
+func (m *OutboundDeliveryMutation) AddedCreatedUnix() (r int64, exists bool) {
+	v := m.addcreated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedUnix resets all changes to the "created_unix" field.
+func (m *OutboundDeliveryMutation) ResetCreatedUnix() {
+	m.created_unix = nil
+	m.addcreated_unix = nil
+}
+
+// SetUpdatedUnix sets the "updated_unix" field.
+func (m *OutboundDeliveryMutation) SetUpdatedUnix(i int64) {
+	m.updated_unix = &i
+	m.addupdated_unix = nil
+}
+
+// UpdatedUnix returns the value of the "updated_unix" field in the mutation.
+func (m *OutboundDeliveryMutation) UpdatedUnix() (r int64, exists bool) {
+	v := m.updated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedUnix returns the old "updated_unix" field's value of the OutboundDelivery entity.
+// If the OutboundDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *OutboundDeliveryMutation) OldUpdatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedUnix: %w", err)
+	}
+	return oldValue.UpdatedUnix, nil
+}
+
+// AddUpdatedUnix adds i to the "updated_unix" field.
+func (m *OutboundDeliveryMutation) AddUpdatedUnix(i int64) {
+	if m.addupdated_unix != nil {
+		*m.addupdated_unix += i
+	} else {
+		m.addupdated_unix = &i
+	}
+}
+
+// AddedUpdatedUnix returns the value that was added to the "updated_unix" field in this mutation.
+func (m *OutboundDeliveryMutation) AddedUpdatedUnix() (r int64, exists bool) {
+	v := m.addupdated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpdatedUnix resets all changes to the "updated_unix" field.
+func (m *OutboundDeliveryMutation) ResetUpdatedUnix() {
+	m.updated_unix = nil
+	m.addupdated_unix = nil
+}
+
+// Where appends a list predicates to the OutboundDeliveryMutation builder.
+func (m *OutboundDeliveryMutation) Where(ps ...predicate.OutboundDelivery) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the OutboundDeliveryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *OutboundDeliveryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.OutboundDelivery, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *OutboundDeliveryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *OutboundDeliveryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (OutboundDelivery).
+func (m *OutboundDeliveryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *OutboundDeliveryMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.target != nil {
+		fields = append(fields, outbounddelivery.FieldTarget)
+	}
+	if m.message_id != nil {
+		fields = append(fields, outbounddelivery.FieldMessageID)
+	}
+	if m.endpoint_id != nil {
+		fields = append(fields, outbounddelivery.FieldEndpointID)
+	}
+	if m.endpoint_kind != nil {
+		fields = append(fields, outbounddelivery.FieldEndpointKind)
+	}
+	if m.external_message_id != nil {
+		fields = append(fields, outbounddelivery.FieldExternalMessageID)
+	}
+	if m.status != nil {
+		fields = append(fields, outbounddelivery.FieldStatus)
+	}
+	if m.attempt_count != nil {
+		fields = append(fields, outbounddelivery.FieldAttemptCount)
+	}
+	if m.next_retry_time_unix != nil {
+		fields = append(fields, outbounddelivery.FieldNextRetryTimeUnix)
+	}
+	if m.delivered_time_unix != nil {
+		fields = append(fields, outbounddelivery.FieldDeliveredTimeUnix)
+	}
+	if m.last_error != nil {
+		fields = append(fields, outbounddelivery.FieldLastError)
+	}
+	if m.request_id != nil {
+		fields = append(fields, outbounddelivery.FieldRequestID)
+	}
+	if m.created_unix != nil {
+		fields = append(fields, outbounddelivery.FieldCreatedUnix)
+	}
+	if m.updated_unix != nil {
+		fields = append(fields, outbounddelivery.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *OutboundDeliveryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case outbounddelivery.FieldTarget:
+		return m.Target()
+	case outbounddelivery.FieldMessageID:
+		return m.MessageID()
+	case outbounddelivery.FieldEndpointID:
+		return m.EndpointID()
+	case outbounddelivery.FieldEndpointKind:
+		return m.EndpointKind()
+	case outbounddelivery.FieldExternalMessageID:
+		return m.ExternalMessageID()
+	case outbounddelivery.FieldStatus:
+		return m.Status()
+	case outbounddelivery.FieldAttemptCount:
+		return m.AttemptCount()
+	case outbounddelivery.FieldNextRetryTimeUnix:
+		return m.NextRetryTimeUnix()
+	case outbounddelivery.FieldDeliveredTimeUnix:
+		return m.DeliveredTimeUnix()
+	case outbounddelivery.FieldLastError:
+		return m.LastError()
+	case outbounddelivery.FieldRequestID:
+		return m.RequestID()
+	case outbounddelivery.FieldCreatedUnix:
+		return m.CreatedUnix()
+	case outbounddelivery.FieldUpdatedUnix:
+		return m.UpdatedUnix()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *OutboundDeliveryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case outbounddelivery.FieldTarget:
+		return m.OldTarget(ctx)
+	case outbounddelivery.FieldMessageID:
+		return m.OldMessageID(ctx)
+	case outbounddelivery.FieldEndpointID:
+		return m.OldEndpointID(ctx)
+	case outbounddelivery.FieldEndpointKind:
+		return m.OldEndpointKind(ctx)
+	case outbounddelivery.FieldExternalMessageID:
+		return m.OldExternalMessageID(ctx)
+	case outbounddelivery.FieldStatus:
+		return m.OldStatus(ctx)
+	case outbounddelivery.FieldAttemptCount:
+		return m.OldAttemptCount(ctx)
+	case outbounddelivery.FieldNextRetryTimeUnix:
+		return m.OldNextRetryTimeUnix(ctx)
+	case outbounddelivery.FieldDeliveredTimeUnix:
+		return m.OldDeliveredTimeUnix(ctx)
+	case outbounddelivery.FieldLastError:
+		return m.OldLastError(ctx)
+	case outbounddelivery.FieldRequestID:
+		return m.OldRequestID(ctx)
+	case outbounddelivery.FieldCreatedUnix:
+		return m.OldCreatedUnix(ctx)
+	case outbounddelivery.FieldUpdatedUnix:
+		return m.OldUpdatedUnix(ctx)
+	}
+	return nil, fmt.Errorf("unknown OutboundDelivery field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *OutboundDeliveryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case outbounddelivery.FieldTarget:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTarget(v)
+		return nil
+	case outbounddelivery.FieldMessageID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMessageID(v)
+		return nil
+	case outbounddelivery.FieldEndpointID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndpointID(v)
+		return nil
+	case outbounddelivery.FieldEndpointKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndpointKind(v)
+		return nil
+	case outbounddelivery.FieldExternalMessageID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalMessageID(v)
+		return nil
+	case outbounddelivery.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case outbounddelivery.FieldAttemptCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttemptCount(v)
+		return nil
+	case outbounddelivery.FieldNextRetryTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNextRetryTimeUnix(v)
+		return nil
+	case outbounddelivery.FieldDeliveredTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeliveredTimeUnix(v)
+		return nil
+	case outbounddelivery.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case outbounddelivery.FieldRequestID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequestID(v)
+		return nil
+	case outbounddelivery.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedUnix(v)
+		return nil
+	case outbounddelivery.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown OutboundDelivery field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *OutboundDeliveryMutation) AddedFields() []string {
+	var fields []string
+	if m.addattempt_count != nil {
+		fields = append(fields, outbounddelivery.FieldAttemptCount)
+	}
+	if m.addnext_retry_time_unix != nil {
+		fields = append(fields, outbounddelivery.FieldNextRetryTimeUnix)
+	}
+	if m.adddelivered_time_unix != nil {
+		fields = append(fields, outbounddelivery.FieldDeliveredTimeUnix)
+	}
+	if m.addcreated_unix != nil {
+		fields = append(fields, outbounddelivery.FieldCreatedUnix)
+	}
+	if m.addupdated_unix != nil {
+		fields = append(fields, outbounddelivery.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *OutboundDeliveryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case outbounddelivery.FieldAttemptCount:
+		return m.AddedAttemptCount()
+	case outbounddelivery.FieldNextRetryTimeUnix:
+		return m.AddedNextRetryTimeUnix()
+	case outbounddelivery.FieldDeliveredTimeUnix:
+		return m.AddedDeliveredTimeUnix()
+	case outbounddelivery.FieldCreatedUnix:
+		return m.AddedCreatedUnix()
+	case outbounddelivery.FieldUpdatedUnix:
+		return m.AddedUpdatedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *OutboundDeliveryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case outbounddelivery.FieldAttemptCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttemptCount(v)
+		return nil
+	case outbounddelivery.FieldNextRetryTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNextRetryTimeUnix(v)
+		return nil
+	case outbounddelivery.FieldDeliveredTimeUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDeliveredTimeUnix(v)
+		return nil
+	case outbounddelivery.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedUnix(v)
+		return nil
+	case outbounddelivery.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown OutboundDelivery numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *OutboundDeliveryMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *OutboundDeliveryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *OutboundDeliveryMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown OutboundDelivery nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *OutboundDeliveryMutation) ResetField(name string) error {
+	switch name {
+	case outbounddelivery.FieldTarget:
+		m.ResetTarget()
+		return nil
+	case outbounddelivery.FieldMessageID:
+		m.ResetMessageID()
+		return nil
+	case outbounddelivery.FieldEndpointID:
+		m.ResetEndpointID()
+		return nil
+	case outbounddelivery.FieldEndpointKind:
+		m.ResetEndpointKind()
+		return nil
+	case outbounddelivery.FieldExternalMessageID:
+		m.ResetExternalMessageID()
+		return nil
+	case outbounddelivery.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case outbounddelivery.FieldAttemptCount:
+		m.ResetAttemptCount()
+		return nil
+	case outbounddelivery.FieldNextRetryTimeUnix:
+		m.ResetNextRetryTimeUnix()
+		return nil
+	case outbounddelivery.FieldDeliveredTimeUnix:
+		m.ResetDeliveredTimeUnix()
+		return nil
+	case outbounddelivery.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case outbounddelivery.FieldRequestID:
+		m.ResetRequestID()
+		return nil
+	case outbounddelivery.FieldCreatedUnix:
+		m.ResetCreatedUnix()
+		return nil
+	case outbounddelivery.FieldUpdatedUnix:
+		m.ResetUpdatedUnix()
+		return nil
+	}
+	return fmt.Errorf("unknown OutboundDelivery field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *OutboundDeliveryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *OutboundDeliveryMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *OutboundDeliveryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *OutboundDeliveryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *OutboundDeliveryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *OutboundDeliveryMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *OutboundDeliveryMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown OutboundDelivery unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *OutboundDeliveryMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown OutboundDelivery edge %s", name)
 }
 
 // ReminderMutation represents an operation that mutates the Reminder nodes in the graph.

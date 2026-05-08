@@ -16,6 +16,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
@@ -87,6 +88,7 @@ func checkColumn(t, c string) error {
 			idempotencyrecord.Table:   idempotencyrecord.ValidColumn,
 			interactionendpoint.Table: interactionendpoint.ValidColumn,
 			message.Table:             message.ValidColumn,
+			outbounddelivery.Table:    outbounddelivery.ValidColumn,
 			reminder.Table:            reminder.ValidColumn,
 			reminderevent.Table:       reminderevent.ValidColumn,
 			savedmessage.Table:        savedmessage.ValidColumn,

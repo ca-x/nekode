@@ -18,6 +18,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
@@ -40,6 +41,8 @@ type Client struct {
 	InteractionEndpoint *InteractionEndpointClient
 	// Message is the client for interacting with the Message builders.
 	Message *MessageClient
+	// OutboundDelivery is the client for interacting with the OutboundDelivery builders.
+	OutboundDelivery *OutboundDeliveryClient
 	// Reminder is the client for interacting with the Reminder builders.
 	Reminder *ReminderClient
 	// ReminderEvent is the client for interacting with the ReminderEvent builders.
@@ -69,6 +72,7 @@ func (c *Client) init() {
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
 	c.InteractionEndpoint = NewInteractionEndpointClient(c.config)
 	c.Message = NewMessageClient(c.config)
+	c.OutboundDelivery = NewOutboundDeliveryClient(c.config)
 	c.Reminder = NewReminderClient(c.config)
 	c.ReminderEvent = NewReminderEventClient(c.config)
 	c.SavedMessage = NewSavedMessageClient(c.config)
@@ -172,6 +176,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
+		OutboundDelivery:    NewOutboundDeliveryClient(cfg),
 		Reminder:            NewReminderClient(cfg),
 		ReminderEvent:       NewReminderEventClient(cfg),
 		SavedMessage:        NewSavedMessageClient(cfg),
@@ -202,6 +207,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
+		OutboundDelivery:    NewOutboundDeliveryClient(cfg),
 		Reminder:            NewReminderClient(cfg),
 		ReminderEvent:       NewReminderEventClient(cfg),
 		SavedMessage:        NewSavedMessageClient(cfg),
@@ -239,8 +245,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
-		c.ThreadReadState, c.User,
+		c.OutboundDelivery, c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session,
+		c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -251,8 +257,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
-		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
-		c.ThreadReadState, c.User,
+		c.OutboundDelivery, c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session,
+		c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -269,6 +275,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.InteractionEndpoint.mutate(ctx, m)
 	case *MessageMutation:
 		return c.Message.mutate(ctx, m)
+	case *OutboundDeliveryMutation:
+		return c.OutboundDelivery.mutate(ctx, m)
 	case *ReminderMutation:
 		return c.Reminder.mutate(ctx, m)
 	case *ReminderEventMutation:
@@ -817,6 +825,139 @@ func (c *MessageClient) mutate(ctx context.Context, m *MessageMutation) (Value, 
 		return (&MessageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Message mutation op: %q", m.Op())
+	}
+}
+
+// OutboundDeliveryClient is a client for the OutboundDelivery schema.
+type OutboundDeliveryClient struct {
+	config
+}
+
+// NewOutboundDeliveryClient returns a client for the OutboundDelivery from the given config.
+func NewOutboundDeliveryClient(c config) *OutboundDeliveryClient {
+	return &OutboundDeliveryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `outbounddelivery.Hooks(f(g(h())))`.
+func (c *OutboundDeliveryClient) Use(hooks ...Hook) {
+	c.hooks.OutboundDelivery = append(c.hooks.OutboundDelivery, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `outbounddelivery.Intercept(f(g(h())))`.
+func (c *OutboundDeliveryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OutboundDelivery = append(c.inters.OutboundDelivery, interceptors...)
+}
+
+// Create returns a builder for creating a OutboundDelivery entity.
+func (c *OutboundDeliveryClient) Create() *OutboundDeliveryCreate {
+	mutation := newOutboundDeliveryMutation(c.config, OpCreate)
+	return &OutboundDeliveryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OutboundDelivery entities.
+func (c *OutboundDeliveryClient) CreateBulk(builders ...*OutboundDeliveryCreate) *OutboundDeliveryCreateBulk {
+	return &OutboundDeliveryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OutboundDeliveryClient) MapCreateBulk(slice any, setFunc func(*OutboundDeliveryCreate, int)) *OutboundDeliveryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OutboundDeliveryCreateBulk{err: fmt.Errorf("calling to OutboundDeliveryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OutboundDeliveryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OutboundDeliveryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OutboundDelivery.
+func (c *OutboundDeliveryClient) Update() *OutboundDeliveryUpdate {
+	mutation := newOutboundDeliveryMutation(c.config, OpUpdate)
+	return &OutboundDeliveryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OutboundDeliveryClient) UpdateOne(_m *OutboundDelivery) *OutboundDeliveryUpdateOne {
+	mutation := newOutboundDeliveryMutation(c.config, OpUpdateOne, withOutboundDelivery(_m))
+	return &OutboundDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OutboundDeliveryClient) UpdateOneID(id string) *OutboundDeliveryUpdateOne {
+	mutation := newOutboundDeliveryMutation(c.config, OpUpdateOne, withOutboundDeliveryID(id))
+	return &OutboundDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OutboundDelivery.
+func (c *OutboundDeliveryClient) Delete() *OutboundDeliveryDelete {
+	mutation := newOutboundDeliveryMutation(c.config, OpDelete)
+	return &OutboundDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OutboundDeliveryClient) DeleteOne(_m *OutboundDelivery) *OutboundDeliveryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OutboundDeliveryClient) DeleteOneID(id string) *OutboundDeliveryDeleteOne {
+	builder := c.Delete().Where(outbounddelivery.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OutboundDeliveryDeleteOne{builder}
+}
+
+// Query returns a query builder for OutboundDelivery.
+func (c *OutboundDeliveryClient) Query() *OutboundDeliveryQuery {
+	return &OutboundDeliveryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOutboundDelivery},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OutboundDelivery entity by its id.
+func (c *OutboundDeliveryClient) Get(ctx context.Context, id string) (*OutboundDelivery, error) {
+	return c.Query().Where(outbounddelivery.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OutboundDeliveryClient) GetX(ctx context.Context, id string) *OutboundDelivery {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OutboundDeliveryClient) Hooks() []Hook {
+	return c.hooks.OutboundDelivery
+}
+
+// Interceptors returns the client interceptors.
+func (c *OutboundDeliveryClient) Interceptors() []Interceptor {
+	return c.inters.OutboundDelivery
+}
+
+func (c *OutboundDeliveryClient) mutate(ctx context.Context, m *OutboundDeliveryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OutboundDeliveryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OutboundDeliveryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OutboundDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OutboundDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OutboundDelivery mutation op: %q", m.Op())
 	}
 }
 
@@ -1754,12 +1895,13 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Reminder,
-		ReminderEvent, SavedMessage, Session, Task, ThreadReadState, User []ent.Hook
+		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message,
+		OutboundDelivery, Reminder, ReminderEvent, SavedMessage, Session, Task,
+		ThreadReadState, User []ent.Hook
 	}
 	inters struct {
-		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Reminder,
-		ReminderEvent, SavedMessage, Session, Task, ThreadReadState,
-		User []ent.Interceptor
+		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message,
+		OutboundDelivery, Reminder, ReminderEvent, SavedMessage, Session, Task,
+		ThreadReadState, User []ent.Interceptor
 	}
 )

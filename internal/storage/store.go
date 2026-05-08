@@ -18,6 +18,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/predicate"
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/session"
@@ -296,6 +297,17 @@ func (s *Store) ListInteractionEndpoints(ctx context.Context, limit int) ([]Inte
 	return endpoints, nil
 }
 
+func (s *Store) GetInteractionEndpoint(ctx context.Context, id string) (InteractionEndpoint, error) {
+	row, err := s.client.InteractionEndpoint.Query().Where(interactionendpoint.IDEQ(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return InteractionEndpoint{}, ErrNotFound
+	}
+	if err != nil {
+		return InteractionEndpoint{}, err
+	}
+	return endpointFromEnt(row), nil
+}
+
 func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Message, error) {
 	if messageModel.CreatedUnix == 0 {
 		messageModel.CreatedUnix = unixNow()
@@ -370,6 +382,136 @@ func (s *Store) ListMessages(ctx context.Context, target, threadID string, limit
 		messages = append(messages, messageFromEnt(row))
 	}
 	return messages, nil
+}
+
+func (s *Store) CreateOutboundDelivery(ctx context.Context, delivery OutboundDelivery) (OutboundDelivery, error) {
+	status := normalizeOutboundDeliveryStatus(delivery.Status)
+	if !validOutboundDeliveryStatus(status) {
+		return OutboundDelivery{}, ErrInvalidState
+	}
+	now := unixNow()
+	if delivery.CreatedUnix == 0 {
+		delivery.CreatedUnix = now
+	}
+	delivery.UpdatedUnix = now
+	create := s.client.OutboundDelivery.Create().
+		SetTarget(delivery.Target).
+		SetMessageID(delivery.MessageID).
+		SetEndpointID(delivery.EndpointID).
+		SetEndpointKind(delivery.EndpointKind).
+		SetExternalMessageID(delivery.ExternalMessageID).
+		SetStatus(status).
+		SetAttemptCount(delivery.AttemptCount).
+		SetNextRetryTimeUnix(delivery.NextRetryTimeUnix).
+		SetDeliveredTimeUnix(delivery.DeliveredTimeUnix).
+		SetLastError(delivery.LastError).
+		SetRequestID(delivery.RequestID).
+		SetCreatedUnix(delivery.CreatedUnix).
+		SetUpdatedUnix(delivery.UpdatedUnix)
+	if delivery.ID != "" {
+		create.SetID(delivery.ID)
+	}
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
+		return OutboundDelivery{}, ErrConflict
+	}
+	if err != nil {
+		return OutboundDelivery{}, err
+	}
+	return outboundDeliveryFromEnt(row), nil
+}
+
+func (s *Store) GetOutboundDelivery(ctx context.Context, id string) (OutboundDelivery, error) {
+	row, err := s.client.OutboundDelivery.Query().Where(outbounddelivery.IDEQ(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return OutboundDelivery{}, ErrNotFound
+	}
+	if err != nil {
+		return OutboundDelivery{}, err
+	}
+	return outboundDeliveryFromEnt(row), nil
+}
+
+func (s *Store) ListOutboundDeliveries(ctx context.Context, opts OutboundDeliveryListOptions) ([]OutboundDelivery, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 50
+	}
+	query := s.client.OutboundDelivery.Query()
+	if opts.Target != "" {
+		query.Where(outbounddelivery.TargetEQ(opts.Target))
+	}
+	if opts.MessageID != "" {
+		query.Where(outbounddelivery.MessageIDEQ(opts.MessageID))
+	}
+	if opts.EndpointID != "" {
+		query.Where(outbounddelivery.EndpointIDEQ(opts.EndpointID))
+	}
+	if len(opts.Statuses) > 0 {
+		statuses := make([]string, 0, len(opts.Statuses))
+		for _, status := range opts.Statuses {
+			normalized := normalizeOutboundDeliveryStatus(status)
+			if !validOutboundDeliveryStatus(normalized) {
+				return nil, ErrInvalidState
+			}
+			statuses = append(statuses, normalized)
+		}
+		query.Where(outbounddelivery.StatusIn(statuses...))
+	}
+	rows, err := query.
+		Order(outbounddelivery.ByUpdatedUnix(sql.OrderDesc()), outbounddelivery.ByID(sql.OrderDesc())).
+		Limit(opts.Limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	deliveries := make([]OutboundDelivery, 0, len(rows))
+	for _, row := range rows {
+		deliveries = append(deliveries, outboundDeliveryFromEnt(row))
+	}
+	return deliveries, nil
+}
+
+func (s *Store) UpdateOutboundDeliveryStatus(ctx context.Context, id, statusValue, lastError string, nextRetryUnix, deliveredUnix int64) (OutboundDelivery, error) {
+	statusValue = normalizeOutboundDeliveryStatus(statusValue)
+	if !validOutboundDeliveryStatus(statusValue) {
+		return OutboundDelivery{}, ErrInvalidState
+	}
+	update := s.client.OutboundDelivery.UpdateOneID(id).
+		SetStatus(statusValue).
+		SetLastError(lastError).
+		SetNextRetryTimeUnix(nextRetryUnix).
+		SetDeliveredTimeUnix(deliveredUnix).
+		SetUpdatedUnix(unixNow())
+	row, err := update.Save(ctx)
+	if ent.IsNotFound(err) {
+		return OutboundDelivery{}, ErrNotFound
+	}
+	if err != nil {
+		return OutboundDelivery{}, err
+	}
+	return outboundDeliveryFromEnt(row), nil
+}
+
+func (s *Store) ScheduleOutboundDeliveryRetry(ctx context.Context, id string, nextRetryUnix int64) (OutboundDelivery, error) {
+	now := unixNow()
+	if nextRetryUnix == 0 {
+		nextRetryUnix = now
+	}
+	row, err := s.client.OutboundDelivery.UpdateOneID(id).
+		SetStatus("retrying").
+		AddAttemptCount(1).
+		SetNextRetryTimeUnix(nextRetryUnix).
+		SetDeliveredTimeUnix(0).
+		SetLastError("").
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if ent.IsNotFound(err) {
+		return OutboundDelivery{}, ErrNotFound
+	}
+	if err != nil {
+		return OutboundDelivery{}, err
+	}
+	return outboundDeliveryFromEnt(row), nil
 }
 
 func (s *Store) SearchMessages(ctx context.Context, opts MessageSearchOptions) ([]Message, error) {
@@ -1200,6 +1342,25 @@ func messageFromEnt(row *ent.Message) Message {
 	}
 }
 
+func outboundDeliveryFromEnt(row *ent.OutboundDelivery) OutboundDelivery {
+	return OutboundDelivery{
+		ID:                row.ID,
+		Target:            row.Target,
+		MessageID:         row.MessageID,
+		EndpointID:        row.EndpointID,
+		EndpointKind:      row.EndpointKind,
+		ExternalMessageID: row.ExternalMessageID,
+		Status:            row.Status,
+		AttemptCount:      row.AttemptCount,
+		NextRetryTimeUnix: row.NextRetryTimeUnix,
+		DeliveredTimeUnix: row.DeliveredTimeUnix,
+		LastError:         row.LastError,
+		RequestID:         row.RequestID,
+		CreatedUnix:       row.CreatedUnix,
+		UpdatedUnix:       row.UpdatedUnix,
+	}
+}
+
 func marshalAttachments(attachments []Attachment) (string, error) {
 	if len(attachments) == 0 {
 		return "[]", nil
@@ -1310,6 +1471,32 @@ func firstNonEmpty(values ...string) string {
 func validTaskState(state string) bool {
 	switch normalizeTaskState(state) {
 	case "todo", "in_progress", "in_review", "blocked", "done", "canceled":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeOutboundDeliveryStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "", "pending":
+		return "pending"
+	case "delivered":
+		return "delivered"
+	case "failed":
+		return "failed"
+	case "retry", "retrying":
+		return "retrying"
+	case "cancelled", "canceled":
+		return "canceled"
+	default:
+		return strings.ToLower(strings.TrimSpace(status))
+	}
+}
+
+func validOutboundDeliveryStatus(status string) bool {
+	switch status {
+	case "pending", "delivered", "failed", "retrying", "canceled":
 		return true
 	default:
 		return false

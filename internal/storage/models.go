@@ -80,6 +80,31 @@ type Message struct {
 	CreatedUnix       int64        `json:"createdUnix"`
 }
 
+type OutboundDelivery struct {
+	ID                string `json:"id"`
+	Target            string `json:"target"`
+	MessageID         string `json:"messageId"`
+	EndpointID        string `json:"endpointId"`
+	EndpointKind      string `json:"endpointKind"`
+	ExternalMessageID string `json:"externalMessageId,omitempty"`
+	Status            string `json:"status"`
+	AttemptCount      uint32 `json:"attemptCount"`
+	NextRetryTimeUnix int64  `json:"nextRetryTimeUnix,omitempty"`
+	DeliveredTimeUnix int64  `json:"deliveredTimeUnix,omitempty"`
+	LastError         string `json:"lastError,omitempty"`
+	RequestID         string `json:"requestId,omitempty"`
+	CreatedUnix       int64  `json:"createdUnix"`
+	UpdatedUnix       int64  `json:"updatedUnix"`
+}
+
+type OutboundDeliveryListOptions struct {
+	Target     string
+	MessageID  string
+	EndpointID string
+	Statuses   []string
+	Limit      int
+}
+
 type Attachment struct {
 	ID              string `json:"id"`
 	Target          string `json:"target"`

@@ -7,6 +7,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
@@ -225,6 +226,56 @@ func init() {
 	messageDescID := messageFields[0].Descriptor()
 	// message.DefaultID holds the default value on creation for the id field.
 	message.DefaultID = messageDescID.Default.(func() string)
+	outbounddeliveryFields := schema.OutboundDelivery{}.Fields()
+	_ = outbounddeliveryFields
+	// outbounddeliveryDescTarget is the schema descriptor for target field.
+	outbounddeliveryDescTarget := outbounddeliveryFields[1].Descriptor()
+	// outbounddelivery.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	outbounddelivery.TargetValidator = outbounddeliveryDescTarget.Validators[0].(func(string) error)
+	// outbounddeliveryDescMessageID is the schema descriptor for message_id field.
+	outbounddeliveryDescMessageID := outbounddeliveryFields[2].Descriptor()
+	// outbounddelivery.MessageIDValidator is a validator for the "message_id" field. It is called by the builders before save.
+	outbounddelivery.MessageIDValidator = outbounddeliveryDescMessageID.Validators[0].(func(string) error)
+	// outbounddeliveryDescEndpointID is the schema descriptor for endpoint_id field.
+	outbounddeliveryDescEndpointID := outbounddeliveryFields[3].Descriptor()
+	// outbounddelivery.EndpointIDValidator is a validator for the "endpoint_id" field. It is called by the builders before save.
+	outbounddelivery.EndpointIDValidator = outbounddeliveryDescEndpointID.Validators[0].(func(string) error)
+	// outbounddeliveryDescEndpointKind is the schema descriptor for endpoint_kind field.
+	outbounddeliveryDescEndpointKind := outbounddeliveryFields[4].Descriptor()
+	// outbounddelivery.DefaultEndpointKind holds the default value on creation for the endpoint_kind field.
+	outbounddelivery.DefaultEndpointKind = outbounddeliveryDescEndpointKind.Default.(string)
+	// outbounddeliveryDescExternalMessageID is the schema descriptor for external_message_id field.
+	outbounddeliveryDescExternalMessageID := outbounddeliveryFields[5].Descriptor()
+	// outbounddelivery.DefaultExternalMessageID holds the default value on creation for the external_message_id field.
+	outbounddelivery.DefaultExternalMessageID = outbounddeliveryDescExternalMessageID.Default.(string)
+	// outbounddeliveryDescStatus is the schema descriptor for status field.
+	outbounddeliveryDescStatus := outbounddeliveryFields[6].Descriptor()
+	// outbounddelivery.DefaultStatus holds the default value on creation for the status field.
+	outbounddelivery.DefaultStatus = outbounddeliveryDescStatus.Default.(string)
+	// outbounddeliveryDescAttemptCount is the schema descriptor for attempt_count field.
+	outbounddeliveryDescAttemptCount := outbounddeliveryFields[7].Descriptor()
+	// outbounddelivery.DefaultAttemptCount holds the default value on creation for the attempt_count field.
+	outbounddelivery.DefaultAttemptCount = outbounddeliveryDescAttemptCount.Default.(uint32)
+	// outbounddeliveryDescNextRetryTimeUnix is the schema descriptor for next_retry_time_unix field.
+	outbounddeliveryDescNextRetryTimeUnix := outbounddeliveryFields[8].Descriptor()
+	// outbounddelivery.DefaultNextRetryTimeUnix holds the default value on creation for the next_retry_time_unix field.
+	outbounddelivery.DefaultNextRetryTimeUnix = outbounddeliveryDescNextRetryTimeUnix.Default.(int64)
+	// outbounddeliveryDescDeliveredTimeUnix is the schema descriptor for delivered_time_unix field.
+	outbounddeliveryDescDeliveredTimeUnix := outbounddeliveryFields[9].Descriptor()
+	// outbounddelivery.DefaultDeliveredTimeUnix holds the default value on creation for the delivered_time_unix field.
+	outbounddelivery.DefaultDeliveredTimeUnix = outbounddeliveryDescDeliveredTimeUnix.Default.(int64)
+	// outbounddeliveryDescLastError is the schema descriptor for last_error field.
+	outbounddeliveryDescLastError := outbounddeliveryFields[10].Descriptor()
+	// outbounddelivery.DefaultLastError holds the default value on creation for the last_error field.
+	outbounddelivery.DefaultLastError = outbounddeliveryDescLastError.Default.(string)
+	// outbounddeliveryDescRequestID is the schema descriptor for request_id field.
+	outbounddeliveryDescRequestID := outbounddeliveryFields[11].Descriptor()
+	// outbounddelivery.DefaultRequestID holds the default value on creation for the request_id field.
+	outbounddelivery.DefaultRequestID = outbounddeliveryDescRequestID.Default.(string)
+	// outbounddeliveryDescID is the schema descriptor for id field.
+	outbounddeliveryDescID := outbounddeliveryFields[0].Descriptor()
+	// outbounddelivery.DefaultID holds the default value on creation for the id field.
+	outbounddelivery.DefaultID = outbounddeliveryDescID.Default.(func() string)
 	reminderFields := schema.Reminder{}.Fields()
 	_ = reminderFields
 	// reminderDescTarget is the schema descriptor for target field.

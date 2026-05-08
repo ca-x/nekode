@@ -18,6 +18,9 @@ type InteractionEndpoint func(*sql.Selector)
 // Message is the predicate function for message builders.
 type Message func(*sql.Selector)
 
+// OutboundDelivery is the predicate function for outbounddelivery builders.
+type OutboundDelivery func(*sql.Selector)
+
 // Reminder is the predicate function for reminder builders.
 type Reminder func(*sql.Selector)
 
