@@ -1,0 +1,513 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"log/slog"
+	"os"
+	"os/exec"
+	"strings"
+	"sync"
+	"time"
+
+	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/runtimeadapter"
+	"google.golang.org/grpc"
+)
+
+const maxRunDetailBytes = 4096
+
+type runSupervisorClient interface {
+	AcquireStartPermit(context.Context, *daemonv1.AcquireStartPermitRequest, ...grpc.CallOption) (*daemonv1.AcquireStartPermitResponse, error)
+	ReleaseStartPermit(context.Context, *daemonv1.ReleaseStartPermitRequest, ...grpc.CallOption) (*daemonv1.ReleaseStartPermitResponse, error)
+	FetchAssignedRuns(context.Context, *daemonv1.FetchAssignedRunsRequest, ...grpc.CallOption) (*daemonv1.FetchAssignedRunsResponse, error)
+	UpdateRunStatus(context.Context, *daemonv1.UpdateRunStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateRunStatusResponse, error)
+	AppendRunStep(context.Context, *daemonv1.AppendRunStepRequest, ...grpc.CallOption) (*daemonv1.AppendRunStepResponse, error)
+	UpdateAgentStatus(context.Context, *daemonv1.UpdateAgentStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error)
+	LogActivity(context.Context, *daemonv1.LogActivityRequest, ...grpc.CallOption) (*daemonv1.LogActivityResponse, error)
+}
+
+type runSupervisorConfig struct {
+	Config         daemonConfig
+	Client         runSupervisorClient
+	WithToken      func(context.Context) context.Context
+	RequestContext func() *daemonv1.RequestContext
+	Runner         runtimeCommandRunner
+}
+
+type runSupervisor struct {
+	cfg            daemonConfig
+	client         runSupervisorClient
+	withToken      func(context.Context) context.Context
+	requestContext func() *daemonv1.RequestContext
+	runner         runtimeCommandRunner
+
+	mu      sync.Mutex
+	running map[string]*supervisedProcess
+}
+
+type supervisedProcess struct {
+	RunID           string
+	AgentID         string
+	Command         string
+	Args            []string
+	StartedTimeUnix int64
+	cancel          context.CancelFunc
+}
+
+type runtimeCommand struct {
+	Command string
+	Args    []string
+	Env     []string
+}
+
+type runtimeCommandResult struct {
+	Output   string
+	ExitCode int
+	Err      error
+}
+
+type runtimeCommandRunner interface {
+	Run(context.Context, runtimeCommand) runtimeCommandResult
+}
+
+type commandRunner struct{}
+
+func newRunSupervisor(cfg runSupervisorConfig) *runSupervisor {
+	if cfg.WithToken == nil {
+		cfg.WithToken = func(ctx context.Context) context.Context { return ctx }
+	}
+	if cfg.RequestContext == nil {
+		cfg.RequestContext = func() *daemonv1.RequestContext { return nil }
+	}
+	if cfg.Runner == nil {
+		cfg.Runner = commandRunner{}
+	}
+	return &runSupervisor{
+		cfg:            cfg.Config,
+		client:         cfg.Client,
+		withToken:      cfg.WithToken,
+		requestContext: cfg.RequestContext,
+		runner:         cfg.Runner,
+		running:        make(map[string]*supervisedProcess),
+	}
+}
+
+func (s *runSupervisor) pollOnce(ctx context.Context) error {
+	if s.client == nil {
+		return nil
+	}
+	req := &daemonv1.FetchAssignedRunsRequest{
+		ComputerId: s.cfg.ComputerID,
+		Limit:      uint32(s.cfg.MaxConcurrentRuns),
+		RequestId:  newRequestID("fetch-runs"),
+	}
+	if strings.TrimSpace(s.cfg.AgentID) != "" {
+		req.AgentIds = []string{s.cfg.AgentID}
+	}
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	resp, err := s.client.FetchAssignedRuns(callCtx, req)
+	if err != nil {
+		return fmt.Errorf("fetch assigned runs: %w", err)
+	}
+	for _, run := range resp.GetRuns() {
+		if !shouldStartRun(run) {
+			continue
+		}
+		if !s.reserveRun(run.GetRunId()) {
+			continue
+		}
+		s.executeRun(ctx, run)
+		s.releaseRun(run.GetRunId())
+	}
+	return nil
+}
+
+func shouldStartRun(run *daemonv1.Run) bool {
+	if run == nil || strings.TrimSpace(run.GetRunId()) == "" {
+		return false
+	}
+	switch run.GetState() {
+	case daemonv1.RunState_RUN_STATE_UNSPECIFIED,
+		daemonv1.RunState_RUN_STATE_QUEUED:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *runSupervisor) reserveRun(runID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.running[runID]; ok {
+		return false
+	}
+	s.running[runID] = &supervisedProcess{RunID: runID, StartedTimeUnix: time.Now().Unix()}
+	return true
+}
+
+func (s *runSupervisor) setProcessCommand(runID string, cmd runtimeCommand, cancel context.CancelFunc, agentID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	process := s.running[runID]
+	if process == nil {
+		return
+	}
+	process.AgentID = agentID
+	process.Command = cmd.Command
+	process.Args = append([]string(nil), cmd.Args...)
+	process.cancel = cancel
+}
+
+func (s *runSupervisor) releaseRun(runID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.running, runID)
+}
+
+func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
+	agentID := firstNonEmpty(run.GetAgentId(), s.cfg.AgentID)
+	target := firstNonEmpty(run.GetTarget(), s.cfg.Target)
+	permitLeaseID := ""
+	permit, err := s.acquirePermit(ctx, run, agentID)
+	if err != nil {
+		s.failRun(ctx, run, agentID, "", "start permit failed", err)
+		return
+	}
+	if permit != nil {
+		permitLeaseID = permit.GetLeaseId()
+		defer s.releasePermit(ctx, permitLeaseID, agentID)
+	}
+	if err := s.reportRunAgentStatus(ctx, run, agentID, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_RUNNING_COMMAND, daemonv1.AgentHealth_AGENT_HEALTH_OK, "run started"); err != nil {
+		slog.Warn("daemon supervisor status update failed", "run_id", run.GetRunId(), "error", err)
+	}
+	if err := s.updateRun(ctx, run, agentID, daemonv1.RunState_RUN_STATE_RUNNING, "runtime command started", "", permitLeaseID); err != nil {
+		s.failRun(ctx, run, agentID, permitLeaseID, "run status update failed", err)
+		return
+	}
+	startStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_START, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "daemon supervisor started run", "")
+	cmd, err := s.runtimeCommand(run, agentID)
+	if err != nil {
+		s.failRun(ctx, run, agentID, permitLeaseID, "build runtime command failed", err)
+		return
+	}
+	commandSummary := strings.Join(append([]string{cmd.Command}, cmd.Args...), " ")
+	commandStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_RUNNING, "runtime command running", commandSummary)
+	if startStep != nil {
+		s.logActivity(ctx, target, agentID, "run_started", "daemon supervisor started run", "", run.GetRunId(), startStep.GetStepId())
+	}
+	s.logActivity(ctx, target, agentID, "command_run", "runtime command running", commandSummary, run.GetRunId(), commandStepID(commandStep))
+
+	runCtx, cancel := context.WithTimeout(ctx, s.cfg.RunTimeout)
+	defer cancel()
+	s.setProcessCommand(run.GetRunId(), cmd, cancel, agentID)
+	result := s.runner.Run(runCtx, cmd)
+	detail := truncateDetail(result.Output)
+	if result.Err != nil {
+		errDetail := result.Err.Error()
+		if detail != "" {
+			errDetail += "\n" + detail
+		}
+		if commandStep != nil {
+			s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_FAILED, "runtime command failed", errDetail)
+		}
+		s.failRun(ctx, run, agentID, permitLeaseID, "runtime command failed", result.Err)
+		s.logActivity(ctx, target, agentID, "run_failed", "runtime command failed", errDetail, run.GetRunId(), commandStepID(commandStep))
+		return
+	}
+	if commandStep != nil {
+		s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "runtime command completed", detail)
+	}
+	resultStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_RESULT, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "run completed", detail)
+	if err := s.updateRun(ctx, run, agentID, daemonv1.RunState_RUN_STATE_COMPLETED, "runtime command completed", "", permitLeaseID); err != nil {
+		slog.Warn("daemon supervisor completion update failed", "run_id", run.GetRunId(), "error", err)
+	}
+	if err := s.reportRunAgentStatus(ctx, run, agentID, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING, daemonv1.AgentHealth_AGENT_HEALTH_OK, "run completed"); err != nil {
+		slog.Warn("daemon supervisor status update failed", "run_id", run.GetRunId(), "error", err)
+	}
+	s.logActivity(ctx, target, agentID, "run_completed", "runtime command completed", detail, run.GetRunId(), commandStepID(resultStep))
+}
+
+func (s *runSupervisor) acquirePermit(ctx context.Context, run *daemonv1.Run, agentID string) (*daemonv1.Lease, error) {
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	resp, err := s.client.AcquireStartPermit(callCtx, &daemonv1.AcquireStartPermitRequest{
+		ComputerId:       s.cfg.ComputerID,
+		AgentId:          agentID,
+		RuntimeProfileId: firstNonEmpty(run.GetRuntimeProfileId(), "profile-"+agentID),
+		RequestId:        newRequestID("permit"),
+		IdempotencyKey:   newRequestID("permit"),
+		Context:          s.requestContext(),
+		PermitTtlSeconds: uint32(max(60, int(s.cfg.RunTimeout/time.Second))),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !resp.GetGranted() {
+		return nil, fmt.Errorf("start permit rejected: %s", resp.GetRejectionReason())
+	}
+	return resp.GetPermitLease(), nil
+}
+
+func (s *runSupervisor) releasePermit(ctx context.Context, leaseID string, agentID string) {
+	if strings.TrimSpace(leaseID) == "" {
+		return
+	}
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	if _, err := s.client.ReleaseStartPermit(callCtx, &daemonv1.ReleaseStartPermitRequest{
+		LeaseId:        leaseID,
+		ComputerId:     s.cfg.ComputerID,
+		AgentId:        agentID,
+		RequestId:      newRequestID("permit-release"),
+		IdempotencyKey: newRequestID("permit-release"),
+		Context:        s.requestContext(),
+	}); err != nil {
+		slog.Warn("daemon supervisor permit release failed", "lease_id", leaseID, "error", err)
+	}
+}
+
+func (s *runSupervisor) failRun(ctx context.Context, run *daemonv1.Run, agentID string, leaseID string, summary string, err error) {
+	detail := ""
+	if err != nil {
+		detail = err.Error()
+	}
+	leaseID = firstNonEmpty(leaseID, run.GetLeaseId())
+	s.appendStep(ctx, run, leaseID, daemonv1.RunStepKind_RUN_STEP_KIND_RESULT, daemonv1.RunStepStatus_RUN_STEP_STATUS_FAILED, summary, detail)
+	if updateErr := s.updateRun(ctx, run, agentID, daemonv1.RunState_RUN_STATE_FAILED, summary, detail, leaseID); updateErr != nil {
+		slog.Warn("daemon supervisor failure update failed", "run_id", run.GetRunId(), "error", updateErr)
+	}
+	if statusErr := s.reportRunAgentStatus(ctx, run, agentID, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_BLOCKED, daemonv1.AgentHealth_AGENT_HEALTH_RUNTIME_ERROR, summary); statusErr != nil {
+		slog.Warn("daemon supervisor failure status update failed", "run_id", run.GetRunId(), "error", statusErr)
+	}
+}
+
+func (s *runSupervisor) updateRun(ctx context.Context, run *daemonv1.Run, agentID string, state daemonv1.RunState, summary string, detail string, leaseID string) error {
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	_, err := s.client.UpdateRunStatus(callCtx, &daemonv1.UpdateRunStatusRequest{
+		RunId:          run.GetRunId(),
+		AgentId:        agentID,
+		State:          state,
+		Summary:        summary,
+		Error:          detail,
+		RequestId:      newRequestID("run-status"),
+		IdempotencyKey: newRequestID("run-status"),
+		Context:        s.requestContext(),
+		LeaseId:        firstNonEmpty(leaseID, run.GetLeaseId()),
+	})
+	return err
+}
+
+func (s *runSupervisor) appendStep(ctx context.Context, run *daemonv1.Run, leaseID string, kind daemonv1.RunStepKind, status daemonv1.RunStepStatus, summary string, detail string) *daemonv1.RunStep {
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	now := time.Now().Unix()
+	resp, err := s.client.AppendRunStep(callCtx, &daemonv1.AppendRunStepRequest{
+		Step: &daemonv1.RunStep{
+			RunId:             run.GetRunId(),
+			Kind:              kind,
+			Status:            status,
+			Summary:           summary,
+			Detail:            truncateDetail(detail),
+			StartedTimeUnix:   now,
+			CompletedTimeUnix: completedTimeForStep(status, now),
+		},
+		RequestId:      newRequestID("run-step"),
+		IdempotencyKey: newRequestID("run-step"),
+		Context:        s.requestContext(),
+		LeaseId:        firstNonEmpty(leaseID, run.GetLeaseId()),
+	})
+	if err != nil {
+		slog.Warn("daemon supervisor append step failed", "run_id", run.GetRunId(), "error", err)
+		return nil
+	}
+	return resp.GetStep()
+}
+
+func completedTimeForStep(status daemonv1.RunStepStatus, now int64) int64 {
+	if status == daemonv1.RunStepStatus_RUN_STEP_STATUS_RUNNING {
+		return 0
+	}
+	return now
+}
+
+func (s *runSupervisor) reportRunAgentStatus(ctx context.Context, run *daemonv1.Run, agentID string, state daemonv1.AgentActivityState, health daemonv1.AgentHealth, summary string) error {
+	now := time.Now().Unix()
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	_, err := s.client.UpdateAgentStatus(callCtx, &daemonv1.UpdateAgentStatusRequest{
+		Status: &daemonv1.AgentStatusSnapshot{
+			AgentId:          agentID,
+			ComputerId:       s.cfg.ComputerID,
+			RuntimeProfileId: firstNonEmpty(run.GetRuntimeProfileId(), "profile-"+agentID),
+			Presence:         presenceForActivity(state),
+			ActivityState:    state,
+			Health:           health,
+			Severity:         severityForHealth(health),
+			Summary:          summary,
+			Target:           firstNonEmpty(run.GetTarget(), s.cfg.Target),
+			TaskId:           run.GetTaskId(),
+			RunId:            run.GetRunId(),
+			StartedTimeUnix:  firstNonZero(run.GetStartedTimeUnix(), now),
+			UpdatedTimeUnix:  now,
+			ExpiresTimeUnix:  now + int64((2*s.cfg.HeartbeatInterval)/time.Second),
+		},
+		RequestId:      newRequestID("agent-status"),
+		IdempotencyKey: newRequestID("agent-status"),
+		Context:        s.requestContext(),
+	})
+	return err
+}
+
+func presenceForActivity(state daemonv1.AgentActivityState) daemonv1.AgentPresence {
+	if state == daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING {
+		return daemonv1.AgentPresence_AGENT_PRESENCE_IDLE
+	}
+	if state == daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_BLOCKED {
+		return daemonv1.AgentPresence_AGENT_PRESENCE_DEGRADED
+	}
+	return daemonv1.AgentPresence_AGENT_PRESENCE_BUSY
+}
+
+func severityForHealth(health daemonv1.AgentHealth) daemonv1.AgentStatusSeverity {
+	if health == daemonv1.AgentHealth_AGENT_HEALTH_OK {
+		return daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO
+	}
+	return daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_ERROR
+}
+
+func (s *runSupervisor) logActivity(ctx context.Context, target string, agentID string, kind string, summary string, detail string, runID string, stepID string) {
+	if strings.TrimSpace(target) == "" {
+		target = "daemon"
+	}
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	if _, err := s.client.LogActivity(callCtx, &daemonv1.LogActivityRequest{
+		Target:         target,
+		AgentId:        agentID,
+		Kind:           kind,
+		Summary:        summary,
+		Detail:         truncateDetail(detail),
+		RunId:          runID,
+		StepId:         stepID,
+		RequestId:      newRequestID("activity"),
+		IdempotencyKey: newRequestID("activity"),
+		Context:        s.requestContext(),
+	}); err != nil {
+		slog.Warn("daemon supervisor activity log failed", "run_id", runID, "kind", kind, "error", err)
+	}
+}
+
+func (s *runSupervisor) runtimeCommand(run *daemonv1.Run, agentID string) (runtimeCommand, error) {
+	if strings.TrimSpace(s.cfg.ExecutorCommand) != "" {
+		return runtimeCommand{
+			Command: s.cfg.ExecutorCommand,
+			Args:    append([]string(nil), s.cfg.ExecutorArgs...),
+			Env:     runCommandEnv(s.cfg, run, agentID),
+		}, nil
+	}
+	kind := firstNonEmpty(s.cfg.RuntimeKind, "codex")
+	template := runtimeadapter.DefaultInstanceTemplate(runtimeadapter.RuntimeType{
+		Kind:        kind,
+		DisplayName: kind,
+		Command:     kind,
+		Installed:   true,
+		Healthy:     true,
+	})
+	wrapped, err := runtimeadapter.BuildWrapCommand(template, map[string]string{
+		"display_name": agentID,
+	})
+	if err != nil {
+		return runtimeCommand{}, err
+	}
+	args := append([]string(nil), wrapped.Args...)
+	if prompt := runPrompt(run); prompt != "" {
+		args = append(args, prompt)
+	}
+	return runtimeCommand{
+		Command: wrapped.Command,
+		Args:    args,
+		Env:     append(wrapped.Env, runCommandEnv(s.cfg, run, agentID)...),
+	}, nil
+}
+
+func runPrompt(run *daemonv1.Run) string {
+	parts := []string{}
+	if run.GetSummary() != "" {
+		parts = append(parts, run.GetSummary())
+	}
+	if run.GetTaskId() != "" {
+		parts = append(parts, "task_id="+run.GetTaskId())
+	}
+	if run.GetInputMessageId() != "" {
+		parts = append(parts, "input_message_id="+run.GetInputMessageId())
+	}
+	return strings.Join(parts, "\n")
+}
+
+func runCommandEnv(cfg daemonConfig, run *daemonv1.Run, agentID string) []string {
+	return []string{
+		"NEKODE_RUN_ID=" + run.GetRunId(),
+		"NEKODE_TASK_ID=" + run.GetTaskId(),
+		"NEKODE_AGENT_ID=" + agentID,
+		"NEKODE_COMPUTER_ID=" + cfg.ComputerID,
+		"NEKODE_TARGET=" + firstNonEmpty(run.GetTarget(), cfg.Target),
+		"NEKODE_RUNTIME_PROFILE_ID=" + firstNonEmpty(run.GetRuntimeProfileId(), "profile-"+agentID),
+	}
+}
+
+func (commandRunner) Run(ctx context.Context, cmd runtimeCommand) runtimeCommandResult {
+	if strings.TrimSpace(cmd.Command) == "" {
+		return runtimeCommandResult{Err: fmt.Errorf("runtime command is required"), ExitCode: -1}
+	}
+	command := exec.CommandContext(ctx, cmd.Command, cmd.Args...)
+	command.Env = append(os.Environ(), cmd.Env...)
+	var output bytes.Buffer
+	command.Stdout = &output
+	command.Stderr = &output
+	err := command.Run()
+	result := runtimeCommandResult{Output: output.String(), Err: err}
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		result.ExitCode = exitErr.ExitCode()
+	}
+	if ctx.Err() != nil {
+		result.Err = ctx.Err()
+		result.ExitCode = -1
+	}
+	return result
+}
+
+func truncateDetail(value string) string {
+	if len(value) <= maxRunDetailBytes {
+		return value
+	}
+	return value[:maxRunDetailBytes] + "\n...truncated..."
+}
+
+func commandStepID(step *daemonv1.RunStep) string {
+	if step == nil {
+		return ""
+	}
+	return step.GetStepId()
+}
+
+func firstNonZero(values ...int64) int64 {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
+	}
+	return 0
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}

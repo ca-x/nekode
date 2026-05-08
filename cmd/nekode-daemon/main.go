@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -36,20 +37,30 @@ type daemonConfig struct {
 	AgentID           string
 	RuntimeKind       string
 	Target            string
+	RunPollInterval   time.Duration
+	RunTimeout        time.Duration
+	MaxConcurrentRuns int
+	ExecutorCommand   string
+	ExecutorArgs      []string
 	Once              bool
 }
 
 type daemonConfigFile struct {
-	GRPCAddr          string `json:"grpcAddr"`
-	Token             string `json:"token"`
-	DaemonID          string `json:"daemonId"`
-	ComputerID        string `json:"computerId"`
-	DisplayName       string `json:"displayName"`
-	Hostname          string `json:"hostname"`
-	HeartbeatInterval string `json:"heartbeatInterval"`
-	AgentID           string `json:"agentId"`
-	RuntimeKind       string `json:"runtimeKind"`
-	Target            string `json:"target"`
+	GRPCAddr          string   `json:"grpcAddr"`
+	Token             string   `json:"token"`
+	DaemonID          string   `json:"daemonId"`
+	ComputerID        string   `json:"computerId"`
+	DisplayName       string   `json:"displayName"`
+	Hostname          string   `json:"hostname"`
+	HeartbeatInterval string   `json:"heartbeatInterval"`
+	AgentID           string   `json:"agentId"`
+	RuntimeKind       string   `json:"runtimeKind"`
+	Target            string   `json:"target"`
+	RunPollInterval   string   `json:"runPollInterval"`
+	RunTimeout        string   `json:"runTimeout"`
+	MaxConcurrentRuns int      `json:"maxConcurrentRuns"`
+	ExecutorCommand   string   `json:"executorCommand"`
+	ExecutorArgs      []string `json:"executorArgs"`
 }
 
 func main() {
@@ -189,18 +200,38 @@ func (s *daemonSession) loop(ctx context.Context) error {
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	heartbeatTicker := time.NewTicker(interval)
+	defer heartbeatTicker.Stop()
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config:         s.cfg,
+		Client:         s.client,
+		WithToken:      s.withToken,
+		RequestContext: s.requestContext,
+		Runner:         commandRunner{},
+	})
+	runTicker := time.NewTicker(s.cfg.RunPollInterval)
+	defer runTicker.Stop()
+	pollSupervisor(ctx, supervisor)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-ticker.C:
+		case <-heartbeatTicker.C:
 			if err := s.heartbeat(ctx); err != nil {
 				return err
 			}
+		case <-runTicker.C:
+			pollSupervisor(ctx, supervisor)
 		}
 	}
+}
+
+func pollSupervisor(ctx context.Context, supervisor *runSupervisor) {
+	go func() {
+		if err := supervisor.pollOnce(ctx); err != nil {
+			slog.Warn("daemon run supervisor poll failed", "error", err)
+		}
+	}()
 }
 
 func (s *daemonSession) computerInfo(status daemonv1.ComputerStatus) *daemonv1.ComputerInfo {
@@ -286,6 +317,11 @@ func loadConfig(args []string) (daemonConfig, error) {
 		AgentID:           env("NEKODE_AGENT_ID", "daemon-agent-"+hostname),
 		RuntimeKind:       env("NEKODE_RUNTIME_KIND", "codex"),
 		Target:            env("NEKODE_DAEMON_TARGET", "#general"),
+		RunPollInterval:   durationEnv("NEKODE_RUN_POLL_INTERVAL", 5*time.Second),
+		RunTimeout:        durationEnv("NEKODE_RUN_TIMEOUT", 10*time.Minute),
+		MaxConcurrentRuns: intEnv("NEKODE_MAX_CONCURRENT_RUNS", 1),
+		ExecutorCommand:   env("NEKODE_EXECUTOR_COMMAND", ""),
+		ExecutorArgs:      splitArgsEnv("NEKODE_EXECUTOR_ARGS"),
 	}
 	if err := applyConfigFile(&cfg); err != nil {
 		return cfg, err
@@ -304,6 +340,14 @@ func loadConfig(args []string) (daemonConfig, error) {
 	flags.StringVar(&cfg.AgentID, "agent-id", cfg.AgentID, "minimal agent id reported by this daemon")
 	flags.StringVar(&cfg.RuntimeKind, "runtime-kind", cfg.RuntimeKind, "runtime kind advertised by this daemon")
 	flags.StringVar(&cfg.Target, "target", cfg.Target, "status target")
+	flags.DurationVar(&cfg.RunPollInterval, "run-poll-interval", cfg.RunPollInterval, "assigned run poll interval")
+	flags.DurationVar(&cfg.RunTimeout, "run-timeout", cfg.RunTimeout, "maximum duration for one runtime command")
+	flags.IntVar(&cfg.MaxConcurrentRuns, "max-concurrent-runs", cfg.MaxConcurrentRuns, "maximum supervised runtime commands")
+	flags.StringVar(&cfg.ExecutorCommand, "executor-command", cfg.ExecutorCommand, "override runtime command for supervised runs")
+	flags.Func("executor-arg", "runtime command argument; repeat for multiple args", func(value string) error {
+		cfg.ExecutorArgs = append(cfg.ExecutorArgs, value)
+		return nil
+	})
 	flags.BoolVar(&cfg.Once, "once", false, "register and heartbeat once, then exit")
 	if err := flags.Parse(args); err != nil {
 		return cfg, err
@@ -316,6 +360,15 @@ func loadConfig(args []string) (daemonConfig, error) {
 	}
 	if cfg.HeartbeatInterval <= 0 {
 		return cfg, fmt.Errorf("heartbeat interval must be positive")
+	}
+	if cfg.RunPollInterval <= 0 {
+		return cfg, fmt.Errorf("run poll interval must be positive")
+	}
+	if cfg.RunTimeout <= 0 {
+		return cfg, fmt.Errorf("run timeout must be positive")
+	}
+	if cfg.MaxConcurrentRuns <= 0 {
+		return cfg, fmt.Errorf("max concurrent runs must be positive")
 	}
 	return cfg, nil
 }
@@ -356,12 +409,33 @@ func applyConfigFile(cfg *daemonConfig) error {
 	overlayString(&cfg.AgentID, file.AgentID)
 	overlayString(&cfg.RuntimeKind, file.RuntimeKind)
 	overlayString(&cfg.Target, file.Target)
+	overlayString(&cfg.ExecutorCommand, file.ExecutorCommand)
+	if len(file.ExecutorArgs) > 0 {
+		cfg.ExecutorArgs = append([]string(nil), file.ExecutorArgs...)
+	}
 	if strings.TrimSpace(file.HeartbeatInterval) != "" {
 		duration, err := time.ParseDuration(file.HeartbeatInterval)
 		if err != nil {
 			return fmt.Errorf("parse daemon heartbeat interval: %w", err)
 		}
 		cfg.HeartbeatInterval = duration
+	}
+	if strings.TrimSpace(file.RunPollInterval) != "" {
+		duration, err := time.ParseDuration(file.RunPollInterval)
+		if err != nil {
+			return fmt.Errorf("parse daemon run poll interval: %w", err)
+		}
+		cfg.RunPollInterval = duration
+	}
+	if strings.TrimSpace(file.RunTimeout) != "" {
+		duration, err := time.ParseDuration(file.RunTimeout)
+		if err != nil {
+			return fmt.Errorf("parse daemon run timeout: %w", err)
+		}
+		cfg.RunTimeout = duration
+	}
+	if file.MaxConcurrentRuns > 0 {
+		cfg.MaxConcurrentRuns = file.MaxConcurrentRuns
 	}
 	return nil
 }
@@ -388,6 +462,38 @@ func env(name, fallback string) string {
 	return value
 }
 
+func durationEnv(name string, fallback time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return fallback
+	}
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	return duration
+}
+
+func intEnv(name string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func splitArgsEnv(name string) []string {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return nil
+	}
+	return strings.Fields(value)
+}
+
 func newRequestID(prefix string) string {
 	var buf [8]byte
 	if _, err := rand.Read(buf[:]); err != nil {
@@ -398,6 +504,6 @@ func newRequestID(prefix string) string {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  nekode-daemon run [--config ~/.nekode/daemon.json] [--grpc-addr 127.0.0.1:18789] [--server-grpc 127.0.0.1:18789] [--token <install-token>] [--daemon-id daemon-host] [--computer-id computer-host] [--heartbeat-interval 30s] [--once]")
+	fmt.Fprintln(os.Stderr, "  nekode-daemon run [--config ~/.nekode/daemon.json] [--grpc-addr 127.0.0.1:18789] [--server-grpc 127.0.0.1:18789] [--token <install-token>] [--daemon-id daemon-host] [--computer-id computer-host] [--heartbeat-interval 30s] [--run-poll-interval 5s] [--executor-command codex] [--executor-arg run] [--once]")
 	fmt.Fprintln(os.Stderr, "  nekode-daemon version")
 }
