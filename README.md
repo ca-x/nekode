@@ -14,7 +14,8 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - Protocol capability review: `docs/protocol-capability-review.md`
 - Implementation design: `docs/slock-style-daemon-runtime.md`
 - Web console assets: `web/src/assets-brand.png` and `web/public/*`
-- Container bootstrap: `Dockerfile` and `docker-compose.yml`
+- Container and binary build: `Dockerfile`, `docker-compose.yml`, and
+  `build.sh`
 - Local references for future design comparison:
   `/home/czyt/code/go/references/open-agent-room` and
   `/home/czyt/code/go/references/zano`
@@ -45,6 +46,40 @@ Environment variables:
 The cache is a rebuildable projection/read-through layer. The database and
 durable event log remain authoritative for idempotency, leases, event sequence,
 task claims, sessions, secrets, and config.
+
+## Build and Package
+
+Build the Web console and a release-style Go binary:
+
+```bash
+./build.sh
+./dist/nekode version
+```
+
+Useful build variables:
+
+```bash
+VERSION=v0.1.0 COMMIT="$(git rev-parse --short HEAD)" ./build.sh
+GOOS=linux GOARCH=arm64 ./build.sh dist/nekode-linux-arm64
+```
+
+Build and run the local container image:
+
+```bash
+docker build \
+  --build-arg VERSION=local \
+  --build-arg COMMIT="$(git rev-parse --short HEAD)" \
+  --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -t nekode:local .
+
+docker compose up --build
+```
+
+The Docker image builds the Vite Web console and stores the static output at
+`/app/web/dist` inside the image. The current `nekode` server process exposes
+the API on port `18790`; production deployments that need the console from the
+same origin should serve `/app/web/dist` through a reverse proxy or a static
+file layer until backend static serving is added.
 
 ## Protocol
 

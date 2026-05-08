@@ -24,6 +24,10 @@ node_modules/
 # Frontend build artifacts
 web/dist/
 
+# Release/build artifacts
+dist/
+/nekode
+
 # Go workspace file
 go.work
 go.work.sum

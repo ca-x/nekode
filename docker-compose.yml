@@ -1,13 +1,27 @@
 services:
   nekode:
-    build: .
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-local}
+        COMMIT: ${COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
     image: nekode:local
+    container_name: nekode
+    restart: unless-stopped
     ports:
       - "18790:18790"
     environment:
+      TZ: "Asia/Shanghai"
       NEKODE_ADDR: ":18790"
       NEKODE_BASE_URL: "http://localhost:18790"
       NEKODE_DATA_DIR: "/data"
+      NEKODE_DB_TYPE: "sqlite"
+      NEKODE_DB_DSN: "/data/nekode.db"
+      # Optional unattended first-admin bootstrap:
+      # NEKODE_BOOTSTRAP_ADMIN_USERNAME: "admin"
+      # NEKODE_BOOTSTRAP_ADMIN_PASSWORD: "change-me"
+      # NEKODE_BOOTSTRAP_ADMIN_NAME: "Admin"
     volumes:
       - nekode-data:/data
 

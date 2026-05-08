@@ -249,16 +249,57 @@ manifest files at the dist root.
 
 ### Container Bootstrap
 
-The current `Dockerfile` builds the Go server. `docker-compose.yml` starts a
-single server with `/data` persisted:
+The `Dockerfile` follows the Nekobot-style release shape:
+
+- Node stage runs `npm ci` and `npm run build` under `web/`;
+- Go stage builds the `cmd/nekode` binary with version metadata;
+- runtime stage runs as a non-root user, persists `/data`, and includes the
+  built Web console at `/app/web/dist`;
+- health check probes `GET /health` on port `18790`.
+
+Build the image directly:
+
+```bash
+docker build \
+  --build-arg VERSION=local \
+  --build-arg COMMIT="$(git rev-parse --short HEAD)" \
+  --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -t nekode:local .
+```
+
+Or start the local compose stack:
 
 ```bash
 docker compose up --build
 ```
 
-The Web console is currently a separate Vite app under `web/`. A production
-container or reverse-proxy setup must either serve `web/dist/` on the same
-origin as the API or configure equivalent `/api` routing.
+`docker-compose.yml` starts a single server with `/data` persisted. It also
+shows the optional first-admin bootstrap env variables as commented examples.
+
+The image carries the Web console assets, but the current server process does
+not yet mount them as HTTP routes. A production container or reverse-proxy
+setup must serve `/app/web/dist` on the same origin as the API, or configure an
+equivalent static host plus `/api` routing, until backend static serving is
+implemented.
+
+### Binary Build
+
+`build.sh` builds the Web console first and then writes a release-style binary
+to `dist/nekode` by default:
+
+```bash
+./build.sh
+./dist/nekode version
+```
+
+The script supports release metadata and cross-target variables:
+
+```bash
+VERSION=v0.1.0 COMMIT="$(git rev-parse --short HEAD)" ./build.sh
+GOOS=linux GOARCH=arm64 ./build.sh dist/nekode-linux-arm64
+```
+
+`SKIP_NPM_INSTALL=1` may be used when `web/node_modules` is already prepared.
 
 ## Authority and Cache Rules
 
@@ -423,6 +464,8 @@ Before tagging or deploying:
 - `buf lint`
 - `go test ./... -count=1 -timeout=180s`
 - `go build ./...`
+- `./build.sh /tmp/nekode-build-check`
+- `docker build -t nekode:local-check .`
 - `cd web && npm ci && npm run typecheck && npm run build`
 - `git diff --check`
 - smoke checklist above completed against the intended deploy target
