@@ -23,6 +23,22 @@ func TestDedupeCacheMarkSeen(t *testing.T) {
 	}
 }
 
+func TestDedupeCacheIgnoresMessagesWithoutStableKey(t *testing.T) {
+	cache := DedupeCache{}
+	for _, msg := range []iminbound.Message{
+		{},
+		{EndpointID: "ep"},
+		{ExternalMessageID: "m1"},
+	} {
+		if cache.MarkSeen(msg) {
+			t.Fatalf("MarkSeen(%+v) = true, want false for messages without dedupe key", msg)
+		}
+		if cache.MarkSeen(msg) {
+			t.Fatalf("second MarkSeen(%+v) = true, want false for messages without dedupe key", msg)
+		}
+	}
+}
+
 func TestRenderStream(t *testing.T) {
 	if got := RenderStream(StreamState{}, 0); got != "Thinking... ▍" {
 		t.Fatalf("empty RenderStream() = %q", got)
@@ -38,5 +54,15 @@ func TestRenderStream(t *testing.T) {
 	got = RenderStream(StreamState{Text: "abcdefghijklmnopqrstuvwxyz"}, 10)
 	if got != "abcdefg..." {
 		t.Fatalf("truncated RenderStream() = %q", got)
+	}
+}
+
+func TestRenderStreamTruncatesOnUTF8Boundary(t *testing.T) {
+	got := RenderStream(StreamState{Text: "你好世界"}, len("你好世")+2)
+	if got != "你好..." {
+		t.Fatalf("UTF-8 truncated RenderStream() = %q", got)
+	}
+	if got := RenderStream(StreamState{Text: "abcdef"}, 3); got != "abc" {
+		t.Fatalf("small max RenderStream() = %q, want raw byte cut", got)
 	}
 }

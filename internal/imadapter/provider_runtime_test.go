@@ -128,3 +128,40 @@ func TestRenderProviderOutboundStreamFrames(t *testing.T) {
 		t.Fatalf("stream frame = %+v", frames)
 	}
 }
+
+func TestRenderProviderOutboundRejectsUnsupportedProvider(t *testing.T) {
+	if _, err := RenderProviderOutbound(OutboundRenderInput{Provider: "feishu", Text: "hello"}); err == nil {
+		t.Fatal("RenderProviderOutbound(feishu) error = nil, want unsupported provider")
+	}
+}
+
+func TestRenderProviderOutboundUsesEmptyFallbacks(t *testing.T) {
+	frames, err := RenderProviderOutbound(OutboundRenderInput{
+		Provider:       "telegram",
+		ConversationID: "-100",
+		Text:           "   ",
+	})
+	if err != nil {
+		t.Fatalf("RenderProviderOutbound(telegram) error = %v", err)
+	}
+	if len(frames) != 1 || frames[0].Text != "(empty response)" || !frames[0].Done {
+		t.Fatalf("telegram empty fallback frames = %+v", frames)
+	}
+
+	frames, err = RenderProviderOutbound(OutboundRenderInput{
+		Provider:       "qq",
+		ConversationID: "u1",
+		Stream:         &StreamState{Text: "done", StartedUnix: 10, UpdatedUnix: 15, Done: true},
+	})
+	if err != nil {
+		t.Fatalf("RenderProviderOutbound(qq done stream) error = %v", err)
+	}
+	if len(frames) != 1 ||
+		frames[0].TargetKind != "c2c" ||
+		frames[0].TargetID != "u1" ||
+		frames[0].StreamState != qqStreamStateDone ||
+		!frames[0].Done ||
+		!strings.Contains(frames[0].Text, "Response time: 5.0s") {
+		t.Fatalf("qq done stream frames = %+v", frames)
+	}
+}

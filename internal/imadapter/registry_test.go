@@ -43,3 +43,58 @@ func TestValidateConfigAndRedact(t *testing.T) {
 		t.Fatalf("redacted config = %#v", config)
 	}
 }
+
+func TestProviderSchemaShapeForConfigUI(t *testing.T) {
+	for _, schema := range ListProviders() {
+		t.Run(schema.Provider, func(t *testing.T) {
+			if _, ok := GetProvider(strings.ToUpper(schema.Provider)); !ok {
+				t.Fatalf("GetProvider() should normalize provider case for %q", schema.Provider)
+			}
+			targets := map[string]bool{}
+			for _, target := range schema.BindingTargets {
+				targets[target] = true
+			}
+			for _, target := range []string{"channel", "thread", "agent", "default_target"} {
+				if !targets[target] {
+					t.Fatalf("schema %q missing binding target %q: %#v", schema.Provider, target, schema.BindingTargets)
+				}
+			}
+			if len(schema.SetupHints) == 0 {
+				t.Fatalf("schema %q missing setup hints", schema.Provider)
+			}
+			for _, field := range schema.Fields {
+				if field.Name == "group_mode" {
+					if field.Type != FieldSelect || strings.Join(field.Options, ",") != "mention,always,disabled" {
+						t.Fatalf("schema %q group_mode field = %+v", schema.Provider, field)
+					}
+				}
+			}
+		})
+	}
+
+	if schema, ok := GetProvider("wechat"); !ok || schema.Provider != ProviderWeixin {
+		t.Fatalf("GetProvider(wechat) = %+v, %v; want weixin alias", schema, ok)
+	}
+}
+
+func TestRedactConfigOnlyMasksKnownSensitiveFields(t *testing.T) {
+	redacted, err := RedactConfig(ProviderTelegram, `{"token":"secret","channel_id":"chat-1","enable_notify":true}`)
+	if err != nil {
+		t.Fatalf("RedactConfig(telegram) error = %v", err)
+	}
+	var config map[string]any
+	if err := json.Unmarshal([]byte(redacted), &config); err != nil {
+		t.Fatalf("redacted JSON invalid: %v", err)
+	}
+	if config["token"] != "***" || config["channel_id"] != "chat-1" || config["enable_notify"] != true {
+		t.Fatalf("telegram redacted config = %#v", config)
+	}
+
+	redacted, err = RedactConfig("unknown-provider", `{"token":"leave-alone","nested":{"ok":true}}`)
+	if err != nil {
+		t.Fatalf("RedactConfig(unknown) error = %v", err)
+	}
+	if !strings.Contains(redacted, "leave-alone") || !strings.Contains(redacted, "nested") {
+		t.Fatalf("unknown provider redacted config = %s, want normalized unmasked object", redacted)
+	}
+}

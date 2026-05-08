@@ -121,6 +121,80 @@ func TestNormalizeFeishuFallsBackToEventID(t *testing.T) {
 	}
 }
 
+func TestNormalizeProviderAliasesAndMetadataEnvelope(t *testing.T) {
+	normalizer := Normalizer{Now: func() time.Time { return time.Unix(1234, 0) }}
+	msg, err := normalizer.NormalizeInbound(context.Background(), iminbound.RawEvent{
+		EndpointID:   " ep-wechat ",
+		EndpointKind: "wechat",
+		Body:         []byte(`{"seq":99,"from_user_id":"wx-u","session_id":"wx-s","item_list":[{"type":1,"text_item":{"text":"hello alias"}}]}`),
+		Metadata:     map[string]any{"raw_provider": "wechat"},
+	})
+	if err != nil {
+		t.Fatalf("NormalizeInbound(wechat alias) error = %v", err)
+	}
+	if msg.Provider != ProviderWeixin || msg.EndpointID != "ep-wechat" || msg.ExternalMessageID != "99" {
+		t.Fatalf("normalized alias message = %+v", msg)
+	}
+	metadataJSON, err := msg.MetadataJSON()
+	if err != nil {
+		t.Fatalf("MetadataJSON() error = %v", err)
+	}
+	var metadata struct {
+		Provider string `json:"provider"`
+		IM       struct {
+			Provider      string                 `json:"provider"`
+			EndpointID    string                 `json:"endpoint_id"`
+			ReceivedUnix  int64                  `json:"received_unix"`
+			Conversation  map[string]any         `json:"conversation"`
+			Sender        map[string]any         `json:"sender"`
+			Content       []map[string]any       `json:"content"`
+			UnknownFields map[string]interface{} `json:"-"`
+		} `json:"im"`
+	}
+	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+		t.Fatalf("metadata invalid: %v", err)
+	}
+	if metadata.Provider != ProviderWeixin ||
+		metadata.IM.Provider != ProviderWeixin ||
+		metadata.IM.EndpointID != "ep-wechat" ||
+		metadata.IM.ReceivedUnix != 1234 ||
+		metadata.IM.Conversation["external_id"] != "wx-s" ||
+		metadata.IM.Sender["external_id"] != "wx-u" ||
+		len(metadata.IM.Content) != 1 {
+		t.Fatalf("metadata envelope = %#v from %s", metadata, metadataJSON)
+	}
+}
+
+func TestNormalizeRejectsInvalidProviderMessages(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+		body     string
+	}{
+		{
+			name:     "telegram missing sender",
+			provider: ProviderTelegram,
+			body:     `{"message":{"message_id":1,"text":"hello","chat":{"id":2}}}`,
+		},
+		{
+			name:     "terminal empty text",
+			provider: ProviderTerminal,
+			body:     `{"message_id":"m1","session_id":"s1","operator_id":"op1"}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := (Normalizer{}).NormalizeInbound(context.Background(), iminbound.RawEvent{
+				EndpointID: "ep-" + tt.provider,
+				Provider:   tt.provider,
+				Body:       []byte(tt.body),
+			}); err == nil {
+				t.Fatalf("NormalizeInbound() error = nil, want invalid message")
+			}
+		})
+	}
+}
+
 func mustMetadataJSON(t *testing.T, msg iminbound.Message) string {
 	t.Helper()
 	value, err := msg.MetadataJSON()
