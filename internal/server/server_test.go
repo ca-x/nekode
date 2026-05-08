@@ -629,6 +629,96 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 }
 
+func TestCoreAPIsRejectMissingAuthAndInvalidInputs(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+
+	unauthenticated := []struct {
+		name   string
+		method string
+		target string
+		body   any
+	}{
+		{name: "auth me", method: http.MethodGet, target: "/api/auth/me"},
+		{name: "list messages", method: http.MethodGet, target: "/api/messages?target=%23general"},
+		{name: "create message", method: http.MethodPost, target: "/api/messages", body: map[string]any{"target": "#general", "content": "hello"}},
+		{name: "list tasks", method: http.MethodGet, target: "/api/tasks"},
+		{name: "create task", method: http.MethodPost, target: "/api/tasks", body: map[string]any{"target": "#general", "summary": "ship"}},
+		{name: "list reminders", method: http.MethodGet, target: "/api/reminders"},
+		{name: "create reminder", method: http.MethodPost, target: "/api/reminders", body: map[string]any{"target": "#general", "title": "standup", "delaySeconds": 60}},
+		{name: "daemon info", method: http.MethodGet, target: "/api/daemon/info"},
+		{name: "create daemon agent", method: http.MethodPost, target: "/api/daemon/agents", body: map[string]any{"profileId": "agent"}},
+		{name: "list interaction endpoints", method: http.MethodGet, target: "/api/interaction-endpoints"},
+		{name: "list IM providers", method: http.MethodGet, target: "/api/im/providers"},
+		{name: "list notification routes", method: http.MethodGet, target: "/api/notification-routes"},
+	}
+	for _, tt := range unauthenticated {
+		t.Run("missing auth "+tt.name, func(t *testing.T) {
+			resp := doJSONOrEmpty(t, s, tt.method, tt.target, "", tt.body)
+			if resp.Code != http.StatusUnauthorized {
+				t.Fatalf("%s %s status = %d body=%s, want 401", tt.method, tt.target, resp.Code, resp.Body.String())
+			}
+		})
+	}
+
+	invalidToken := doGETWithToken(t, s, "/api/messages?target=%23general", "not-a-valid-token")
+	if invalidToken.Code != http.StatusUnauthorized {
+		t.Fatalf("invalid token status = %d body=%s, want 401", invalidToken.Code, invalidToken.Body.String())
+	}
+
+	token := bootstrapToken(t, s)
+	endpointResp := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":        "web",
+		"provider":    "browser",
+		"displayName": "Web Console",
+	})
+	if endpointResp.Code != http.StatusCreated {
+		t.Fatalf("create endpoint status = %d body=%s", endpointResp.Code, endpointResp.Body.String())
+	}
+	endpointID := endpointBodyID(t, endpointResp)
+
+	cases := []struct {
+		name     string
+		method   string
+		target   string
+		body     any
+		wantCode int
+	}{
+		{name: "message missing content", method: http.MethodPost, target: "/api/messages", body: map[string]any{"target": "#general"}, wantCode: http.StatusBadRequest},
+		{name: "message unknown attachment", method: http.MethodPost, target: "/api/messages", body: map[string]any{"target": "#general", "content": "hello", "attachmentIds": []string{"att-missing"}}, wantCode: http.StatusNotFound},
+		{name: "task missing summary", method: http.MethodPost, target: "/api/tasks", body: map[string]any{"target": "#general"}, wantCode: http.StatusBadRequest},
+		{name: "task invalid state", method: http.MethodPost, target: "/api/tasks", body: map[string]any{"target": "#general", "summary": "ship", "state": "reviewing"}, wantCode: http.StatusBadRequest},
+		{name: "update missing task", method: http.MethodPatch, target: "/api/tasks/task-missing", body: map[string]any{"state": "done"}, wantCode: http.StatusNotFound},
+		{name: "task comment missing task", method: http.MethodPost, target: "/api/tasks/task-missing/comments", body: map[string]any{"content": "review"}, wantCode: http.StatusNotFound},
+		{name: "task comment empty content", method: http.MethodPost, target: "/api/tasks/task-missing/comments", body: map[string]any{"content": " "}, wantCode: http.StatusBadRequest},
+		{name: "task timeline missing task", method: http.MethodGet, target: "/api/tasks/task-missing/timeline", wantCode: http.StatusNotFound},
+		{name: "reminder missing target", method: http.MethodPost, target: "/api/reminders", body: map[string]any{"title": "standup", "delaySeconds": 60}, wantCode: http.StatusBadRequest},
+		{name: "reminder missing title and prompt", method: http.MethodPost, target: "/api/reminders", body: map[string]any{"target": "#general", "delaySeconds": 60}, wantCode: http.StatusBadRequest},
+		{name: "reminder invalid schedule", method: http.MethodPost, target: "/api/reminders", body: map[string]any{"target": "#general", "title": "standup", "scheduleKind": "never"}, wantCode: http.StatusBadRequest},
+		{name: "snooze reminder missing delay", method: http.MethodPost, target: "/api/reminders/rem-missing/snooze", body: map[string]any{}, wantCode: http.StatusBadRequest},
+		{name: "update missing reminder", method: http.MethodPatch, target: "/api/reminders/rem-missing", body: map[string]any{"title": "later"}, wantCode: http.StatusNotFound},
+		{name: "interaction endpoint missing display name", method: http.MethodPost, target: "/api/interaction-endpoints", body: map[string]any{"kind": "web", "provider": "browser"}, wantCode: http.StatusBadRequest},
+		{name: "notification route missing endpoint", method: http.MethodPost, target: "/api/notification-routes", body: map[string]any{"target": "#general"}, wantCode: http.StatusBadRequest},
+		{name: "notification route unknown endpoint", method: http.MethodPost, target: "/api/notification-routes", body: map[string]any{"target": "#general", "endpointId": "endpoint-missing", "eventKind": "message"}, wantCode: http.StatusBadRequest},
+		{name: "notification route invalid event kind", method: http.MethodPost, target: "/api/notification-routes", body: map[string]any{"target": "#general", "endpointId": endpointID, "eventKind": "nonsense"}, wantCode: http.StatusBadRequest},
+		{name: "resolve notification route missing target", method: http.MethodGet, target: "/api/notification-routes/resolve?eventKind=message", wantCode: http.StatusBadRequest},
+		{name: "resolve notification route invalid kind", method: http.MethodGet, target: "/api/notification-routes/resolve?target=%23general&eventKind=nonsense", wantCode: http.StatusBadRequest},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := doJSONOrEmpty(t, s, tt.method, tt.target, token, tt.body)
+			if resp.Code != tt.wantCode {
+				t.Fatalf("%s %s status = %d body=%s, want %d", tt.method, tt.target, resp.Code, resp.Body.String(), tt.wantCode)
+			}
+		})
+	}
+
+	nonMultipart := doJSON(t, s, http.MethodPost, "/api/attachments", token, map[string]any{"target": "#general"})
+	if nonMultipart.Code != http.StatusBadRequest {
+		t.Fatalf("non-multipart attachment status = %d body=%s, want 400", nonMultipart.Code, nonMultipart.Body.String())
+	}
+
+}
+
 func TestThreadInboxReadWorkflow(t *testing.T) {
 	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
 	token := bootstrapToken(t, s)
@@ -1288,13 +1378,33 @@ func doJSON(t *testing.T, s *Server, method, target, token string, body any) *ht
 
 func doGET(t *testing.T, s *Server, target, token string) *httptest.ResponseRecorder {
 	t.Helper()
+	return doGETWithToken(t, s, target, authorizationHeader(token))
+}
+
+func authorizationHeader(token string) string {
+	if token == "" {
+		return ""
+	}
+	return "Bearer " + token
+}
+
+func doGETWithToken(t *testing.T, s *Server, target, authorization string) *httptest.ResponseRecorder {
+	t.Helper()
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, target, nil)
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if authorization != "" {
+		req.Header.Set("Authorization", authorization)
 	}
 	s.Handler().ServeHTTP(resp, req)
 	return resp
+}
+
+func doJSONOrEmpty(t *testing.T, s *Server, method, target, token string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	if body == nil {
+		return doGETWithToken(t, s, target, authorizationHeader(token))
+	}
+	return doJSON(t, s, method, target, token, body)
 }
 
 func doMultipartAttachment(
