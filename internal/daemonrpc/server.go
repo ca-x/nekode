@@ -1317,6 +1317,10 @@ func eventScopeTypeFromStorage(scopeType string) daemonv1.EventScopeType {
 }
 
 func messageToProto(msg storage.Message) *daemonv1.CollaborationMessage {
+	attachments := make([]*daemonv1.AttachmentRecord, 0, len(msg.Attachments))
+	for _, attachment := range msg.Attachments {
+		attachments = append(attachments, attachmentToProto(attachment))
+	}
 	return &daemonv1.CollaborationMessage{
 		MessageId:         msg.ID,
 		Target:            msg.Target,
@@ -1328,6 +1332,7 @@ func messageToProto(msg storage.Message) *daemonv1.CollaborationMessage {
 		SourceEndpointId:  msg.SourceEndpointID,
 		ExternalMessageId: msg.ExternalMessageID,
 		MetadataJson:      msg.MetadataJSON,
+		Attachments:       attachments,
 		Sender: &daemonv1.Actor{
 			ActorKind:   actorKindFromStorage(msg.SenderKind),
 			AgentId:     msg.SenderAgentID,
@@ -1335,6 +1340,22 @@ func messageToProto(msg storage.Message) *daemonv1.CollaborationMessage {
 			DisplayName: msg.SenderDisplayName,
 		},
 		AggregateId: msg.Target,
+	}
+}
+
+func attachmentToProto(attachment storage.Attachment) *daemonv1.AttachmentRecord {
+	return &daemonv1.AttachmentRecord{
+		AttachmentId:    attachment.ID,
+		Target:          attachment.Target,
+		OwnerId:         attachment.OwnerID,
+		Filename:        attachment.Filename,
+		MimeType:        attachment.MimeType,
+		SizeBytes:       attachment.SizeBytes,
+		StorageRef:      attachment.StorageRef,
+		DownloadUrl:     attachment.DownloadURL,
+		UploadUrl:       attachment.UploadURL,
+		ExpiresTimeUnix: attachment.ExpiresTimeUnix,
+		CreatedTimeUnix: attachment.CreatedUnix,
 	}
 }
 

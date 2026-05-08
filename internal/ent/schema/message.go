@@ -24,6 +24,7 @@ func (Message) Fields() []ent.Field {
 		field.String("source_endpoint_id").Default(""),
 		field.String("external_message_id").Default(""),
 		field.String("metadata_json").Default("{}"),
+		field.String("attachments_json").Default("[]"),
 		field.String("request_id").Default(""),
 		field.Int64("created_unix"),
 	}

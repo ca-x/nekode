@@ -42,20 +42,35 @@ type InteractionEndpoint struct {
 }
 
 type Message struct {
-	ID                string `json:"id"`
-	Target            string `json:"target"`
-	ThreadID          string `json:"threadId,omitempty"`
-	Role              string `json:"role"`
-	Content           string `json:"content"`
-	SenderUserID      string `json:"senderUserId,omitempty"`
-	SenderAgentID     string `json:"senderAgentId,omitempty"`
-	SenderDisplayName string `json:"senderDisplayName,omitempty"`
-	SenderKind        string `json:"senderKind"`
-	SourceEndpointID  string `json:"sourceEndpointId,omitempty"`
-	ExternalMessageID string `json:"externalMessageId,omitempty"`
-	MetadataJSON      string `json:"metadataJson,omitempty"`
-	RequestID         string `json:"requestId,omitempty"`
-	CreatedUnix       int64  `json:"createdUnix"`
+	ID                string       `json:"id"`
+	Target            string       `json:"target"`
+	ThreadID          string       `json:"threadId,omitempty"`
+	Role              string       `json:"role"`
+	Content           string       `json:"content"`
+	SenderUserID      string       `json:"senderUserId,omitempty"`
+	SenderAgentID     string       `json:"senderAgentId,omitempty"`
+	SenderDisplayName string       `json:"senderDisplayName,omitempty"`
+	SenderKind        string       `json:"senderKind"`
+	SourceEndpointID  string       `json:"sourceEndpointId,omitempty"`
+	ExternalMessageID string       `json:"externalMessageId,omitempty"`
+	MetadataJSON      string       `json:"metadataJson,omitempty"`
+	Attachments       []Attachment `json:"attachments,omitempty"`
+	RequestID         string       `json:"requestId,omitempty"`
+	CreatedUnix       int64        `json:"createdUnix"`
+}
+
+type Attachment struct {
+	ID              string `json:"id"`
+	Target          string `json:"target"`
+	OwnerID         string `json:"ownerId,omitempty"`
+	Filename        string `json:"filename"`
+	MimeType        string `json:"mimeType"`
+	SizeBytes       int64  `json:"sizeBytes"`
+	StorageRef      string `json:"storageRef"`
+	DownloadURL     string `json:"downloadUrl"`
+	UploadURL       string `json:"uploadUrl,omitempty"`
+	ExpiresTimeUnix int64  `json:"expiresTimeUnix,omitempty"`
+	CreatedUnix     int64  `json:"createdUnix"`
 }
 
 type Task struct {

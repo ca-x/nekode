@@ -3073,6 +3073,7 @@ type MessageMutation struct {
 	source_endpoint_id  *string
 	external_message_id *string
 	metadata_json       *string
+	attachments_json    *string
 	request_id          *string
 	created_unix        *int64
 	addcreated_unix     *int64
@@ -3582,6 +3583,42 @@ func (m *MessageMutation) ResetMetadataJSON() {
 	m.metadata_json = nil
 }
 
+// SetAttachmentsJSON sets the "attachments_json" field.
+func (m *MessageMutation) SetAttachmentsJSON(s string) {
+	m.attachments_json = &s
+}
+
+// AttachmentsJSON returns the value of the "attachments_json" field in the mutation.
+func (m *MessageMutation) AttachmentsJSON() (r string, exists bool) {
+	v := m.attachments_json
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttachmentsJSON returns the old "attachments_json" field's value of the Message entity.
+// If the Message object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MessageMutation) OldAttachmentsJSON(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttachmentsJSON is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttachmentsJSON requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttachmentsJSON: %w", err)
+	}
+	return oldValue.AttachmentsJSON, nil
+}
+
+// ResetAttachmentsJSON resets all changes to the "attachments_json" field.
+func (m *MessageMutation) ResetAttachmentsJSON() {
+	m.attachments_json = nil
+}
+
 // SetRequestID sets the "request_id" field.
 func (m *MessageMutation) SetRequestID(s string) {
 	m.request_id = &s
@@ -3708,7 +3745,7 @@ func (m *MessageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MessageMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.target != nil {
 		fields = append(fields, message.FieldTarget)
 	}
@@ -3741,6 +3778,9 @@ func (m *MessageMutation) Fields() []string {
 	}
 	if m.metadata_json != nil {
 		fields = append(fields, message.FieldMetadataJSON)
+	}
+	if m.attachments_json != nil {
+		fields = append(fields, message.FieldAttachmentsJSON)
 	}
 	if m.request_id != nil {
 		fields = append(fields, message.FieldRequestID)
@@ -3778,6 +3818,8 @@ func (m *MessageMutation) Field(name string) (ent.Value, bool) {
 		return m.ExternalMessageID()
 	case message.FieldMetadataJSON:
 		return m.MetadataJSON()
+	case message.FieldAttachmentsJSON:
+		return m.AttachmentsJSON()
 	case message.FieldRequestID:
 		return m.RequestID()
 	case message.FieldCreatedUnix:
@@ -3813,6 +3855,8 @@ func (m *MessageMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldExternalMessageID(ctx)
 	case message.FieldMetadataJSON:
 		return m.OldMetadataJSON(ctx)
+	case message.FieldAttachmentsJSON:
+		return m.OldAttachmentsJSON(ctx)
 	case message.FieldRequestID:
 		return m.OldRequestID(ctx)
 	case message.FieldCreatedUnix:
@@ -3902,6 +3946,13 @@ func (m *MessageMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMetadataJSON(v)
+		return nil
+	case message.FieldAttachmentsJSON:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttachmentsJSON(v)
 		return nil
 	case message.FieldRequestID:
 		v, ok := value.(string)
@@ -4013,6 +4064,9 @@ func (m *MessageMutation) ResetField(name string) error {
 		return nil
 	case message.FieldMetadataJSON:
 		m.ResetMetadataJSON()
+		return nil
+	case message.FieldAttachmentsJSON:
+		m.ResetAttachmentsJSON()
 		return nil
 	case message.FieldRequestID:
 		m.ResetRequestID()

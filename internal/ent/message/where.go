@@ -117,6 +117,11 @@ func MetadataJSON(v string) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldMetadataJSON, v))
 }
 
+// AttachmentsJSON applies equality check predicate on the "attachments_json" field. It's identical to AttachmentsJSONEQ.
+func AttachmentsJSON(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldAttachmentsJSON, v))
+}
+
 // RequestID applies equality check predicate on the "request_id" field. It's identical to RequestIDEQ.
 func RequestID(v string) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldRequestID, v))
@@ -840,6 +845,71 @@ func MetadataJSONEqualFold(v string) predicate.Message {
 // MetadataJSONContainsFold applies the ContainsFold predicate on the "metadata_json" field.
 func MetadataJSONContainsFold(v string) predicate.Message {
 	return predicate.Message(sql.FieldContainsFold(FieldMetadataJSON, v))
+}
+
+// AttachmentsJSONEQ applies the EQ predicate on the "attachments_json" field.
+func AttachmentsJSONEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONNEQ applies the NEQ predicate on the "attachments_json" field.
+func AttachmentsJSONNEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONIn applies the In predicate on the "attachments_json" field.
+func AttachmentsJSONIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldAttachmentsJSON, vs...))
+}
+
+// AttachmentsJSONNotIn applies the NotIn predicate on the "attachments_json" field.
+func AttachmentsJSONNotIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldAttachmentsJSON, vs...))
+}
+
+// AttachmentsJSONGT applies the GT predicate on the "attachments_json" field.
+func AttachmentsJSONGT(v string) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONGTE applies the GTE predicate on the "attachments_json" field.
+func AttachmentsJSONGTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONLT applies the LT predicate on the "attachments_json" field.
+func AttachmentsJSONLT(v string) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONLTE applies the LTE predicate on the "attachments_json" field.
+func AttachmentsJSONLTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONContains applies the Contains predicate on the "attachments_json" field.
+func AttachmentsJSONContains(v string) predicate.Message {
+	return predicate.Message(sql.FieldContains(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONHasPrefix applies the HasPrefix predicate on the "attachments_json" field.
+func AttachmentsJSONHasPrefix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasPrefix(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONHasSuffix applies the HasSuffix predicate on the "attachments_json" field.
+func AttachmentsJSONHasSuffix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasSuffix(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONEqualFold applies the EqualFold predicate on the "attachments_json" field.
+func AttachmentsJSONEqualFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldEqualFold(FieldAttachmentsJSON, v))
+}
+
+// AttachmentsJSONContainsFold applies the ContainsFold predicate on the "attachments_json" field.
+func AttachmentsJSONContainsFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldContainsFold(FieldAttachmentsJSON, v))
 }
 
 // RequestIDEQ applies the EQ predicate on the "request_id" field.

@@ -141,6 +141,20 @@ func (_c *MessageCreate) SetNillableMetadataJSON(v *string) *MessageCreate {
 	return _c
 }
 
+// SetAttachmentsJSON sets the "attachments_json" field.
+func (_c *MessageCreate) SetAttachmentsJSON(v string) *MessageCreate {
+	_c.mutation.SetAttachmentsJSON(v)
+	return _c
+}
+
+// SetNillableAttachmentsJSON sets the "attachments_json" field if the given value is not nil.
+func (_c *MessageCreate) SetNillableAttachmentsJSON(v *string) *MessageCreate {
+	if v != nil {
+		_c.SetAttachmentsJSON(*v)
+	}
+	return _c
+}
+
 // SetRequestID sets the "request_id" field.
 func (_c *MessageCreate) SetRequestID(v string) *MessageCreate {
 	_c.mutation.SetRequestID(v)
@@ -238,6 +252,10 @@ func (_c *MessageCreate) defaults() {
 		v := message.DefaultMetadataJSON
 		_c.mutation.SetMetadataJSON(v)
 	}
+	if _, ok := _c.mutation.AttachmentsJSON(); !ok {
+		v := message.DefaultAttachmentsJSON
+		_c.mutation.SetAttachmentsJSON(v)
+	}
 	if _, ok := _c.mutation.RequestID(); !ok {
 		v := message.DefaultRequestID
 		_c.mutation.SetRequestID(v)
@@ -302,6 +320,9 @@ func (_c *MessageCreate) check() error {
 	}
 	if _, ok := _c.mutation.MetadataJSON(); !ok {
 		return &ValidationError{Name: "metadata_json", err: errors.New(`ent: missing required field "Message.metadata_json"`)}
+	}
+	if _, ok := _c.mutation.AttachmentsJSON(); !ok {
+		return &ValidationError{Name: "attachments_json", err: errors.New(`ent: missing required field "Message.attachments_json"`)}
 	}
 	if _, ok := _c.mutation.RequestID(); !ok {
 		return &ValidationError{Name: "request_id", err: errors.New(`ent: missing required field "Message.request_id"`)}
@@ -387,6 +408,10 @@ func (_c *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.MetadataJSON(); ok {
 		_spec.SetField(message.FieldMetadataJSON, field.TypeString, value)
 		_node.MetadataJSON = value
+	}
+	if value, ok := _c.mutation.AttachmentsJSON(); ok {
+		_spec.SetField(message.FieldAttachmentsJSON, field.TypeString, value)
+		_node.AttachmentsJSON = value
 	}
 	if value, ok := _c.mutation.RequestID(); ok {
 		_spec.SetField(message.FieldRequestID, field.TypeString, value)

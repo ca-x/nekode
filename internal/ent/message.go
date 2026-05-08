@@ -38,6 +38,8 @@ type Message struct {
 	ExternalMessageID string `json:"external_message_id,omitempty"`
 	// MetadataJSON holds the value of the "metadata_json" field.
 	MetadataJSON string `json:"metadata_json,omitempty"`
+	// AttachmentsJSON holds the value of the "attachments_json" field.
+	AttachmentsJSON string `json:"attachments_json,omitempty"`
 	// RequestID holds the value of the "request_id" field.
 	RequestID string `json:"request_id,omitempty"`
 	// CreatedUnix holds the value of the "created_unix" field.
@@ -52,7 +54,7 @@ func (*Message) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case message.FieldCreatedUnix:
 			values[i] = new(sql.NullInt64)
-		case message.FieldID, message.FieldTarget, message.FieldThreadID, message.FieldRole, message.FieldContent, message.FieldSenderUserID, message.FieldSenderAgentID, message.FieldSenderDisplayName, message.FieldSenderKind, message.FieldSourceEndpointID, message.FieldExternalMessageID, message.FieldMetadataJSON, message.FieldRequestID:
+		case message.FieldID, message.FieldTarget, message.FieldThreadID, message.FieldRole, message.FieldContent, message.FieldSenderUserID, message.FieldSenderAgentID, message.FieldSenderDisplayName, message.FieldSenderKind, message.FieldSourceEndpointID, message.FieldExternalMessageID, message.FieldMetadataJSON, message.FieldAttachmentsJSON, message.FieldRequestID:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -141,6 +143,12 @@ func (_m *Message) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.MetadataJSON = value.String
 			}
+		case message.FieldAttachmentsJSON:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field attachments_json", values[i])
+			} else if value.Valid {
+				_m.AttachmentsJSON = value.String
+			}
 		case message.FieldRequestID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field request_id", values[i])
@@ -221,6 +229,9 @@ func (_m *Message) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("metadata_json=")
 	builder.WriteString(_m.MetadataJSON)
+	builder.WriteString(", ")
+	builder.WriteString("attachments_json=")
+	builder.WriteString(_m.AttachmentsJSON)
 	builder.WriteString(", ")
 	builder.WriteString("request_id=")
 	builder.WriteString(_m.RequestID)

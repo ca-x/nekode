@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -295,6 +296,10 @@ func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Messag
 	if messageModel.CreatedUnix == 0 {
 		messageModel.CreatedUnix = unixNow()
 	}
+	attachmentsJSON, err := marshalAttachments(messageModel.Attachments)
+	if err != nil {
+		return Message{}, err
+	}
 	create := s.client.Message.Create().
 		SetTarget(messageModel.Target).
 		SetThreadID(messageModel.ThreadID).
@@ -307,6 +312,7 @@ func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Messag
 		SetSourceEndpointID(messageModel.SourceEndpointID).
 		SetExternalMessageID(messageModel.ExternalMessageID).
 		SetMetadataJSON(messageModel.MetadataJSON).
+		SetAttachmentsJSON(attachmentsJSON).
 		SetRequestID(messageModel.RequestID).
 		SetCreatedUnix(messageModel.CreatedUnix)
 	if messageModel.ID != "" {
@@ -746,9 +752,32 @@ func messageFromEnt(row *ent.Message) Message {
 		SourceEndpointID:  row.SourceEndpointID,
 		ExternalMessageID: row.ExternalMessageID,
 		MetadataJSON:      row.MetadataJSON,
+		Attachments:       unmarshalAttachments(row.AttachmentsJSON),
 		RequestID:         row.RequestID,
 		CreatedUnix:       row.CreatedUnix,
 	}
+}
+
+func marshalAttachments(attachments []Attachment) (string, error) {
+	if len(attachments) == 0 {
+		return "[]", nil
+	}
+	data, err := json.Marshal(attachments)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func unmarshalAttachments(value string) []Attachment {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	var attachments []Attachment
+	if err := json.Unmarshal([]byte(value), &attachments); err != nil {
+		return nil
+	}
+	return attachments
 }
 
 func taskFromEnt(row *ent.Task) Task {

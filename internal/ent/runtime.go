@@ -205,8 +205,12 @@ func init() {
 	messageDescMetadataJSON := messageFields[11].Descriptor()
 	// message.DefaultMetadataJSON holds the default value on creation for the metadata_json field.
 	message.DefaultMetadataJSON = messageDescMetadataJSON.Default.(string)
+	// messageDescAttachmentsJSON is the schema descriptor for attachments_json field.
+	messageDescAttachmentsJSON := messageFields[12].Descriptor()
+	// message.DefaultAttachmentsJSON holds the default value on creation for the attachments_json field.
+	message.DefaultAttachmentsJSON = messageDescAttachmentsJSON.Default.(string)
 	// messageDescRequestID is the schema descriptor for request_id field.
-	messageDescRequestID := messageFields[12].Descriptor()
+	messageDescRequestID := messageFields[13].Descriptor()
 	// message.DefaultRequestID holds the default value on creation for the request_id field.
 	message.DefaultRequestID = messageDescRequestID.Default.(string)
 	// messageDescID is the schema descriptor for id field.

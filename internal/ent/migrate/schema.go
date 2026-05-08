@@ -154,6 +154,7 @@ var (
 		{Name: "source_endpoint_id", Type: field.TypeString, Default: ""},
 		{Name: "external_message_id", Type: field.TypeString, Default: ""},
 		{Name: "metadata_json", Type: field.TypeString, Default: "{}"},
+		{Name: "attachments_json", Type: field.TypeString, Default: "[]"},
 		{Name: "request_id", Type: field.TypeString, Default: ""},
 		{Name: "created_unix", Type: field.TypeInt64},
 	}
@@ -166,17 +167,17 @@ var (
 			{
 				Name:    "message_target_created_unix_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[13], MessagesColumns[0]},
+				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[14], MessagesColumns[0]},
 			},
 			{
 				Name:    "message_thread_id_created_unix_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[2], MessagesColumns[13], MessagesColumns[0]},
+				Columns: []*schema.Column{MessagesColumns[2], MessagesColumns[14], MessagesColumns[0]},
 			},
 			{
 				Name:    "message_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[12]},
+				Columns: []*schema.Column{MessagesColumns[13]},
 			},
 		},
 	}

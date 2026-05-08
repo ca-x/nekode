@@ -6,8 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"os"
 	"path/filepath"
 	"strings"
@@ -270,6 +272,37 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	s.Handler().ServeHTTP(messages, req)
 	if messages.Code != http.StatusOK {
 		t.Fatalf("list messages status = %d body=%s", messages.Code, messages.Body.String())
+	}
+
+	attachmentResp := doMultipartAttachment(t, s, token, "#general", "preview.html", "text/html", "<strong>safe</strong>")
+	if attachmentResp.Code != http.StatusCreated {
+		t.Fatalf("upload attachment status = %d body=%s", attachmentResp.Code, attachmentResp.Body.String())
+	}
+	var attachment storage.Attachment
+	if err := json.Unmarshal(attachmentResp.Body.Bytes(), &attachment); err != nil {
+		t.Fatalf("decode attachment: %v", err)
+	}
+	if attachment.ID == "" || attachment.MimeType != "text/html" || attachment.DownloadURL == "" {
+		t.Fatalf("attachment body = %+v, want html attachment with download url", attachment)
+	}
+	attachmentMessage := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
+		"target":        "#general",
+		"content":       "with attachment",
+		"attachmentIds": []string{attachment.ID},
+	})
+	if attachmentMessage.Code != http.StatusCreated {
+		t.Fatalf("create attachment message status = %d body=%s", attachmentMessage.Code, attachmentMessage.Body.String())
+	}
+	var attachmentMessageBody storage.Message
+	if err := json.Unmarshal(attachmentMessage.Body.Bytes(), &attachmentMessageBody); err != nil {
+		t.Fatalf("decode attachment message: %v", err)
+	}
+	if len(attachmentMessageBody.Attachments) != 1 || attachmentMessageBody.Attachments[0].Filename != "preview.html" {
+		t.Fatalf("message attachments = %+v, want uploaded attachment", attachmentMessageBody.Attachments)
+	}
+	download := doGET(t, s, "/api/attachments/"+attachment.ID+"/content", token)
+	if download.Code != http.StatusOK || !strings.Contains(download.Body.String(), "<strong>safe</strong>") {
+		t.Fatalf("download attachment status = %d body=%s", download.Code, download.Body.String())
 	}
 
 	task := doJSON(t, s, http.MethodPost, "/api/tasks", token, map[string]any{
@@ -681,6 +714,44 @@ func doGET(t *testing.T, s *Server, target, token string) *httptest.ResponseReco
 	t.Helper()
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, target, nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	s.Handler().ServeHTTP(resp, req)
+	return resp
+}
+
+func doMultipartAttachment(
+	t *testing.T,
+	s *Server,
+	token string,
+	target string,
+	filename string,
+	contentType string,
+	content string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	if err := writer.WriteField("target", target); err != nil {
+		t.Fatalf("write target field: %v", err)
+	}
+	header := make(textproto.MIMEHeader)
+	header.Set("Content-Disposition", `form-data; name="file"; filename="`+filename+`"`)
+	header.Set("Content-Type", contentType)
+	part, err := writer.CreatePart(header)
+	if err != nil {
+		t.Fatalf("create file field: %v", err)
+	}
+	if _, err := part.Write([]byte(content)); err != nil {
+		t.Fatalf("write file field: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+	resp := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/attachments", &buf)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}

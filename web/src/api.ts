@@ -1,4 +1,5 @@
 import type {
+  Attachment,
   AuthResponse,
   AgentStatusSnapshot,
   CollaborationEvent,
@@ -290,6 +291,45 @@ function normalizeTask(raw: unknown): Task {
   };
 }
 
+function normalizeAttachment(raw: unknown): Attachment {
+  const row = asRecord(raw);
+  const id = asString(row.id ?? row.attachmentId ?? row.attachment_id);
+  return {
+    id,
+    target: asString(row.target),
+    ownerId: asOptionalString(row.ownerId ?? row.owner_id),
+    filename: asString(row.filename) || "attachment",
+    mimeType: asString(row.mimeType ?? row.mime_type) || "application/octet-stream",
+    sizeBytes: asNumber(row.sizeBytes ?? row.size_bytes),
+    storageRef: asOptionalString(row.storageRef ?? row.storage_ref),
+    downloadUrl: asString(row.downloadUrl ?? row.download_url) || `/api/attachments/${encodeURIComponent(id)}/content`,
+    uploadUrl: asOptionalString(row.uploadUrl ?? row.upload_url),
+    expiresTimeUnix: asNumber(row.expiresTimeUnix ?? row.expires_time_unix) || undefined,
+    createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix)
+  };
+}
+
+function normalizeMessage(raw: unknown): Message {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id ?? row.messageId ?? row.message_id),
+    target: asString(row.target),
+    threadId: asOptionalString(row.threadId ?? row.thread_id),
+    role: asString(row.role),
+    content: asString(row.content),
+    senderUserId: asOptionalString(row.senderUserId ?? row.sender_user_id),
+    senderAgentId: asOptionalString(row.senderAgentId ?? row.sender_agent_id),
+    senderDisplayName: asOptionalString(row.senderDisplayName ?? row.sender_display_name),
+    senderKind: asString(row.senderKind ?? row.sender_kind),
+    sourceEndpointId: asOptionalString(row.sourceEndpointId ?? row.source_endpoint_id),
+    externalMessageId: asOptionalString(row.externalMessageId ?? row.external_message_id),
+    metadataJson: asOptionalString(row.metadataJson ?? row.metadata_json),
+    attachments: Array.isArray(row.attachments) ? row.attachments.map(normalizeAttachment) : undefined,
+    requestId: asOptionalString(row.requestId ?? row.request_id),
+    createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix)
+  };
+}
+
 function normalizeList<T>(response: RawListResponse<unknown>, normalize: (raw: unknown) => T): ListResponse<T> {
   return { items: (response.items ?? []).map(normalize) };
 }
@@ -541,7 +581,7 @@ export class ApiClient {
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
-    if (init.body && !headers.has("Content-Type")) {
+    if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
     if (this.token) {
@@ -668,24 +708,48 @@ export class ApiClient {
     });
   }
 
-  listMessages(target: string, limit = 50) {
-    return this.request<ListResponse<Message>>(
-      `/api/messages?target=${encodeURIComponent(target)}&limit=${limit}`
+  async uploadAttachment(target: string, file: File) {
+    const form = new FormData();
+    form.set("target", target);
+    form.set("file", file);
+    return normalizeAttachment(await this.request<unknown>("/api/attachments", {
+      method: "POST",
+      body: form
+    }));
+  }
+
+  async downloadAttachment(attachment: Attachment) {
+    const response = await fetch(`${this.baseURL}${attachment.downloadUrl}`, {
+      headers: this.token ? { Authorization: `Bearer ${this.token}` } : undefined
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, response.statusText);
+    }
+    return response.blob();
+  }
+
+  async listMessages(target: string, limit = 50) {
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(
+        `/api/messages?target=${encodeURIComponent(target)}&limit=${limit}`
+      ),
+      normalizeMessage
     );
   }
 
-  createMessage(input: {
+  async createMessage(input: {
     target: string;
     content: string;
     role?: string;
     threadId?: string;
+    attachmentIds?: string[];
     sourceEndpointId?: string;
     requestId?: string;
   }) {
-    return this.request<Message>("/api/messages", {
+    return normalizeMessage(await this.request<unknown>("/api/messages", {
       method: "POST",
       body: JSON.stringify(input)
-    });
+    }));
   }
 
   async listTasks(filters: { state?: TaskState | "all"; target?: string; limit?: number }) {
@@ -721,16 +785,18 @@ export class ApiClient {
   }
 
   listTaskComments(taskId: string, limit = 100) {
-    return this.request<ListResponse<Message>>(
+    return this.request<RawListResponse<unknown>>(
       `/api/tasks/${encodeURIComponent(taskId)}/comments?limit=${limit}`
+    ).then((response) =>
+      normalizeList(response, normalizeMessage)
     );
   }
 
-  createTaskComment(taskId: string, input: { content: string; requestId?: string }) {
-    return this.request<Message>(`/api/tasks/${encodeURIComponent(taskId)}/comments`, {
+  async createTaskComment(taskId: string, input: { content: string; requestId?: string }) {
+    return normalizeMessage(await this.request<unknown>(`/api/tasks/${encodeURIComponent(taskId)}/comments`, {
       method: "POST",
       body: JSON.stringify(input)
-    });
+    }));
   }
 
   listTaskTimeline(taskId: string, filters: { sequence?: number; limit?: number } = {}) {

@@ -33,6 +33,8 @@ const (
 	FieldExternalMessageID = "external_message_id"
 	// FieldMetadataJSON holds the string denoting the metadata_json field in the database.
 	FieldMetadataJSON = "metadata_json"
+	// FieldAttachmentsJSON holds the string denoting the attachments_json field in the database.
+	FieldAttachmentsJSON = "attachments_json"
 	// FieldRequestID holds the string denoting the request_id field in the database.
 	FieldRequestID = "request_id"
 	// FieldCreatedUnix holds the string denoting the created_unix field in the database.
@@ -55,6 +57,7 @@ var Columns = []string{
 	FieldSourceEndpointID,
 	FieldExternalMessageID,
 	FieldMetadataJSON,
+	FieldAttachmentsJSON,
 	FieldRequestID,
 	FieldCreatedUnix,
 }
@@ -92,6 +95,8 @@ var (
 	DefaultExternalMessageID string
 	// DefaultMetadataJSON holds the default value on creation for the "metadata_json" field.
 	DefaultMetadataJSON string
+	// DefaultAttachmentsJSON holds the default value on creation for the "attachments_json" field.
+	DefaultAttachmentsJSON string
 	// DefaultRequestID holds the default value on creation for the "request_id" field.
 	DefaultRequestID string
 	// DefaultID holds the default value on creation for the "id" field.
@@ -159,6 +164,11 @@ func ByExternalMessageID(opts ...sql.OrderTermOption) OrderOption {
 // ByMetadataJSON orders the results by the metadata_json field.
 func ByMetadataJSON(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMetadataJSON, opts...).ToFunc()
+}
+
+// ByAttachmentsJSON orders the results by the attachments_json field.
+func ByAttachmentsJSON(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAttachmentsJSON, opts...).ToFunc()
 }
 
 // ByRequestID orders the results by the request_id field.

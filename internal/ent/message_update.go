@@ -181,6 +181,20 @@ func (_u *MessageUpdate) SetNillableMetadataJSON(v *string) *MessageUpdate {
 	return _u
 }
 
+// SetAttachmentsJSON sets the "attachments_json" field.
+func (_u *MessageUpdate) SetAttachmentsJSON(v string) *MessageUpdate {
+	_u.mutation.SetAttachmentsJSON(v)
+	return _u
+}
+
+// SetNillableAttachmentsJSON sets the "attachments_json" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillableAttachmentsJSON(v *string) *MessageUpdate {
+	if v != nil {
+		_u.SetAttachmentsJSON(*v)
+	}
+	return _u
+}
+
 // SetRequestID sets the "request_id" field.
 func (_u *MessageUpdate) SetRequestID(v string) *MessageUpdate {
 	_u.mutation.SetRequestID(v)
@@ -317,6 +331,9 @@ func (_u *MessageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.MetadataJSON(); ok {
 		_spec.SetField(message.FieldMetadataJSON, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AttachmentsJSON(); ok {
+		_spec.SetField(message.FieldAttachmentsJSON, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RequestID(); ok {
 		_spec.SetField(message.FieldRequestID, field.TypeString, value)
@@ -501,6 +518,20 @@ func (_u *MessageUpdateOne) SetNillableMetadataJSON(v *string) *MessageUpdateOne
 	return _u
 }
 
+// SetAttachmentsJSON sets the "attachments_json" field.
+func (_u *MessageUpdateOne) SetAttachmentsJSON(v string) *MessageUpdateOne {
+	_u.mutation.SetAttachmentsJSON(v)
+	return _u
+}
+
+// SetNillableAttachmentsJSON sets the "attachments_json" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillableAttachmentsJSON(v *string) *MessageUpdateOne {
+	if v != nil {
+		_u.SetAttachmentsJSON(*v)
+	}
+	return _u
+}
+
 // SetRequestID sets the "request_id" field.
 func (_u *MessageUpdateOne) SetRequestID(v string) *MessageUpdateOne {
 	_u.mutation.SetRequestID(v)
@@ -667,6 +698,9 @@ func (_u *MessageUpdateOne) sqlSave(ctx context.Context) (_node *Message, err er
 	}
 	if value, ok := _u.mutation.MetadataJSON(); ok {
 		_spec.SetField(message.FieldMetadataJSON, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.AttachmentsJSON(); ok {
+		_spec.SetField(message.FieldAttachmentsJSON, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RequestID(); ok {
 		_spec.SetField(message.FieldRequestID, field.TypeString, value)

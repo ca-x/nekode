@@ -37,6 +37,20 @@ export type InteractionEndpoint = {
 
 export type MessageSenderKind = "user" | "agent" | "system" | "endpoint";
 
+export type Attachment = {
+  id: string;
+  target: string;
+  ownerId?: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageRef?: string;
+  downloadUrl: string;
+  uploadUrl?: string;
+  expiresTimeUnix?: number;
+  createdUnix: number;
+};
+
 export type JsonObject = Record<string, unknown>;
 
 export type Message = {
@@ -52,6 +66,7 @@ export type Message = {
   sourceEndpointId?: string;
   externalMessageId?: string;
   metadataJson?: string;
+  attachments?: Attachment[];
   requestId?: string;
   createdUnix: number;
 };

@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -148,6 +150,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
+	s.mux.HandleFunc("POST /api/attachments", s.requireAuth(s.handleUploadAttachment))
+	s.mux.HandleFunc("GET /api/attachments/{id}", s.requireAuth(s.handleGetAttachment))
+	s.mux.HandleFunc("GET /api/attachments/{id}/content", s.requireAuth(s.handleDownloadAttachment))
 	s.mux.HandleFunc("GET /api/messages", s.requireAuth(s.handleListMessages))
 	s.mux.HandleFunc("POST /api/messages", s.requireAuth(s.handleCreateMessage))
 	s.mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListTasks))
@@ -429,6 +434,111 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 	writeJSON(w, http.StatusCreated, created)
 }
 
+func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
+	const maxAttachmentBytes = 32 << 20
+	r.Body = http.MaxBytesReader(w, r.Body, maxAttachmentBytes)
+	if err := r.ParseMultipartForm(maxAttachmentBytes); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid multipart attachment upload")
+		return
+	}
+	target := strings.TrimSpace(r.FormValue("target"))
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "file is required")
+		return
+	}
+	defer file.Close()
+
+	id := storage.NewID("att")
+	filename := safeAttachmentFilename(header.Filename)
+	dir := filepath.Join(s.cfg.DataDir, "attachments", id)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		writeError(w, http.StatusInternalServerError, "create attachment storage failed")
+		return
+	}
+	relativeStorageRef := filepath.Join("attachments", id, filename)
+	contentPath := filepath.Join(s.cfg.DataDir, relativeStorageRef)
+	out, err := os.OpenFile(contentPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create attachment failed")
+		return
+	}
+	size, copyErr := io.Copy(out, file)
+	closeErr := out.Close()
+	if copyErr != nil || closeErr != nil {
+		_ = os.RemoveAll(dir)
+		writeError(w, http.StatusInternalServerError, "store attachment failed")
+		return
+	}
+
+	mimeType := strings.TrimSpace(header.Header.Get("Content-Type"))
+	if mimeType == "" || mimeType == "application/octet-stream" {
+		detected, err := detectFileContentType(contentPath)
+		if err == nil {
+			mimeType = detected
+		}
+	}
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	principal := principalFromContext(r.Context())
+	attachment := storage.Attachment{
+		ID:          id,
+		Target:      target,
+		OwnerID:     principal.User.ID,
+		Filename:    filename,
+		MimeType:    mimeType,
+		SizeBytes:   size,
+		StorageRef:  filepath.ToSlash(relativeStorageRef),
+		DownloadURL: "/api/attachments/" + id + "/content",
+		CreatedUnix: time.Now().Unix(),
+	}
+	if err := s.saveAttachmentMetadata(attachment); err != nil {
+		_ = os.RemoveAll(dir)
+		writeError(w, http.StatusInternalServerError, "save attachment metadata failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, attachment)
+}
+
+func (s *Server) handleGetAttachment(w http.ResponseWriter, r *http.Request) {
+	attachment, ok := s.readAttachmentForRequest(w, r)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, attachment)
+}
+
+func (s *Server) handleDownloadAttachment(w http.ResponseWriter, r *http.Request) {
+	attachment, ok := s.readAttachmentForRequest(w, r)
+	if !ok {
+		return
+	}
+	contentPath := filepath.Join(s.cfg.DataDir, filepath.FromSlash(attachment.StorageRef))
+	file, err := os.Open(contentPath)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "attachment content not found")
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || info.IsDir() {
+		writeError(w, http.StatusNotFound, "attachment content not found")
+		return
+	}
+	disposition := "inline"
+	if !isInlineAttachment(attachment.MimeType) {
+		disposition = "attachment"
+	}
+	w.Header().Set("Content-Type", attachment.MimeType)
+	w.Header().Set("Content-Disposition", disposition+`; filename="`+strings.ReplaceAll(attachment.Filename, `"`, "")+`"`)
+	http.ServeContent(w, r, attachment.Filename, info.ModTime(), file)
+}
+
 func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 	target := strings.TrimSpace(r.URL.Query().Get("target"))
 	if target == "" {
@@ -455,6 +565,15 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	principal := principalFromContext(r.Context())
+	attachments, err := s.loadMessageAttachments(strings.TrimSpace(req.Target), req.AttachmentIDs)
+	if err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, storage.ErrNotFound) {
+			status = http.StatusNotFound
+		}
+		writeError(w, status, err.Error())
+		return
+	}
 	role := strings.TrimSpace(req.Role)
 	if role == "" {
 		role = "user"
@@ -470,6 +589,7 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		SourceEndpointID:  strings.TrimSpace(req.SourceEndpointID),
 		ExternalMessageID: strings.TrimSpace(req.ExternalMessageID),
 		MetadataJSON:      normalizedJSON(req.MetadataJSON),
+		Attachments:       attachments,
 		RequestID:         strings.TrimSpace(req.RequestID),
 	})
 	if errors.Is(err, storage.ErrConflict) {
@@ -729,6 +849,119 @@ func principalFromContext(ctx context.Context) Principal {
 	return principal
 }
 
+func (s *Server) loadMessageAttachments(target string, attachmentIDs []string) ([]storage.Attachment, error) {
+	attachments := make([]storage.Attachment, 0, len(attachmentIDs))
+	seen := make(map[string]struct{}, len(attachmentIDs))
+	for _, rawID := range attachmentIDs {
+		id := strings.TrimSpace(rawID)
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		attachment, err := s.readAttachmentMetadata(id)
+		if err != nil {
+			return nil, err
+		}
+		if attachment.Target != "" && attachment.Target != target {
+			return nil, errors.New("attachment target mismatch")
+		}
+		attachments = append(attachments, attachment)
+	}
+	return attachments, nil
+}
+
+func (s *Server) attachmentMetadataPath(id string) (string, error) {
+	id = strings.TrimSpace(id)
+	if id == "" || strings.ContainsAny(id, `/\`) || strings.HasPrefix(id, ".") {
+		return "", storage.ErrNotFound
+	}
+	return filepath.Join(s.cfg.DataDir, "attachments", id, "metadata.json"), nil
+}
+
+func (s *Server) saveAttachmentMetadata(attachment storage.Attachment) error {
+	metadataPath, err := s.attachmentMetadataPath(attachment.ID)
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(attachment, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(metadataPath, data, 0o600)
+}
+
+func (s *Server) readAttachmentMetadata(id string) (storage.Attachment, error) {
+	metadataPath, err := s.attachmentMetadataPath(id)
+	if err != nil {
+		return storage.Attachment{}, err
+	}
+	data, err := os.ReadFile(metadataPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return storage.Attachment{}, storage.ErrNotFound
+	}
+	if err != nil {
+		return storage.Attachment{}, err
+	}
+	var attachment storage.Attachment
+	if err := json.Unmarshal(data, &attachment); err != nil {
+		return storage.Attachment{}, err
+	}
+	if attachment.ID == "" {
+		return storage.Attachment{}, storage.ErrNotFound
+	}
+	return attachment, nil
+}
+
+func (s *Server) readAttachmentForRequest(w http.ResponseWriter, r *http.Request) (storage.Attachment, bool) {
+	attachment, err := s.readAttachmentMetadata(r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "attachment not found")
+		return storage.Attachment{}, false
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read attachment failed")
+		return storage.Attachment{}, false
+	}
+	return attachment, true
+}
+
+func safeAttachmentFilename(value string) string {
+	name := strings.TrimSpace(filepath.Base(value))
+	if name == "" || name == "." || name == string(filepath.Separator) {
+		return "attachment"
+	}
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\', '"', '\r', '\n', 0:
+			return -1
+		default:
+			return r
+		}
+	}, name)
+}
+
+func detectFileContentType(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	var head [512]byte
+	n, err := file.Read(head[:])
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", err
+	}
+	return http.DetectContentType(head[:n]), nil
+}
+
+func isInlineAttachment(mimeType string) bool {
+	mimeType = strings.ToLower(strings.TrimSpace(strings.Split(mimeType, ";")[0]))
+	return strings.HasPrefix(mimeType, "image/") || mimeType == "text/html"
+}
+
 func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
 	defer r.Body.Close()
 	decoder := json.NewDecoder(r.Body)
@@ -811,14 +1044,15 @@ type endpointRequest struct {
 }
 
 type messageRequest struct {
-	Target            string `json:"target"`
-	ThreadID          string `json:"threadId"`
-	Role              string `json:"role"`
-	Content           string `json:"content"`
-	SourceEndpointID  string `json:"sourceEndpointId"`
-	ExternalMessageID string `json:"externalMessageId"`
-	MetadataJSON      string `json:"metadataJson"`
-	RequestID         string `json:"requestId"`
+	Target            string   `json:"target"`
+	ThreadID          string   `json:"threadId"`
+	Role              string   `json:"role"`
+	Content           string   `json:"content"`
+	AttachmentIDs     []string `json:"attachmentIds"`
+	SourceEndpointID  string   `json:"sourceEndpointId"`
+	ExternalMessageID string   `json:"externalMessageId"`
+	MetadataJSON      string   `json:"metadataJson"`
+	RequestID         string   `json:"requestId"`
 }
 
 type taskRequest struct {

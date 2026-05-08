@@ -4,11 +4,17 @@ import {
   AtSign,
   Bot,
   CheckCircle2,
+  CheckSquare,
   Circle,
   CircleX,
   Columns3,
+  Copy,
+  Download,
   Eye,
+  File,
+  FileText,
   Hash,
+  Image,
   LayoutGrid,
   List,
   ListFilter,
@@ -17,6 +23,7 @@ import {
   MessageSquare,
   Monitor,
   OctagonAlert,
+  Paperclip,
   Plus,
   RefreshCw,
   Search,
@@ -25,14 +32,17 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Square,
+  X,
   UsersRound,
   Wifi
 } from "lucide-react";
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiClient, ApiError, makeRequestId } from "./api";
 import brandMarkUrl from "./assets-brand.png";
 import type {
   AgentStatusSnapshot,
+  Attachment,
   AuthResponse,
   CollaborationEvent,
   DaemonActivityRecord,
@@ -185,6 +195,53 @@ function unixTime(value?: number) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(value * 1000);
+}
+
+function attachmentPreviewKind(attachment: Attachment) {
+  const mimeType = attachment.mimeType.toLowerCase().split(";")[0].trim();
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType === "text/html" || attachment.filename.toLowerCase().endsWith(".html")) return "html";
+  return "file";
+}
+
+function formatBytes(value: number) {
+  if (!value) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+function wrapCanvasText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines: number
+) {
+  const words = text.split(/\s+/);
+  let line = "";
+  let lines = 0;
+  for (const word of words) {
+    const nextLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(nextLine).width > maxWidth && line) {
+      ctx.fillText(line, x, y + lines * lineHeight);
+      line = word;
+      lines += 1;
+      if (lines >= maxLines) return;
+    } else {
+      line = nextLine;
+    }
+  }
+  if (line && lines < maxLines) {
+    ctx.fillText(line, x, y + lines * lineHeight);
+  }
 }
 
 function isAuthError(error: unknown) {
@@ -964,25 +1021,112 @@ function MessagesPanel({
 }) {
   const [content, setContent] = useState("");
   const [sourceEndpointId, setSourceEndpointId] = useState("");
+  const [draftAttachments, setDraftAttachments] = useState<Attachment[]>([]);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
+  const [lightboxAttachment, setLightboxAttachment] = useState<Attachment | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ordered = useMemo(() => [...messages].reverse(), [messages]);
+  const selectedMessages = useMemo(
+    () => ordered.filter((message) => selectedMessageIds.has(message.id)),
+    [ordered, selectedMessageIds]
+  );
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim() && draftAttachments.length === 0) return;
     setBusy(true);
     try {
       await api.createMessage({
         target,
-        content,
+        content: content.trim() || "(attachment)",
+        attachmentIds: draftAttachments.map((attachment) => attachment.id),
         sourceEndpointId,
         requestId: makeRequestId("msg")
       });
       setContent("");
+      setDraftAttachments([]);
       await onCreated();
     } finally {
       setBusy(false);
     }
+  };
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(Array.from(files).map((file) => api.uploadAttachment(target, file)));
+      setDraftAttachments((current) => [...current, ...uploaded]);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const toggleSelected = (messageId: string) => {
+    setSelectedMessageIds((current) => {
+      const next = new Set(current);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  };
+
+  const copySelectedMessages = async () => {
+    const text = selectedMessages
+      .map((message) => {
+        const sender = message.senderDisplayName || message.senderKind;
+        const attachments = message.attachments?.length
+          ? `\nAttachments: ${message.attachments.map((attachment) => attachment.filename).join(", ")}`
+          : "";
+        return `[${unixTime(message.createdUnix)}] ${sender}: ${message.content}${attachments}`;
+      })
+      .join("\n\n");
+    await navigator.clipboard.writeText(text);
+  };
+
+  const saveSelectedAsImage = () => {
+    if (!selectedMessages.length) return;
+    const width = 960;
+    const rowHeight = 112;
+    const height = Math.max(180, 52 + selectedMessages.length * rowHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#17201d";
+    ctx.font = "700 22px Inter, sans-serif";
+    ctx.fillText(`${target} selected messages`, 32, 38);
+    selectedMessages.forEach((message, index) => {
+      const y = 66 + index * rowHeight;
+      ctx.fillStyle = "#eef3f1";
+      ctx.fillRect(24, y, width - 48, rowHeight - 14);
+      ctx.fillStyle = "#17201d";
+      ctx.font = "700 16px Inter, sans-serif";
+      ctx.fillText(message.senderDisplayName || message.senderKind, 44, y + 30);
+      ctx.fillStyle = "#63736d";
+      ctx.font = "13px Inter, sans-serif";
+      ctx.fillText(unixTime(message.createdUnix), width - 210, y + 30);
+      ctx.fillStyle = "#17201d";
+      ctx.font = "15px Inter, sans-serif";
+      wrapCanvasText(ctx, message.content, 44, y + 58, width - 96, 20, 2);
+      if (message.attachments?.length) {
+        ctx.fillStyle = "#3c5a7d";
+        ctx.fillText(`${message.attachments.length} attachment(s)`, 44, y + 92);
+      }
+    });
+    const link = document.createElement("a");
+    link.download = `nekode-${target.replace(/[^a-z0-9]+/gi, "-")}-messages.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
   };
 
   return (
@@ -996,11 +1140,35 @@ function MessagesPanel({
         </div>
         <div className="message-list" role="log" aria-label="Messages">
           {ordered.length ? (
-            ordered.map((message) => <MessageBubble key={message.id} message={message} />)
+            ordered.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                selected={selectedMessageIds.has(message.id)}
+                onToggleSelected={toggleSelected}
+                onPreviewAttachment={setLightboxAttachment}
+              />
+            ))
           ) : (
             <EmptyState icon={MessageSquare} title="No messages loaded" />
           )}
         </div>
+        {selectedMessages.length > 0 ? (
+          <div className="selection-toolbar" aria-label="Selected message actions">
+            <span>{selectedMessages.length} selected</span>
+            <button className="secondary-button" type="button" onClick={copySelectedMessages}>
+              <Copy size={16} aria-hidden="true" />
+              Copy
+            </button>
+            <button className="secondary-button" type="button" onClick={saveSelectedAsImage}>
+              <Image size={16} aria-hidden="true" />
+              Save image
+            </button>
+            <button className="icon-button" type="button" aria-label="Clear selection" onClick={() => setSelectedMessageIds(new Set())}>
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        ) : null}
         <form className="composer" onSubmit={submit}>
           <textarea
             aria-label="Message content"
@@ -1009,6 +1177,23 @@ function MessagesPanel({
             placeholder="Message this target"
             rows={3}
           />
+          {draftAttachments.length ? (
+            <div className="draft-attachments" aria-label="Draft attachments">
+              {draftAttachments.map((attachment) => (
+                <span key={attachment.id}>
+                  <Paperclip size={14} aria-hidden="true" />
+                  {attachment.filename}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${attachment.filename}`}
+                    onClick={() => setDraftAttachments((current) => current.filter((item) => item.id !== attachment.id))}
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="composer-actions">
             <select
               aria-label="Source endpoint"
@@ -1022,13 +1207,29 @@ function MessagesPanel({
                 </option>
               ))}
             </select>
-            <button className="primary-button" type="submit" disabled={busy || !content.trim()}>
-              <Send size={16} aria-hidden="true" />
-              Send
-            </button>
+            <div className="composer-actions-right">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                onChange={(event) => uploadFiles(event.currentTarget.files)}
+              />
+              <button className="secondary-button" type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                <Paperclip size={16} aria-hidden="true" />
+                {uploading ? "Uploading" : "Attach"}
+              </button>
+              <button className="primary-button" type="submit" disabled={busy || (!content.trim() && draftAttachments.length === 0)}>
+                <Send size={16} aria-hidden="true" />
+                Send
+              </button>
+            </div>
           </div>
         </form>
       </div>
+      {lightboxAttachment ? (
+        <AttachmentLightbox attachment={lightboxAttachment} onClose={() => setLightboxAttachment(null)} />
+      ) : null}
       <aside className="panel compact">
         <div className="panel-heading compact-heading">
           <div>
@@ -1080,15 +1281,149 @@ function MessagesPanel({
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({
+  message,
+  selected,
+  onToggleSelected,
+  onPreviewAttachment
+}: {
+  message: Message;
+  selected?: boolean;
+  onToggleSelected?: (messageId: string) => void;
+  onPreviewAttachment?: (attachment: Attachment) => void;
+}) {
   return (
-    <article className="message-bubble">
+    <article className={`message-bubble${selected ? " is-selected" : ""}`}>
       <header>
+        {onToggleSelected ? (
+          <button
+            className="message-select"
+            type="button"
+            aria-label={selected ? "Deselect message" : "Select message"}
+            onClick={() => onToggleSelected(message.id)}
+          >
+            {selected ? <CheckSquare size={16} aria-hidden="true" /> : <Square size={16} aria-hidden="true" />}
+          </button>
+        ) : null}
         <strong>{message.senderDisplayName || message.senderKind}</strong>
         <span>{unixTime(message.createdUnix)}</span>
       </header>
       <p>{message.content}</p>
+      {message.attachments?.length && onPreviewAttachment ? (
+        <div className="attachment-grid">
+          {message.attachments.map((attachment) => (
+            <AttachmentPreview key={attachment.id} attachment={attachment} onPreview={onPreviewAttachment} />
+          ))}
+        </div>
+      ) : null}
     </article>
+  );
+}
+
+function AttachmentPreview({
+  attachment,
+  onPreview
+}: {
+  attachment: Attachment;
+  onPreview: (attachment: Attachment) => void;
+}) {
+  const [objectUrl, setObjectUrl] = useState("");
+  const kind = attachmentPreviewKind(attachment);
+
+  useEffect(() => {
+    let disposed = false;
+    let url = "";
+    if (kind === "image" || kind === "html") {
+      api.downloadAttachment(attachment).then((blob) => {
+        if (disposed) return;
+        url = URL.createObjectURL(blob);
+        setObjectUrl(url);
+      }).catch(() => undefined);
+    }
+    return () => {
+      disposed = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [attachment, kind]);
+
+  const icon = kind === "image" ? Image : kind === "html" ? FileText : File;
+  const Icon = icon;
+
+  return (
+    <div className="attachment-preview">
+      <button type="button" onClick={() => onPreview(attachment)} aria-label={`Preview ${attachment.filename}`}>
+        {kind === "image" && objectUrl ? (
+          <img src={objectUrl} alt={attachment.filename} />
+        ) : kind === "html" && objectUrl ? (
+          <iframe title={attachment.filename} src={objectUrl} sandbox="" />
+        ) : (
+          <span className="attachment-file-icon">
+            <Icon size={22} aria-hidden="true" />
+          </span>
+        )}
+      </button>
+      <div>
+        <strong>{attachment.filename}</strong>
+        <span>{attachment.mimeType} · {formatBytes(attachment.sizeBytes)}</span>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentLightbox({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) {
+  const [objectUrl, setObjectUrl] = useState("");
+  const kind = attachmentPreviewKind(attachment);
+
+  useEffect(() => {
+    let disposed = false;
+    let url = "";
+    api.downloadAttachment(attachment).then((blob) => {
+      if (disposed) return;
+      url = URL.createObjectURL(blob);
+      setObjectUrl(url);
+    }).catch(() => undefined);
+    return () => {
+      disposed = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [attachment]);
+
+  const download = async () => {
+    const blob = await api.downloadAttachment(attachment);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = attachment.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="lightbox-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="lightbox-surface" onClick={(event) => event.stopPropagation()}>
+        <div className="lightbox-header">
+          <strong>{attachment.filename}</strong>
+          <div>
+            <button className="icon-button" type="button" aria-label="Download attachment" onClick={download}>
+              <Download size={16} aria-hidden="true" />
+            </button>
+            <button className="icon-button" type="button" aria-label="Close preview" onClick={onClose}>
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        {kind === "image" && objectUrl ? (
+          <img className="lightbox-image" src={objectUrl} alt={attachment.filename} />
+        ) : kind === "html" && objectUrl ? (
+          <iframe className="lightbox-frame" title={attachment.filename} src={objectUrl} sandbox="" />
+        ) : (
+          <div className="lightbox-file">
+            <File size={42} aria-hidden="true" />
+            <span>{attachment.mimeType}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
