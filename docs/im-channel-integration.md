@@ -274,6 +274,12 @@ keeps the source-only IM reply behavior and also enqueues pending
 still consume and update those delivery records through the task #158 lifecycle;
 task #162 does not send directly to provider SDKs.
 
+Operators should create notification routes only after the destination endpoint
+exists and outbound is enabled on that endpoint. A route is considered active
+only when `enabled=true`, `preference` is not `muted`, the event kind matches
+the event being resolved, and the endpoint ID has not already been selected by
+a more specific thread route.
+
 ## Deployment Steps
 
 For each IM channel:
@@ -293,9 +299,13 @@ For each IM channel:
    provider message ID, sender, conversation, content blocks, and metadata.
 6. Confirm the coordinator writes an existing Nekode message with
    `SourceEndpointID` and `ExternalMessageID`.
-7. Confirm agent replies and notifications go through the outbound dispatcher,
+7. If the endpoint should receive proactive notifications, create a
+   `NotificationRoute` for the target or thread and confirm
+   `/api/notification-routes/resolve` returns the expected endpoint for the
+   event kind.
+8. Confirm agent replies and notifications go through the outbound dispatcher,
    not through direct runtime calls from the adapter.
-8. Run the task #164 mock platform gate before treating the channel as usable.
+9. Run the task #164 mock platform gate before treating the channel as usable.
 
 For local development, use mock platform fixtures first. Real provider
 credentials should be used only in an operator-owned environment and must never
@@ -424,6 +434,9 @@ Before marking platform adapter work done, reviewers should check:
 - Provider coverage includes Telegram, QQ, Feishu, WeChat, and Terminal.
 - Web display/routing rules distinguish IM-origin threads from Web-native agent
   DM while sharing the same `storage.Message` fact model.
+- Notification routes document target/thread/endpoint/event kind/preference
+  resolution, including thread priority, muted/disabled filtering, and endpoint
+  dedupe.
 - `ConfigJSON` is documented as non-secret; credentials use secret references or
   redacted placeholders.
 - Stella reference scope and MIT attribution are explicit.

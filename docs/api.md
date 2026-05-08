@@ -247,6 +247,27 @@ Query:
 
 Returns the enabled routes that should receive that event, with thread-specific
 routes preferred over target defaults and duplicate endpoints collapsed.
+Routes with `enabled=false` or `preference=muted` are omitted. If both a target
+route and a thread route point at the same endpoint, the thread route wins.
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "nroute_...",
+      "target": "#general",
+      "threadId": "optional-thread-id",
+      "endpointId": "iep_...",
+      "eventKind": "message",
+      "preference": "all",
+      "enabled": true,
+      "configJson": "{}"
+    }
+  ]
+}
+```
 
 ### `PATCH /api/notification-routes/{id}`
 
