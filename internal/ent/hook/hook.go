@@ -9,6 +9,30 @@ import (
 	"github.com/ca-x/nekode/internal/ent"
 )
 
+// The ChannelFunc type is an adapter to allow the use of ordinary
+// function as Channel mutator.
+type ChannelFunc func(context.Context, *ent.ChannelMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChannelFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ChannelMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChannelMutation", m)
+}
+
+// The ChannelMemberFunc type is an adapter to allow the use of ordinary
+// function as ChannelMember mutator.
+type ChannelMemberFunc func(context.Context, *ent.ChannelMemberMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChannelMemberFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ChannelMemberMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChannelMemberMutation", m)
+}
+
 // The CollaborationEventFunc type is an adapter to allow the use of ordinary
 // function as CollaborationEvent mutator.
 type CollaborationEventFunc func(context.Context, *ent.CollaborationEventMutation) (ent.Value, error)

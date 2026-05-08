@@ -177,7 +177,13 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/attachments/{id}", s.requireAuth(s.handleGetAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}/content", s.requireAuth(s.handleDownloadAttachment))
 	s.mux.HandleFunc("GET /api/channels", s.requireAuth(s.handleListChannels))
+	s.mux.HandleFunc("POST /api/channels", s.requireAuth(s.handleCreateChannel))
+	s.mux.HandleFunc("PATCH /api/channels/{target}", s.requireAuth(s.handleUpdateChannel))
+	s.mux.HandleFunc("DELETE /api/channels/{target}", s.requireAuth(s.handleDeleteChannel))
 	s.mux.HandleFunc("GET /api/channels/{target}/members", s.requireAuth(s.handleListChannelMembers))
+	s.mux.HandleFunc("POST /api/channels/{target}/members", s.requireAuth(s.handleUpsertChannelMember))
+	s.mux.HandleFunc("PATCH /api/channels/{target}/members/{kind}/{memberID}", s.requireAuth(s.handleUpdateChannelMember))
+	s.mux.HandleFunc("DELETE /api/channels/{target}/members/{kind}/{memberID}", s.requireAuth(s.handleDeleteChannelMember))
 	s.mux.HandleFunc("GET /api/messages", s.requireAuth(s.handleListMessages))
 	s.mux.HandleFunc("GET /api/messages/search", s.requireAuth(s.handleSearchMessages))
 	s.mux.HandleFunc("GET /api/messages/saved", s.requireAuth(s.handleListSavedMessages))
@@ -1054,18 +1060,160 @@ func (s *Server) handleListChannels(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"items": channels})
 }
 
+func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context()).User
+	if !canManageChannels(principal) {
+		writeError(w, http.StatusForbidden, "admin role required")
+		return
+	}
+	var req channelRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	channel, err := s.store.CreateChannel(r.Context(), storage.ChannelSummary{
+		Target:          req.Target,
+		DisplayName:     req.DisplayName,
+		ChannelType:     "channel",
+		Visibility:      req.Visibility,
+		CreatedByUserID: principal.ID,
+	})
+	if err != nil {
+		writeStorageError(w, err, "create channel failed")
+		return
+	}
+	if _, err := s.store.UpsertChannelMember(r.Context(), storage.ChannelMember{
+		Target:      channel.Target,
+		MemberID:    principal.ID,
+		Username:    principal.Username,
+		DisplayName: firstNonEmptyString(principal.DisplayName, principal.Username, "Admin"),
+		Kind:        "human",
+		Role:        "admin",
+	}); err != nil {
+		writeStorageError(w, err, "create channel owner member failed")
+		return
+	}
+	channel.MemberCount = 1
+	channel.CurrentUserRole = "admin"
+	channel.Joined = true
+	writeJSON(w, http.StatusCreated, channel)
+}
+
+func (s *Server) handleUpdateChannel(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context()).User
+	target := pathChannelTarget(r)
+	if !s.canManageChannel(r.Context(), principal, target) {
+		writeError(w, http.StatusForbidden, "channel admin role required")
+		return
+	}
+	var req channelPatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	channel, err := s.store.UpdateChannel(r.Context(), target, storage.ChannelPatch{
+		DisplayName: req.DisplayName,
+		Visibility:  req.Visibility,
+	})
+	if err != nil {
+		writeStorageError(w, err, "update channel failed")
+		return
+	}
+	s.decorateChannelSummary(r.Context(), principal, &channel)
+	writeJSON(w, http.StatusOK, channel)
+}
+
+func (s *Server) handleDeleteChannel(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context()).User
+	target := pathChannelTarget(r)
+	if !s.canManageChannel(r.Context(), principal, target) {
+		writeError(w, http.StatusForbidden, "channel admin role required")
+		return
+	}
+	if err := s.store.DeleteChannel(r.Context(), target); err != nil {
+		writeStorageError(w, err, "delete channel failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 func (s *Server) handleListChannelMembers(w http.ResponseWriter, r *http.Request) {
-	target := strings.TrimSpace(r.PathValue("target"))
+	target := pathChannelTarget(r)
 	if target == "" {
 		writeError(w, http.StatusBadRequest, "target is required")
 		return
 	}
-	target = "#" + strings.TrimPrefix(target, "#")
-	if !canReadChannel(principalFromContext(r.Context()).User, target) {
+	if !s.canReadChannel(r.Context(), principalFromContext(r.Context()).User, target) {
 		writeError(w, http.StatusForbidden, "channel membership is private")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": s.channelMembers(principalFromContext(r.Context()).User, target)})
+	members, err := s.channelMembers(r.Context(), principalFromContext(r.Context()).User, target)
+	if err != nil {
+		writeStorageError(w, err, "list channel members failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": members})
+}
+
+func (s *Server) handleUpsertChannelMember(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context()).User
+	target := pathChannelTarget(r)
+	if !s.canManageChannel(r.Context(), principal, target) {
+		writeError(w, http.StatusForbidden, "channel admin role required")
+		return
+	}
+	var req channelMemberRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	member, err := s.store.UpsertChannelMember(r.Context(), storage.ChannelMember{
+		Target:      target,
+		MemberID:    req.MemberID,
+		Username:    req.Username,
+		DisplayName: req.DisplayName,
+		Kind:        req.Kind,
+		Role:        req.Role,
+	})
+	if err != nil {
+		writeStorageError(w, err, "upsert channel member failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, member)
+}
+
+func (s *Server) handleUpdateChannelMember(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context()).User
+	target := pathChannelTarget(r)
+	if !s.canManageChannel(r.Context(), principal, target) {
+		writeError(w, http.StatusForbidden, "channel admin role required")
+		return
+	}
+	var req channelMemberPatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	member, err := s.store.UpdateChannelMember(r.Context(), target, r.PathValue("kind"), r.PathValue("memberID"), storage.ChannelMemberPatch{
+		Username:    req.Username,
+		DisplayName: req.DisplayName,
+		Role:        req.Role,
+	})
+	if err != nil {
+		writeStorageError(w, err, "update channel member failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, member)
+}
+
+func (s *Server) handleDeleteChannelMember(w http.ResponseWriter, r *http.Request) {
+	principal := principalFromContext(r.Context()).User
+	target := pathChannelTarget(r)
+	if !s.canManageChannel(r.Context(), principal, target) {
+		writeError(w, http.StatusForbidden, "channel admin role required")
+		return
+	}
+	if err := s.store.DeleteChannelMember(r.Context(), target, r.PathValue("kind"), r.PathValue("memberID")); err != nil {
+		writeStorageError(w, err, "delete channel member failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
 func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
@@ -1087,12 +1235,35 @@ func (s *Server) channelSummaries(ctx context.Context, user storage.User, joined
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
+	persisted, err := s.store.ListChannels(ctx, storage.ChannelListOptions{
+		JoinedOnly: joinedOnly,
+		UserID:     user.ID,
+		Limit:      limit,
+	})
+	if err != nil {
+		return nil, err
+	}
 	seen := map[string]struct{}{
 		"#general": {},
 		"#ops":     {},
 		"#release": {},
 	}
 	targets := []string{"#general", "#ops", "#release"}
+	out := make([]storage.ChannelSummary, 0, len(persisted)+len(targets))
+	for _, channel := range persisted {
+		seen[channel.Target] = struct{}{}
+		s.decorateChannelSummary(ctx, user, &channel)
+		if !channel.Joined && channel.Visibility == "private" {
+			continue
+		}
+		if joinedOnly && !channel.Joined {
+			continue
+		}
+		out = append(out, channel)
+		if len(out) >= limit {
+			return out, nil
+		}
+	}
 	messageTargets, err := s.store.ListMessageTargets(ctx, limit)
 	if err != nil {
 		return nil, err
@@ -1108,16 +1279,22 @@ func (s *Server) channelSummaries(ctx context.Context, user storage.User, joined
 		seen[target] = struct{}{}
 		targets = append(targets, target)
 	}
-	out := make([]storage.ChannelSummary, 0, len(targets))
 	for _, target := range targets {
-		role := channelRoleFor(user, target)
+		role := s.channelRoleFor(ctx, user, target)
 		joined := role != ""
 		if joinedOnly && !joined {
 			continue
 		}
 		visibility := "public"
-		if isPrivateChannel(target) {
+		if s.isPrivateChannel(ctx, target) {
 			visibility = "private"
+		}
+		if !joined && visibility == "private" {
+			continue
+		}
+		members, err := s.channelMembers(ctx, user, target)
+		if err != nil {
+			return nil, err
 		}
 		out = append(out, storage.ChannelSummary{
 			Target:          target,
@@ -1125,7 +1302,7 @@ func (s *Server) channelSummaries(ctx context.Context, user storage.User, joined
 			ChannelType:     "channel",
 			Visibility:      visibility,
 			Joined:          joined,
-			MemberCount:     len(s.channelMembers(user, target)),
+			MemberCount:     len(members),
 			CurrentUserRole: role,
 		})
 		if len(out) >= limit {
@@ -1135,7 +1312,24 @@ func (s *Server) channelSummaries(ctx context.Context, user storage.User, joined
 	return out, nil
 }
 
-func (s *Server) channelMembers(user storage.User, target string) []storage.ChannelMember {
+func (s *Server) decorateChannelSummary(ctx context.Context, user storage.User, channel *storage.ChannelSummary) {
+	role := s.channelRoleFor(ctx, user, channel.Target)
+	channel.CurrentUserRole = role
+	channel.Joined = role != ""
+	members, err := s.channelMembers(ctx, user, channel.Target)
+	if err == nil {
+		channel.MemberCount = len(members)
+	}
+}
+
+func (s *Server) channelMembers(ctx context.Context, user storage.User, target string) ([]storage.ChannelMember, error) {
+	persisted, err := s.store.ListChannelMembers(ctx, target, 200)
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return nil, err
+	}
+	if len(persisted) > 0 {
+		return persisted, nil
+	}
 	members := []storage.ChannelMember{
 		{
 			Target:         target,
@@ -1143,7 +1337,7 @@ func (s *Server) channelMembers(user storage.User, target string) []storage.Chan
 			Username:       user.Username,
 			DisplayName:    firstNonEmptyString(user.DisplayName, user.Username, "Signed in user"),
 			Kind:           "human",
-			Role:           firstNonEmptyString(channelRoleFor(user, target), "viewer"),
+			Role:           firstNonEmptyString(s.channelRoleFor(ctx, user, target), "viewer"),
 			JoinedTimeUnix: user.CreatedUnix,
 		},
 	}
@@ -1157,7 +1351,7 @@ func (s *Server) channelMembers(user storage.User, target string) []storage.Chan
 			JoinedTimeUnix: user.CreatedUnix,
 		})
 	}
-	return members
+	return members, nil
 }
 
 func canReadChannel(user storage.User, target string) bool {
@@ -1177,6 +1371,55 @@ func channelRoleFor(user storage.User, target string) string {
 func isPrivateChannel(target string) bool {
 	name := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(target), "#"))
 	return strings.HasPrefix(name, "private-") || strings.HasPrefix(name, "priv-")
+}
+
+func (s *Server) canReadChannel(ctx context.Context, user storage.User, target string) bool {
+	return !s.isPrivateChannel(ctx, target) || s.channelRoleFor(ctx, user, target) != ""
+}
+
+func (s *Server) canManageChannel(ctx context.Context, user storage.User, target string) bool {
+	role := s.channelRoleFor(ctx, user, target)
+	return role == "admin"
+}
+
+func canManageChannels(user storage.User) bool {
+	return strings.EqualFold(user.Role, "owner") || strings.EqualFold(user.Role, "admin")
+}
+
+func (s *Server) channelRoleFor(ctx context.Context, user storage.User, target string) string {
+	if canManageChannels(user) {
+		return "admin"
+	}
+	members, err := s.store.ListChannelMembers(ctx, target, 200)
+	if err == nil {
+		for _, member := range members {
+			if member.Kind == "human" && member.MemberID == user.ID {
+				return member.Role
+			}
+		}
+		if len(members) > 0 {
+			return ""
+		}
+	}
+	if s.isPrivateChannel(ctx, target) {
+		return ""
+	}
+	return "member"
+}
+
+func (s *Server) isPrivateChannel(ctx context.Context, target string) bool {
+	if channel, err := s.store.GetChannel(ctx, target); err == nil {
+		return channel.Visibility == "private"
+	}
+	return isPrivateChannel(target)
+}
+
+func pathChannelTarget(r *http.Request) string {
+	target := strings.TrimSpace(r.PathValue("target"))
+	if target == "" {
+		return ""
+	}
+	return "#" + strings.TrimPrefix(target, "#")
 }
 
 func firstNonEmptyString(values ...string) string {
@@ -1851,6 +2094,19 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
 
+func writeStorageError(w http.ResponseWriter, err error, fallback string) {
+	switch {
+	case errors.Is(err, storage.ErrNotFound):
+		writeError(w, http.StatusNotFound, fallback)
+	case errors.Is(err, storage.ErrConflict):
+		writeError(w, http.StatusConflict, fallback)
+	case errors.Is(err, storage.ErrInvalidState):
+		writeError(w, http.StatusBadRequest, fallback)
+	default:
+		writeError(w, http.StatusInternalServerError, fallback)
+	}
+}
+
 func intQuery(r *http.Request, name string, fallback int) int {
 	raw := strings.TrimSpace(r.URL.Query().Get(name))
 	if raw == "" {
@@ -2041,6 +2297,31 @@ type endpointPatchRequest struct {
 	OutboundEnabled *bool   `json:"outboundEnabled"`
 	AuthMode        *string `json:"authMode"`
 	ConfigJSON      *string `json:"configJson"`
+}
+
+type channelRequest struct {
+	Target      string `json:"target"`
+	DisplayName string `json:"displayName"`
+	Visibility  string `json:"visibility"`
+}
+
+type channelPatchRequest struct {
+	DisplayName *string `json:"displayName"`
+	Visibility  *string `json:"visibility"`
+}
+
+type channelMemberRequest struct {
+	MemberID    string `json:"memberId"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Kind        string `json:"kind"`
+	Role        string `json:"role"`
+}
+
+type channelMemberPatchRequest struct {
+	Username    *string `json:"username"`
+	DisplayName *string `json:"displayName"`
+	Role        *string `json:"role"`
 }
 
 type notificationRouteRequest struct {

@@ -1122,6 +1122,7 @@ function App() {
             issues={sectionIssueGroups.settings}
             loading={status === "loading"}
             onRetry={loadData}
+            onChanged={loadData}
           />
         ) : null}
         {view === "endpoints" ? (
@@ -3519,7 +3520,8 @@ function SettingsPanel({
   runtimePresets,
   issues,
   loading,
-  onRetry
+  onRetry,
+  onChanged
 }: {
   user: User | null;
   setupStatus: SetupStatus | null;
@@ -3534,13 +3536,125 @@ function SettingsPanel({
   issues: SectionIssue[];
   loading: boolean;
   onRetry: () => Promise<void>;
+  onChanged: () => Promise<void>;
 }) {
-  const userRole = user?.role || "member";
+  const userRole = (user?.role || "member").toLowerCase();
   const channelRole = channel?.currentUserRole || "member";
   const visibility = channel?.visibility || "public";
   const recommendedRuntimes = runtimePresets.filter((preset) => preset.recommended).length;
   const writableEndpoints = endpoints.filter((endpoint) => endpoint.outboundEnabled).length;
   const readableEndpoints = endpoints.filter((endpoint) => endpoint.inboundEnabled).length;
+  const canManageChannel = channelRole === "admin";
+  const canCreateChannels = userRole === "admin" || userRole === "owner";
+  const [channelTargetDraft, setChannelTargetDraft] = useState("");
+  const [newChannelNameDraft, setNewChannelNameDraft] = useState("");
+  const [newChannelVisibilityDraft, setNewChannelVisibilityDraft] = useState("public");
+  const [currentChannelNameDraft, setCurrentChannelNameDraft] = useState("");
+  const [currentChannelVisibilityDraft, setCurrentChannelVisibilityDraft] = useState("public");
+  const [memberKindDraft, setMemberKindDraft] = useState("human");
+  const [memberIdDraft, setMemberIdDraft] = useState("");
+  const [memberDisplayNameDraft, setMemberDisplayNameDraft] = useState("");
+  const [memberUsernameDraft, setMemberUsernameDraft] = useState("");
+  const [memberRoleDraft, setMemberRoleDraft] = useState("member");
+  const [memberRoleEdits, setMemberRoleEdits] = useState<Record<string, string>>({});
+  const [channelBusy, setChannelBusy] = useState(false);
+  const [channelActionError, setChannelActionError] = useState("");
+  const [channelActionReceipt, setChannelActionReceipt] = useState("");
+
+  useEffect(() => {
+    setCurrentChannelNameDraft(channel?.displayName || "");
+    setCurrentChannelVisibilityDraft(channel?.visibility || "public");
+    setMemberRoleEdits({});
+    setChannelActionError("");
+    setChannelActionReceipt("");
+  }, [channel?.target, channel?.displayName, channel?.visibility]);
+
+  const runChannelMutation = async (fallback: string, action: () => Promise<string | void>) => {
+    setChannelBusy(true);
+    setChannelActionError("");
+    setChannelActionReceipt("");
+    try {
+      const receipt = await action();
+      if (receipt) setChannelActionReceipt(receipt);
+      await onChanged();
+    } catch (err) {
+      setChannelActionError(errorMessage(err, fallback));
+    } finally {
+      setChannelBusy(false);
+    }
+  };
+
+  const createManagedChannel = async (event: FormEvent) => {
+    event.preventDefault();
+    await runChannelMutation("Unable to create channel", async () => {
+      const created = await api.createChannel({
+        target: channelTargetDraft,
+        displayName: newChannelNameDraft,
+        visibility: newChannelVisibilityDraft
+      });
+      setChannelTargetDraft("");
+      setNewChannelNameDraft("");
+      setNewChannelVisibilityDraft("public");
+      return `Created ${created.target}`;
+    });
+  };
+
+  const updateManagedChannel = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!channel) return;
+    await runChannelMutation("Unable to update channel", async () => {
+      const updated = await api.updateChannel(channel.target, {
+        displayName: currentChannelNameDraft,
+        visibility: currentChannelVisibilityDraft
+      });
+      return `Updated ${updated.target}`;
+    });
+  };
+
+  const deleteManagedChannel = async () => {
+    if (!channel) return;
+    await runChannelMutation("Unable to delete channel", async () => {
+      await api.deleteChannel(channel.target);
+      return `Deleted ${channel.target}`;
+    });
+  };
+
+  const addManagedMember = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!channel) return;
+    await runChannelMutation("Unable to add channel member", async () => {
+      const member = await api.upsertChannelMember(channel.target, {
+        memberId: memberIdDraft,
+        username: memberUsernameDraft,
+        displayName: memberDisplayNameDraft,
+        kind: memberKindDraft,
+        role: memberRoleDraft
+      });
+      setMemberIdDraft("");
+      setMemberUsernameDraft("");
+      setMemberDisplayNameDraft("");
+      setMemberKindDraft("human");
+      setMemberRoleDraft("member");
+      return `Saved ${member.displayName}`;
+    });
+  };
+
+  const updateManagedMemberRole = async (member: ChannelMember) => {
+    if (!channel) return;
+    const role = memberRoleEdits[`${member.kind}:${member.memberId}`] || String(member.role);
+    await runChannelMutation("Unable to update member role", async () => {
+      const updated = await api.updateChannelMember(channel.target, member.kind, member.memberId, { role });
+      return `Updated ${updated.displayName}`;
+    });
+  };
+
+  const removeManagedMember = async (member: ChannelMember) => {
+    if (!channel) return;
+    await runChannelMutation("Unable to remove member", async () => {
+      await api.deleteChannelMember(channel.target, member.kind, member.memberId);
+      return `Removed ${member.displayName}`;
+    });
+  };
 
   return (
     <section className="content-grid settings-grid">
@@ -3635,6 +3749,194 @@ function SettingsPanel({
           ) : (
             <EmptyState icon={UsersRound} title="No visible members for this target" />
           )}
+        </div>
+      </section>
+
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Channel Admin</p>
+            <h2>Management</h2>
+          </div>
+          <span className={`diagnostic-badge ${canManageChannel ? "is-ok" : "is-idle"}`}>
+            {canManageChannel ? "editable" : "read only"}
+          </span>
+        </div>
+        {channelActionError ? <p className="inline-error" role="alert">{channelActionError}</p> : null}
+        {channelActionReceipt ? <p className="inline-success" role="status">{channelActionReceipt}</p> : null}
+        <div className="channel-admin-grid">
+          <form className="form-stack" onSubmit={createManagedChannel}>
+            <p className="eyebrow">Create</p>
+            <label>
+              Target
+              <input
+                value={channelTargetDraft}
+                onChange={(event) => setChannelTargetDraft(event.target.value)}
+                placeholder="#team-ops"
+                disabled={!canCreateChannels}
+              />
+            </label>
+            <label>
+              Display name
+              <input
+                value={newChannelNameDraft}
+                onChange={(event) => setNewChannelNameDraft(event.target.value)}
+                placeholder="Team Ops"
+                disabled={!canCreateChannels}
+              />
+            </label>
+            <label>
+              Visibility
+              <select
+                value={newChannelVisibilityDraft}
+                onChange={(event) => setNewChannelVisibilityDraft(event.target.value)}
+                disabled={!canCreateChannels}
+              >
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </label>
+            <button className="secondary-button" type="submit" disabled={channelBusy || !canCreateChannels || !channelTargetDraft.trim()}>
+              <Plus size={16} aria-hidden="true" />
+              Create
+            </button>
+          </form>
+          <form className="form-stack" onSubmit={updateManagedChannel}>
+            <p className="eyebrow">Current Channel</p>
+            <label>
+              Display name
+              <input
+                value={currentChannelNameDraft}
+                onChange={(event) => setCurrentChannelNameDraft(event.target.value)}
+                disabled={!channel || !canManageChannel}
+              />
+            </label>
+            <label>
+              Visibility
+              <select
+                value={currentChannelVisibilityDraft}
+                onChange={(event) => setCurrentChannelVisibilityDraft(event.target.value)}
+                disabled={!channel || !canManageChannel}
+              >
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </label>
+            <div className="enrollment-actions">
+              <button className="primary-button" type="submit" disabled={channelBusy || !channel || !canManageChannel}>
+                <CheckCircle2 size={16} aria-hidden="true" />
+                Save
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => void deleteManagedChannel()}
+                disabled={channelBusy || !channel || !canManageChannel}
+              >
+                <X size={16} aria-hidden="true" />
+                Delete
+              </button>
+            </div>
+          </form>
+          <form className="form-stack" onSubmit={addManagedMember}>
+            <p className="eyebrow">Members</p>
+            <div className="channel-member-form-grid">
+              <label>
+                Kind
+                <select
+                  value={memberKindDraft}
+                  onChange={(event) => setMemberKindDraft(event.target.value)}
+                  disabled={!channel || !canManageChannel}
+                >
+                  <option value="human">Human</option>
+                  <option value="agent">Agent</option>
+                </select>
+              </label>
+              <label>
+                Role
+                <select
+                  value={memberRoleDraft}
+                  onChange={(event) => setMemberRoleDraft(event.target.value)}
+                  disabled={!channel || !canManageChannel}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="member">Member</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Member ID
+              <input
+                value={memberIdDraft}
+                onChange={(event) => setMemberIdDraft(event.target.value)}
+                placeholder={memberKindDraft === "agent" ? "agent:reviewer" : "usr_..."}
+                disabled={!channel || !canManageChannel}
+              />
+            </label>
+            <label>
+              Display name
+              <input
+                value={memberDisplayNameDraft}
+                onChange={(event) => setMemberDisplayNameDraft(event.target.value)}
+                placeholder="Review Agent"
+                disabled={!channel || !canManageChannel}
+              />
+            </label>
+            <label>
+              Username
+              <input
+                value={memberUsernameDraft}
+                onChange={(event) => setMemberUsernameDraft(event.target.value)}
+                placeholder="optional for humans"
+                disabled={!channel || !canManageChannel}
+              />
+            </label>
+            <button className="secondary-button" type="submit" disabled={channelBusy || !channel || !canManageChannel || !memberIdDraft.trim()}>
+              <Plus size={16} aria-hidden="true" />
+              Add member
+            </button>
+          </form>
+        </div>
+        <div className="channel-member-management-list">
+          {channelMembers.length ? channelMembers.map((member) => {
+            const key = `${member.kind}:${member.memberId}`;
+            return (
+              <article className="channel-member-management-row" key={key}>
+                <div>
+                  <strong>{member.displayName}</strong>
+                  <span>{member.kind} · {member.memberId}</span>
+                </div>
+                <select
+                  value={memberRoleEdits[key] || String(member.role)}
+                  onChange={(event) => setMemberRoleEdits((current) => ({ ...current, [key]: event.target.value }))}
+                  disabled={!canManageChannel || channelBusy}
+                  aria-label={`Role for ${member.displayName}`}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="member">Member</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => void updateManagedMemberRole(member)}
+                  disabled={!canManageChannel || channelBusy}
+                >
+                  Save role
+                </button>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label={`Remove ${member.displayName}`}
+                  onClick={() => void removeManagedMember(member)}
+                  disabled={!canManageChannel || channelBusy}
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </article>
+            );
+          }) : <EmptyState icon={UsersRound} title="No members to manage" />}
         </div>
       </section>
 

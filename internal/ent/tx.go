@@ -12,6 +12,10 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Channel is the client for interacting with the Channel builders.
+	Channel *ChannelClient
+	// ChannelMember is the client for interacting with the ChannelMember builders.
+	ChannelMember *ChannelMemberClient
 	// CollaborationEvent is the client for interacting with the CollaborationEvent builders.
 	CollaborationEvent *CollaborationEventClient
 	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
@@ -169,6 +173,8 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Channel = NewChannelClient(tx.config)
+	tx.ChannelMember = NewChannelMemberClient(tx.config)
 	tx.CollaborationEvent = NewCollaborationEventClient(tx.config)
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
 	tx.InteractionEndpoint = NewInteractionEndpointClient(tx.config)
@@ -191,7 +197,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: CollaborationEvent.QueryXXX(), the query will be executed
+// applies a query, for example: Channel.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

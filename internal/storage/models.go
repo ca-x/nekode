@@ -58,6 +58,20 @@ type ChannelSummary struct {
 	Joined          bool   `json:"joined"`
 	MemberCount     int    `json:"memberCount"`
 	CurrentUserRole string `json:"currentUserRole,omitempty"`
+	CreatedByUserID string `json:"createdByUserId,omitempty"`
+	CreatedUnix     int64  `json:"createdUnix,omitempty"`
+	UpdatedUnix     int64  `json:"updatedUnix,omitempty"`
+}
+
+type ChannelPatch struct {
+	DisplayName *string
+	Visibility  *string
+}
+
+type ChannelListOptions struct {
+	JoinedOnly bool
+	UserID     string
+	Limit      int
 }
 
 type ChannelMember struct {
@@ -68,6 +82,13 @@ type ChannelMember struct {
 	Kind           string `json:"kind"`
 	Role           string `json:"role"`
 	JoinedTimeUnix int64  `json:"joinedTimeUnix"`
+	UpdatedUnix    int64  `json:"updatedUnix,omitempty"`
+}
+
+type ChannelMemberPatch struct {
+	Username    *string
+	DisplayName *string
+	Role        *string
 }
 
 type Message struct {

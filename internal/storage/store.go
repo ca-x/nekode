@@ -15,6 +15,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	entschema "entgo.io/ent/dialect/sql/schema"
 	"github.com/ca-x/nekode/internal/ent"
+	"github.com/ca-x/nekode/internal/ent/channel"
+	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
@@ -381,6 +383,291 @@ func (s *Store) DeleteInteractionEndpoint(ctx context.Context, id string) error 
 		return ErrNotFound
 	}
 	return err
+}
+
+func (s *Store) CreateChannel(ctx context.Context, channelModel ChannelSummary) (ChannelSummary, error) {
+	normalized, err := normalizeChannelSummary(channelModel)
+	if err != nil {
+		return ChannelSummary{}, err
+	}
+	now := unixNow()
+	row, err := s.client.Channel.Create().
+		SetTarget(normalized.Target).
+		SetDisplayName(normalized.DisplayName).
+		SetChannelType(normalized.ChannelType).
+		SetVisibility(normalized.Visibility).
+		SetCreatedByUserID(strings.TrimSpace(normalized.CreatedByUserID)).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if ent.IsConstraintError(err) {
+		return ChannelSummary{}, ErrConflict
+	}
+	if err != nil {
+		return ChannelSummary{}, err
+	}
+	return channelFromEnt(row), nil
+}
+
+func (s *Store) ListChannels(ctx context.Context, opts ChannelListOptions) ([]ChannelSummary, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 100
+	}
+	query := s.client.Channel.Query().Order(channel.ByTarget()).Limit(opts.Limit)
+	if opts.JoinedOnly {
+		targets, err := s.channelMemberTargets(ctx, opts.UserID)
+		if err != nil {
+			return nil, err
+		}
+		if len(targets) == 0 {
+			return nil, nil
+		}
+		query.Where(channel.TargetIn(targets...))
+	}
+	rows, err := query.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels := make([]ChannelSummary, 0, len(rows))
+	for _, row := range rows {
+		channels = append(channels, channelFromEnt(row))
+	}
+	return channels, nil
+}
+
+func (s *Store) channelMemberTargets(ctx context.Context, userID string) ([]string, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, nil
+	}
+	rows, err := s.client.ChannelMember.Query().
+		Where(channelmember.KindEQ("human"), channelmember.MemberIDEQ(userID)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	targets := make([]string, 0, len(rows))
+	seen := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		if _, ok := seen[row.Target]; ok {
+			continue
+		}
+		seen[row.Target] = struct{}{}
+		targets = append(targets, row.Target)
+	}
+	return targets, nil
+}
+
+func (s *Store) GetChannel(ctx context.Context, target string) (ChannelSummary, error) {
+	target = normalizeChannelTarget(target)
+	if target == "" {
+		return ChannelSummary{}, ErrNotFound
+	}
+	row, err := s.client.Channel.Query().Where(channel.TargetEQ(target)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return ChannelSummary{}, ErrNotFound
+	}
+	if err != nil {
+		return ChannelSummary{}, err
+	}
+	return channelFromEnt(row), nil
+}
+
+func (s *Store) UpdateChannel(ctx context.Context, target string, patch ChannelPatch) (ChannelSummary, error) {
+	target = normalizeChannelTarget(target)
+	if target == "" {
+		return ChannelSummary{}, ErrNotFound
+	}
+	update := s.client.Channel.Update().
+		Where(channel.TargetEQ(target)).
+		SetUpdatedUnix(unixNow())
+	if patch.DisplayName != nil {
+		displayName := strings.TrimSpace(*patch.DisplayName)
+		if displayName == "" {
+			return ChannelSummary{}, ErrInvalidState
+		}
+		update.SetDisplayName(displayName)
+	}
+	if patch.Visibility != nil {
+		visibility := normalizeChannelVisibility(*patch.Visibility)
+		if !validChannelVisibility(visibility) {
+			return ChannelSummary{}, ErrInvalidState
+		}
+		update.SetVisibility(visibility)
+	}
+	affected, err := update.Save(ctx)
+	if err != nil {
+		return ChannelSummary{}, err
+	}
+	if affected == 0 {
+		return ChannelSummary{}, ErrNotFound
+	}
+	return s.GetChannel(ctx, target)
+}
+
+func (s *Store) DeleteChannel(ctx context.Context, target string) error {
+	target = normalizeChannelTarget(target)
+	if target == "" {
+		return ErrNotFound
+	}
+	memberCount, err := s.client.ChannelMember.Query().Where(channelmember.TargetEQ(target)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	messageCount, err := s.client.Message.Query().Where(message.TargetEQ(target)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	taskCount, err := s.client.Task.Query().Where(task.TargetEQ(target)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	if memberCount > 0 || messageCount > 0 || taskCount > 0 {
+		return ErrConflict
+	}
+	affected, err := s.client.Channel.Delete().Where(channel.TargetEQ(target)).Exec(ctx)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) UpsertChannelMember(ctx context.Context, member ChannelMember) (ChannelMember, error) {
+	normalized, err := normalizeChannelMember(member)
+	if err != nil {
+		return ChannelMember{}, err
+	}
+	if _, err := s.GetChannel(ctx, normalized.Target); err != nil {
+		return ChannelMember{}, err
+	}
+	now := unixNow()
+	row, err := s.client.ChannelMember.Query().
+		Where(
+			channelmember.TargetEQ(normalized.Target),
+			channelmember.KindEQ(normalized.Kind),
+			channelmember.MemberIDEQ(normalized.MemberID),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		row, err := s.client.ChannelMember.Create().
+			SetTarget(normalized.Target).
+			SetMemberID(normalized.MemberID).
+			SetUsername(normalized.Username).
+			SetDisplayName(normalized.DisplayName).
+			SetKind(normalized.Kind).
+			SetRole(normalized.Role).
+			SetJoinedTimeUnix(now).
+			SetUpdatedUnix(now).
+			Save(ctx)
+		if ent.IsConstraintError(err) {
+			return ChannelMember{}, ErrConflict
+		}
+		if err != nil {
+			return ChannelMember{}, err
+		}
+		return channelMemberFromEnt(row), nil
+	}
+	if err != nil {
+		return ChannelMember{}, err
+	}
+	row, err = s.client.ChannelMember.UpdateOneID(row.ID).
+		SetUsername(normalized.Username).
+		SetDisplayName(normalized.DisplayName).
+		SetRole(normalized.Role).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if err != nil {
+		return ChannelMember{}, err
+	}
+	return channelMemberFromEnt(row), nil
+}
+
+func (s *Store) ListChannelMembers(ctx context.Context, target string, limit int) ([]ChannelMember, error) {
+	target = normalizeChannelTarget(target)
+	if target == "" {
+		return nil, ErrNotFound
+	}
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	rows, err := s.client.ChannelMember.Query().
+		Where(channelmember.TargetEQ(target)).
+		Order(channelmember.ByKind(), channelmember.ByDisplayName(), channelmember.ByMemberID()).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	members := make([]ChannelMember, 0, len(rows))
+	for _, row := range rows {
+		members = append(members, channelMemberFromEnt(row))
+	}
+	return members, nil
+}
+
+func (s *Store) UpdateChannelMember(ctx context.Context, target, kind, memberID string, patch ChannelMemberPatch) (ChannelMember, error) {
+	target = normalizeChannelTarget(target)
+	kind = normalizeChannelMemberKind(kind)
+	memberID = strings.TrimSpace(memberID)
+	if target == "" || kind == "" || memberID == "" {
+		return ChannelMember{}, ErrNotFound
+	}
+	update := s.client.ChannelMember.Update().
+		Where(channelmember.TargetEQ(target), channelmember.KindEQ(kind), channelmember.MemberIDEQ(memberID)).
+		SetUpdatedUnix(unixNow())
+	if patch.Username != nil {
+		update.SetUsername(strings.TrimSpace(*patch.Username))
+	}
+	if patch.DisplayName != nil {
+		displayName := strings.TrimSpace(*patch.DisplayName)
+		if displayName == "" {
+			return ChannelMember{}, ErrInvalidState
+		}
+		update.SetDisplayName(displayName)
+	}
+	if patch.Role != nil {
+		role := normalizeChannelMemberRole(*patch.Role)
+		if !validChannelMemberRole(role) {
+			return ChannelMember{}, ErrInvalidState
+		}
+		update.SetRole(role)
+	}
+	affected, err := update.Save(ctx)
+	if err != nil {
+		return ChannelMember{}, err
+	}
+	if affected == 0 {
+		return ChannelMember{}, ErrNotFound
+	}
+	row, err := s.client.ChannelMember.Query().
+		Where(channelmember.TargetEQ(target), channelmember.KindEQ(kind), channelmember.MemberIDEQ(memberID)).
+		Only(ctx)
+	if err != nil {
+		return ChannelMember{}, err
+	}
+	return channelMemberFromEnt(row), nil
+}
+
+func (s *Store) DeleteChannelMember(ctx context.Context, target, kind, memberID string) error {
+	target = normalizeChannelTarget(target)
+	kind = normalizeChannelMemberKind(kind)
+	memberID = strings.TrimSpace(memberID)
+	if target == "" || kind == "" || memberID == "" {
+		return ErrNotFound
+	}
+	affected, err := s.client.ChannelMember.Delete().
+		Where(channelmember.TargetEQ(target), channelmember.KindEQ(kind), channelmember.MemberIDEQ(memberID)).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Message, error) {
@@ -1600,6 +1887,31 @@ func endpointFromEnt(row *ent.InteractionEndpoint) InteractionEndpoint {
 	}
 }
 
+func channelFromEnt(row *ent.Channel) ChannelSummary {
+	return ChannelSummary{
+		Target:          row.Target,
+		DisplayName:     row.DisplayName,
+		ChannelType:     row.ChannelType,
+		Visibility:      row.Visibility,
+		CreatedByUserID: row.CreatedByUserID,
+		CreatedUnix:     row.CreatedUnix,
+		UpdatedUnix:     row.UpdatedUnix,
+	}
+}
+
+func channelMemberFromEnt(row *ent.ChannelMember) ChannelMember {
+	return ChannelMember{
+		Target:         row.Target,
+		MemberID:       row.MemberID,
+		Username:       row.Username,
+		DisplayName:    row.DisplayName,
+		Kind:           row.Kind,
+		Role:           row.Role,
+		JoinedTimeUnix: row.JoinedTimeUnix,
+		UpdatedUnix:    row.UpdatedUnix,
+	}
+}
+
 func messageFromEnt(row *ent.Message) Message {
 	return Message{
 		ID:                row.ID,
@@ -1760,6 +2072,113 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func normalizeChannelSummary(channelModel ChannelSummary) (ChannelSummary, error) {
+	channelModel.Target = normalizeChannelTarget(channelModel.Target)
+	channelModel.DisplayName = strings.TrimSpace(channelModel.DisplayName)
+	channelModel.ChannelType = strings.ToLower(strings.TrimSpace(channelModel.ChannelType))
+	channelModel.Visibility = normalizeChannelVisibility(channelModel.Visibility)
+	if channelModel.ChannelType == "" {
+		channelModel.ChannelType = "channel"
+	}
+	if channelModel.DisplayName == "" {
+		channelModel.DisplayName = strings.TrimPrefix(channelModel.Target, "#")
+	}
+	if channelModel.Target == "" || !strings.HasPrefix(channelModel.Target, "#") || channelModel.DisplayName == "" {
+		return ChannelSummary{}, ErrInvalidState
+	}
+	if channelModel.ChannelType != "channel" || !validChannelVisibility(channelModel.Visibility) {
+		return ChannelSummary{}, ErrInvalidState
+	}
+	return channelModel, nil
+}
+
+func normalizeChannelMember(member ChannelMember) (ChannelMember, error) {
+	member.Target = normalizeChannelTarget(member.Target)
+	member.MemberID = strings.TrimSpace(member.MemberID)
+	member.Username = strings.TrimSpace(member.Username)
+	member.DisplayName = strings.TrimSpace(member.DisplayName)
+	member.Kind = normalizeChannelMemberKind(member.Kind)
+	member.Role = normalizeChannelMemberRole(member.Role)
+	if member.DisplayName == "" {
+		member.DisplayName = firstNonEmpty(member.Username, member.MemberID)
+	}
+	if member.Target == "" || member.MemberID == "" || member.DisplayName == "" {
+		return ChannelMember{}, ErrInvalidState
+	}
+	if !validChannelMemberKind(member.Kind) || !validChannelMemberRole(member.Role) {
+		return ChannelMember{}, ErrInvalidState
+	}
+	return member, nil
+}
+
+func normalizeChannelTarget(target string) string {
+	target = strings.TrimSpace(target)
+	if target == "" {
+		return ""
+	}
+	return "#" + strings.TrimPrefix(target, "#")
+}
+
+func normalizeChannelVisibility(visibility string) string {
+	switch strings.ToLower(strings.TrimSpace(visibility)) {
+	case "", "public":
+		return "public"
+	case "private":
+		return "private"
+	default:
+		return strings.ToLower(strings.TrimSpace(visibility))
+	}
+}
+
+func validChannelVisibility(visibility string) bool {
+	switch visibility {
+	case "public", "private":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeChannelMemberKind(kind string) string {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "", "human", "user":
+		return "human"
+	case "agent":
+		return "agent"
+	default:
+		return strings.ToLower(strings.TrimSpace(kind))
+	}
+}
+
+func validChannelMemberKind(kind string) bool {
+	switch kind {
+	case "human", "agent":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeChannelMemberRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "", "member":
+		return "member"
+	case "admin", "viewer":
+		return strings.ToLower(strings.TrimSpace(role))
+	default:
+		return strings.ToLower(strings.TrimSpace(role))
+	}
+}
+
+func validChannelMemberRole(role string) bool {
+	switch role {
+	case "admin", "member", "viewer":
+		return true
+	default:
+		return false
+	}
 }
 
 func validTaskState(state string) bool {

@@ -8,6 +8,65 @@ import (
 )
 
 var (
+	// ChannelsColumns holds the columns for the "channels" table.
+	ChannelsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "display_name", Type: field.TypeString},
+		{Name: "channel_type", Type: field.TypeString, Default: "channel"},
+		{Name: "visibility", Type: field.TypeString, Default: "public"},
+		{Name: "created_by_user_id", Type: field.TypeString, Default: ""},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// ChannelsTable holds the schema information for the "channels" table.
+	ChannelsTable = &schema.Table{
+		Name:       "channels",
+		Columns:    ChannelsColumns,
+		PrimaryKey: []*schema.Column{ChannelsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "channel_target",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelsColumns[1]},
+			},
+			{
+				Name:    "channel_visibility",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelsColumns[4]},
+			},
+		},
+	}
+	// ChannelMembersColumns holds the columns for the "channel_members" table.
+	ChannelMembersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "member_id", Type: field.TypeString},
+		{Name: "username", Type: field.TypeString, Default: ""},
+		{Name: "display_name", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeString, Default: "human"},
+		{Name: "role", Type: field.TypeString, Default: "member"},
+		{Name: "joined_time_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// ChannelMembersTable holds the schema information for the "channel_members" table.
+	ChannelMembersTable = &schema.Table{
+		Name:       "channel_members",
+		Columns:    ChannelMembersColumns,
+		PrimaryKey: []*schema.Column{ChannelMembersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "channelmember_target_kind_member_id",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelMembersColumns[1], ChannelMembersColumns[5], ChannelMembersColumns[2]},
+			},
+			{
+				Name:    "channelmember_target_role",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMembersColumns[1], ChannelMembersColumns[6]},
+			},
+		},
+	}
 	// CollaborationEventsColumns holds the columns for the "collaboration_events" table.
 	CollaborationEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -516,6 +575,8 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ChannelsTable,
+		ChannelMembersTable,
 		CollaborationEventsTable,
 		IdempotencyRecordsTable,
 		InteractionEndpointsTable,

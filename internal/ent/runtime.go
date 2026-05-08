@@ -3,6 +3,8 @@
 package ent
 
 import (
+	"github.com/ca-x/nekode/internal/ent/channel"
+	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
@@ -23,6 +25,62 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	channelFields := schema.Channel{}.Fields()
+	_ = channelFields
+	// channelDescTarget is the schema descriptor for target field.
+	channelDescTarget := channelFields[1].Descriptor()
+	// channel.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	channel.TargetValidator = channelDescTarget.Validators[0].(func(string) error)
+	// channelDescDisplayName is the schema descriptor for display_name field.
+	channelDescDisplayName := channelFields[2].Descriptor()
+	// channel.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	channel.DisplayNameValidator = channelDescDisplayName.Validators[0].(func(string) error)
+	// channelDescChannelType is the schema descriptor for channel_type field.
+	channelDescChannelType := channelFields[3].Descriptor()
+	// channel.DefaultChannelType holds the default value on creation for the channel_type field.
+	channel.DefaultChannelType = channelDescChannelType.Default.(string)
+	// channelDescVisibility is the schema descriptor for visibility field.
+	channelDescVisibility := channelFields[4].Descriptor()
+	// channel.DefaultVisibility holds the default value on creation for the visibility field.
+	channel.DefaultVisibility = channelDescVisibility.Default.(string)
+	// channelDescCreatedByUserID is the schema descriptor for created_by_user_id field.
+	channelDescCreatedByUserID := channelFields[5].Descriptor()
+	// channel.DefaultCreatedByUserID holds the default value on creation for the created_by_user_id field.
+	channel.DefaultCreatedByUserID = channelDescCreatedByUserID.Default.(string)
+	// channelDescID is the schema descriptor for id field.
+	channelDescID := channelFields[0].Descriptor()
+	// channel.DefaultID holds the default value on creation for the id field.
+	channel.DefaultID = channelDescID.Default.(func() string)
+	channelmemberFields := schema.ChannelMember{}.Fields()
+	_ = channelmemberFields
+	// channelmemberDescTarget is the schema descriptor for target field.
+	channelmemberDescTarget := channelmemberFields[1].Descriptor()
+	// channelmember.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	channelmember.TargetValidator = channelmemberDescTarget.Validators[0].(func(string) error)
+	// channelmemberDescMemberID is the schema descriptor for member_id field.
+	channelmemberDescMemberID := channelmemberFields[2].Descriptor()
+	// channelmember.MemberIDValidator is a validator for the "member_id" field. It is called by the builders before save.
+	channelmember.MemberIDValidator = channelmemberDescMemberID.Validators[0].(func(string) error)
+	// channelmemberDescUsername is the schema descriptor for username field.
+	channelmemberDescUsername := channelmemberFields[3].Descriptor()
+	// channelmember.DefaultUsername holds the default value on creation for the username field.
+	channelmember.DefaultUsername = channelmemberDescUsername.Default.(string)
+	// channelmemberDescDisplayName is the schema descriptor for display_name field.
+	channelmemberDescDisplayName := channelmemberFields[4].Descriptor()
+	// channelmember.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	channelmember.DisplayNameValidator = channelmemberDescDisplayName.Validators[0].(func(string) error)
+	// channelmemberDescKind is the schema descriptor for kind field.
+	channelmemberDescKind := channelmemberFields[5].Descriptor()
+	// channelmember.DefaultKind holds the default value on creation for the kind field.
+	channelmember.DefaultKind = channelmemberDescKind.Default.(string)
+	// channelmemberDescRole is the schema descriptor for role field.
+	channelmemberDescRole := channelmemberFields[6].Descriptor()
+	// channelmember.DefaultRole holds the default value on creation for the role field.
+	channelmember.DefaultRole = channelmemberDescRole.Default.(string)
+	// channelmemberDescID is the schema descriptor for id field.
+	channelmemberDescID := channelmemberFields[0].Descriptor()
+	// channelmember.DefaultID holds the default value on creation for the id field.
+	channelmember.DefaultID = channelmemberDescID.Default.(func() string)
 	collaborationeventFields := schema.CollaborationEvent{}.Fields()
 	_ = collaborationeventFields
 	// collaborationeventDescServerID is the schema descriptor for server_id field.

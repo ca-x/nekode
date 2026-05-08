@@ -17,6 +17,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/auth"
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/imtelegram"
 	"github.com/ca-x/nekode/internal/imwechat"
@@ -1006,6 +1007,130 @@ func TestCoreAPIsRejectMissingAuthAndInvalidInputs(t *testing.T) {
 
 }
 
+func TestChannelManagementEndpoints(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+	token := bootstrapToken(t, s)
+
+	create := doJSON(t, s, http.MethodPost, "/api/channels", token, map[string]any{
+		"target":      "#private-review",
+		"displayName": "Review Room",
+		"visibility":  "private",
+	})
+	if create.Code != http.StatusCreated {
+		t.Fatalf("create channel status = %d body=%s", create.Code, create.Body.String())
+	}
+	var channelBody storage.ChannelSummary
+	if err := json.Unmarshal(create.Body.Bytes(), &channelBody); err != nil {
+		t.Fatalf("decode create channel: %v", err)
+	}
+	if channelBody.Target != "#private-review" ||
+		channelBody.DisplayName != "Review Room" ||
+		channelBody.Visibility != "private" ||
+		channelBody.CurrentUserRole != "admin" ||
+		!channelBody.Joined ||
+		channelBody.MemberCount != 1 {
+		t.Fatalf("created channel = %+v, want private admin channel with owner member", channelBody)
+	}
+
+	list := doGET(t, s, "/api/channels?joinedOnly=true", token)
+	if list.Code != http.StatusOK {
+		t.Fatalf("list channels status = %d body=%s", list.Code, list.Body.String())
+	}
+	var listBody struct {
+		Items []storage.ChannelSummary `json:"items"`
+	}
+	if err := json.Unmarshal(list.Body.Bytes(), &listBody); err != nil {
+		t.Fatalf("decode channel list: %v", err)
+	}
+	found := false
+	for _, item := range listBody.Items {
+		if item.Target == "#private-review" && item.CurrentUserRole == "admin" && item.MemberCount == 1 {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("channel list = %+v, want private-review admin channel", listBody.Items)
+	}
+	viewerToken := createSessionToken(t, s, "viewer", "Viewer", "member")
+	viewerList := doGET(t, s, "/api/channels?joinedOnly=false", viewerToken)
+	if viewerList.Code != http.StatusOK {
+		t.Fatalf("viewer list channels status = %d body=%s", viewerList.Code, viewerList.Body.String())
+	}
+	var viewerListBody struct {
+		Items []storage.ChannelSummary `json:"items"`
+	}
+	if err := json.Unmarshal(viewerList.Body.Bytes(), &viewerListBody); err != nil {
+		t.Fatalf("decode viewer channel list: %v", err)
+	}
+	for _, item := range viewerListBody.Items {
+		if item.Target == "#private-review" {
+			t.Fatalf("viewer channel list = %+v, private channel leaked to non-member", viewerListBody.Items)
+		}
+	}
+
+	member := doJSON(t, s, http.MethodPost, "/api/channels/private-review/members", token, map[string]any{
+		"memberId":    "agent:reviewer",
+		"displayName": "Review Agent",
+		"kind":        "agent",
+		"role":        "member",
+	})
+	if member.Code != http.StatusCreated {
+		t.Fatalf("create member status = %d body=%s", member.Code, member.Body.String())
+	}
+	var memberBody storage.ChannelMember
+	if err := json.Unmarshal(member.Body.Bytes(), &memberBody); err != nil {
+		t.Fatalf("decode create member: %v", err)
+	}
+	if memberBody.Target != "#private-review" ||
+		memberBody.MemberID != "agent:reviewer" ||
+		memberBody.Kind != "agent" ||
+		memberBody.Role != "member" {
+		t.Fatalf("member body = %+v, want agent member", memberBody)
+	}
+
+	updatedMember := doJSON(t, s, http.MethodPatch, "/api/channels/private-review/members/agent/agent%3Areviewer", token, map[string]any{
+		"role": "admin",
+	})
+	if updatedMember.Code != http.StatusOK {
+		t.Fatalf("update member status = %d body=%s", updatedMember.Code, updatedMember.Body.String())
+	}
+	if err := json.Unmarshal(updatedMember.Body.Bytes(), &memberBody); err != nil {
+		t.Fatalf("decode update member: %v", err)
+	}
+	if memberBody.Role != "admin" {
+		t.Fatalf("updated member role = %q, want admin", memberBody.Role)
+	}
+
+	members := doGET(t, s, "/api/channels/private-review/members", token)
+	if members.Code != http.StatusOK {
+		t.Fatalf("list members status = %d body=%s", members.Code, members.Body.String())
+	}
+	assertJSONItems(t, members.Body.Bytes(), 2)
+
+	updatedChannel := doJSON(t, s, http.MethodPatch, "/api/channels/private-review", token, map[string]any{
+		"displayName": "Review Operations",
+		"visibility":  "public",
+	})
+	if updatedChannel.Code != http.StatusOK {
+		t.Fatalf("update channel status = %d body=%s", updatedChannel.Code, updatedChannel.Body.String())
+	}
+	if err := json.Unmarshal(updatedChannel.Body.Bytes(), &channelBody); err != nil {
+		t.Fatalf("decode update channel: %v", err)
+	}
+	if channelBody.DisplayName != "Review Operations" || channelBody.Visibility != "public" || channelBody.MemberCount != 2 {
+		t.Fatalf("updated channel = %+v, want public renamed channel with two members", channelBody)
+	}
+
+	deleteMember := doJSON(t, s, http.MethodDelete, "/api/channels/private-review/members/agent/agent%3Areviewer", token, map[string]any{})
+	if deleteMember.Code != http.StatusOK {
+		t.Fatalf("delete member status = %d body=%s", deleteMember.Code, deleteMember.Body.String())
+	}
+	deleteChannelBlocked := doJSON(t, s, http.MethodDelete, "/api/channels/private-review", token, map[string]any{})
+	if deleteChannelBlocked.Code != http.StatusConflict {
+		t.Fatalf("delete channel with owner status = %d body=%s, want 409", deleteChannelBlocked.Code, deleteChannelBlocked.Body.String())
+	}
+}
+
 func TestThreadInboxReadWorkflow(t *testing.T) {
 	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
 	token := bootstrapToken(t, s)
@@ -1722,6 +1847,35 @@ func bootstrapToken(t *testing.T, s *Server) string {
 		t.Fatal("bootstrap token is empty")
 	}
 	return body.Token
+}
+
+func createSessionToken(t *testing.T, s *Server, username, displayName, role string) string {
+	t.Helper()
+	passwordHash, err := auth.HashPassword("secret123")
+	if err != nil {
+		t.Fatalf("hash test password: %v", err)
+	}
+	user, err := s.store.CreateUser(context.Background(), storage.User{
+		Username:     username,
+		DisplayName:  displayName,
+		PasswordHash: passwordHash,
+		Role:         role,
+	})
+	if err != nil {
+		t.Fatalf("create test user: %v", err)
+	}
+	token, err := auth.RandomToken()
+	if err != nil {
+		t.Fatalf("create test token: %v", err)
+	}
+	if _, err := s.store.CreateSession(context.Background(), storage.Session{
+		TokenHash:   auth.HashToken(token),
+		UserID:      user.ID,
+		ExpiresUnix: time.Now().Add(time.Hour).Unix(),
+	}); err != nil {
+		t.Fatalf("create test session: %v", err)
+	}
+	return token
 }
 
 func endpointBodyID(t *testing.T, resp *httptest.ResponseRecorder) string {

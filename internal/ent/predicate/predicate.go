@@ -6,6 +6,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Channel is the predicate function for channel builders.
+type Channel func(*sql.Selector)
+
+// ChannelMember is the predicate function for channelmember builders.
+type ChannelMember func(*sql.Selector)
+
 // CollaborationEvent is the predicate function for collaborationevent builders.
 type CollaborationEvent func(*sql.Selector)
 

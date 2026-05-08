@@ -530,7 +530,10 @@ function normalizeChannel(raw: unknown): Channel {
     visibility: normalizeChannelVisibility(row.visibility),
     joined: Boolean(row.joined),
     memberCount: asNumber(row.memberCount ?? row.member_count),
-    currentUserRole: normalizeChannelMemberRole(row.currentUserRole ?? row.current_user_role)
+    currentUserRole: normalizeChannelMemberRole(row.currentUserRole ?? row.current_user_role),
+    createdByUserId: asOptionalString(row.createdByUserId ?? row.created_by_user_id),
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix) || undefined,
+    updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix) || undefined
   };
 }
 
@@ -546,7 +549,8 @@ function normalizeChannelMember(raw: unknown): ChannelMember {
       "Member",
     kind: asString(row.kind ?? member.kind ?? member.actorKind ?? member.actor_kind) || "human",
     role: normalizeChannelMemberRole(row.role),
-    joinedTimeUnix: asNumber(row.joinedTimeUnix ?? row.joined_time_unix)
+    joinedTimeUnix: asNumber(row.joinedTimeUnix ?? row.joined_time_unix),
+    updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix) || undefined
   };
 }
 
@@ -1428,6 +1432,35 @@ export class ApiClient {
     return normalizeList(await this.request<RawListResponse<unknown>>(`/api/channels?${params}`), normalizeChannel);
   }
 
+  async createChannel(input: {
+    target: string;
+    displayName?: string;
+    visibility?: ChannelVisibility | string;
+  }) {
+    return normalizeChannel(await this.request<unknown>("/api/channels", {
+      method: "POST",
+      body: JSON.stringify(input)
+    }));
+  }
+
+  async updateChannel(target: string, input: {
+    displayName?: string;
+    visibility?: ChannelVisibility | string;
+  }) {
+    const channel = target.replace(/^#/, "");
+    return normalizeChannel(await this.request<unknown>(`/api/channels/${encodeURIComponent(channel)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }));
+  }
+
+  async deleteChannel(target: string) {
+    const channel = target.replace(/^#/, "");
+    return this.request<{ ok: boolean }>(`/api/channels/${encodeURIComponent(channel)}`, {
+      method: "DELETE"
+    });
+  }
+
   async listChannelMembers(target: string, limit = 100) {
     const channel = target.replace(/^#/, "");
     return normalizeList(
@@ -1435,6 +1468,45 @@ export class ApiClient {
         `/api/channels/${encodeURIComponent(channel)}/members?limit=${limit}`
       ),
       normalizeChannelMember
+    );
+  }
+
+  async upsertChannelMember(target: string, input: {
+    memberId: string;
+    username?: string;
+    displayName?: string;
+    kind?: string;
+    role?: ChannelMemberRole | string;
+  }) {
+    const channel = target.replace(/^#/, "");
+    return normalizeChannelMember(await this.request<unknown>(`/api/channels/${encodeURIComponent(channel)}/members`, {
+      method: "POST",
+      body: JSON.stringify(input)
+    }));
+  }
+
+  async updateChannelMember(target: string, kind: string, memberId: string, input: {
+    username?: string;
+    displayName?: string;
+    role?: ChannelMemberRole | string;
+  }) {
+    const channel = target.replace(/^#/, "");
+    return normalizeChannelMember(
+      await this.request<unknown>(
+        `/api/channels/${encodeURIComponent(channel)}/members/${encodeURIComponent(kind)}/${encodeURIComponent(memberId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(input)
+        }
+      )
+    );
+  }
+
+  async deleteChannelMember(target: string, kind: string, memberId: string) {
+    const channel = target.replace(/^#/, "");
+    return this.request<{ ok: boolean }>(
+      `/api/channels/${encodeURIComponent(channel)}/members/${encodeURIComponent(kind)}/${encodeURIComponent(memberId)}`,
+      { method: "DELETE" }
     );
   }
 

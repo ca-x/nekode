@@ -2504,6 +2504,62 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.channel-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.channel-admin-grid .form-stack {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.channel-member-form-grid,
+.channel-member-management-row {
+  display: grid;
+  gap: 8px;
+}
+
+.channel-member-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.channel-member-management-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.channel-member-management-row {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.35fr) auto auto;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.channel-member-management-row > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.channel-member-management-row strong,
+.channel-member-management-row span {
+  overflow-wrap: anywhere;
+}
+
+.channel-member-management-row span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .agent-row span:not(.avatar-badge):not(.presence) {
   color: var(--muted);
   font-size: 0.8125rem;
@@ -2724,6 +2780,9 @@ textarea {
   .agent-message-form,
   .agent-options-grid,
   .auth-panel,
+  .channel-admin-grid,
+  .channel-member-form-grid,
+  .channel-member-management-row,
   .endpoint-binding-grid,
   .endpoint-grid,
   .endpoint-route-grid,

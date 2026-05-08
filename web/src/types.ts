@@ -98,6 +98,9 @@ export type Channel = {
   joined: boolean;
   memberCount: number;
   currentUserRole?: ChannelMemberRole | string;
+  createdByUserId?: string;
+  createdUnix?: number;
+  updatedUnix?: number;
 };
 
 export type ChannelMember = {
@@ -108,6 +111,7 @@ export type ChannelMember = {
   kind: string;
   role: ChannelMemberRole | string;
   joinedTimeUnix: number;
+  updatedUnix?: number;
 };
 
 export type MessageSenderKind = "user" | "agent" | "system" | "endpoint";
