@@ -117,6 +117,7 @@ Add a provider runtime layer that is separate from the existing mock gate:
    - WeChat: verify official or contractually allowed iLink/public account path,
      test account availability, QR/session/token persistence, media limits, and
      outbound context-token constraints before runtime coding.
+   - Detailed feasibility plan: `docs/im-wechat-qq-runtime-feasibility.md`.
 
 ## Acceptance Criteria for Provider Runtime Tasks
 
