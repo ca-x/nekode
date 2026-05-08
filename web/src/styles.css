@@ -1606,10 +1606,132 @@ textarea {
   display: grid;
 }
 
+.endpoint-workspace {
+  align-items: start;
+}
+
+.endpoint-row-detailed {
+  align-items: flex-start;
+}
+
+.endpoint-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.endpoint-config-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.endpoint-config-chips span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-subtle);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.endpoint-config-details {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.endpoint-config-details summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.endpoint-config-details code {
+  display: block;
+  margin-top: 6px;
+  padding: 10px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface-subtle);
+}
+
 .endpoint-flags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.endpoint-create-panel {
+  align-content: start;
+}
+
+.endpoint-mode-toggle {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.provider-schema-summary,
+.endpoint-form-section,
+.setup-hints {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.provider-schema-summary > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.provider-schema-summary span,
+.endpoint-form-section p,
+.setup-hints span,
+.form-stack small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.endpoint-form-section > strong {
+  color: var(--text);
+}
+
+.endpoint-binding-grid,
+.endpoint-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.checkbox-row input {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin-top: 2px;
+}
+
+.checkbox-row span {
+  display: grid;
+  gap: 3px;
 }
 
 .event-stream {
@@ -2427,6 +2549,8 @@ textarea {
   .agent-create-grid,
   .agent-options-grid,
   .auth-panel,
+  .endpoint-binding-grid,
+  .endpoint-toggle-grid,
   .enrollment-layout,
   .task-workspace,
   .two-column {

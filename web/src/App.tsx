@@ -59,6 +59,8 @@ import type {
   DaemonInfo,
   DaemonInventoryComputer,
   DaemonRun,
+  IMProviderField,
+  IMProviderSchema,
   InteractionEndpoint,
   Message,
   ProtocolInfo,
@@ -561,6 +563,7 @@ function App() {
   const [daemonActivity, setDaemonActivity] = useState<DaemonActivityRecord[]>([]);
   const [runtimePresets, setRuntimePresets] = useState<RuntimePreset[]>(fallbackRuntimePresets);
   const [endpoints, setEndpoints] = useState<InteractionEndpoint[]>([]);
+  const [imProviders, setIMProviders] = useState<IMProviderSchema[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [channelMembers, setChannelMembers] = useState<ChannelMember[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -599,6 +602,10 @@ function App() {
           return null;
         }),
         api.listInteractionEndpoints(),
+        api.listIMProviders().catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] as IMProviderSchema[] };
+        }),
         api.listChannels({ joinedOnly: false }).catch((err: unknown) => {
           if (isAuthError(err)) throw err;
           return { items: [] };
@@ -619,6 +626,7 @@ function App() {
         protocolInfo,
         daemonBridgeInfo,
         endpointList,
+        imProviderList,
         channelList,
         channelMemberList,
         messageList,
@@ -632,6 +640,7 @@ function App() {
       setProtocol(protocolInfo);
       setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEndpoints(endpointList.items);
+      setIMProviders(imProviderList.items);
       setChannels(channelList.items.length ? channelList.items : fallbackChannels());
       setChannelMembers(channelMemberList.items);
       setMessages(messageList.items);
@@ -978,7 +987,7 @@ function App() {
           />
         ) : null}
         {view === "endpoints" ? (
-          <EndpointsPanel endpoints={endpoints} onCreated={loadData} />
+          <EndpointsPanel endpoints={endpoints} imProviders={imProviders} onCreated={loadData} />
         ) : null}
         {view === "daemon" ? (
           <DaemonPanel
@@ -3348,40 +3357,266 @@ function SettingsPanel({
   );
 }
 
+type EndpointCreateMode = "im" | "generic";
+type EndpointConfigValue = string | boolean;
+
+const DEFAULT_BINDING_TARGETS = ["channel", "thread", "agent", "default_target"];
+const DEFAULT_GROUP_MODES = ["mention", "always", "disabled"];
+const REDACTED_VALUE = "***";
+
+function parseEndpointConfig(configJson?: string): Record<string, unknown> {
+  if (!configJson?.trim()) return {};
+  try {
+    const parsed = JSON.parse(configJson) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function formatProviderLabel(provider: string, schemas: IMProviderSchema[]) {
+  return schemas.find((schema) => schema.provider === provider)?.displayName || provider;
+}
+
+function displayConfigValue(value: unknown) {
+  if (value === REDACTED_VALUE) return "redacted";
+  if (typeof value === "boolean") return value ? "enabled" : "disabled";
+  if (typeof value === "string") return value || "empty";
+  if (value === null || value === undefined) return "empty";
+  return JSON.stringify(value);
+}
+
+function hasConfigField(schema: IMProviderSchema | null, name: string) {
+  return Boolean(schema?.fields.some((field) => field.name === name));
+}
+
+function defaultIMValues(schema: IMProviderSchema | null): Record<string, EndpointConfigValue> {
+  const values: Record<string, EndpointConfigValue> = {};
+  for (const field of schema?.fields ?? []) {
+    if (field.type === "boolean") {
+      values[field.name] = false;
+    } else if (field.type === "select") {
+      values[field.name] = field.options?.[0] ?? "";
+    } else if (field.type === "json") {
+      values[field.name] = "{}";
+    } else {
+      values[field.name] = "";
+    }
+  }
+  return values;
+}
+
+function targetLabel(target: string) {
+  return target
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function EndpointsPanel({
   endpoints,
+  imProviders,
   onCreated
 }: {
   endpoints: InteractionEndpoint[];
+  imProviders: IMProviderSchema[];
   onCreated: () => Promise<void>;
 }) {
-  const [displayName, setDisplayName] = useState("Web Console");
+  const [mode, setMode] = useState<EndpointCreateMode>("im");
+  const [displayName, setDisplayName] = useState("");
   const [kind, setKind] = useState("web");
-  const [provider, setProvider] = useState("browser");
+  const [provider, setProvider] = useState("");
+  const [targetPrefix, setTargetPrefix] = useState("#");
+  const [authMode, setAuthMode] = useState("bearer");
+  const [inboundEnabled, setInboundEnabled] = useState(true);
+  const [outboundEnabled, setOutboundEnabled] = useState(true);
+  const [imConfigValues, setIMConfigValues] = useState<Record<string, EndpointConfigValue>>({});
+  const [bindingTargetType, setBindingTargetType] = useState("channel");
+  const [defaultTarget, setDefaultTarget] = useState("#general");
+  const [defaultAgent, setDefaultAgent] = useState("");
+  const [groupMode, setGroupMode] = useState("mention");
+  const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const autoNameRef = useRef("");
+
+  const selectedProvider = useMemo(
+    () => imProviders.find((schema) => schema.provider === provider) ?? imProviders[0] ?? null,
+    [imProviders, provider]
+  );
+  const bindingTargets = selectedProvider?.bindingTargets.length
+    ? selectedProvider.bindingTargets
+    : DEFAULT_BINDING_TARGETS;
+  const providerHasGroupMode = hasConfigField(selectedProvider, "group_mode");
+
+  useEffect(() => {
+    if (mode !== "im") return;
+    if (!provider && imProviders[0]) setProvider(imProviders[0].provider);
+  }, [imProviders, mode, provider]);
+
+  useEffect(() => {
+    if (mode !== "im" || !selectedProvider) return;
+    setIMConfigValues(defaultIMValues(selectedProvider));
+    setBindingTargetType(selectedProvider.bindingTargets[0] || "channel");
+    setAuthMode(selectedProvider.supportsWebhook ? "webhook_signature" : "bearer");
+    const nextName = `${selectedProvider.displayName} endpoint`;
+    if (!displayName || displayName === autoNameRef.current) {
+      setDisplayName(nextName);
+      autoNameRef.current = nextName;
+    }
+  }, [mode, selectedProvider]);
+
+  const updateIMValue = (field: IMProviderField, value: EndpointConfigValue) => {
+    setIMConfigValues((current) => ({ ...current, [field.name]: value }));
+  };
 
   const createEndpoint = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
+    setFormError("");
     try {
-      await api.createInteractionEndpoint({
-        kind,
-        provider,
-        displayName,
-        targetPrefix: "#",
-        inboundEnabled: true,
-        outboundEnabled: true,
-        authMode: "bearer",
-        configJson: "{}"
-      });
+      if (mode === "im") {
+        if (!selectedProvider) {
+          setFormError("IM provider schema is not loaded yet.");
+          return;
+        }
+        const config: Record<string, unknown> = {};
+        for (const field of selectedProvider.fields) {
+          const value = imConfigValues[field.name];
+          if (field.type === "json") {
+            const raw = String(value ?? "").trim();
+            if (!raw) continue;
+            try {
+              config[field.name] = JSON.parse(raw) as unknown;
+            } catch {
+              setFormError(`${field.label} must be valid JSON.`);
+              return;
+            }
+          } else if (field.type === "boolean") {
+            config[field.name] = Boolean(value);
+          } else {
+            const stringValue = String(value ?? "").trim();
+            if (field.required && !stringValue) {
+              setFormError(`${field.label} is required.`);
+              return;
+            }
+            if (stringValue) config[field.name] = stringValue;
+          }
+        }
+        config.binding_target_type = bindingTargetType;
+        config.default_target = defaultTarget.trim();
+        if (defaultAgent.trim()) config.default_agent = defaultAgent.trim();
+        if (!providerHasGroupMode) config.group_mode = groupMode;
+
+        await api.createInteractionEndpoint({
+          kind: "im",
+          provider: selectedProvider.provider,
+          displayName: displayName.trim() || `${selectedProvider.displayName} endpoint`,
+          targetPrefix: "#",
+          inboundEnabled,
+          outboundEnabled,
+          authMode,
+          configJson: JSON.stringify(config)
+        });
+      } else {
+        await api.createInteractionEndpoint({
+          kind: kind.trim() || "web",
+          provider: provider.trim() || "browser",
+          displayName: displayName.trim() || "Web Console",
+          targetPrefix: targetPrefix.trim() || "#",
+          inboundEnabled,
+          outboundEnabled,
+          authMode: authMode.trim() || "bearer",
+          configJson: "{}"
+        });
+      }
       await onCreated();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Endpoint creation failed.");
     } finally {
       setBusy(false);
     }
   };
 
+  const renderProviderField = (field: IMProviderField) => {
+    const fieldID = `im-field-${field.name}`;
+    const value = imConfigValues[field.name];
+    const hint = field.sensitive
+      ? `${field.description || ""} Stored endpoint responses are redacted.`
+      : field.description;
+
+    if (field.type === "boolean") {
+      return (
+        <label className="checkbox-row" key={field.name} htmlFor={fieldID}>
+          <input
+            id={fieldID}
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(event) => updateIMValue(field, event.target.checked)}
+          />
+          <span>
+            {field.label}
+            {hint ? <small>{hint}</small> : null}
+          </span>
+        </label>
+      );
+    }
+
+    if (field.type === "select") {
+      return (
+        <label key={field.name} htmlFor={fieldID}>
+          {field.label}
+          <select
+            id={fieldID}
+            required={field.required}
+            value={String(value ?? "")}
+            onChange={(event) => updateIMValue(field, event.target.value)}
+          >
+            {(field.options || []).map((option) => (
+              <option key={option} value={option}>
+                {targetLabel(option)}
+              </option>
+            ))}
+          </select>
+          {hint ? <small>{hint}</small> : null}
+        </label>
+      );
+    }
+
+    if (field.type === "json") {
+      return (
+        <label key={field.name} htmlFor={fieldID}>
+          {field.label}
+          <textarea
+            id={fieldID}
+            required={field.required}
+            value={String(value ?? "")}
+            placeholder={field.placeholder || "{}"}
+            onChange={(event) => updateIMValue(field, event.target.value)}
+          />
+          {hint ? <small>{hint}</small> : null}
+        </label>
+      );
+    }
+
+    return (
+      <label key={field.name} htmlFor={fieldID}>
+        {field.label}
+        <input
+          id={fieldID}
+          required={field.required}
+          type={field.sensitive ? "password" : "text"}
+          value={String(value ?? "")}
+          placeholder={field.placeholder || (field.sensitive ? "Stored redacted after create" : "")}
+          onChange={(event) => updateIMValue(field, event.target.value)}
+        />
+        {hint ? <small>{hint}</small> : null}
+      </label>
+    );
+  };
+
   return (
-    <section className="two-column">
+    <section className="two-column endpoint-workspace">
       <div className="panel">
         <div className="panel-heading">
           <div>
@@ -3391,40 +3626,270 @@ function EndpointsPanel({
         </div>
         <div className="endpoint-list">
           {endpoints.length ? (
-            endpoints.map((endpoint) => (
-              <article className="endpoint-row" key={endpoint.id}>
-                <div>
-                  <strong>{endpoint.displayName}</strong>
-                  <span>
-                    {endpoint.kind} / {endpoint.provider}
-                  </span>
-                </div>
-                <div className="endpoint-flags">
-                  <StatusDot active={endpoint.inboundEnabled} label="Inbound" />
-                  <StatusDot active={endpoint.outboundEnabled} label="Outbound" />
-                </div>
-              </article>
-            ))
+            endpoints.map((endpoint) => {
+              const config = parseEndpointConfig(endpoint.configJson);
+              const schema = imProviders.find((item) => item.provider === endpoint.provider) ?? null;
+              const previewKeys = [
+                "binding_target_type",
+                "default_target",
+                "group_mode",
+                "enable_notify",
+                ...(schema?.fields.map((field) => field.name) ?? [])
+              ];
+              const previewEntries = Array.from(new Set(previewKeys))
+                .filter((key) => config[key] !== undefined && config[key] !== "")
+                .slice(0, 5);
+              return (
+                <article className="endpoint-row endpoint-row-detailed" key={endpoint.id}>
+                  <div className="endpoint-main">
+                    <div>
+                      <strong>{endpoint.displayName}</strong>
+                      <span>
+                        {endpoint.kind} / {formatProviderLabel(endpoint.provider, imProviders)}
+                      </span>
+                    </div>
+                    {endpoint.kind === "im" ? (
+                      <div className="endpoint-config-chips" aria-label="Endpoint config summary">
+                        {previewEntries.length ? (
+                          previewEntries.map((key) => (
+                            <span key={key}>
+                              {targetLabel(key)}: {displayConfigValue(config[key])}
+                            </span>
+                          ))
+                        ) : (
+                          <span>Config redacted</span>
+                        )}
+                      </div>
+                    ) : null}
+                    {endpoint.kind === "im" && endpoint.configJson ? (
+                      <details className="endpoint-config-details">
+                        <summary>Redacted config JSON</summary>
+                        <code>{endpoint.configJson}</code>
+                      </details>
+                    ) : null}
+                  </div>
+                  <div className="endpoint-flags">
+                    <StatusDot active={endpoint.inboundEnabled} label="Inbound" />
+                    <StatusDot active={endpoint.outboundEnabled} label="Outbound" />
+                  </div>
+                </article>
+              );
+            })
           ) : (
             <EmptyState icon={Settings} title="No endpoints configured" />
           )}
         </div>
       </div>
-      <form className="panel compact form-stack" onSubmit={createEndpoint}>
+      <form className="panel compact form-stack endpoint-create-panel" onSubmit={createEndpoint}>
         <p className="eyebrow">Create Endpoint</p>
-        <label>
-          Display name
-          <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+        <div className="segmented endpoint-mode-toggle" role="group" aria-label="Endpoint type">
+          <button
+            className={mode === "im" ? "is-active" : ""}
+            type="button"
+            onClick={() => setMode("im")}
+          >
+            IM
+          </button>
+          <button
+            className={mode === "generic" ? "is-active" : ""}
+            type="button"
+            onClick={() => setMode("generic")}
+          >
+            Generic
+          </button>
+        </div>
+
+        {mode === "im" ? (
+          <>
+            <label htmlFor="im-provider">
+              Provider
+              <select
+                id="im-provider"
+                value={selectedProvider?.provider || ""}
+                disabled={!imProviders.length}
+                onChange={(event) => setProvider(event.target.value)}
+              >
+                {imProviders.map((schema) => (
+                  <option key={schema.provider} value={schema.provider}>
+                    {schema.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedProvider ? (
+              <div className="provider-schema-summary">
+                <div>
+                  <strong>{selectedProvider.displayName}</strong>
+                  <span>{selectedProvider.description}</span>
+                </div>
+                <div className="endpoint-config-chips">
+                  <span>{selectedProvider.transport}</span>
+                  {selectedProvider.supportsWebhook ? <span>Webhook</span> : null}
+                  {selectedProvider.supportsPolling ? <span>Polling</span> : null}
+                  {selectedProvider.supportsStreaming ? <span>Streaming</span> : null}
+                  {selectedProvider.supportsMedia ? <span>Media</span> : null}
+                </div>
+              </div>
+            ) : (
+              <p className="notice error">IM provider schema is unavailable.</p>
+            )}
+            <label htmlFor="endpoint-display-name">
+              Display name
+              <input
+                id="endpoint-display-name"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+              />
+            </label>
+
+            {selectedProvider ? (
+              <>
+                <div className="endpoint-form-section">
+                  <strong>Provider config</strong>
+                  <div className="form-stack">
+                    {selectedProvider.fields.map((field) => renderProviderField(field))}
+                  </div>
+                </div>
+
+                <div className="endpoint-form-section">
+                  <strong>Binding</strong>
+                  <div className="endpoint-binding-grid">
+                    <label htmlFor="binding-target-type">
+                      Target type
+                      <select
+                        id="binding-target-type"
+                        value={bindingTargetType}
+                        onChange={(event) => setBindingTargetType(event.target.value)}
+                      >
+                        {bindingTargets.map((target) => (
+                          <option key={target} value={target}>
+                            {targetLabel(target)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label htmlFor="default-target">
+                      Default target
+                      <input
+                        id="default-target"
+                        value={defaultTarget}
+                        placeholder="#general or inbox:im/provider"
+                        onChange={(event) => setDefaultTarget(event.target.value)}
+                      />
+                    </label>
+                    <label htmlFor="default-agent">
+                      Default agent
+                      <input
+                        id="default-agent"
+                        value={defaultAgent}
+                        placeholder="@agent handle or agent id"
+                        onChange={(event) => setDefaultAgent(event.target.value)}
+                      />
+                    </label>
+                    {!providerHasGroupMode ? (
+                      <label htmlFor="group-mode">
+                        Group mode
+                        <select
+                          id="group-mode"
+                          value={groupMode}
+                          onChange={(event) => setGroupMode(event.target.value)}
+                        >
+                          {DEFAULT_GROUP_MODES.map((modeOption) => (
+                            <option key={modeOption} value={modeOption}>
+                              {targetLabel(modeOption)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="endpoint-form-section">
+                  <strong>Credential handling</strong>
+                  <p>
+                    Sensitive fields are sent once and the endpoint list reads back redacted values.
+                  </p>
+                </div>
+
+                {selectedProvider.setupHints.length ? (
+                  <div className="setup-hints">
+                    {selectedProvider.setupHints.map((hint) => (
+                      <span key={hint}>{hint}</span>
+                    ))}
+                    {selectedProvider.supportsWebhook ? (
+                      <span>Callback setup is provider-runtime specific; use webhook signature auth for signed callbacks.</span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <label htmlFor="generic-display-name">
+              Display name
+              <input
+                id="generic-display-name"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+              />
+            </label>
+            <label htmlFor="generic-kind">
+              Kind
+              <input id="generic-kind" value={kind} onChange={(event) => setKind(event.target.value)} />
+            </label>
+            <label htmlFor="generic-provider">
+              Provider
+              <input
+                id="generic-provider"
+                value={provider}
+                onChange={(event) => setProvider(event.target.value)}
+              />
+            </label>
+            <label htmlFor="generic-prefix">
+              Target prefix
+              <input
+                id="generic-prefix"
+                value={targetPrefix}
+                onChange={(event) => setTargetPrefix(event.target.value)}
+              />
+            </label>
+          </>
+        )}
+
+        <div className="endpoint-toggle-grid">
+          <label className="checkbox-row" htmlFor="endpoint-inbound-enabled">
+            <input
+              id="endpoint-inbound-enabled"
+              type="checkbox"
+              checked={inboundEnabled}
+              onChange={(event) => setInboundEnabled(event.target.checked)}
+            />
+            <span>Inbound</span>
+          </label>
+          <label className="checkbox-row" htmlFor="endpoint-outbound-enabled">
+            <input
+              id="endpoint-outbound-enabled"
+              type="checkbox"
+              checked={outboundEnabled}
+              onChange={(event) => setOutboundEnabled(event.target.checked)}
+            />
+            <span>Outbound</span>
+          </label>
+        </div>
+
+        <label htmlFor="endpoint-auth-mode">
+          Auth mode
+          <input
+            id="endpoint-auth-mode"
+            value={authMode}
+            onChange={(event) => setAuthMode(event.target.value)}
+          />
         </label>
-        <label>
-          Kind
-          <input value={kind} onChange={(event) => setKind(event.target.value)} />
-        </label>
-        <label>
-          Provider
-          <input value={provider} onChange={(event) => setProvider(event.target.value)} />
-        </label>
-        <button className="primary-button" type="submit" disabled={busy}>
+
+        {formError ? <p className="inline-error">{formError}</p> : null}
+        <button className="primary-button" type="submit" disabled={busy || (mode === "im" && !selectedProvider)}>
           <Plus size={16} aria-hidden="true" />
           Create
         </button>
