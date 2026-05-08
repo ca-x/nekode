@@ -73,6 +73,16 @@ type StoredEventCursor = {
   protocolVersion: number;
   sequence: number;
 };
+type MessageFeedItem =
+  | { kind: "message"; message: Message }
+  | { kind: "system_group"; id: string; messages: Message[] };
+type TaskReceipt = {
+  id: string;
+  summary: string;
+  state: TaskState;
+  action: "created" | "moved";
+  createdUnix: number;
+};
 
 const api = new ApiClient();
 
@@ -346,6 +356,42 @@ function eventScopeLabel(event: CollaborationEvent) {
 
 function eventSummary(event: CollaborationEvent) {
   return `${event.kind}/${event.operation}/${event.scope?.scopeType ?? "unspecified"}`;
+}
+
+function isSystemReceipt(message: Message) {
+  const senderKind = message.senderKind.toLowerCase();
+  const role = message.role.toLowerCase();
+  return senderKind === "system" || role === "system";
+}
+
+function buildMessageFeed(messages: Message[]): MessageFeedItem[] {
+  const feed: MessageFeedItem[] = [];
+  let pendingSystemMessages: Message[] = [];
+
+  const flushSystemMessages = () => {
+    if (!pendingSystemMessages.length) return;
+    if (pendingSystemMessages.length === 1) {
+      feed.push({ kind: "message", message: pendingSystemMessages[0] });
+    } else {
+      feed.push({
+        kind: "system_group",
+        id: pendingSystemMessages.map((message) => message.id).join(":"),
+        messages: pendingSystemMessages
+      });
+    }
+    pendingSystemMessages = [];
+  };
+
+  messages.forEach((message) => {
+    if (isSystemReceipt(message)) {
+      pendingSystemMessages.push(message);
+      return;
+    }
+    flushSystemMessages();
+    feed.push({ kind: "message", message });
+  });
+  flushSystemMessages();
+  return feed;
 }
 
 function formatUnixTime(value?: number) {
@@ -1045,8 +1091,10 @@ function MessagesPanel({
   const [lightboxAttachment, setLightboxAttachment] = useState<Attachment | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ordered = useMemo(() => [...messages].reverse(), [messages]);
+  const feed = useMemo(() => buildMessageFeed(ordered), [ordered]);
   const selectedMessages = useMemo(
     () => ordered.filter((message) => selectedMessageIds.has(message.id)),
     [ordered, selectedMessageIds]
@@ -1158,16 +1206,38 @@ function MessagesPanel({
           </div>
         </div>
         <div className="message-list" role="log" aria-label="Messages">
-          {ordered.length ? (
-            ordered.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                selected={selectedMessageIds.has(message.id)}
-                onToggleSelected={toggleSelected}
-                onPreviewAttachment={setLightboxAttachment}
-              />
-            ))
+          {feed.length ? (
+            feed.map((item) => {
+              if (item.kind === "system_group") {
+                return (
+                  <SystemReceiptGroup
+                    key={item.id}
+                    group={item}
+                    expanded={expandedGroups.has(item.id)}
+                    onToggle={() =>
+                      setExpandedGroups((current) => {
+                        const next = new Set(current);
+                        if (next.has(item.id)) {
+                          next.delete(item.id);
+                        } else {
+                          next.add(item.id);
+                        }
+                        return next;
+                      })
+                    }
+                  />
+                );
+              }
+              return (
+                <MessageBubble
+                  key={item.message.id}
+                  message={item.message}
+                  selected={selectedMessageIds.has(item.message.id)}
+                  onToggleSelected={toggleSelected}
+                  onPreviewAttachment={setLightboxAttachment}
+                />
+              );
+            })
           ) : (
             <EmptyState icon={MessageSquare} title="No messages loaded" />
           )}
@@ -1300,21 +1370,62 @@ function MessagesPanel({
   );
 }
 
+function SystemReceiptGroup({
+  group,
+  expanded,
+  onToggle
+}: {
+  group: Extract<MessageFeedItem, { kind: "system_group" }>;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const first = group.messages[0];
+  const last = group.messages[group.messages.length - 1];
+  return (
+    <section className="system-receipt-group">
+      <button type="button" onClick={onToggle} aria-expanded={expanded}>
+        <Activity size={16} aria-hidden="true" />
+        <span>{group.messages.length} status receipts collapsed</span>
+        <small>
+          {unixTime(first.createdUnix)} - {unixTime(last.createdUnix)}
+        </small>
+      </button>
+      {expanded ? (
+        <div className="system-receipt-items">
+          {group.messages.map((message) => (
+            <MessageBubble key={message.id} message={message} compact />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function MessageBubble({
   message,
+  compact,
   selected,
   onToggleSelected,
   onPreviewAttachment
 }: {
   message: Message;
+  compact?: boolean;
   selected?: boolean;
   onToggleSelected?: (messageId: string) => void;
   onPreviewAttachment?: (attachment: Attachment) => void;
 }) {
+  const classes = [
+    "message-bubble",
+    selected ? "is-selected" : "",
+    compact ? "is-compact" : "",
+    isSystemReceipt(message) ? "is-system" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <article className={`message-bubble${selected ? " is-selected" : ""}`}>
+    <article className={classes}>
       <header>
-        {onToggleSelected ? (
+        {onToggleSelected && !compact ? (
           <button
             className="message-select"
             type="button"
@@ -1466,6 +1577,7 @@ function TasksPanel({
   const [sortKey, setSortKey] = useState<TaskSortKey>("updated_desc");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
+  const [taskReceipt, setTaskReceipt] = useState<TaskReceipt | null>(null);
 
   const taskStats = useMemo(
     () => ({
@@ -1514,9 +1626,18 @@ function TasksPanel({
     if (!summary.trim()) return;
     setBusy(true);
     try {
-      await api.createTask({ summary, target, state: newTaskState });
+      const createdSummary = summary.trim();
+      const createdState = newTaskState;
+      const created = await api.createTask({ summary: createdSummary, target, state: createdState });
       setSummary("");
       setNewTaskState("todo");
+      setTaskReceipt({
+        id: created.id,
+        summary: created.summary || createdSummary,
+        state: created.state || createdState,
+        action: "created",
+        createdUnix: Math.floor(Date.now() / 1000)
+      });
       await onChanged();
     } finally {
       setBusy(false);
@@ -1524,7 +1645,14 @@ function TasksPanel({
   };
 
   const moveTask = async (task: Task, state: TaskState) => {
-    await api.updateTask(task.id, { state });
+    const updated = await api.updateTask(task.id, { state });
+    setTaskReceipt({
+      id: updated.id || task.id,
+      summary: updated.summary || task.summary,
+      state: updated.state || state,
+      action: "moved",
+      createdUnix: Math.floor(Date.now() / 1000)
+    });
     await onChanged();
   };
 
@@ -1647,6 +1775,7 @@ function TasksPanel({
           Column membership comes from server state. Status changes submit to the API and wait for the
           returned DTO/refetch before the board becomes authoritative.
         </div>
+        {taskReceipt ? <TaskStatusReceipt receipt={taskReceipt} onDismiss={() => setTaskReceipt(null)} /> : null}
         {viewMode === "board" ? (
           <div className="task-board">
             {grouped.map((column) => (
@@ -1686,7 +1815,7 @@ function TasksPanel({
                   <th>Status</th>
                   <th>Assignee</th>
                   <th>Updated</th>
-                  <th>Move</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1712,6 +1841,29 @@ function TasksPanel({
         onChanged={onChanged}
       />
     </section>
+  );
+}
+
+function TaskStatusReceipt({
+  receipt,
+  onDismiss
+}: {
+  receipt: TaskReceipt;
+  onDismiss: () => void;
+}) {
+  const status = taskColumnFor(receipt.state);
+  return (
+    <div className="task-receipt" role="status">
+      <CheckCircle2 size={16} aria-hidden="true" />
+      <span>
+        Task {receipt.action === "created" ? "created" : "moved"}: <strong>{receipt.summary}</strong>
+      </span>
+      <TaskStatusBadge state={receipt.state} label={status.label} compact />
+      <small>{unixTime(receipt.createdUnix)}</small>
+      <button className="icon-button" type="button" aria-label="Dismiss status receipt" onClick={onDismiss}>
+        <X size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
@@ -1742,17 +1894,7 @@ function TaskListRow({
       <td>{task.assigneeId || "unassigned"}</td>
       <td>{unixTime(task.updatedUnix)}</td>
       <td>
-        <select
-          aria-label={`Move ${task.summary}`}
-          value={task.state}
-          onChange={(event) => void onMove(task, event.target.value as TaskState)}
-        >
-          {taskColumns.map((option) => (
-            <option key={option.state} value={option.state}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <TaskMoveActions task={task} onMove={onMove} />
       </td>
     </tr>
   );
@@ -1781,6 +1923,22 @@ function TaskCard({
         </span>
         {task.assigneeId ? <span>Assignee: {task.assigneeId}</span> : null}
       </button>
+      <TaskMoveActions task={task} onMove={onMove} />
+    </article>
+  );
+}
+
+function TaskMoveActions({
+  task,
+  onMove
+}: {
+  task: Task;
+  onMove: (task: Task, state: TaskState) => Promise<void>;
+}) {
+  const canMarkDone = task.state !== "done";
+  const canReopen = task.state === "done" || task.state === "canceled";
+  return (
+    <div className="task-actions">
       <select
         aria-label={`Move ${task.summary}`}
         value={task.state}
@@ -1792,7 +1950,23 @@ function TaskCard({
           </option>
         ))}
       </select>
-    </article>
+      <button
+        className="mini-action-button"
+        type="button"
+        disabled={!canMarkDone}
+        onClick={() => void onMove(task, "done")}
+      >
+        Done
+      </button>
+      <button
+        className="mini-action-button"
+        type="button"
+        disabled={!canReopen}
+        onClick={() => void onMove(task, "todo")}
+      >
+        Reopen
+      </button>
+    </div>
   );
 }
 
