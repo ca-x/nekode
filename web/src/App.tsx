@@ -67,7 +67,16 @@ const TOKEN_KEY = "nekode.console.token";
 const EVENT_CURSOR_KEY = "nekode.console.serverEvents.cursorState";
 const DEFAULT_TARGET = "#general";
 
-type ViewKey = "overview" | "inbox" | "messages" | "tasks" | "activity" | "skills" | "endpoints" | "daemon";
+type ViewKey =
+  | "overview"
+  | "inbox"
+  | "messages"
+  | "tasks"
+  | "activity"
+  | "skills"
+  | "settings"
+  | "endpoints"
+  | "daemon";
 type LoadState = "idle" | "loading" | "ready" | "error";
 type RealtimeStatus = "disabled" | "connecting" | "connected" | "error";
 type TaskViewMode = "board" | "list";
@@ -124,7 +133,8 @@ const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = 
   { key: "tasks", label: "Tasks", icon: Columns3 },
   { key: "activity", label: "Activity", icon: Activity },
   { key: "skills", label: "Skills", icon: Sparkles },
-  { key: "endpoints", label: "Endpoints", icon: Settings },
+  { key: "settings", label: "Settings", icon: Settings },
+  { key: "endpoints", label: "Endpoints", icon: Server },
   { key: "daemon", label: "Daemon", icon: Bot }
 ];
 
@@ -415,6 +425,13 @@ function healthClass(value?: string) {
   return "is-warn";
 }
 
+function roleClass(value?: string) {
+  const normalized = (value || "member").toLowerCase();
+  if (["owner", "admin"].includes(normalized)) return "is-ok";
+  if (normalized === "viewer") return "is-idle";
+  return "is-warn";
+}
+
 function fallbackChannels(): Channel[] {
   return ["#general", "#ops", "#release"].map((target) => ({
     target,
@@ -433,6 +450,7 @@ function App() {
   const [view, setView] = useState<ViewKey>("overview");
   const [status, setStatus] = useState<LoadState>("idle");
   const [error, setError] = useState("");
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [protocol, setProtocol] = useState<ProtocolInfo | null>(null);
   const [daemonInfo, setDaemonInfo] = useState<DaemonInfo | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>("disabled");
@@ -470,6 +488,10 @@ function App() {
       const messageThreadID = activeThread?.threadId ?? "";
       const coreData = await Promise.all([
         api.me(),
+        api.setupStatus().catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return null;
+        }),
         api.protocol(),
         api.daemonInfo().catch((err: unknown) => {
           if (isAuthError(err)) throw err;
@@ -490,6 +512,7 @@ function App() {
       ]);
       const [
         me,
+        setupInfo,
         protocolInfo,
         daemonBridgeInfo,
         endpointList,
@@ -500,6 +523,7 @@ function App() {
         taskList
       ] = coreData;
       setUser(me);
+      setSetupStatus(setupInfo);
       setProtocol(protocolInfo);
       setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEndpoints(endpointList.items);
@@ -619,6 +643,7 @@ function App() {
     localStorage.removeItem(EVENT_CURSOR_KEY);
     setToken("");
     setUser(null);
+    setSetupStatus(null);
     setDaemonInfo(null);
     setLatestEvent(null);
     setEvents([]);
@@ -817,6 +842,20 @@ function App() {
           />
         ) : null}
         {view === "skills" ? <SkillsPanel runtimePresets={runtimePresets} /> : null}
+        {view === "settings" ? (
+          <SettingsPanel
+            user={user}
+            setupStatus={setupStatus}
+            protocol={protocol}
+            daemonInfo={daemonInfo}
+            realtimeStatus={realtimeStatus}
+            target={target}
+            channel={channels.find((item) => item.target === target) ?? null}
+            channelMembers={channelMembers}
+            endpoints={endpoints}
+            runtimePresets={runtimePresets}
+          />
+        ) : null}
         {view === "endpoints" ? (
           <EndpointsPanel endpoints={endpoints} onCreated={loadData} />
         ) : null}
@@ -2569,6 +2608,174 @@ function EventRow({ event }: { event: CollaborationEvent }) {
         {event.protocolVersion ? <span>proto {event.protocolVersion}</span> : null}
       </div>
     </article>
+  );
+}
+
+function SettingsPanel({
+  user,
+  setupStatus,
+  protocol,
+  daemonInfo,
+  realtimeStatus,
+  target,
+  channel,
+  channelMembers,
+  endpoints,
+  runtimePresets
+}: {
+  user: User | null;
+  setupStatus: SetupStatus | null;
+  protocol: ProtocolInfo | null;
+  daemonInfo: DaemonInfo | null;
+  realtimeStatus: RealtimeStatus;
+  target: string;
+  channel: Channel | null;
+  channelMembers: ChannelMember[];
+  endpoints: InteractionEndpoint[];
+  runtimePresets: RuntimePreset[];
+}) {
+  const userRole = user?.role || "member";
+  const channelRole = channel?.currentUserRole || "member";
+  const visibility = channel?.visibility || "public";
+  const recommendedRuntimes = runtimePresets.filter((preset) => preset.recommended).length;
+  const writableEndpoints = endpoints.filter((endpoint) => endpoint.outboundEnabled).length;
+  const readableEndpoints = endpoints.filter((endpoint) => endpoint.inboundEnabled).length;
+
+  return (
+    <section className="content-grid settings-grid">
+      <MetricCard icon={ShieldCheck} label="Account Role" value={userRole} />
+      <MetricCard icon={Hash} label="Active Target" value={target} />
+      <MetricCard icon={UsersRound} label="Visible Members" value={String(channelMembers.length)} />
+      <MetricCard icon={Bot} label="Runtime Presets" value={String(runtimePresets.length)} />
+
+      <section className="panel wide">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Setup</p>
+            <h2>Server readiness</h2>
+          </div>
+          <StatusDot active={Boolean(setupStatus?.initialized)} label={setupStatus?.initialized ? "Initialized" : "Pending"} />
+        </div>
+        <div className="settings-posture-grid">
+          <article className="settings-posture-item">
+            <Server size={18} aria-hidden="true" />
+            <div>
+              <strong>{setupStatus?.serverId || daemonInfo?.serverId || "server pending"}</strong>
+              <span>server_id</span>
+            </div>
+          </article>
+          <article className="settings-posture-item">
+            <Shield size={18} aria-hidden="true" />
+            <div>
+              <strong>
+                {setupStatus ? (setupStatus.webSetupEnabled ? "enabled" : "disabled") : "unknown"}
+              </strong>
+              <span>web setup</span>
+            </div>
+          </article>
+          <article className="settings-posture-item">
+            <FileText size={18} aria-hidden="true" />
+            <div>
+              <strong>{setupStatus?.bootstrapMethods?.join(", ") || "password"}</strong>
+              <span>bootstrap methods</span>
+            </div>
+          </article>
+          <article className="settings-posture-item">
+            <Monitor size={18} aria-hidden="true" />
+            <div>
+              <strong>{setupStatus?.dataDir || "not reported"}</strong>
+              <span>data dir</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Permissions</p>
+            <h2>Current access posture</h2>
+          </div>
+        </div>
+        <div className="settings-access-grid">
+          <article>
+            <span className={`diagnostic-badge ${roleClass(userRole)}`}>{userRole}</span>
+            <strong>{user?.displayName || user?.username || "Signed in user"}</strong>
+            <small>server account</small>
+          </article>
+          <article>
+            <span className={`diagnostic-badge ${visibility === "private" ? "is-warn" : "is-ok"}`}>{visibility}</span>
+            <strong>{channel?.displayName || target}</strong>
+            <small>{channel?.memberCount ?? channelMembers.length} channel member(s)</small>
+          </article>
+          <article>
+            <span className={`diagnostic-badge ${roleClass(String(channelRole))}`}>{channelRole}</span>
+            <strong>target role</strong>
+            <small>{visibility === "private" ? "membership gated" : "public target"}</small>
+          </article>
+        </div>
+        <div className="settings-member-list">
+          {channelMembers.length ? (
+            channelMembers.slice(0, 12).map((member) => (
+              <article className="agent-row" key={`${member.kind}:${member.memberId}`}>
+                <AvatarBadge label={member.displayName} color={member.kind === "agent" ? "#2b79b4" : "#146b5a"} />
+                <div>
+                  <strong>{member.displayName}</strong>
+                  <span>
+                    {member.kind} · {member.role}
+                  </span>
+                </div>
+              </article>
+            ))
+          ) : (
+            <EmptyState icon={UsersRound} title="No visible members for this target" />
+          )}
+        </div>
+      </section>
+
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Configuration</p>
+            <h2>Runtime and bridge visibility</h2>
+          </div>
+        </div>
+        <dl className="definition-list settings-definition-list">
+          <div>
+            <dt>Protocol</dt>
+            <dd>{protocol ? `${protocol.name} ${protocol.compatibility}` : "unknown"}</dd>
+          </div>
+          <div>
+            <dt>Daemon</dt>
+            <dd>{daemonInfo?.health || "unknown"} / {daemonInfo?.daemonTransport || "transport unknown"}</dd>
+          </div>
+          <div>
+            <dt>gRPC</dt>
+            <dd>{daemonInfo?.grpcAddr || "not reported"}</dd>
+          </div>
+          <div>
+            <dt>Cache</dt>
+            <dd>{daemonInfo?.cacheDriver || "unknown"}</dd>
+          </div>
+          <div>
+            <dt>Realtime</dt>
+            <dd>{realtimeStatus}</dd>
+          </div>
+          <div>
+            <dt>Endpoints</dt>
+            <dd>{readableEndpoints} inbound / {writableEndpoints} outbound</dd>
+          </div>
+          <div>
+            <dt>Recommended runtimes</dt>
+            <dd>{recommendedRuntimes} of {runtimePresets.length}</dd>
+          </div>
+          <div>
+            <dt>Server time</dt>
+            <dd>{formatUnixTime(daemonInfo?.serverTimeUnix)}</dd>
+          </div>
+        </dl>
+      </section>
+    </section>
   );
 }
 

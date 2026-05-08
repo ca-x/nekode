@@ -455,6 +455,10 @@ textarea {
   font-size: 1.35rem;
 }
 
+.settings-grid .metric-card {
+  min-height: 124px;
+}
+
 .two-column {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -1784,6 +1788,60 @@ textarea {
 .access-summary small {
   color: var(--muted);
   font-size: 0.8125rem;
+}
+
+.settings-posture-grid,
+.settings-access-grid,
+.settings-member-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-posture-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.settings-posture-item,
+.settings-access-grid article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.settings-posture-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-posture-item div,
+.settings-access-grid article {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-posture-item strong,
+.settings-access-grid strong,
+.settings-definition-list dd {
+  overflow-wrap: anywhere;
+}
+
+.settings-posture-item span,
+.settings-access-grid small {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.settings-access-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 12px;
+}
+
+.settings-definition-list {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .agent-row span:not(.avatar-badge):not(.presence) {
