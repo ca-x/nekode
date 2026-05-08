@@ -13,6 +13,8 @@ const (
 	FieldID = "id"
 	// FieldSummary holds the string denoting the summary field in the database.
 	FieldSummary = "summary"
+	// FieldDescription holds the string denoting the description field in the database.
+	FieldDescription = "description"
 	// FieldState holds the string denoting the state field in the database.
 	FieldState = "state"
 	// FieldTarget holds the string denoting the target field in the database.
@@ -21,6 +23,8 @@ const (
 	FieldAssigneeID = "assignee_id"
 	// FieldCreatedByUserID holds the string denoting the created_by_user_id field in the database.
 	FieldCreatedByUserID = "created_by_user_id"
+	// FieldBlockedReason holds the string denoting the blocked_reason field in the database.
+	FieldBlockedReason = "blocked_reason"
 	// FieldVersion holds the string denoting the version field in the database.
 	FieldVersion = "version"
 	// FieldClaimLeaseID holds the string denoting the claim_lease_id field in the database.
@@ -37,10 +41,12 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldSummary,
+	FieldDescription,
 	FieldState,
 	FieldTarget,
 	FieldAssigneeID,
 	FieldCreatedByUserID,
+	FieldBlockedReason,
 	FieldVersion,
 	FieldClaimLeaseID,
 	FieldCreatedUnix,
@@ -60,6 +66,8 @@ func ValidColumn(column string) bool {
 var (
 	// SummaryValidator is a validator for the "summary" field. It is called by the builders before save.
 	SummaryValidator func(string) error
+	// DefaultDescription holds the default value on creation for the "description" field.
+	DefaultDescription string
 	// DefaultState holds the default value on creation for the "state" field.
 	DefaultState string
 	// TargetValidator is a validator for the "target" field. It is called by the builders before save.
@@ -68,6 +76,8 @@ var (
 	DefaultAssigneeID string
 	// DefaultCreatedByUserID holds the default value on creation for the "created_by_user_id" field.
 	DefaultCreatedByUserID string
+	// DefaultBlockedReason holds the default value on creation for the "blocked_reason" field.
+	DefaultBlockedReason string
 	// DefaultVersion holds the default value on creation for the "version" field.
 	DefaultVersion int64
 	// DefaultClaimLeaseID holds the default value on creation for the "claim_lease_id" field.
@@ -89,6 +99,11 @@ func BySummary(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSummary, opts...).ToFunc()
 }
 
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
 // ByState orders the results by the state field.
 func ByState(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldState, opts...).ToFunc()
@@ -107,6 +122,11 @@ func ByAssigneeID(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedByUserID orders the results by the created_by_user_id field.
 func ByCreatedByUserID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedByUserID, opts...).ToFunc()
+}
+
+// ByBlockedReason orders the results by the blocked_reason field.
+func ByBlockedReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBlockedReason, opts...).ToFunc()
 }
 
 // ByVersion orders the results by the version field.

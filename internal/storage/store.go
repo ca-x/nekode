@@ -341,6 +341,25 @@ func (s *Store) ListMessages(ctx context.Context, target string, limit int) ([]M
 	return messages, nil
 }
 
+func (s *Store) ListTaskComments(ctx context.Context, taskID string, limit int) ([]Message, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := s.client.Message.Query().
+		Where(message.ThreadIDEQ(taskID)).
+		Order(message.ByCreatedUnix(sql.OrderAsc()), message.ByID(sql.OrderAsc())).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]Message, 0, len(rows))
+	for _, row := range rows {
+		messages = append(messages, messageFromEnt(row))
+	}
+	return messages, nil
+}
+
 func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {
 	now := unixNow()
 	taskModel.State = normalizeTaskState(taskModel.State)
@@ -352,10 +371,12 @@ func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {
 	}
 	create := s.client.Task.Create().
 		SetSummary(taskModel.Summary).
+		SetDescription(taskModel.Description).
 		SetState(taskModel.State).
 		SetTarget(taskModel.Target).
 		SetAssigneeID(taskModel.AssigneeID).
 		SetCreatedByUserID(taskModel.CreatedByUserID).
+		SetBlockedReason(taskModel.BlockedReason).
 		SetVersion(1).
 		SetClaimLeaseID(taskModel.ClaimLeaseID).
 		SetCreatedUnix(now).
@@ -404,6 +425,9 @@ func (s *Store) UpdateTask(ctx context.Context, id string, patch TaskPatch) (Tas
 	if patch.Summary != nil {
 		update.SetSummary(*patch.Summary)
 	}
+	if patch.Description != nil {
+		update.SetDescription(*patch.Description)
+	}
 	if patch.State != nil {
 		state := normalizeTaskState(*patch.State)
 		if !validTaskState(state) {
@@ -413,6 +437,9 @@ func (s *Store) UpdateTask(ctx context.Context, id string, patch TaskPatch) (Tas
 	}
 	if patch.AssigneeID != nil {
 		update.SetAssigneeID(*patch.AssigneeID)
+	}
+	if patch.BlockedReason != nil {
+		update.SetBlockedReason(*patch.BlockedReason)
 	}
 	update.AddVersion(1)
 	update.SetUpdatedUnix(unixNow())
@@ -728,10 +755,12 @@ func taskFromEnt(row *ent.Task) Task {
 	return Task{
 		ID:              row.ID,
 		Summary:         row.Summary,
+		Description:     row.Description,
 		State:           row.State,
 		Target:          row.Target,
 		AssigneeID:      row.AssigneeID,
 		CreatedByUserID: row.CreatedByUserID,
+		BlockedReason:   row.BlockedReason,
 		Version:         row.Version,
 		ClaimLeaseID:    row.ClaimLeaseID,
 		CreatedUnix:     row.CreatedUnix,

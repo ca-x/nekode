@@ -169,6 +169,11 @@ var (
 				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[13], MessagesColumns[0]},
 			},
 			{
+				Name:    "message_thread_id_created_unix_id",
+				Unique:  false,
+				Columns: []*schema.Column{MessagesColumns[2], MessagesColumns[13], MessagesColumns[0]},
+			},
+			{
 				Name:    "message_request_id",
 				Unique:  false,
 				Columns: []*schema.Column{MessagesColumns[12]},
@@ -210,10 +215,12 @@ var (
 	TasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
 		{Name: "summary", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Default: ""},
 		{Name: "state", Type: field.TypeString, Default: "todo"},
 		{Name: "target", Type: field.TypeString},
 		{Name: "assignee_id", Type: field.TypeString, Default: ""},
 		{Name: "created_by_user_id", Type: field.TypeString, Default: ""},
+		{Name: "blocked_reason", Type: field.TypeString, Default: ""},
 		{Name: "version", Type: field.TypeInt64, Default: 1},
 		{Name: "claim_lease_id", Type: field.TypeString, Default: ""},
 		{Name: "created_unix", Type: field.TypeInt64},
@@ -228,22 +235,22 @@ var (
 			{
 				Name:    "task_state_updated_unix",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[2], TasksColumns[9]},
+				Columns: []*schema.Column{TasksColumns[3], TasksColumns[11]},
 			},
 			{
 				Name:    "task_target_updated_unix",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[3], TasksColumns[9]},
+				Columns: []*schema.Column{TasksColumns[4], TasksColumns[11]},
 			},
 			{
 				Name:    "task_target_state_updated_unix_id",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[3], TasksColumns[2], TasksColumns[9], TasksColumns[0]},
+				Columns: []*schema.Column{TasksColumns[4], TasksColumns[3], TasksColumns[11], TasksColumns[0]},
 			},
 			{
 				Name:    "task_assignee_id_updated_unix",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[4], TasksColumns[9]},
+				Columns: []*schema.Column{TasksColumns[5], TasksColumns[11]},
 			},
 		},
 	}

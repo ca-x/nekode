@@ -14,10 +14,12 @@ func (Task) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("id").DefaultFunc(func() string { return newID("tsk") }).Immutable(),
 		field.String("summary").NotEmpty(),
+		field.String("description").Default(""),
 		field.String("state").Default("todo"),
 		field.String("target").NotEmpty(),
 		field.String("assignee_id").Default(""),
 		field.String("created_by_user_id").Default(""),
+		field.String("blocked_reason").Default(""),
 		field.Int64("version").Default(1),
 		field.String("claim_lease_id").Default(""),
 		field.Int64("created_unix"),

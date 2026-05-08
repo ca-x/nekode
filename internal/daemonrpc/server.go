@@ -1022,7 +1022,7 @@ func (s *Server) RecordMessageMutation(ctx context.Context, msg storage.Message,
 	if err != nil {
 		return err
 	}
-	aggregateID := firstNonEmpty(protoMsg.GetAggregateId(), msg.Target)
+	aggregateID := firstNonEmpty(msg.ThreadID, protoMsg.GetAggregateId(), msg.Target)
 	_, err = s.store.AppendCollaborationEvent(ctx, storage.CollaborationEvent{
 		ServerID:        s.serverID,
 		Target:          msg.Target,
@@ -1380,8 +1380,10 @@ func taskToProto(task storage.Task) *daemonv1.Task {
 		Summary:         task.Summary,
 		State:           taskStateFromStorage(task.State),
 		Target:          task.Target,
+		ThreadId:        task.ID,
 		AssigneeId:      task.AssigneeID,
 		CreatedByUserId: task.CreatedByUserID,
+		BlockedReason:   task.BlockedReason,
 		BoardColumn:     task.State,
 		CreatedTimeUnix: task.CreatedUnix,
 		UpdatedTimeUnix: task.UpdatedUnix,

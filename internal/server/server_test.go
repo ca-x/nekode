@@ -273,8 +273,10 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 
 	task := doJSON(t, s, http.MethodPost, "/api/tasks", token, map[string]any{
-		"summary": "wire backend",
-		"target":  "#general",
+		"summary":       "wire backend",
+		"description":   "connect the daemon bridge",
+		"target":        "#general",
+		"blockedReason": "waiting for test credentials",
 	})
 	if task.Code != http.StatusCreated {
 		t.Fatalf("create task status = %d body=%s", task.Code, task.Body.String())
@@ -283,18 +285,54 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if err := json.Unmarshal(task.Body.Bytes(), &taskBody); err != nil {
 		t.Fatalf("decode task: %v", err)
 	}
+	if taskBody.Description != "connect the daemon bridge" || taskBody.BlockedReason != "waiting for test credentials" {
+		t.Fatalf("task detail fields = %+v, want description and blocked reason", taskBody)
+	}
 	updated := doJSON(t, s, http.MethodPatch, "/api/tasks/"+taskBody.ID, token, map[string]any{
-		"state": "in_progress",
+		"state":       "in_progress",
+		"description": "daemon bridge is connected",
 	})
 	if updated.Code != http.StatusOK {
 		t.Fatalf("update task status = %d body=%s", updated.Code, updated.Body.String())
 	}
 	blocked := doJSON(t, s, http.MethodPatch, "/api/tasks/"+taskBody.ID, token, map[string]any{
-		"state": "blocked",
+		"state":         "blocked",
+		"blockedReason": "waiting on API review",
 	})
 	if blocked.Code != http.StatusOK {
 		t.Fatalf("block task status = %d body=%s", blocked.Code, blocked.Body.String())
 	}
+	var blockedBody storage.Task
+	if err := json.Unmarshal(blocked.Body.Bytes(), &blockedBody); err != nil {
+		t.Fatalf("decode blocked task: %v", err)
+	}
+	if blockedBody.Description != "daemon bridge is connected" || blockedBody.BlockedReason != "waiting on API review" {
+		t.Fatalf("blocked task detail fields = %+v, want patched detail fields", blockedBody)
+	}
+	comment := doJSON(t, s, http.MethodPost, "/api/tasks/"+taskBody.ID+"/comments", token, map[string]any{
+		"content":   "Reviewer asked for timeline evidence.",
+		"requestId": "task-comment-test",
+	})
+	if comment.Code != http.StatusCreated {
+		t.Fatalf("create task comment status = %d body=%s", comment.Code, comment.Body.String())
+	}
+	var commentBody storage.Message
+	if err := json.Unmarshal(comment.Body.Bytes(), &commentBody); err != nil {
+		t.Fatalf("decode task comment: %v", err)
+	}
+	if commentBody.ThreadID != taskBody.ID || commentBody.Target != "#general" {
+		t.Fatalf("task comment routing = %+v, want thread task id and task target", commentBody)
+	}
+	comments := doGET(t, s, "/api/tasks/"+taskBody.ID+"/comments", token)
+	if comments.Code != http.StatusOK {
+		t.Fatalf("list task comments status = %d body=%s", comments.Code, comments.Body.String())
+	}
+	assertJSONItems(t, comments.Body.Bytes(), 1)
+	timeline := doGET(t, s, "/api/tasks/"+taskBody.ID+"/timeline", token)
+	if timeline.Code != http.StatusOK {
+		t.Fatalf("task timeline status = %d body=%s", timeline.Code, timeline.Body.String())
+	}
+	assertJSONItemsAtLeast(t, timeline.Body.Bytes(), 4)
 	listBlocked := httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/tasks?state=blocked&target=%23general", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -633,6 +671,19 @@ func assertJSONItems(t *testing.T, data []byte, want int) {
 	}
 	if len(body.Items) != want {
 		t.Fatalf("items = %d, want %d; body=%s", len(body.Items), want, string(data))
+	}
+}
+
+func assertJSONItemsAtLeast(t *testing.T, data []byte, wantMin int) {
+	t.Helper()
+	var body struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(data, &body); err != nil {
+		t.Fatalf("decode list response: %v", err)
+	}
+	if len(body.Items) < wantMin {
+		t.Fatalf("items = %d, want at least %d; body=%s", len(body.Items), wantMin, string(data))
 	}
 }
 

@@ -1300,7 +1300,12 @@ function TasksPanel({
           </div>
         )}
       </div>
-      <TaskInspector task={selectedTask} onClose={() => onSelectTask(null)} onMove={moveTask} />
+      <TaskInspector
+        task={selectedTask}
+        onClose={() => onSelectTask(null)}
+        onMove={moveTask}
+        onChanged={onChanged}
+      />
     </section>
   );
 }
@@ -1389,12 +1394,54 @@ function TaskCard({
 function TaskInspector({
   task,
   onClose,
-  onMove
+  onMove,
+  onChanged
 }: {
   task: Task | null;
   onClose: () => void;
   onMove: (task: Task, state: TaskState) => Promise<void>;
+  onChanged: () => Promise<void>;
 }) {
+  const [summaryDraft, setSummaryDraft] = useState("");
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [blockedReasonDraft, setBlockedReasonDraft] = useState("");
+  const [commentDraft, setCommentDraft] = useState("");
+  const [comments, setComments] = useState<Message[]>([]);
+  const [timeline, setTimeline] = useState<CollaborationEvent[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [savingDetail, setSavingDetail] = useState(false);
+  const [detailError, setDetailError] = useState("");
+
+  const loadTaskDetail = useCallback(async () => {
+    if (!task) {
+      setComments([]);
+      setTimeline([]);
+      return;
+    }
+    setLoadingDetail(true);
+    setDetailError("");
+    try {
+      const [commentList, timelineList] = await Promise.all([
+        api.listTaskComments(task.id),
+        api.listTaskTimeline(task.id)
+      ]);
+      setComments(commentList.items);
+      setTimeline(timelineList.items);
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "Unable to load task detail");
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, [task]);
+
+  useEffect(() => {
+    setSummaryDraft(task?.summary ?? "");
+    setDescriptionDraft(task?.description ?? "");
+    setBlockedReasonDraft(task?.blockedReason ?? "");
+    setCommentDraft("");
+    void loadTaskDetail();
+  }, [loadTaskDetail, task?.blockedReason, task?.description, task?.summary]);
+
   if (!task) {
     return (
       <aside className="panel task-inspector">
@@ -1402,6 +1449,45 @@ function TaskInspector({
       </aside>
     );
   }
+
+  const saveDetail = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!summaryDraft.trim()) return;
+    setSavingDetail(true);
+    setDetailError("");
+    try {
+      await api.updateTask(task.id, {
+        summary: summaryDraft,
+        description: descriptionDraft,
+        blockedReason: blockedReasonDraft
+      });
+      await onChanged();
+      await loadTaskDetail();
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "Unable to save task detail");
+    } finally {
+      setSavingDetail(false);
+    }
+  };
+
+  const addComment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!commentDraft.trim()) return;
+    setSavingDetail(true);
+    setDetailError("");
+    try {
+      await api.createTaskComment(task.id, {
+        content: commentDraft,
+        requestId: makeRequestId("task-comment")
+      });
+      setCommentDraft("");
+      await loadTaskDetail();
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "Unable to add task comment");
+    } finally {
+      setSavingDetail(false);
+    }
+  };
 
   return (
     <aside className="panel task-inspector">
@@ -1428,6 +1514,49 @@ function TaskInspector({
           ))}
         </select>
       </div>
+      {task.state === "blocked" && task.blockedReason ? (
+        <div className="blocked-reason" role="note">
+          <OctagonAlert size={16} aria-hidden="true" />
+          <span>{task.blockedReason}</span>
+        </div>
+      ) : null}
+      {detailError ? (
+        <div className="notice error" role="alert">
+          {detailError}
+        </div>
+      ) : null}
+      <form className="task-detail-form" onSubmit={saveDetail}>
+        <label>
+          Summary
+          <input
+            value={summaryDraft}
+            onChange={(event) => setSummaryDraft(event.target.value)}
+            placeholder="Task summary"
+          />
+        </label>
+        <label>
+          Description
+          <textarea
+            value={descriptionDraft}
+            onChange={(event) => setDescriptionDraft(event.target.value)}
+            placeholder="Capture scope, acceptance notes, and links"
+            rows={5}
+          />
+        </label>
+        <label>
+          Blocked reason
+          <textarea
+            value={blockedReasonDraft}
+            onChange={(event) => setBlockedReasonDraft(event.target.value)}
+            placeholder="Visible when the task is blocked"
+            rows={3}
+          />
+        </label>
+        <button className="primary-button" type="submit" disabled={savingDetail || !summaryDraft.trim()}>
+          <CheckCircle2 size={16} aria-hidden="true" />
+          Save Detail
+        </button>
+      </form>
       <dl className="definition-list">
         <div>
           <dt>ID</dt>
@@ -1458,6 +1587,59 @@ function TaskInspector({
           <dd>{unixTime(task.updatedUnix)}</dd>
         </div>
       </dl>
+      <section className="inspector-subsection" aria-label="Task comments">
+        <div className="inspector-subheading">
+          <div>
+            <p className="eyebrow">Comments</p>
+            <h3>{comments.length}</h3>
+          </div>
+          <button className="icon-button" type="button" aria-label="Refresh task detail" onClick={() => void loadTaskDetail()}>
+            <RefreshCw size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <form className="comment-form" onSubmit={addComment}>
+          <textarea
+            value={commentDraft}
+            onChange={(event) => setCommentDraft(event.target.value)}
+            placeholder="Add a task comment"
+            rows={3}
+          />
+          <button className="secondary-button" type="submit" disabled={savingDetail || !commentDraft.trim()}>
+            <Send size={16} aria-hidden="true" />
+            Send
+          </button>
+        </form>
+        <div className="comment-list">
+          {comments.length ? (
+            comments.map((comment) => <MessageBubble key={comment.id} message={comment} />)
+          ) : (
+            <EmptyState icon={MessageSquare} title={loadingDetail ? "Loading comments" : "No comments yet"} />
+          )}
+        </div>
+      </section>
+      <section className="inspector-subsection" aria-label="Task timeline">
+        <div className="inspector-subheading">
+          <div>
+            <p className="eyebrow">Timeline</p>
+            <h3>{timeline.length}</h3>
+          </div>
+        </div>
+        <div className="timeline-list">
+          {timeline.length ? (
+            timeline.map((event) => (
+              <article className="timeline-row" key={event.eventId || event.sequence}>
+                <strong>{eventSummary(event)}</strong>
+                <span>{eventScopeLabel(event)}</span>
+                <span>
+                  seq {event.sequence || "n/a"} · {unixTime(event.createdTimeUnix)}
+                </span>
+              </article>
+            ))
+          ) : (
+            <EmptyState icon={Activity} title={loadingDetail ? "Loading timeline" : "No timeline events"} />
+          )}
+        </div>
+      </section>
       <p className="boundary-note">
         This panel submits mutations through the API and waits for server DTO/refetch. It does not
         treat local state changes or SSE payloads as authoritative facts.

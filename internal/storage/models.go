@@ -61,10 +61,12 @@ type Message struct {
 type Task struct {
 	ID              string `json:"id"`
 	Summary         string `json:"summary"`
+	Description     string `json:"description"`
 	State           string `json:"state"`
 	Target          string `json:"target"`
 	AssigneeID      string `json:"assigneeId,omitempty"`
 	CreatedByUserID string `json:"createdByUserId,omitempty"`
+	BlockedReason   string `json:"blockedReason,omitempty"`
 	Version         int64  `json:"version"`
 	ClaimLeaseID    string `json:"claimLeaseId,omitempty"`
 	CreatedUnix     int64  `json:"createdUnix"`
@@ -72,9 +74,11 @@ type Task struct {
 }
 
 type TaskPatch struct {
-	Summary    *string
-	State      *string
-	AssigneeID *string
+	Summary       *string
+	Description   *string
+	State         *string
+	AssigneeID    *string
+	BlockedReason *string
 }
 
 type CollaborationEvent struct {

@@ -41,6 +41,20 @@ func (_u *TaskUpdate) SetNillableSummary(v *string) *TaskUpdate {
 	return _u
 }
 
+// SetDescription sets the "description" field.
+func (_u *TaskUpdate) SetDescription(v string) *TaskUpdate {
+	_u.mutation.SetDescription(v)
+	return _u
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableDescription(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetDescription(*v)
+	}
+	return _u
+}
+
 // SetState sets the "state" field.
 func (_u *TaskUpdate) SetState(v string) *TaskUpdate {
 	_u.mutation.SetState(v)
@@ -93,6 +107,20 @@ func (_u *TaskUpdate) SetCreatedByUserID(v string) *TaskUpdate {
 func (_u *TaskUpdate) SetNillableCreatedByUserID(v *string) *TaskUpdate {
 	if v != nil {
 		_u.SetCreatedByUserID(*v)
+	}
+	return _u
+}
+
+// SetBlockedReason sets the "blocked_reason" field.
+func (_u *TaskUpdate) SetBlockedReason(v string) *TaskUpdate {
+	_u.mutation.SetBlockedReason(v)
+	return _u
+}
+
+// SetNillableBlockedReason sets the "blocked_reason" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableBlockedReason(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetBlockedReason(*v)
 	}
 	return _u
 }
@@ -236,6 +264,9 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(task.FieldSummary, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Description(); ok {
+		_spec.SetField(task.FieldDescription, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(task.FieldState, field.TypeString, value)
 	}
@@ -247,6 +278,9 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.CreatedByUserID(); ok {
 		_spec.SetField(task.FieldCreatedByUserID, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.BlockedReason(); ok {
+		_spec.SetField(task.FieldBlockedReason, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Version(); ok {
 		_spec.SetField(task.FieldVersion, field.TypeInt64, value)
@@ -303,6 +337,20 @@ func (_u *TaskUpdateOne) SetNillableSummary(v *string) *TaskUpdateOne {
 	return _u
 }
 
+// SetDescription sets the "description" field.
+func (_u *TaskUpdateOne) SetDescription(v string) *TaskUpdateOne {
+	_u.mutation.SetDescription(v)
+	return _u
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableDescription(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetDescription(*v)
+	}
+	return _u
+}
+
 // SetState sets the "state" field.
 func (_u *TaskUpdateOne) SetState(v string) *TaskUpdateOne {
 	_u.mutation.SetState(v)
@@ -355,6 +403,20 @@ func (_u *TaskUpdateOne) SetCreatedByUserID(v string) *TaskUpdateOne {
 func (_u *TaskUpdateOne) SetNillableCreatedByUserID(v *string) *TaskUpdateOne {
 	if v != nil {
 		_u.SetCreatedByUserID(*v)
+	}
+	return _u
+}
+
+// SetBlockedReason sets the "blocked_reason" field.
+func (_u *TaskUpdateOne) SetBlockedReason(v string) *TaskUpdateOne {
+	_u.mutation.SetBlockedReason(v)
+	return _u
+}
+
+// SetNillableBlockedReason sets the "blocked_reason" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableBlockedReason(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetBlockedReason(*v)
 	}
 	return _u
 }
@@ -528,6 +590,9 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(task.FieldSummary, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Description(); ok {
+		_spec.SetField(task.FieldDescription, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(task.FieldState, field.TypeString, value)
 	}
@@ -539,6 +604,9 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.CreatedByUserID(); ok {
 		_spec.SetField(task.FieldCreatedByUserID, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.BlockedReason(); ok {
+		_spec.SetField(task.FieldBlockedReason, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Version(); ok {
 		_spec.SetField(task.FieldVersion, field.TypeInt64, value)

@@ -246,9 +246,11 @@ Request:
 ```json
 {
   "summary": "wire backend",
+  "description": "connect the HTTP bridge to the daemon event log",
   "target": "#general",
   "state": "todo",
-  "assigneeId": "usr_..."
+  "assigneeId": "usr_...",
+  "blockedReason": ""
 }
 ```
 
@@ -259,10 +261,50 @@ Request:
 ```json
 {
   "summary": "updated summary",
+  "description": "daemon bridge is connected; waiting for review",
   "state": "in_progress",
-  "assigneeId": "usr_..."
+  "assigneeId": "usr_...",
+  "blockedReason": "waiting for credentials"
 }
 ```
+
+### `GET /api/tasks/{id}/comments`
+
+Requires bearer auth. Returns task-scoped message comments where `threadId`
+equals the task id.
+
+Query:
+
+- `limit`: optional, defaults to `100`.
+
+Response shape: `{ "items": [Message] }`.
+
+### `POST /api/tasks/{id}/comments`
+
+Requires bearer auth. Creates a task-scoped human comment on the task target and
+records a durable message event with the task id as aggregate id.
+
+Request:
+
+```json
+{
+  "content": "Reviewer asked for timeline evidence.",
+  "requestId": "optional-idempotency-key"
+}
+```
+
+### `GET /api/tasks/{id}/timeline`
+
+Requires bearer auth. Returns durable collaboration events for the task aggregate
+so the Web inspector can show task creation, updates, state changes, and comments
+without treating local UI state as authoritative.
+
+Query:
+
+- `sequence`: optional resume sequence.
+- `limit`: optional, defaults to `100`.
+
+Response shape: `{ "items": [CollaborationEvent], "nextCursor": EventCursor }`.
 
 ## Daemon Bridge
 

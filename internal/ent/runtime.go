@@ -233,28 +233,36 @@ func init() {
 	taskDescSummary := taskFields[1].Descriptor()
 	// task.SummaryValidator is a validator for the "summary" field. It is called by the builders before save.
 	task.SummaryValidator = taskDescSummary.Validators[0].(func(string) error)
+	// taskDescDescription is the schema descriptor for description field.
+	taskDescDescription := taskFields[2].Descriptor()
+	// task.DefaultDescription holds the default value on creation for the description field.
+	task.DefaultDescription = taskDescDescription.Default.(string)
 	// taskDescState is the schema descriptor for state field.
-	taskDescState := taskFields[2].Descriptor()
+	taskDescState := taskFields[3].Descriptor()
 	// task.DefaultState holds the default value on creation for the state field.
 	task.DefaultState = taskDescState.Default.(string)
 	// taskDescTarget is the schema descriptor for target field.
-	taskDescTarget := taskFields[3].Descriptor()
+	taskDescTarget := taskFields[4].Descriptor()
 	// task.TargetValidator is a validator for the "target" field. It is called by the builders before save.
 	task.TargetValidator = taskDescTarget.Validators[0].(func(string) error)
 	// taskDescAssigneeID is the schema descriptor for assignee_id field.
-	taskDescAssigneeID := taskFields[4].Descriptor()
+	taskDescAssigneeID := taskFields[5].Descriptor()
 	// task.DefaultAssigneeID holds the default value on creation for the assignee_id field.
 	task.DefaultAssigneeID = taskDescAssigneeID.Default.(string)
 	// taskDescCreatedByUserID is the schema descriptor for created_by_user_id field.
-	taskDescCreatedByUserID := taskFields[5].Descriptor()
+	taskDescCreatedByUserID := taskFields[6].Descriptor()
 	// task.DefaultCreatedByUserID holds the default value on creation for the created_by_user_id field.
 	task.DefaultCreatedByUserID = taskDescCreatedByUserID.Default.(string)
+	// taskDescBlockedReason is the schema descriptor for blocked_reason field.
+	taskDescBlockedReason := taskFields[7].Descriptor()
+	// task.DefaultBlockedReason holds the default value on creation for the blocked_reason field.
+	task.DefaultBlockedReason = taskDescBlockedReason.Default.(string)
 	// taskDescVersion is the schema descriptor for version field.
-	taskDescVersion := taskFields[6].Descriptor()
+	taskDescVersion := taskFields[8].Descriptor()
 	// task.DefaultVersion holds the default value on creation for the version field.
 	task.DefaultVersion = taskDescVersion.Default.(int64)
 	// taskDescClaimLeaseID is the schema descriptor for claim_lease_id field.
-	taskDescClaimLeaseID := taskFields[7].Descriptor()
+	taskDescClaimLeaseID := taskFields[9].Descriptor()
 	// task.DefaultClaimLeaseID holds the default value on creation for the claim_lease_id field.
 	task.DefaultClaimLeaseID = taskDescClaimLeaseID.Default.(string)
 	// taskDescID is the schema descriptor for id field.

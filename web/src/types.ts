@@ -67,10 +67,12 @@ export type TaskState =
 export type Task = {
   id: string;
   summary: string;
+  description?: string;
   state: TaskState;
   target: string;
   assigneeId?: string;
   createdByUserId?: string;
+  blockedReason?: string;
   version?: number;
   claimLeaseId?: string;
   createdUnix: number;

@@ -276,10 +276,12 @@ function normalizeTask(raw: unknown): Task {
   return {
     id: asString(row.id ?? row.taskId ?? row.task_id),
     summary: asString(row.summary),
+    description: asOptionalString(row.description),
     state: normalizeTaskState(row.state ?? row.boardColumn ?? row.board_column),
     target: asString(row.target),
     assigneeId: asOptionalString(row.assigneeId ?? row.assignee_id),
     createdByUserId: asOptionalString(row.createdByUserId ?? row.created_by_user_id),
+    blockedReason: asOptionalString(row.blockedReason ?? row.blocked_reason),
     version: asNumber(row.version) || undefined,
     claimLeaseId: asOptionalString(row.claimLeaseId ?? row.claim_lease_id),
     createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix),
@@ -637,6 +639,7 @@ export class ApiClient {
     target: string;
     content: string;
     role?: string;
+    threadId?: string;
     sourceEndpointId?: string;
     requestId?: string;
   }) {
@@ -659,6 +662,8 @@ export class ApiClient {
     target: string;
     state?: TaskState;
     assigneeId?: string;
+    description?: string;
+    blockedReason?: string;
   }) {
     return normalizeTask(await this.request<unknown>("/api/tasks", {
       method: "POST",
@@ -666,10 +671,39 @@ export class ApiClient {
     }));
   }
 
-  async updateTask(id: string, patch: Partial<Pick<Task, "summary" | "state" | "assigneeId">>) {
+  async updateTask(
+    id: string,
+    patch: Partial<Pick<Task, "summary" | "description" | "state" | "assigneeId" | "blockedReason">>
+  ) {
     return normalizeTask(await this.request<unknown>(`/api/tasks/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(patch)
+    }));
+  }
+
+  listTaskComments(taskId: string, limit = 100) {
+    return this.request<ListResponse<Message>>(
+      `/api/tasks/${encodeURIComponent(taskId)}/comments?limit=${limit}`
+    );
+  }
+
+  createTaskComment(taskId: string, input: { content: string; requestId?: string }) {
+    return this.request<Message>(`/api/tasks/${encodeURIComponent(taskId)}/comments`, {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  }
+
+  listTaskTimeline(taskId: string, filters: { sequence?: number; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "sequence", filters.sequence);
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    const query = params.toString();
+    return this.request<{ items?: unknown[]; nextCursor?: RawEventCursor; next_cursor?: RawEventCursor }>(
+      `/api/tasks/${encodeURIComponent(taskId)}/timeline${query ? `?${query}` : ""}`
+    ).then((response) => ({
+      items: (response.items ?? []).map(normalizeCollaborationEvent),
+      nextCursor: normalizeCursor(response.nextCursor ?? response.next_cursor)
     }));
   }
 

@@ -18,6 +18,8 @@ type Task struct {
 	ID string `json:"id,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
+	// Description holds the value of the "description" field.
+	Description string `json:"description,omitempty"`
 	// State holds the value of the "state" field.
 	State string `json:"state,omitempty"`
 	// Target holds the value of the "target" field.
@@ -26,6 +28,8 @@ type Task struct {
 	AssigneeID string `json:"assignee_id,omitempty"`
 	// CreatedByUserID holds the value of the "created_by_user_id" field.
 	CreatedByUserID string `json:"created_by_user_id,omitempty"`
+	// BlockedReason holds the value of the "blocked_reason" field.
+	BlockedReason string `json:"blocked_reason,omitempty"`
 	// Version holds the value of the "version" field.
 	Version int64 `json:"version,omitempty"`
 	// ClaimLeaseID holds the value of the "claim_lease_id" field.
@@ -44,7 +48,7 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case task.FieldVersion, task.FieldCreatedUnix, task.FieldUpdatedUnix:
 			values[i] = new(sql.NullInt64)
-		case task.FieldID, task.FieldSummary, task.FieldState, task.FieldTarget, task.FieldAssigneeID, task.FieldCreatedByUserID, task.FieldClaimLeaseID:
+		case task.FieldID, task.FieldSummary, task.FieldDescription, task.FieldState, task.FieldTarget, task.FieldAssigneeID, task.FieldCreatedByUserID, task.FieldBlockedReason, task.FieldClaimLeaseID:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -73,6 +77,12 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Summary = value.String
 			}
+		case task.FieldDescription:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field description", values[i])
+			} else if value.Valid {
+				_m.Description = value.String
+			}
 		case task.FieldState:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field state", values[i])
@@ -96,6 +106,12 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field created_by_user_id", values[i])
 			} else if value.Valid {
 				_m.CreatedByUserID = value.String
+			}
+		case task.FieldBlockedReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field blocked_reason", values[i])
+			} else if value.Valid {
+				_m.BlockedReason = value.String
 			}
 		case task.FieldVersion:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -160,6 +176,9 @@ func (_m *Task) String() string {
 	builder.WriteString("summary=")
 	builder.WriteString(_m.Summary)
 	builder.WriteString(", ")
+	builder.WriteString("description=")
+	builder.WriteString(_m.Description)
+	builder.WriteString(", ")
 	builder.WriteString("state=")
 	builder.WriteString(_m.State)
 	builder.WriteString(", ")
@@ -171,6 +190,9 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_by_user_id=")
 	builder.WriteString(_m.CreatedByUserID)
+	builder.WriteString(", ")
+	builder.WriteString("blocked_reason=")
+	builder.WriteString(_m.BlockedReason)
 	builder.WriteString(", ")
 	builder.WriteString("version=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Version))

@@ -4642,10 +4642,12 @@ type TaskMutation struct {
 	typ                string
 	id                 *string
 	summary            *string
+	description        *string
 	state              *string
 	target             *string
 	assignee_id        *string
 	created_by_user_id *string
+	blocked_reason     *string
 	version            *int64
 	addversion         *int64
 	claim_lease_id     *string
@@ -4799,6 +4801,42 @@ func (m *TaskMutation) ResetSummary() {
 	m.summary = nil
 }
 
+// SetDescription sets the "description" field.
+func (m *TaskMutation) SetDescription(s string) {
+	m.description = &s
+}
+
+// Description returns the value of the "description" field in the mutation.
+func (m *TaskMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDescription returns the old "description" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldDescription(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+	}
+	return oldValue.Description, nil
+}
+
+// ResetDescription resets all changes to the "description" field.
+func (m *TaskMutation) ResetDescription() {
+	m.description = nil
+}
+
 // SetState sets the "state" field.
 func (m *TaskMutation) SetState(s string) {
 	m.state = &s
@@ -4941,6 +4979,42 @@ func (m *TaskMutation) OldCreatedByUserID(ctx context.Context) (v string, err er
 // ResetCreatedByUserID resets all changes to the "created_by_user_id" field.
 func (m *TaskMutation) ResetCreatedByUserID() {
 	m.created_by_user_id = nil
+}
+
+// SetBlockedReason sets the "blocked_reason" field.
+func (m *TaskMutation) SetBlockedReason(s string) {
+	m.blocked_reason = &s
+}
+
+// BlockedReason returns the value of the "blocked_reason" field in the mutation.
+func (m *TaskMutation) BlockedReason() (r string, exists bool) {
+	v := m.blocked_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBlockedReason returns the old "blocked_reason" field's value of the Task entity.
+// If the Task object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskMutation) OldBlockedReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBlockedReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBlockedReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBlockedReason: %w", err)
+	}
+	return oldValue.BlockedReason, nil
+}
+
+// ResetBlockedReason resets all changes to the "blocked_reason" field.
+func (m *TaskMutation) ResetBlockedReason() {
+	m.blocked_reason = nil
 }
 
 // SetVersion sets the "version" field.
@@ -5181,9 +5255,12 @@ func (m *TaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TaskMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 11)
 	if m.summary != nil {
 		fields = append(fields, task.FieldSummary)
+	}
+	if m.description != nil {
+		fields = append(fields, task.FieldDescription)
 	}
 	if m.state != nil {
 		fields = append(fields, task.FieldState)
@@ -5196,6 +5273,9 @@ func (m *TaskMutation) Fields() []string {
 	}
 	if m.created_by_user_id != nil {
 		fields = append(fields, task.FieldCreatedByUserID)
+	}
+	if m.blocked_reason != nil {
+		fields = append(fields, task.FieldBlockedReason)
 	}
 	if m.version != nil {
 		fields = append(fields, task.FieldVersion)
@@ -5219,6 +5299,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case task.FieldSummary:
 		return m.Summary()
+	case task.FieldDescription:
+		return m.Description()
 	case task.FieldState:
 		return m.State()
 	case task.FieldTarget:
@@ -5227,6 +5309,8 @@ func (m *TaskMutation) Field(name string) (ent.Value, bool) {
 		return m.AssigneeID()
 	case task.FieldCreatedByUserID:
 		return m.CreatedByUserID()
+	case task.FieldBlockedReason:
+		return m.BlockedReason()
 	case task.FieldVersion:
 		return m.Version()
 	case task.FieldClaimLeaseID:
@@ -5246,6 +5330,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 	switch name {
 	case task.FieldSummary:
 		return m.OldSummary(ctx)
+	case task.FieldDescription:
+		return m.OldDescription(ctx)
 	case task.FieldState:
 		return m.OldState(ctx)
 	case task.FieldTarget:
@@ -5254,6 +5340,8 @@ func (m *TaskMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldAssigneeID(ctx)
 	case task.FieldCreatedByUserID:
 		return m.OldCreatedByUserID(ctx)
+	case task.FieldBlockedReason:
+		return m.OldBlockedReason(ctx)
 	case task.FieldVersion:
 		return m.OldVersion(ctx)
 	case task.FieldClaimLeaseID:
@@ -5277,6 +5365,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSummary(v)
+		return nil
+	case task.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDescription(v)
 		return nil
 	case task.FieldState:
 		v, ok := value.(string)
@@ -5305,6 +5400,13 @@ func (m *TaskMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedByUserID(v)
+		return nil
+	case task.FieldBlockedReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBlockedReason(v)
 		return nil
 	case task.FieldVersion:
 		v, ok := value.(int64)
@@ -5425,6 +5527,9 @@ func (m *TaskMutation) ResetField(name string) error {
 	case task.FieldSummary:
 		m.ResetSummary()
 		return nil
+	case task.FieldDescription:
+		m.ResetDescription()
+		return nil
 	case task.FieldState:
 		m.ResetState()
 		return nil
@@ -5436,6 +5541,9 @@ func (m *TaskMutation) ResetField(name string) error {
 		return nil
 	case task.FieldCreatedByUserID:
 		m.ResetCreatedByUserID()
+		return nil
+	case task.FieldBlockedReason:
+		m.ResetBlockedReason()
 		return nil
 	case task.FieldVersion:
 		m.ResetVersion()

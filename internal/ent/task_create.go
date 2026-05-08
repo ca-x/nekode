@@ -25,6 +25,20 @@ func (_c *TaskCreate) SetSummary(v string) *TaskCreate {
 	return _c
 }
 
+// SetDescription sets the "description" field.
+func (_c *TaskCreate) SetDescription(v string) *TaskCreate {
+	_c.mutation.SetDescription(v)
+	return _c
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableDescription(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetDescription(*v)
+	}
+	return _c
+}
+
 // SetState sets the "state" field.
 func (_c *TaskCreate) SetState(v string) *TaskCreate {
 	_c.mutation.SetState(v)
@@ -69,6 +83,20 @@ func (_c *TaskCreate) SetCreatedByUserID(v string) *TaskCreate {
 func (_c *TaskCreate) SetNillableCreatedByUserID(v *string) *TaskCreate {
 	if v != nil {
 		_c.SetCreatedByUserID(*v)
+	}
+	return _c
+}
+
+// SetBlockedReason sets the "blocked_reason" field.
+func (_c *TaskCreate) SetBlockedReason(v string) *TaskCreate {
+	_c.mutation.SetBlockedReason(v)
+	return _c
+}
+
+// SetNillableBlockedReason sets the "blocked_reason" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableBlockedReason(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetBlockedReason(*v)
 	}
 	return _c
 }
@@ -162,6 +190,10 @@ func (_c *TaskCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *TaskCreate) defaults() {
+	if _, ok := _c.mutation.Description(); !ok {
+		v := task.DefaultDescription
+		_c.mutation.SetDescription(v)
+	}
 	if _, ok := _c.mutation.State(); !ok {
 		v := task.DefaultState
 		_c.mutation.SetState(v)
@@ -173,6 +205,10 @@ func (_c *TaskCreate) defaults() {
 	if _, ok := _c.mutation.CreatedByUserID(); !ok {
 		v := task.DefaultCreatedByUserID
 		_c.mutation.SetCreatedByUserID(v)
+	}
+	if _, ok := _c.mutation.BlockedReason(); !ok {
+		v := task.DefaultBlockedReason
+		_c.mutation.SetBlockedReason(v)
 	}
 	if _, ok := _c.mutation.Version(); !ok {
 		v := task.DefaultVersion
@@ -198,6 +234,9 @@ func (_c *TaskCreate) check() error {
 			return &ValidationError{Name: "summary", err: fmt.Errorf(`ent: validator failed for field "Task.summary": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.Description(); !ok {
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Task.description"`)}
+	}
 	if _, ok := _c.mutation.State(); !ok {
 		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "Task.state"`)}
 	}
@@ -214,6 +253,9 @@ func (_c *TaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.CreatedByUserID(); !ok {
 		return &ValidationError{Name: "created_by_user_id", err: errors.New(`ent: missing required field "Task.created_by_user_id"`)}
+	}
+	if _, ok := _c.mutation.BlockedReason(); !ok {
+		return &ValidationError{Name: "blocked_reason", err: errors.New(`ent: missing required field "Task.blocked_reason"`)}
 	}
 	if _, ok := _c.mutation.Version(); !ok {
 		return &ValidationError{Name: "version", err: errors.New(`ent: missing required field "Task.version"`)}
@@ -266,6 +308,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 		_spec.SetField(task.FieldSummary, field.TypeString, value)
 		_node.Summary = value
 	}
+	if value, ok := _c.mutation.Description(); ok {
+		_spec.SetField(task.FieldDescription, field.TypeString, value)
+		_node.Description = value
+	}
 	if value, ok := _c.mutation.State(); ok {
 		_spec.SetField(task.FieldState, field.TypeString, value)
 		_node.State = value
@@ -281,6 +327,10 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedByUserID(); ok {
 		_spec.SetField(task.FieldCreatedByUserID, field.TypeString, value)
 		_node.CreatedByUserID = value
+	}
+	if value, ok := _c.mutation.BlockedReason(); ok {
+		_spec.SetField(task.FieldBlockedReason, field.TypeString, value)
+		_node.BlockedReason = value
 	}
 	if value, ok := _c.mutation.Version(); ok {
 		_spec.SetField(task.FieldVersion, field.TypeInt64, value)

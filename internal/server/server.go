@@ -151,6 +151,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/messages", s.requireAuth(s.handleCreateMessage))
 	s.mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListTasks))
 	s.mux.HandleFunc("POST /api/tasks", s.requireAuth(s.handleCreateTask))
+	s.mux.HandleFunc("GET /api/tasks/{id}/comments", s.requireAuth(s.handleListTaskComments))
+	s.mux.HandleFunc("POST /api/tasks/{id}/comments", s.requireAuth(s.handleCreateTaskComment))
+	s.mux.HandleFunc("GET /api/tasks/{id}/timeline", s.requireAuth(s.handleTaskTimeline))
 	s.mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
 	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
 	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))
@@ -510,10 +513,12 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	principal := principalFromContext(r.Context())
 	task, err := s.store.CreateTask(r.Context(), storage.Task{
 		Summary:         summary,
+		Description:     strings.TrimSpace(req.Description),
 		State:           strings.TrimSpace(req.State),
 		Target:          target,
 		AssigneeID:      strings.TrimSpace(req.AssigneeID),
 		CreatedByUserID: principal.User.ID,
+		BlockedReason:   strings.TrimSpace(req.BlockedReason),
 	})
 	if errors.Is(err, storage.ErrInvalidState) {
 		writeError(w, http.StatusBadRequest, "invalid task state")
@@ -536,9 +541,11 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	patch := storage.TaskPatch{
-		Summary:    optionalTrimmed(req.Summary),
-		State:      optionalTrimmed(req.State),
-		AssigneeID: optionalTrimmed(req.AssigneeID),
+		Summary:       optionalTrimmed(req.Summary),
+		Description:   optionalTrimmed(req.Description),
+		State:         optionalTrimmed(req.State),
+		AssigneeID:    optionalTrimmed(req.AssigneeID),
+		BlockedReason: optionalTrimmed(req.BlockedReason),
 	}
 	task, err := s.store.UpdateTask(r.Context(), r.PathValue("id"), patch)
 	if errors.Is(err, storage.ErrNotFound) {
@@ -562,6 +569,102 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, task)
+}
+
+func (s *Server) handleListTaskComments(w http.ResponseWriter, r *http.Request) {
+	taskID := strings.TrimSpace(r.PathValue("id"))
+	if _, err := s.store.GetTask(r.Context(), taskID); errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "task not found")
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "get task failed")
+		return
+	}
+	messages, err := s.store.ListTaskComments(r.Context(), taskID, intQuery(r, "limit", 100))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list task comments failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": messages})
+}
+
+func (s *Server) handleCreateTaskComment(w http.ResponseWriter, r *http.Request) {
+	var req taskCommentRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		writeError(w, http.StatusBadRequest, "content is required")
+		return
+	}
+	taskID := strings.TrimSpace(r.PathValue("id"))
+	task, err := s.store.GetTask(r.Context(), taskID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "task not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "get task failed")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	message, err := s.store.CreateMessage(r.Context(), storage.Message{
+		Target:            task.Target,
+		ThreadID:          task.ID,
+		Role:              "user",
+		Content:           content,
+		SenderUserID:      principal.User.ID,
+		SenderDisplayName: principal.User.DisplayName,
+		SenderKind:        "human",
+		MetadataJSON:      "{}",
+		RequestID:         strings.TrimSpace(req.RequestID),
+	})
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "duplicate request id")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create task comment failed")
+		return
+	}
+	if err := s.daemon.RecordMessageMutation(r.Context(), message, daemonv1.EventOperation_EVENT_OPERATION_APPENDED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append message event failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, message)
+}
+
+func (s *Server) handleTaskTimeline(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")
+		return
+	}
+	taskID := strings.TrimSpace(r.PathValue("id"))
+	if _, err := s.store.GetTask(r.Context(), taskID); errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "task not found")
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "get task failed")
+		return
+	}
+	resp, err := s.daemon.ListEventsSince(r.Context(), &daemonv1.ListEventsSinceRequest{
+		Cursor: &daemonv1.EventCursor{
+			AggregateId:     taskID,
+			Sequence:        int64Query(r, "sequence", 0),
+			ProtocolVersion: s.daemon.ProtocolVersion(),
+			ServerId:        s.daemon.ServerID(),
+		},
+		Limit: uint32(intQuery(r, "limit", 100)),
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list task timeline failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"items":      resp.GetEvents(),
+		"nextCursor": resp.GetNextCursor(),
+	})
 }
 
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -705,14 +808,23 @@ type messageRequest struct {
 }
 
 type taskRequest struct {
-	Summary    string `json:"summary"`
-	State      string `json:"state"`
-	Target     string `json:"target"`
-	AssigneeID string `json:"assigneeId"`
+	Summary       string `json:"summary"`
+	Description   string `json:"description"`
+	State         string `json:"state"`
+	Target        string `json:"target"`
+	AssigneeID    string `json:"assigneeId"`
+	BlockedReason string `json:"blockedReason"`
 }
 
 type taskPatchRequest struct {
-	Summary    *string `json:"summary"`
-	State      *string `json:"state"`
-	AssigneeID *string `json:"assigneeId"`
+	Summary       *string `json:"summary"`
+	Description   *string `json:"description"`
+	State         *string `json:"state"`
+	AssigneeID    *string `json:"assigneeId"`
+	BlockedReason *string `json:"blockedReason"`
+}
+
+type taskCommentRequest struct {
+	Content   string `json:"content"`
+	RequestID string `json:"requestId"`
 }

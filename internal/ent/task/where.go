@@ -67,6 +67,11 @@ func Summary(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldSummary, v))
 }
 
+// Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
+func Description(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldDescription, v))
+}
+
 // State applies equality check predicate on the "state" field. It's identical to StateEQ.
 func State(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldState, v))
@@ -85,6 +90,11 @@ func AssigneeID(v string) predicate.Task {
 // CreatedByUserID applies equality check predicate on the "created_by_user_id" field. It's identical to CreatedByUserIDEQ.
 func CreatedByUserID(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedByUserID, v))
+}
+
+// BlockedReason applies equality check predicate on the "blocked_reason" field. It's identical to BlockedReasonEQ.
+func BlockedReason(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldBlockedReason, v))
 }
 
 // Version applies equality check predicate on the "version" field. It's identical to VersionEQ.
@@ -170,6 +180,71 @@ func SummaryEqualFold(v string) predicate.Task {
 // SummaryContainsFold applies the ContainsFold predicate on the "summary" field.
 func SummaryContainsFold(v string) predicate.Task {
 	return predicate.Task(sql.FieldContainsFold(FieldSummary, v))
+}
+
+// DescriptionEQ applies the EQ predicate on the "description" field.
+func DescriptionEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldDescription, v))
+}
+
+// DescriptionNEQ applies the NEQ predicate on the "description" field.
+func DescriptionNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldDescription, v))
+}
+
+// DescriptionIn applies the In predicate on the "description" field.
+func DescriptionIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldDescription, vs...))
+}
+
+// DescriptionNotIn applies the NotIn predicate on the "description" field.
+func DescriptionNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldDescription, vs...))
+}
+
+// DescriptionGT applies the GT predicate on the "description" field.
+func DescriptionGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldDescription, v))
+}
+
+// DescriptionGTE applies the GTE predicate on the "description" field.
+func DescriptionGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldDescription, v))
+}
+
+// DescriptionLT applies the LT predicate on the "description" field.
+func DescriptionLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldDescription, v))
+}
+
+// DescriptionLTE applies the LTE predicate on the "description" field.
+func DescriptionLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldDescription, v))
+}
+
+// DescriptionContains applies the Contains predicate on the "description" field.
+func DescriptionContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldDescription, v))
+}
+
+// DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
+func DescriptionHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldDescription, v))
+}
+
+// DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
+func DescriptionHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldDescription, v))
+}
+
+// DescriptionEqualFold applies the EqualFold predicate on the "description" field.
+func DescriptionEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldDescription, v))
+}
+
+// DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
+func DescriptionContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldDescription, v))
 }
 
 // StateEQ applies the EQ predicate on the "state" field.
@@ -430,6 +505,71 @@ func CreatedByUserIDEqualFold(v string) predicate.Task {
 // CreatedByUserIDContainsFold applies the ContainsFold predicate on the "created_by_user_id" field.
 func CreatedByUserIDContainsFold(v string) predicate.Task {
 	return predicate.Task(sql.FieldContainsFold(FieldCreatedByUserID, v))
+}
+
+// BlockedReasonEQ applies the EQ predicate on the "blocked_reason" field.
+func BlockedReasonEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldBlockedReason, v))
+}
+
+// BlockedReasonNEQ applies the NEQ predicate on the "blocked_reason" field.
+func BlockedReasonNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldBlockedReason, v))
+}
+
+// BlockedReasonIn applies the In predicate on the "blocked_reason" field.
+func BlockedReasonIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldBlockedReason, vs...))
+}
+
+// BlockedReasonNotIn applies the NotIn predicate on the "blocked_reason" field.
+func BlockedReasonNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldBlockedReason, vs...))
+}
+
+// BlockedReasonGT applies the GT predicate on the "blocked_reason" field.
+func BlockedReasonGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldBlockedReason, v))
+}
+
+// BlockedReasonGTE applies the GTE predicate on the "blocked_reason" field.
+func BlockedReasonGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldBlockedReason, v))
+}
+
+// BlockedReasonLT applies the LT predicate on the "blocked_reason" field.
+func BlockedReasonLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldBlockedReason, v))
+}
+
+// BlockedReasonLTE applies the LTE predicate on the "blocked_reason" field.
+func BlockedReasonLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldBlockedReason, v))
+}
+
+// BlockedReasonContains applies the Contains predicate on the "blocked_reason" field.
+func BlockedReasonContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldBlockedReason, v))
+}
+
+// BlockedReasonHasPrefix applies the HasPrefix predicate on the "blocked_reason" field.
+func BlockedReasonHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldBlockedReason, v))
+}
+
+// BlockedReasonHasSuffix applies the HasSuffix predicate on the "blocked_reason" field.
+func BlockedReasonHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldBlockedReason, v))
+}
+
+// BlockedReasonEqualFold applies the EqualFold predicate on the "blocked_reason" field.
+func BlockedReasonEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldBlockedReason, v))
+}
+
+// BlockedReasonContainsFold applies the ContainsFold predicate on the "blocked_reason" field.
+func BlockedReasonContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldBlockedReason, v))
 }
 
 // VersionEQ applies the EQ predicate on the "version" field.
