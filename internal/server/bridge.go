@@ -94,16 +94,116 @@ func (s *Server) handleCreateDaemonAgent(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusCreated, result)
 }
 
+func (s *Server) handleControlDaemonAgent(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")
+		return
+	}
+	agentID := strings.TrimSpace(r.PathValue("agentID"))
+	var req daemonAgentControlRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	action, ok := daemonAgentControlAction(req.Action)
+	if agentID == "" || !ok {
+		writeError(w, http.StatusBadRequest, "agentID and valid action are required")
+		return
+	}
+	requestID := firstNonEmptyString(strings.TrimSpace(req.RequestID), storage.NewID("ctlreq"))
+	resp, err := s.daemon.ControlAgent(r.Context(), &daemonv1.ControlAgentRequest{
+		AgentId:          agentID,
+		ComputerId:       strings.TrimSpace(req.ComputerID),
+		RuntimeProfileId: strings.TrimSpace(req.RuntimeProfileID),
+		Action:           action,
+		Reason:           strings.TrimSpace(req.Reason),
+		RequestId:        requestID,
+		IdempotencyKey:   requestID,
+		Context:          daemonHTTPContext(r),
+	})
+	if err != nil {
+		writeError(w, daemonAgentHTTPStatus(err), grpcstatus.Convert(err).Message())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, resp)
+}
+
+func (s *Server) handleSendDaemonAgentDirectMessage(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")
+		return
+	}
+	agentID := strings.TrimSpace(r.PathValue("agentID"))
+	var req daemonAgentDirectMessageRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	content := strings.TrimSpace(req.Content)
+	if agentID == "" || content == "" {
+		writeError(w, http.StatusBadRequest, "agentID and content are required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	requestID := firstNonEmptyString(strings.TrimSpace(req.RequestID), storage.NewID("dmreq"))
+	resp, err := s.daemon.SendAgentDirectMessage(r.Context(), &daemonv1.SendAgentDirectMessageRequest{
+		AgentId:          agentID,
+		Content:          content,
+		RequestId:        requestID,
+		IdempotencyKey:   requestID,
+		AttachmentIds:    append([]string(nil), req.AttachmentIDs...),
+		ReplyToMessageId: strings.TrimSpace(req.ReplyToMessageID),
+		Context:          daemonHTTPContext(r),
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_HUMAN,
+			UserId:      principal.User.ID,
+			DisplayName: firstNonEmptyString(principal.User.DisplayName, principal.User.Username, "User"),
+		},
+	})
+	if err != nil {
+		writeError(w, daemonAgentHTTPStatus(err), grpcstatus.Convert(err).Message())
+		return
+	}
+	writeJSON(w, http.StatusCreated, resp)
+}
+
 func daemonAgentHTTPStatus(err error) int {
 	switch grpcstatus.Code(err) {
 	case codes.InvalidArgument:
 		return http.StatusBadRequest
+	case codes.AlreadyExists:
+		return http.StatusConflict
 	case codes.NotFound:
 		return http.StatusNotFound
 	case codes.FailedPrecondition:
 		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
+	}
+}
+
+func daemonAgentControlAction(value string) (daemonv1.AgentControlAction, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "terminate", "agent_control_action_terminate":
+		return daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE, true
+	case "restart", "agent_control_action_restart":
+		return daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART, true
+	case "restart_reset_session", "agent_control_action_restart_reset_session":
+		return daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION, true
+	case "restart_full_reset", "agent_control_action_restart_full_reset":
+		return daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET, true
+	default:
+		return daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED, false
+	}
+}
+
+func daemonHTTPContext(r *http.Request) *daemonv1.RequestContext {
+	principal := principalFromContext(r.Context())
+	return &daemonv1.RequestContext{
+		TraceId: storage.NewID("trace"),
+		Actor: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_HUMAN,
+			UserId:      principal.User.ID,
+			DisplayName: firstNonEmptyString(principal.User.DisplayName, principal.User.Username, "User"),
+		},
 	}
 }
 
@@ -291,6 +391,21 @@ func (s *Server) handleDaemonManagementScript(w http.ResponseWriter, _ *http.Req
 		w.Header().Set("Content-Type", "text/x-shellscript; charset=utf-8")
 		_, _ = w.Write([]byte(s.renderDaemonManagementShell(action)))
 	}
+}
+
+type daemonAgentControlRequest struct {
+	Action           string `json:"action"`
+	Reason           string `json:"reason"`
+	ComputerID       string `json:"computerId"`
+	RuntimeProfileID string `json:"runtimeProfileId"`
+	RequestID        string `json:"requestId"`
+}
+
+type daemonAgentDirectMessageRequest struct {
+	Content          string   `json:"content"`
+	ReplyToMessageID string   `json:"replyToMessageId"`
+	AttachmentIDs    []string `json:"attachmentIds"`
+	RequestID        string   `json:"requestId"`
 }
 
 func (s *Server) handleDaemonEnrollmentInstallScript(w http.ResponseWriter, r *http.Request, scriptKind string) {

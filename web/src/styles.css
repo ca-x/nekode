@@ -273,6 +273,10 @@ textarea:focus-visible {
   background: #7a8983;
 }
 
+.presence.offline {
+  background: var(--danger);
+}
+
 .machine-state {
   padding: 2px 6px;
   border-radius: 999px;
@@ -1950,6 +1954,75 @@ textarea {
   font-size: 0.875rem;
 }
 
+.agent-management-row {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
+.agent-management-main,
+.agent-management-controls {
+  min-width: 0;
+}
+
+.agent-management-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agent-management-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-management-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.agent-control-strip,
+.agent-message-form {
+  display: grid;
+  grid-template-columns: minmax(128px, 0.8fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.agent-message-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.agent-control-strip label,
+.agent-message-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.agent-control-strip button,
+.agent-message-form button {
+  min-height: 38px;
+}
+
+.agent-action-feedback {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.agent-action-feedback.is-error {
+  color: var(--danger);
+}
+
+.agent-action-feedback.is-success {
+  color: var(--success);
+}
+
 .runtime-preset-grid,
 .runtime-preset-list {
   display: grid;
@@ -2589,7 +2662,10 @@ textarea {
 
 @media (max-width: 980px) {
   .app-shell,
+  .agent-control-strip,
   .agent-create-grid,
+  .agent-management-row,
+  .agent-message-form,
   .agent-options-grid,
   .auth-panel,
   .endpoint-binding-grid,

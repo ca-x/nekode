@@ -285,10 +285,37 @@ export type AgentStatusSnapshot = {
   summary?: string;
   detail?: string;
   target?: string;
+  threadId?: string;
+  messageId?: string;
   taskId?: string;
   runId?: string;
+  operationId?: string;
   updatedTimeUnix?: number;
   expiresTimeUnix?: number;
+};
+
+export type AgentControlAction =
+  | "terminate"
+  | "restart"
+  | "restart_reset_session"
+  | "restart_full_reset";
+
+export type AgentControlResult = {
+  accepted: boolean;
+  operationId: string;
+  agentId: string;
+  computerId?: string;
+  runtimeProfileId?: string;
+  action: AgentControlAction | string;
+  state: string;
+  reason?: string;
+  createdTimeUnix?: number;
+  updatedTimeUnix?: number;
+};
+
+export type AgentDirectMessageResult = {
+  accepted: boolean;
+  message: Message;
 };
 
 export type DaemonRun = {

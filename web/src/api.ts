@@ -1,6 +1,9 @@
 import type {
   Attachment,
   AuthResponse,
+  AgentControlAction,
+  AgentControlResult,
+  AgentDirectMessageResult,
   AgentStatusSnapshot,
   Channel,
   ChannelMember,
@@ -368,6 +371,25 @@ const agentSeverityByNumber: Record<number, string> = {
   1: "info",
   2: "warning",
   3: "error"
+};
+
+const agentControlActionByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "terminate",
+  2: "restart",
+  3: "restart_reset_session",
+  4: "restart_full_reset",
+  5: "custom"
+};
+
+const agentControlStateByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "requested",
+  2: "queued",
+  3: "running",
+  4: "completed",
+  5: "failed",
+  6: "unsupported"
 };
 
 const runStateByNumber: Record<number, string> = {
@@ -830,10 +852,38 @@ function normalizeAgentStatus(raw: unknown): AgentStatusSnapshot {
     summary: asOptionalString(row.summary),
     detail: asOptionalString(row.detail),
     target: asOptionalString(row.target),
+    threadId: asOptionalString(row.threadId ?? row.thread_id),
+    messageId: asOptionalString(row.messageId ?? row.message_id),
     taskId: asOptionalString(row.taskId ?? row.task_id),
     runId: asOptionalString(row.runId ?? row.run_id),
+    operationId: asOptionalString(row.operationId ?? row.operation_id),
     updatedTimeUnix: asNumber(row.updatedTimeUnix ?? row.updated_time_unix) || undefined,
     expiresTimeUnix: asNumber(row.expiresTimeUnix ?? row.expires_time_unix) || undefined
+  };
+}
+
+function normalizeAgentControlResult(raw: unknown): AgentControlResult {
+  const row = asRecord(raw);
+  const operation = asRecord(row.operation);
+  return {
+    accepted: Boolean(row.accepted),
+    operationId: asString(operation.operationId ?? operation.operation_id),
+    agentId: asString(operation.agentId ?? operation.agent_id),
+    computerId: asOptionalString(operation.computerId ?? operation.computer_id),
+    runtimeProfileId: asOptionalString(operation.runtimeProfileId ?? operation.runtime_profile_id),
+    action: knownEnumLabel(operation.action, agentControlActionByNumber, "agent_control_action"),
+    state: knownEnumLabel(operation.state, agentControlStateByNumber, "agent_control_state"),
+    reason: asOptionalString(operation.reason),
+    createdTimeUnix: asNumber(operation.createdTimeUnix ?? operation.created_time_unix) || undefined,
+    updatedTimeUnix: asNumber(operation.updatedTimeUnix ?? operation.updated_time_unix) || undefined
+  };
+}
+
+function normalizeAgentDirectMessageResult(raw: unknown): AgentDirectMessageResult {
+  const row = asRecord(raw);
+  return {
+    accepted: Boolean(row.accepted),
+    message: normalizeMessage(row.message)
   };
 }
 
@@ -1175,6 +1225,35 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify(input)
     }));
+  }
+
+  async controlDaemonAgent(agentId: string, input: {
+    action: AgentControlAction;
+    reason?: string;
+    computerId?: string;
+    runtimeProfileId?: string;
+    requestId?: string;
+  }) {
+    return normalizeAgentControlResult(
+      await this.request<unknown>(`/api/daemon/agents/${encodeURIComponent(agentId)}/control`, {
+        method: "POST",
+        body: JSON.stringify(input)
+      })
+    );
+  }
+
+  async sendDaemonAgentDirectMessage(agentId: string, input: {
+    content: string;
+    replyToMessageId?: string;
+    attachmentIds?: string[];
+    requestId?: string;
+  }) {
+    return normalizeAgentDirectMessageResult(
+      await this.request<unknown>(`/api/daemon/agents/${encodeURIComponent(agentId)}/messages`, {
+        method: "POST",
+        body: JSON.stringify(input)
+      })
+    );
   }
 
   async listAgentStatuses(filters: { target?: string; agentId?: string; limit?: number } = {}) {

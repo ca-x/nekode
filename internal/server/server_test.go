@@ -1274,6 +1274,92 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 	}
 	assertJSONItems(t, statuses.Body.Bytes(), 1)
 
+	missingControl := doJSON(t, s, http.MethodPost, "/api/daemon/agents/agent-1/control", token, map[string]any{
+		"reason": "missing action",
+	})
+	if missingControl.Code != http.StatusBadRequest {
+		t.Fatalf("missing control action status = %d body=%s, want 400", missingControl.Code, missingControl.Body.String())
+	}
+	control := doJSON(t, s, http.MethodPost, "/api/daemon/agents/agent-1/control", token, map[string]any{
+		"action":    "restart_reset_session",
+		"reason":    "operator requested reset",
+		"requestId": "http-control-1",
+	})
+	if control.Code != http.StatusAccepted {
+		t.Fatalf("control agent status = %d body=%s", control.Code, control.Body.String())
+	}
+	var controlBody struct {
+		Accepted  bool `json:"accepted"`
+		Operation struct {
+			OperationID      string `json:"operation_id"`
+			AgentID          string `json:"agent_id"`
+			ComputerID       string `json:"computer_id"`
+			RuntimeProfileID string `json:"runtime_profile_id"`
+			Action           int    `json:"action"`
+			State            int    `json:"state"`
+			Reason           string `json:"reason"`
+		} `json:"operation"`
+	}
+	if err := json.Unmarshal(control.Body.Bytes(), &controlBody); err != nil {
+		t.Fatalf("decode control response: %v", err)
+	}
+	if !controlBody.Accepted ||
+		controlBody.Operation.OperationID == "" ||
+		controlBody.Operation.AgentID != "agent-1" ||
+		controlBody.Operation.ComputerID != "computer-1" ||
+		controlBody.Operation.Action != int(daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION) ||
+		controlBody.Operation.State != int(daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED) ||
+		controlBody.Operation.Reason != "operator requested reset" {
+		t.Fatalf("control response = %+v, want queued reset operation", controlBody)
+	}
+	unknownControl := doJSON(t, s, http.MethodPost, "/api/daemon/agents/missing-agent/control", token, map[string]any{
+		"action": "restart",
+	})
+	if unknownControl.Code != http.StatusNotFound {
+		t.Fatalf("unknown control agent status = %d body=%s, want 404", unknownControl.Code, unknownControl.Body.String())
+	}
+	missingDirectMessage := doJSON(t, s, http.MethodPost, "/api/daemon/agents/agent-1/messages", token, map[string]any{})
+	if missingDirectMessage.Code != http.StatusBadRequest {
+		t.Fatalf("missing direct message content status = %d body=%s, want 400", missingDirectMessage.Code, missingDirectMessage.Body.String())
+	}
+	directMessage := doJSON(t, s, http.MethodPost, "/api/daemon/agents/agent-1/messages", token, map[string]any{
+		"content":   "please report current state",
+		"requestId": "http-direct-1",
+	})
+	if directMessage.Code != http.StatusCreated {
+		t.Fatalf("direct message status = %d body=%s", directMessage.Code, directMessage.Body.String())
+	}
+	var directBody struct {
+		Accepted bool `json:"accepted"`
+		Message  struct {
+			MessageID string `json:"message_id"`
+			Target    string `json:"target"`
+			Content   string `json:"content"`
+			Sender    struct {
+				ActorKind   int    `json:"actor_kind"`
+				UserID      string `json:"user_id"`
+				DisplayName string `json:"display_name"`
+			} `json:"sender"`
+		} `json:"message"`
+	}
+	if err := json.Unmarshal(directMessage.Body.Bytes(), &directBody); err != nil {
+		t.Fatalf("decode direct message response: %v", err)
+	}
+	if !directBody.Accepted ||
+		directBody.Message.MessageID == "" ||
+		directBody.Message.Target != "dm:agent-1" ||
+		directBody.Message.Content != "please report current state" ||
+		directBody.Message.Sender.ActorKind != int(daemonv1.ActorKind_ACTOR_KIND_HUMAN) ||
+		directBody.Message.Sender.UserID == "" ||
+		directBody.Message.Sender.DisplayName != "Admin" {
+		t.Fatalf("direct message response = %+v, want human-authored agent DM", directBody)
+	}
+	dmMessages := doGET(t, s, "/api/messages?target=dm%3Aagent-1", token)
+	if dmMessages.Code != http.StatusOK {
+		t.Fatalf("direct message list status = %d body=%s", dmMessages.Code, dmMessages.Body.String())
+	}
+	assertJSONItems(t, dmMessages.Body.Bytes(), 1)
+
 	if _, err := s.daemon.UpdateRunStatus(context.Background(), &daemonv1.UpdateRunStatusRequest{
 		RunId:   "run-1",
 		AgentId: "agent-1",

@@ -47,6 +47,9 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState
 import { ApiClient, ApiError, makeRequestId } from "./api";
 import brandMarkUrl from "./assets-brand.png";
 import type {
+  AgentControlAction,
+  AgentControlResult,
+  AgentDirectMessageResult,
   AgentStatusSnapshot,
   Attachment,
   AuthResponse,
@@ -99,6 +102,7 @@ type RealtimeStatus = "disabled" | "connecting" | "connected" | "error";
 type TaskViewMode = "board" | "list";
 type TaskStateFilter = TaskState | "all" | "open";
 type TaskSortKey = "updated_desc" | "created_desc" | "summary_asc" | "state_asc";
+type AgentActionBusy = { agentId: string; kind: "control" | "message" } | null;
 type StoredEventCursor = {
   serverId: string;
   protocolVersion: number;
@@ -142,6 +146,13 @@ const taskSortOptions: Array<{ value: TaskSortKey; label: string }> = [
   { value: "created_desc", label: "Newest first" },
   { value: "summary_asc", label: "Summary A-Z" },
   { value: "state_asc", label: "Board order" }
+];
+
+const agentControlActions: Array<{ value: AgentControlAction; label: string }> = [
+  { value: "terminate", label: "Terminate" },
+  { value: "restart", label: "Restart" },
+  { value: "restart_reset_session", label: "Reset session" },
+  { value: "restart_full_reset", label: "Full reset" }
 ];
 
 const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = [
@@ -480,6 +491,14 @@ function healthClass(value?: string) {
   return "is-warn";
 }
 
+function presenceClass(value?: string) {
+  const normalized = (value || "idle").toLowerCase();
+  if (normalized === "online") return "online";
+  if (normalized === "busy") return "busy";
+  if (["stale", "offline", "degraded"].includes(normalized)) return "offline";
+  return "idle";
+}
+
 function enrollmentStatus(enrollment: DaemonEnrollment | null) {
   if (!enrollment) return "idle";
   if (enrollment.status === "pending" && enrollment.expiresUnix && enrollment.expiresUnix <= Math.floor(Date.now() / 1000)) {
@@ -546,6 +565,37 @@ function fallbackChannels(): Channel[] {
   }));
 }
 
+function realAgentSidebarItems(inventory: DaemonInventoryComputer[], statuses: AgentStatusSnapshot[]) {
+  const byID = new Map<string, {
+    agentId: string;
+    label: string;
+    detail: string;
+    presence: string;
+  }>();
+  for (const computer of inventory) {
+    for (const agent of computer.agents) {
+      if (!agent.agentId) continue;
+      byID.set(agent.agentId, {
+        agentId: agent.agentId,
+        label: agent.displayName || agent.name || agent.agentId,
+        detail: agent.runtimeKind || computer.displayName || computer.hostname || computer.computerId,
+        presence: agent.status || "idle"
+      });
+    }
+  }
+  for (const status of statuses) {
+    if (!status.agentId) continue;
+    const current = byID.get(status.agentId);
+    byID.set(status.agentId, {
+      agentId: status.agentId,
+      label: current?.label || status.agentId,
+      detail: status.summary || status.target || current?.detail || status.computerId || "runtime status",
+      presence: status.presence || current?.presence || "idle"
+    });
+  }
+  return Array.from(byID.values()).sort((left, right) => left.label.localeCompare(right.label));
+}
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
   const [user, setUser] = useState<User | null>(null);
@@ -581,6 +631,10 @@ function App() {
   const selectedTask = useMemo(
     () => tasks.find((task) => task.id === selectedTaskId) ?? null,
     [selectedTaskId, tasks]
+  );
+  const sidebarAgents = useMemo(
+    () => realAgentSidebarItems(daemonInventory, agentStatuses),
+    [daemonInventory, agentStatuses]
   );
 
   const loadData = useCallback(async (options: { background?: boolean } = {}) => {
@@ -857,20 +911,31 @@ function App() {
           ))}
         </SidebarSection>
         <SidebarSection title="Agents" actionLabel="Create agent">
-          {demoAgents.map((agent) => (
+          {sidebarAgents.length ? sidebarAgents.map((agent) => (
             <button
-              key={agent.id}
+              key={agent.agentId}
               className="agent-link"
               type="button"
               onClick={() => {
                 setActiveThread(null);
-                setTarget(`dm:@${agent.name.toLowerCase()}`);
+                setTarget(`dm:${agent.agentId}`);
                 setView("messages");
               }}
             >
+              <AvatarBadge label={agent.label} color="#2b79b4" />
+              <span>{agent.label}</span>
+              <span className={`presence ${presenceClass(agent.presence)}`} aria-label={agent.presence} />
+            </button>
+          )) : demoAgents.map((agent) => (
+            <button
+              key={agent.id}
+              className="agent-link"
+              type="button"
+              onClick={() => setView("daemon")}
+            >
               <AvatarBadge label={agent.name} color={agent.color} />
               <span>{agent.name}</span>
-              <span className={`presence ${agent.status}`} aria-label={agent.status} />
+              <span className="machine-state">demo</span>
             </button>
           ))}
         </SidebarSection>
@@ -4513,6 +4578,12 @@ function DaemonPanel({
   const [agentCreateState, setAgentCreateState] = useState<"idle" | "creating" | "created" | "error">("idle");
   const [agentError, setAgentError] = useState("");
   const [createdAgent, setCreatedAgent] = useState<CreateDaemonAgentResult | null>(null);
+  const [agentControlActionsById, setAgentControlActionsById] = useState<Record<string, AgentControlAction>>({});
+  const [agentControlReasons, setAgentControlReasons] = useState<Record<string, string>>({});
+  const [agentMessageDrafts, setAgentMessageDrafts] = useState<Record<string, string>>({});
+  const [agentActionBusy, setAgentActionBusy] = useState<AgentActionBusy>(null);
+  const [agentActionErrors, setAgentActionErrors] = useState<Record<string, string>>({});
+  const [agentActionReceipts, setAgentActionReceipts] = useState<Record<string, string>>({});
   const agentComputers = useMemo(
     () => daemonInventory.filter((computer) =>
       computer.runtimes.some((runtime) =>
@@ -4535,6 +4606,30 @@ function DaemonPanel({
     agentDisplayName.trim() &&
     agentCreateState !== "creating"
   );
+  const manageableAgents = useMemo(() => {
+    const byID = new Map<string, AgentStatusSnapshot>();
+    for (const computer of daemonInventory) {
+      for (const agent of computer.agents) {
+        if (!agent.agentId) continue;
+        byID.set(agent.agentId, {
+          agentId: agent.agentId,
+          computerId: agent.computerId || computer.computerId,
+          runtimeProfileId: agent.runtimeProfileId,
+          presence: agent.status || "idle",
+          activityState: "unspecified",
+          health: "unspecified",
+          severity: "info",
+          summary: agent.displayName || agent.name || agent.description,
+          target: undefined,
+          updatedTimeUnix: computer.lastHeartbeatUnix
+        });
+      }
+    }
+    for (const status of agentStatuses) {
+      if (status.agentId) byID.set(status.agentId, { ...byID.get(status.agentId), ...status });
+    }
+    return Array.from(byID.values()).sort((left, right) => left.agentId.localeCompare(right.agentId));
+  }, [agentStatuses, daemonInventory]);
 
   useEffect(() => {
     if (!enrollment?.id || canFinishEnrollment || currentEnrollmentStatus !== "pending") {
@@ -4666,6 +4761,75 @@ function DaemonPanel({
     } catch (err) {
       setAgentCreateState("error");
       setAgentError(err instanceof Error ? err.message : "Unable to create agent");
+    }
+  };
+
+  const setAgentControlAction = (agentId: string, action: AgentControlAction) => {
+    setAgentControlActionsById((current) => ({ ...current, [agentId]: action }));
+  };
+
+  const setAgentControlReason = (agentId: string, reason: string) => {
+    setAgentControlReasons((current) => ({ ...current, [agentId]: reason }));
+  };
+
+  const setAgentMessageDraft = (agentId: string, content: string) => {
+    setAgentMessageDrafts((current) => ({ ...current, [agentId]: content }));
+  };
+
+  const setAgentActionError = (agentId: string, error: string) => {
+    setAgentActionErrors((current) => ({ ...current, [agentId]: error }));
+  };
+
+  const setAgentActionReceipt = (agentId: string, receipt: string) => {
+    setAgentActionReceipts((current) => ({ ...current, [agentId]: receipt }));
+  };
+
+  const controlAgent = async (status: AgentStatusSnapshot) => {
+    const action = agentControlActionsById[status.agentId] ?? "restart";
+    setAgentActionBusy({ agentId: status.agentId, kind: "control" });
+    setAgentActionError(status.agentId, "");
+    setAgentActionReceipt(status.agentId, "");
+    try {
+      const result: AgentControlResult = await api.controlDaemonAgent(status.agentId, {
+        action,
+        reason: agentControlReasons[status.agentId],
+        computerId: status.computerId,
+        runtimeProfileId: status.runtimeProfileId,
+        requestId: makeRequestId("agent-control")
+      });
+      setAgentActionReceipt(
+        status.agentId,
+        `${targetLabel(result.action)} ${result.state}${result.operationId ? ` · ${compactId(result.operationId)}` : ""}`
+      );
+      onAgentCreated();
+    } catch (err) {
+      setAgentActionError(status.agentId, err instanceof Error ? err.message : "Unable to control agent");
+    } finally {
+      setAgentActionBusy(null);
+    }
+  };
+
+  const sendAgentDirectMessage = async (status: AgentStatusSnapshot) => {
+    const content = (agentMessageDrafts[status.agentId] ?? "").trim();
+    if (!content) {
+      setAgentActionError(status.agentId, "Message content is required");
+      return;
+    }
+    setAgentActionBusy({ agentId: status.agentId, kind: "message" });
+    setAgentActionError(status.agentId, "");
+    setAgentActionReceipt(status.agentId, "");
+    try {
+      const result: AgentDirectMessageResult = await api.sendDaemonAgentDirectMessage(status.agentId, {
+        content,
+        requestId: makeRequestId("agent-dm")
+      });
+      setAgentMessageDraft(status.agentId, "");
+      setAgentActionReceipt(status.agentId, `Direct message queued · ${compactId(result.message.id)}`);
+      onAgentCreated();
+    } catch (err) {
+      setAgentActionError(status.agentId, err instanceof Error ? err.message : "Unable to send direct message");
+    } finally {
+      setAgentActionBusy(null);
     }
   };
 
@@ -5085,23 +5249,92 @@ function DaemonPanel({
             <h2>Agent runtime health</h2>
           </div>
         </div>
-        {agentStatuses.length ? (
+        {manageableAgents.length ? (
           <div className="diagnostic-list">
-            {agentStatuses.map((status) => (
-              <article className="diagnostic-row" key={`${status.agentId}-${status.target ?? "global"}`}>
-                <div>
-                  <strong>{status.agentId || "unknown agent"}</strong>
-                  <span>{status.summary || status.detail || status.target || "No runtime summary"}</span>
-                </div>
-                <div className="diagnostic-meta">
-                  <span className={`diagnostic-badge ${healthClass(status.health)}`}>{status.health}</span>
-                  <span>{status.presence || "presence_unknown"}</span>
-                  <span>{status.activityState || "activity_unknown"}</span>
-                  <span>{status.target || "global"}</span>
-                  <span>{formatUnixTime(status.updatedTimeUnix)}</span>
-                </div>
-              </article>
-            ))}
+            {manageableAgents.map((status) => {
+              const controlBusy = agentActionBusy?.agentId === status.agentId && agentActionBusy.kind === "control";
+              const messageBusy = agentActionBusy?.agentId === status.agentId && agentActionBusy.kind === "message";
+              const action = agentControlActionsById[status.agentId] ?? "restart";
+              const messageDraft = agentMessageDrafts[status.agentId] ?? "";
+              const actionError = agentActionErrors[status.agentId];
+              const actionReceipt = agentActionReceipts[status.agentId];
+              return (
+                <article className="diagnostic-row agent-management-row" key={`${status.agentId}-${status.target ?? "global"}`}>
+                  <div className="agent-management-main">
+                    <div className="agent-management-title">
+                      <span className={`presence ${presenceClass(status.presence)}`} aria-label={status.presence || "idle"} />
+                      <strong>{status.summary || status.agentId || "unknown agent"}</strong>
+                    </div>
+                    <span>{status.detail || status.agentId || "No runtime summary"}</span>
+                    <div className="diagnostic-meta">
+                      <span className={`diagnostic-badge ${healthClass(status.health)}`}>{status.health}</span>
+                      <span>{status.presence || "presence_unknown"}</span>
+                      <span>{status.activityState || "activity_unknown"}</span>
+                      <span>{status.target || "global"}</span>
+                      <span>{status.computerId || "computer_unknown"}</span>
+                      <span>{formatUnixTime(status.updatedTimeUnix)}</span>
+                    </div>
+                    {actionError ? <p className="agent-action-feedback is-error" role="alert">{actionError}</p> : null}
+                    {actionReceipt ? <p className="agent-action-feedback is-success" role="status">{actionReceipt}</p> : null}
+                  </div>
+                  <div className="agent-management-controls">
+                    <div className="agent-control-strip">
+                      <label>
+                        Control
+                        <select
+                          value={action}
+                          onChange={(event) => setAgentControlAction(status.agentId, event.target.value as AgentControlAction)}
+                          disabled={controlBusy || messageBusy}
+                        >
+                          {agentControlActions.map((item) => (
+                            <option key={item.value} value={item.value}>{item.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Reason
+                        <input
+                          value={agentControlReasons[status.agentId] ?? ""}
+                          onChange={(event) => setAgentControlReason(status.agentId, event.target.value)}
+                          placeholder="Operator action"
+                          disabled={controlBusy || messageBusy}
+                        />
+                      </label>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => void controlAgent(status)}
+                        disabled={controlBusy || messageBusy}
+                      >
+                        <RefreshCw size={16} aria-hidden="true" />
+                        {controlBusy ? "Queuing" : "Run control"}
+                      </button>
+                    </div>
+                    <div className="agent-message-form">
+                      <label>
+                        Direct message
+                        <textarea
+                          value={messageDraft}
+                          onChange={(event) => setAgentMessageDraft(status.agentId, event.target.value)}
+                          placeholder="Send a direct instruction to this agent"
+                          rows={2}
+                          disabled={controlBusy || messageBusy}
+                        />
+                      </label>
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => void sendAgentDirectMessage(status)}
+                        disabled={controlBusy || messageBusy || !messageDraft.trim()}
+                      >
+                        <Send size={16} aria-hidden="true" />
+                        {messageBusy ? "Sending" : "Send"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <EmptyState icon={Bot} title="No agent runtime status yet" />
