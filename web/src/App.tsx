@@ -5950,6 +5950,7 @@ function DaemonPanel({
                     </span>
                   </div>
                   <div className="runtime-flags">
+                    {runtime.runtimeType?.canonical === false ? <span>non-canonical</span> : <span>canonical</span>}
                     <span>{runtime.installed ? "installed" : "missing"}</span>
                     <span>{runtime.healthy ? "smoke passed" : runtime.runtimeType?.availability || "unavailable"}</span>
                     {runtime.runtimeType?.smoke?.category ? <span>{runtime.runtimeType.smoke.category}</span> : null}

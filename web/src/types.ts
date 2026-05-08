@@ -370,6 +370,7 @@ export type RuntimeTypeInventory = {
   aliases: string[];
   installed: boolean;
   healthy: boolean;
+  canonical?: boolean;
   resolvedPath?: string;
   availability?: string;
   availabilityReason?: string;
@@ -403,6 +404,7 @@ export type DaemonInventoryRuntime = {
   command?: string;
   installed: boolean;
   healthy: boolean;
+  canonical?: boolean;
   capabilities: string[];
   runtimeType?: RuntimeTypeInventory;
   templates: RuntimeInstanceTemplate[];

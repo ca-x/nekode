@@ -1008,6 +1008,7 @@ function normalizeDaemonInventoryRuntime(
     command: asOptionalString(row.command),
     installed: Boolean(row.installed),
     healthy: Boolean(row.healthy),
+    canonical: typeof row.canonical === "boolean" ? row.canonical : undefined,
     capabilities: normalizeCapabilityNames(row.capabilities),
     runtimeType,
     templates: templatesByKind.get(kind) ?? []
@@ -1041,6 +1042,7 @@ function normalizeRuntimeTypeInventory(row: Record<string, unknown>): RuntimeTyp
     aliases: asStringArray(row.aliases),
     installed: Boolean(row.installed),
     healthy: Boolean(row.healthy),
+    canonical: typeof row.canonical === "boolean" ? row.canonical : undefined,
     resolvedPath: asOptionalString(row.resolvedPath),
     availability: asOptionalString(row.availability),
     availabilityReason: asOptionalString(row.availabilityReason),

@@ -194,9 +194,9 @@ func TestBuildWrapCommandPerRuntimeContracts(t *testing.T) {
 			wantDir:    "/tmp/work",
 		},
 		{
-			kind:       "kiro-cli",
-			wantArgs:   []string{"chat", "--no-interactive", "--trust-all-tools"},
-			wantPairs:  map[string]string{"--model": "model-1", "--resume-id": "session-1"},
+			kind:       "gemini",
+			wantArgs:   []string{"--yolo", "-o", "stream-json"},
+			wantPairs:  map[string]string{"-m": "model-1", "-r": "session-1"},
 			forbidArgs: []string{"--reasoning-effort", "--system-message", "--system-prompt"},
 			wantStdin:  "system rules",
 			wantDir:    "/tmp/work",
@@ -246,6 +246,7 @@ func TestComputerInventoryRuntimeAvailabilityMatrix(t *testing.T) {
 		"codex":    "/usr/local/bin/codex",
 		"claude":   "/usr/local/bin/claude",
 		"opencode": "/usr/local/bin/opencode",
+		"gemini":   "/usr/local/bin/gemini",
 		"kiro-cli": "/usr/local/bin/kiro-cli",
 	}
 	inventory := ComputerInventory(InventoryConfig{
@@ -265,11 +266,12 @@ func TestComputerInventoryRuntimeAvailabilityMatrix(t *testing.T) {
 		},
 	})
 
-	available := map[string]bool{"codex": true, "claude": true, "opencode": true, "kiro-cli": true}
+	available := map[string]bool{"codex": true, "claude": true, "opencode": true, "gemini": true}
 	for _, runtime := range inventory.GetRuntimes() {
+		wantInstalled := installed[runtime.GetKind()] != ""
 		wantAvailable := available[runtime.GetKind()]
-		if runtime.GetInstalled() != wantAvailable || runtime.GetHealthy() != wantAvailable {
-			t.Fatalf("%s installed/healthy = %v/%v, want %v/%v", runtime.GetKind(), runtime.GetInstalled(), runtime.GetHealthy(), wantAvailable, wantAvailable)
+		if runtime.GetInstalled() != wantInstalled || runtime.GetHealthy() != wantAvailable {
+			t.Fatalf("%s installed/healthy = %v/%v, want %v/%v", runtime.GetKind(), runtime.GetInstalled(), runtime.GetHealthy(), wantInstalled, wantAvailable)
 		}
 	}
 	for _, profile := range inventory.GetRuntimeProfiles() {
@@ -277,8 +279,24 @@ func TestComputerInventoryRuntimeAvailabilityMatrix(t *testing.T) {
 		if err := json.Unmarshal([]byte(profile.GetAdapterConfigJson()), &adapter); err != nil {
 			t.Fatalf("decode adapter config for %s: %v", profile.GetKind(), err)
 		}
+		switch adapter.RuntimeType.Kind {
+		case "codex", "claude", "opencode", "kimi", "gemini", "custom":
+			if !adapter.RuntimeType.Canonical || !adapter.RuntimeType.Contract.Canonical || adapter.RuntimeType.Contract.Surface != "proto-canonical" {
+				t.Fatalf("%s canonical flags = runtime:%v contract:%+v", adapter.RuntimeType.Kind, adapter.RuntimeType.Canonical, adapter.RuntimeType.Contract)
+			}
+		default:
+			if adapter.RuntimeType.Canonical || adapter.RuntimeType.Contract.Canonical || adapter.RuntimeType.Availability == "available" {
+				t.Fatalf("%s non-canonical metadata = %+v", adapter.RuntimeType.Kind, adapter.RuntimeType)
+			}
+			if adapter.RuntimeType.Smoke.Category != "non_canonical" && adapter.RuntimeType.Installed {
+				t.Fatalf("%s installed non-canonical smoke = %+v, want non_canonical", adapter.RuntimeType.Kind, adapter.RuntimeType.Smoke)
+			}
+		}
 		if adapter.RuntimeType.Kind == "custom" && adapter.RuntimeType.Availability != "unavailable" {
 			t.Fatalf("custom availability = %q, want unavailable", adapter.RuntimeType.Availability)
+		}
+		if adapter.RuntimeType.Kind == "kimi" && adapter.RuntimeType.Installed && adapter.RuntimeType.Healthy {
+			t.Fatalf("kimi should remain unavailable until ACP runner support exists: %+v", adapter.RuntimeType)
 		}
 		if !available[adapter.RuntimeType.Kind] && adapter.RuntimeType.Healthy {
 			t.Fatalf("%s marked healthy without installed smoke: %+v", adapter.RuntimeType.Kind, adapter.RuntimeType)
@@ -286,17 +304,20 @@ func TestComputerInventoryRuntimeAvailabilityMatrix(t *testing.T) {
 	}
 }
 
-func TestRuntimeContractsCoverCatalogKinds(t *testing.T) {
+func TestRuntimeContractsCoverProtoCanonicalKinds(t *testing.T) {
 	directRunKinds := map[string]bool{
 		"codex":    true,
 		"claude":   true,
 		"opencode": true,
-		"kiro-cli": true,
+		"gemini":   true,
 	}
-	for _, kind := range []string{"codex", "claude", "opencode", "kimi", "gemini", "cursor-agent", "copilot", "openclaw", "hermes", "pi", "kiro-cli", "custom"} {
+	for _, kind := range []string{"codex", "claude", "opencode", "kimi", "gemini", "custom"} {
 		contract := ContractForKind(kind)
 		if contract.Kind != kind {
 			t.Fatalf("%s contract kind = %q", kind, contract.Kind)
+		}
+		if !contract.Canonical || contract.Surface != "proto-canonical" {
+			t.Fatalf("%s contract canonical/surface = %v/%q, want proto-canonical", kind, contract.Canonical, contract.Surface)
 		}
 		if contract.PromptInjection == "" || contract.SystemPromptInjection == "" || contract.SecretRedaction == "" {
 			t.Fatalf("%s contract incomplete: %+v", kind, contract)
@@ -311,6 +332,22 @@ func TestRuntimeContractsCoverCatalogKinds(t *testing.T) {
 		}
 		if !directRunKinds[kind] && err == nil {
 			t.Fatalf("%s BuildWrapCommand() error = nil, want unsupported until smoke contract exists", kind)
+		}
+	}
+}
+
+func TestNonCanonicalCatalogKindsAreReferenceOnly(t *testing.T) {
+	for _, kind := range []string{"cursor-agent", "copilot", "openclaw", "hermes", "pi", "kiro-cli"} {
+		contract := ContractForKind(kind)
+		if contract.Kind != kind {
+			t.Fatalf("%s contract kind = %q", kind, contract.Kind)
+		}
+		if contract.Canonical || contract.Surface != "non-canonical-reference" || contract.DirectRunSupported {
+			t.Fatalf("%s contract = %+v, want non-canonical reference unavailable", kind, contract)
+		}
+		template := DefaultInstanceTemplate(RuntimeType{Kind: kind, DisplayName: kind, Command: firstNonEmpty(contract.Command, kind)})
+		if _, err := BuildWrapCommand(template, map[string]string{"display_name": "Runtime Bot"}); err == nil {
+			t.Fatalf("%s BuildWrapCommand() error = nil, want reference-only unavailable", kind)
 		}
 	}
 }

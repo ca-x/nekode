@@ -77,6 +77,7 @@ type RuntimeType struct {
 	Aliases            []string            `json:"aliases,omitempty"`
 	Installed          bool                `json:"installed"`
 	Healthy            bool                `json:"healthy"`
+	Canonical          bool                `json:"canonical"`
 	ResolvedPath       string              `json:"resolvedPath,omitempty"`
 	Availability       string              `json:"availability"`
 	AvailabilityReason string              `json:"availabilityReason,omitempty"`
@@ -119,6 +120,8 @@ type RuntimeSmokeResult struct {
 type RuntimeContractInfo struct {
 	Kind                  string   `json:"kind"`
 	Command               string   `json:"command"`
+	Canonical             bool     `json:"canonical"`
+	Surface               string   `json:"surface"`
 	DirectRunSupported    bool     `json:"directRunSupported"`
 	VersionArgs           []string `json:"versionArgs,omitempty"`
 	PromptInjection       string   `json:"promptInjection"`
@@ -142,6 +145,7 @@ const (
 	availabilityAvailable   = "available"
 	availabilityUnavailable = "unavailable"
 	availabilityUnsupported = "unsupported"
+	availabilityReference   = "reference_only"
 )
 
 func ComputerInventory(cfg InventoryConfig) *daemonv1.ComputerInventory {
@@ -291,6 +295,10 @@ func runtimeTypeFromPreset(preset *daemonv1.RuntimePreset, cfg InventoryConfig) 
 	if strings.TrimSpace(command) == "" {
 		reason = "custom runtime requires an explicit command"
 		smoke = RuntimeSmokeResult{OK: false, Status: "not_run", Category: "custom_command_required", Detail: reason}
+	} else if installed && !contract.Canonical {
+		availability = availabilityReference
+		reason = "runtime kind is non-canonical reference-only; proto canonical runtime kinds are codex, claude, opencode, kimi, gemini, and custom"
+		smoke = RuntimeSmokeResult{OK: false, Status: "not_run", Category: "non_canonical", Detail: reason}
 	} else if installed && !contract.DirectRunSupported {
 		availability = availabilityUnsupported
 		reason = "direct-run contract is not verified for this runtime kind"
@@ -320,6 +328,7 @@ func runtimeTypeFromPreset(preset *daemonv1.RuntimePreset, cfg InventoryConfig) 
 		Aliases:            append([]string(nil), preset.GetAliases()...),
 		Installed:          installed,
 		Healthy:            healthy,
+		Canonical:          contract.Canonical,
 		ResolvedPath:       resolved,
 		Availability:       availability,
 		AvailabilityReason: reason,
@@ -426,6 +435,7 @@ func runtimeContractForKind(kind string) runtimeContract {
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	common := RuntimeContractInfo{
 		Kind:               kind,
+		Surface:            "non-canonical-reference",
 		DirectRunSupported: true,
 		VersionArgs:        []string{"--version"},
 		TimeoutPolicy:      "daemon run timeout",
@@ -435,6 +445,8 @@ func runtimeContractForKind(kind string) runtimeContract {
 	}
 	switch kind {
 	case "codex":
+		common.Canonical = true
+		common.Surface = "proto-canonical"
 		common.Command = "codex"
 		common.VersionArgs = []string{"exec", "--help"}
 		common.PromptInjection = "stdin via `codex exec -`"
@@ -445,6 +457,8 @@ func runtimeContractForKind(kind string) runtimeContract {
 		common.SessionMapping = "ephemeral exec; resume unsupported"
 		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildCodexArgs}
 	case "claude":
+		common.Canonical = true
+		common.Surface = "proto-canonical"
 		common.Command = "claude"
 		common.VersionArgs = []string{"--help"}
 		common.PromptInjection = "positional prompt with `--print`"
@@ -455,6 +469,8 @@ func runtimeContractForKind(kind string) runtimeContract {
 		common.SessionMapping = "`--resume <session_id>`"
 		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildClaudeArgs}
 	case "opencode":
+		common.Canonical = true
+		common.Surface = "proto-canonical"
 		common.Command = "opencode"
 		common.VersionArgs = []string{"run", "--help"}
 		common.PromptInjection = "positional message with `opencode run --format json`"
@@ -464,20 +480,38 @@ func runtimeContractForKind(kind string) runtimeContract {
 		common.ReasoningMapping = "`--variant <effort>`"
 		common.SessionMapping = "`--session <session_id>`"
 		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildOpenCodeArgs}
-	case "kiro-cli":
-		common.Command = "kiro-cli"
-		common.VersionArgs = []string{"chat", "--help"}
-		common.PromptInjection = "positional input with `kiro-cli chat --no-interactive`"
-		common.SystemPromptInjection = "prepended to prompt because chat has no system prompt flag"
+	case "gemini":
+		common.Canonical = true
+		common.Surface = "proto-canonical"
+		common.Command = "gemini"
+		common.VersionArgs = []string{"--help"}
+		common.PromptInjection = "`-p <prompt>` one-shot invocation"
+		common.SystemPromptInjection = "prepended to prompt because Gemini CLI stream-json path has no separate system prompt flag"
 		common.WorkspaceMapping = "process cwd"
-		common.ModelMapping = "`--model <model>`"
+		common.ModelMapping = "`-m <model>`"
 		common.ReasoningMapping = "unsupported by CLI contract; ignored"
-		common.SessionMapping = "`--resume-id <session_id>`"
-		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildKiroArgs}
-	case "kimi", "gemini", "cursor-agent", "copilot", "openclaw", "hermes", "pi":
+		common.SessionMapping = "`-r <session_id>`"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: buildGeminiArgs}
+	case "kimi":
+		common.Canonical = true
+		common.Surface = "proto-canonical"
+		common.Command = "kimi"
+		common.DirectRunSupported = false
+		common.VersionArgs = []string{"--help"}
+		common.PromptInjection = "canonical but unavailable: Kimi uses ACP (`kimi acp`), which needs a protocol adapter rather than the simple process runner"
+		common.SystemPromptInjection = "requires ACP session prompt support"
+		common.WorkspaceMapping = "requires ACP session/new cwd"
+		common.ModelMapping = "requires ACP session/set_model"
+		common.ReasoningMapping = "not verified"
+		common.SessionMapping = "requires ACP session/resume"
+		return runtimeContract{RuntimeContractInfo: common, baseArgs: unsupportedRuntimeArgs}
+	case "cursor-agent", "copilot", "openclaw", "hermes", "pi", "kiro-cli":
 		common.Command = kind
 		common.DirectRunSupported = false
-		common.PromptInjection = "direct-run contract not verified; runtime remains unavailable until command builder and smoke are added"
+		if kind == "kiro-cli" {
+			common.Command = "kiro-cli"
+		}
+		common.PromptInjection = "non-canonical reference runtime; unavailable until proto/API docs promote it or a separate experimental path is added"
 		common.SystemPromptInjection = "not verified"
 		common.WorkspaceMapping = "not verified"
 		common.ModelMapping = "not verified"
@@ -485,6 +519,8 @@ func runtimeContractForKind(kind string) runtimeContract {
 		common.SessionMapping = "not verified"
 		return runtimeContract{RuntimeContractInfo: common, baseArgs: unsupportedRuntimeArgs}
 	case "custom":
+		common.Canonical = true
+		common.Surface = "proto-canonical"
 		common.Command = ""
 		common.DirectRunSupported = false
 		common.PromptInjection = "custom runtime requires an explicit user command before it can be smoke-tested"
@@ -561,15 +597,16 @@ func buildOpenCodeArgs(values map[string]string) ([]string, string, string, []st
 	return args, workdir, "", []string{`OPENCODE_PERMISSION={"*":"allow"}`}, nil
 }
 
-func buildKiroArgs(values map[string]string) ([]string, string, string, []string, error) {
-	args := []string{"chat", "--no-interactive", "--trust-all-tools"}
+func buildGeminiArgs(values map[string]string) ([]string, string, string, []string, error) {
+	prompt := values["system_message"]
+	args := []string{"--yolo", "-o", "stream-json"}
 	if model := values["model"]; model != "" {
-		args = append(args, "--model", model)
+		args = append(args, "-m", model)
 	}
 	if sessionID := values["session_id"]; sessionID != "" {
-		args = append(args, "--resume-id", sessionID)
+		args = append(args, "-r", sessionID)
 	}
-	return args, values["workdir"], values["system_message"], nil, nil
+	return args, values["workdir"], prompt, nil, nil
 }
 
 func unsupportedRuntimeArgs(map[string]string) ([]string, string, string, []string, error) {
@@ -584,8 +621,8 @@ func WithRunPrompt(wrap WrapCommand, prompt string) WrapCommand {
 	switch strings.ToLower(strings.TrimSpace(wrap.Kind)) {
 	case "codex":
 		wrap.Stdin = combinePrompt(wrap.Stdin, prompt)
-	case "kiro-cli":
-		wrap.Args = append(wrap.Args, combinePrompt(wrap.Stdin, prompt))
+	case "gemini":
+		wrap.Args = append(wrap.Args, "-p", combinePrompt(wrap.Stdin, prompt))
 		wrap.Stdin = ""
 	default:
 		wrap.Args = append(wrap.Args, prompt)
