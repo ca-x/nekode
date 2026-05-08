@@ -23,6 +23,8 @@ node_modules/
 
 # Frontend build artifacts
 web/dist/
+internal/webdist/dist/*
+!internal/webdist/dist/.gitkeep
 
 # Release/build artifacts
 dist/

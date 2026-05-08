@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -52,6 +54,44 @@ func TestProtocolEndpoint(t *testing.T) {
 	}
 	if body["protoPath"] != ProtocolPath {
 		t.Fatalf("protoPath = %q, want %q", body["protoPath"], ProtocolPath)
+	}
+}
+
+func TestWebConsoleStaticServing(t *testing.T) {
+	dist := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte(`<!doctype html><title>Nekode</title><div id="root"></div>`), 0o644); err != nil {
+		t.Fatalf("write index: %v", err)
+	}
+	assets := filepath.Join(dist, "assets")
+	if err := os.Mkdir(assets, 0o755); err != nil {
+		t.Fatalf("mkdir assets: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(assets, "app.js"), []byte(`console.log("nekode")`), 0o644); err != nil {
+		t.Fatalf("write asset: %v", err)
+	}
+	cfg := testConfig()
+	cfg.WebDistDir = dist
+	s := New(cfg, slog.New(slog.DiscardHandler), newTestStore(t))
+
+	index := doGET(t, s, "/", "")
+	if index.Code != http.StatusOK || !strings.Contains(index.Body.String(), "Nekode") {
+		t.Fatalf("index response = %d body=%s", index.Code, index.Body.String())
+	}
+	asset := doGET(t, s, "/assets/app.js", "")
+	if asset.Code != http.StatusOK || !strings.Contains(asset.Body.String(), "nekode") {
+		t.Fatalf("asset response = %d body=%s", asset.Code, asset.Body.String())
+	}
+	spa := doGET(t, s, "/tasks/123", "")
+	if spa.Code != http.StatusOK || !strings.Contains(spa.Body.String(), "Nekode") {
+		t.Fatalf("spa response = %d body=%s", spa.Code, spa.Body.String())
+	}
+	missingAsset := doGET(t, s, "/assets/missing.js", "")
+	if missingAsset.Code != http.StatusNotFound {
+		t.Fatalf("missing asset status = %d, want 404", missingAsset.Code)
+	}
+	missingAPI := doGET(t, s, "/api/not-found", "")
+	if missingAPI.Code != http.StatusNotFound {
+		t.Fatalf("missing api status = %d, want 404", missingAPI.Code)
 	}
 }
 

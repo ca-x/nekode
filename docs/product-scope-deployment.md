@@ -214,6 +214,7 @@ Important environment variables:
 | `NEKODE_GRPC_ADDR` | `127.0.0.1:18789` | local daemon gRPC listen address |
 | `NEKODE_DAEMON_TRANSPORT` | `grpc` | daemon transport lane; only `grpc` is implemented |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | public server URL used by clients |
+| `NEKODE_WEB_DIST_DIR` | empty | optional external Web console dist directory; embedded assets are served by default |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | persistent data directory |
 | `NEKODE_DB_TYPE` | `sqlite` | `sqlite`, `postgres`, or `mysql` |
 | `NEKODE_DB_DSN` | `$NEKODE_DATA_DIR/nekode.db` | database DSN |
@@ -252,9 +253,9 @@ manifest files at the dist root.
 The `Dockerfile` follows the Nekobot-style release shape:
 
 - Node stage runs `npm ci` and `npm run build` under `web/`;
-- Go stage builds the `cmd/nekode` binary with version metadata;
-- runtime stage runs as a non-root user, persists `/data`, and includes the
-  built Web console at `/app/web/dist`;
+- Go stage copies `web/dist` into the Go embed package before building
+  `cmd/nekode` with version metadata;
+- runtime stage runs as a non-root user and persists `/data`;
 - health check probes `GET /health` on port `18790`.
 
 Build the image directly:
@@ -276,16 +277,14 @@ docker compose up --build
 `docker-compose.yml` starts a single server with `/data` persisted. It also
 shows the optional first-admin bootstrap env variables as commented examples.
 
-The image carries the Web console assets, but the current server process does
-not yet mount them as HTTP routes. A production container or reverse-proxy
-setup must serve `/app/web/dist` on the same origin as the API, or configure an
-equivalent static host plus `/api` routing, until backend static serving is
-implemented.
+The built binary embeds and serves the Web console from the same origin as the
+API. Unknown non-API browser routes fall back to `index.html` for the React
+app; unknown `/api/*` routes and missing static assets still return `404`.
 
 ### Binary Build
 
-`build.sh` builds the Web console first and then writes a release-style binary
-to `dist/nekode` by default:
+`build.sh` builds the Web console, copies `web/dist` into the Go embed package,
+and then writes a release-style binary to `dist/nekode` by default:
 
 ```bash
 ./build.sh

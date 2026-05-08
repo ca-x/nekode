@@ -25,7 +25,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-COPY --from=web /src/web/dist ./web/dist
+COPY --from=web /src/web/dist/ ./internal/webdist/dist/
 
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     -trimpath \
@@ -44,7 +44,6 @@ RUN apk add --no-cache ca-certificates tzdata wget \
 WORKDIR /app
 
 COPY --from=build /out/nekode /app/nekode
-COPY --from=web /src/web/dist /app/web/dist
 
 RUN mkdir -p /data \
     && chown -R app:app /app /data

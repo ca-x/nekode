@@ -1,0 +1,1 @@
+placeholder for go:embed; release builds copy web/dist here before go build

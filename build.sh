@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB_DIR="$ROOT_DIR/web"
+EMBED_DIR="$ROOT_DIR/internal/webdist/dist"
 OUTPUT="${1:-${OUTPUT:-$ROOT_DIR/dist/nekode}}"
 
 VERSION="${VERSION:-dev}"
@@ -28,6 +29,9 @@ if [ "${SKIP_NPM_INSTALL:-0}" != "1" ]; then
   npm ci
 fi
 npm run build
+mkdir -p "$EMBED_DIR"
+find "$EMBED_DIR" -mindepth 1 -maxdepth 1 ! -name .gitkeep -exec rm -rf {} +
+cp -R "$WEB_DIR/dist/." "$EMBED_DIR/"
 
 echo "Building Nekode binary"
 cd "$ROOT_DIR"

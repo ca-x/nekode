@@ -54,6 +54,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	t.Setenv("NEKODE_GRPC_ADDR", "127.0.0.1:19001")
 	t.Setenv("NEKODE_DAEMON_TRANSPORT", "grpc_http2")
 	t.Setenv("NEKODE_BASE_URL", "https://nekode.example.test")
+	t.Setenv("NEKODE_WEB_DIST_DIR", "/srv/nekode/web")
 	t.Setenv("NEKODE_DATA_DIR", "/tmp/nekode-test")
 	t.Setenv("NEKODE_DB_TYPE", "postgresql")
 	t.Setenv("NEKODE_DB_DSN", "postgres://user:pass@localhost/nekode?sslmode=disable")
@@ -82,6 +83,9 @@ func TestLoadFromEnvironment(t *testing.T) {
 	}
 	if cfg.BaseURL != "https://nekode.example.test" {
 		t.Fatalf("BaseURL = %q", cfg.BaseURL)
+	}
+	if cfg.WebDistDir != "/srv/nekode/web" {
+		t.Fatalf("WebDistDir = %q", cfg.WebDistDir)
 	}
 	if cfg.DataDir != "/tmp/nekode-test" {
 		t.Fatalf("DataDir = %q", cfg.DataDir)
@@ -143,6 +147,7 @@ func clearEnv(t *testing.T) {
 		"NEKODE_GRPC_ADDR",
 		"NEKODE_DAEMON_TRANSPORT",
 		"NEKODE_BASE_URL",
+		"NEKODE_WEB_DIST_DIR",
 		"NEKODE_DATA_DIR",
 		"NEKODE_DB_TYPE",
 		"NEKODE_DB_DSN",

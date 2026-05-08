@@ -34,6 +34,7 @@ Environment variables:
 | `NEKODE_ADDR` | `:18790` | HTTP listen address |
 | `NEKODE_GRPC_ADDR` | `127.0.0.1:18789` | local daemon gRPC listen address |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | Public server URL |
+| `NEKODE_WEB_DIST_DIR` | empty | Optional external Web console dist directory; the binary serves embedded assets by default |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | Persistent data directory |
 | `NEKODE_DB_TYPE` | `sqlite` | Database type: `sqlite`, `postgres`, or `mysql` |
 | `NEKODE_DB_DSN` | `$NEKODE_DATA_DIR/nekode.db` | Database DSN |
@@ -75,11 +76,11 @@ docker build \
 docker compose up --build
 ```
 
-The Docker image builds the Vite Web console and stores the static output at
-`/app/web/dist` inside the image. The current `nekode` server process exposes
-the API on port `18790`; production deployments that need the console from the
-same origin should serve `/app/web/dist` through a reverse proxy or a static
-file layer until backend static serving is added.
+The Docker image and `build.sh` embed the Vite Web console into the `nekode`
+binary. The server exposes the Web console and API from the same port
+(`18790`). Set `NEKODE_WEB_DIST_DIR` or `--web-dist-dir` only when you want to
+override the embedded assets with an external static directory during
+development.
 
 ## Protocol
 

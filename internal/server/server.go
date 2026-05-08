@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +21,7 @@ import (
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
+	"github.com/ca-x/nekode/internal/webdist"
 	"google.golang.org/grpc"
 )
 
@@ -154,6 +158,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/daemon/runs", s.requireAuth(s.handleDaemonRuns))
 	s.mux.HandleFunc("GET /api/daemon/events", s.requireAuth(s.handleDaemonEvents))
 	s.mux.HandleFunc("GET /api/server-events", s.requireAuthOrQueryToken(s.handleServerEvents))
+	s.mux.HandleFunc("GET /", s.handleWebConsole)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -174,6 +179,83 @@ func (s *Server) handleProtocol(w http.ResponseWriter, _ *http.Request) {
 		"documentation": "docs/slock-style-daemon-runtime.md",
 		"compatibility": "slock-style daemon/server runtime contract",
 	})
+}
+
+func (s *Server) handleWebConsole(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		http.NotFound(w, r)
+		return
+	}
+	webFS, ok := s.webFileSystem()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+	if rel == "" || rel == "." {
+		rel = "index.html"
+	}
+	if hasDotPathSegment(rel) {
+		http.NotFound(w, r)
+		return
+	}
+	file, err := webFS.Open(rel)
+	if err == nil {
+		defer file.Close()
+		info, statErr := file.Stat()
+		if statErr == nil && !info.IsDir() {
+			http.FileServer(webFS).ServeHTTP(w, r)
+			return
+		}
+	}
+	if path.Ext(rel) != "" {
+		http.NotFound(w, r)
+		return
+	}
+	index, err := webFS.Open("index.html")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer index.Close()
+	info, err := index.Stat()
+	if err != nil || info.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeContent(w, r, "index.html", info.ModTime(), index)
+}
+
+func (s *Server) webFileSystem() (http.FileSystem, bool) {
+	if dir := strings.TrimSpace(s.cfg.WebDistDir); dir != "" {
+		if hasIndexFile(os.DirFS(dir)) {
+			return http.Dir(dir), true
+		}
+	}
+	embedded, err := fs.Sub(webdist.FS, webdist.Root)
+	if err == nil && hasIndexFile(embedded) {
+		return http.FS(embedded), true
+	}
+	for _, candidate := range []string{"web/dist", "/app/web/dist"} {
+		if hasIndexFile(os.DirFS(candidate)) {
+			return http.Dir(candidate), true
+		}
+	}
+	return nil, false
+}
+
+func hasIndexFile(fsys fs.FS) bool {
+	info, err := fs.Stat(fsys, "index.html")
+	return err == nil && !info.IsDir()
+}
+
+func hasDotPathSegment(rel string) bool {
+	for _, segment := range strings.Split(rel, "/") {
+		if strings.HasPrefix(segment, ".") {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) BootstrapFromEnvironment(ctx context.Context) error {

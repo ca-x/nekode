@@ -23,6 +23,7 @@ type Config struct {
 	GRPCAddr               string
 	DaemonTransport        string
 	BaseURL                string
+	WebDistDir             string
 	DataDir                string
 	DBType                 string
 	DBDSN                  string
@@ -52,6 +53,7 @@ func Load() (Config, error) {
 		GRPCAddr:               env("NEKODE_GRPC_ADDR", DefaultGRPCAddr),
 		DaemonTransport:        env("NEKODE_DAEMON_TRANSPORT", "grpc"),
 		BaseURL:                env("NEKODE_BASE_URL", DefaultBaseURL),
+		WebDistDir:             strings.TrimSpace(os.Getenv("NEKODE_WEB_DIST_DIR")),
 		DataDir:                env("NEKODE_DATA_DIR", filepath.Join(home, ".nekode")),
 		DBType:                 env("NEKODE_DB_TYPE", DefaultDBType),
 		DBDSN:                  strings.TrimSpace(os.Getenv("NEKODE_DB_DSN")),
