@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -742,15 +743,88 @@ func (s *Server) ClaimCollaborationTask(ctx context.Context, req *daemonv1.Claim
 		remember(ctx, s, "ClaimCollaborationTask", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 		return resp, nil
 	}
+	runTask := claimStartsExecution(req.GetClaimMode())
+	promotedToExecution := false
+	if runTask && updated.State == "todo" {
+		nextState := "in_progress"
+		promoted, updateErr := s.store.UpdateTask(ctx, updated.ID, storage.TaskPatch{State: &nextState})
+		if updateErr != nil {
+			return nil, status.Errorf(codes.Internal, "promote claimed task: %v", updateErr)
+		}
+		updated = promoted
+		promotedToExecution = true
+	}
 	s.mu.Lock()
 	s.leases[lease.LeaseId] = lease
+	var run *daemonv1.Run
+	if runTask {
+		run = s.ensureClaimRunLocked(updated, req, lease)
+	}
 	s.mu.Unlock()
 	if err := s.RecordTaskMutation(ctx, updated, daemonv1.EventOperation_EVENT_OPERATION_CLAIMED); err != nil {
 		return nil, status.Errorf(codes.Internal, "append task claim event: %v", err)
 	}
-	resp := &daemonv1.ClaimCollaborationTaskResponse{Task: taskToProto(updated), Accepted: true, ClaimLease: lease}
+	if promotedToExecution {
+		if err := s.RecordTaskMutation(ctx, updated, daemonv1.EventOperation_EVENT_OPERATION_STATE_CHANGED); err != nil {
+			return nil, status.Errorf(codes.Internal, "append task state event: %v", err)
+		}
+	}
+	taskProto := taskToProto(updated)
+	if run != nil {
+		taskProto.CurrentRunId = run.GetRunId()
+	}
+	resp := &daemonv1.ClaimCollaborationTaskResponse{Task: taskProto, Accepted: true, ClaimLease: lease}
 	remember(ctx, s, "ClaimCollaborationTask", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 	return resp, nil
+}
+
+func claimStartsExecution(mode daemonv1.TaskClaimMode) bool {
+	return mode == daemonv1.TaskClaimMode_TASK_CLAIM_MODE_UNSPECIFIED ||
+		mode == daemonv1.TaskClaimMode_TASK_CLAIM_MODE_OWNER
+}
+
+func (s *Server) ensureClaimRunLocked(task storage.Task, req *daemonv1.ClaimCollaborationTaskRequest, lease *daemonv1.Lease) *daemonv1.Run {
+	for _, existing := range s.runs {
+		if existing.GetTaskId() == task.ID &&
+			existing.GetAgentId() == req.GetAgentId() &&
+			!isTerminalRunState(existing.GetState()) {
+			return proto.Clone(existing).(*daemonv1.Run)
+		}
+	}
+	computerID, runtimeProfileID := s.agentRouteLocked(req.GetAgentId())
+	now := unixNow()
+	run := &daemonv1.Run{
+		RunId:            storage.NewID("run"),
+		TaskId:           task.ID,
+		Target:           task.Target,
+		AgentId:          req.GetAgentId(),
+		ComputerId:       computerID,
+		RuntimeProfileId: runtimeProfileID,
+		State:            daemonv1.RunState_RUN_STATE_QUEUED,
+		LeaseId:          lease.GetLeaseId(),
+		RequestId:        req.GetRequestId(),
+		Summary:          task.Summary,
+		StartedTimeUnix:  now,
+		UpdatedTimeUnix:  now,
+		Attempt:          1,
+		MaxAttempts:      1,
+	}
+	s.runs[run.GetRunId()] = run
+	event := s.serverEventLocked(&daemonv1.ServerEvent{
+		AggregateId: run.GetRunId(),
+		Target:      task.Target,
+		Kind:        daemonv1.ServerEventKind_SERVER_EVENT_KIND_RUN_ASSIGNED,
+		RequestId:   req.GetRequestId(),
+		Operation:   daemonv1.EventOperation_EVENT_OPERATION_CREATED,
+		Scope: &daemonv1.EventScope{
+			ScopeType: daemonv1.EventScopeType_EVENT_SCOPE_TYPE_TASK,
+			ScopeId:   task.ID,
+			Target:    task.Target,
+		},
+		Payload: &daemonv1.ServerEvent_Run{Run: proto.Clone(run).(*daemonv1.Run)},
+	})
+	s.serverEvents[event.GetEventId()] = event
+	return proto.Clone(run).(*daemonv1.Run)
 }
 
 func (s *Server) ScheduleReminder(ctx context.Context, req *daemonv1.ScheduleReminderRequest) (*daemonv1.ScheduleReminderResponse, error) {
@@ -1719,6 +1793,8 @@ func (s *Server) UpdateRunStatus(ctx context.Context, req *daemonv1.UpdateRunSta
 		return nil, status.Error(codes.InvalidArgument, "run_id is required")
 	}
 	now := unixNow()
+	summary := redactRunFeedback(req.GetSummary())
+	runError := redactRunFeedback(req.GetError())
 	s.mu.Lock()
 	run := s.runs[req.GetRunId()]
 	if run == nil {
@@ -1726,17 +1802,99 @@ func (s *Server) UpdateRunStatus(ctx context.Context, req *daemonv1.UpdateRunSta
 		s.runs[req.GetRunId()] = run
 	}
 	run.State = req.GetState()
-	run.Summary = req.GetSummary()
-	run.Error = req.GetError()
+	run.Summary = summary
+	run.Error = runError
 	run.UpdatedTimeUnix = now
 	if isTerminalRunState(run.State) {
 		run.CompletedTimeUnix = now
 	}
 	cp := proto.Clone(run).(*daemonv1.Run)
+	event := s.serverEventLocked(&daemonv1.ServerEvent{
+		AggregateId: cp.GetRunId(),
+		Target:      firstNonEmpty(cp.GetTarget(), cp.GetComputerId(), cp.GetAgentId()),
+		Kind:        daemonv1.ServerEventKind_SERVER_EVENT_KIND_RUN_ASSIGNED,
+		RequestId:   req.GetRequestId(),
+		Operation:   daemonv1.EventOperation_EVENT_OPERATION_UPDATED,
+		Scope: &daemonv1.EventScope{
+			ScopeType: daemonv1.EventScopeType_EVENT_SCOPE_TYPE_TASK,
+			ScopeId:   cp.GetTaskId(),
+			Target:    cp.GetTarget(),
+		},
+		Payload: &daemonv1.ServerEvent_Run{Run: proto.Clone(cp).(*daemonv1.Run)},
+	})
+	s.serverEvents[event.GetEventId()] = event
 	s.mu.Unlock()
+	if err := s.updateTaskFromRunStatus(ctx, cp, req); err != nil {
+		return nil, err
+	}
 	resp := &daemonv1.UpdateRunStatusResponse{Accepted: true, Run: cp}
 	remember(ctx, s, "UpdateRunStatus", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 	return resp, nil
+}
+
+func (s *Server) updateTaskFromRunStatus(ctx context.Context, run *daemonv1.Run, req *daemonv1.UpdateRunStatusRequest) error {
+	if run == nil || run.GetTaskId() == "" || !isTerminalRunState(run.GetState()) {
+		return nil
+	}
+	patch := storage.TaskPatch{}
+	switch run.GetState() {
+	case daemonv1.RunState_RUN_STATE_COMPLETED:
+		state := "in_review"
+		patch.State = &state
+		clearBlocked := ""
+		patch.BlockedReason = &clearBlocked
+	case daemonv1.RunState_RUN_STATE_FAILED:
+		state := "blocked"
+		reason := runFailureReason(run, req)
+		patch.State = &state
+		patch.BlockedReason = &reason
+	case daemonv1.RunState_RUN_STATE_CANCELED:
+		state := "canceled"
+		reason := runFailureReason(run, req)
+		patch.State = &state
+		patch.BlockedReason = &reason
+	}
+	taskModel, err := s.store.UpdateTask(ctx, run.GetTaskId(), patch)
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return status.Errorf(codes.Internal, "update task from run status: %v", err)
+	}
+	if err := s.RecordTaskMutation(ctx, taskModel, daemonv1.EventOperation_EVENT_OPERATION_STATE_CHANGED); err != nil {
+		return status.Errorf(codes.Internal, "append task run status event: %v", err)
+	}
+	return nil
+}
+
+func runFailureReason(run *daemonv1.Run, req *daemonv1.UpdateRunStatusRequest) string {
+	parts := []string{
+		"Run " + run.GetRunId(),
+		"agent " + firstNonEmpty(run.GetAgentId(), req.GetAgentId(), "unknown"),
+	}
+	if run.GetRuntimeProfileId() != "" {
+		parts = append(parts, "runtime "+run.GetRuntimeProfileId())
+	}
+	detail := firstNonEmpty(redactRunFeedback(req.GetBlockedReason()), run.GetError(), run.GetSummary())
+	if detail != "" {
+		parts = append(parts, detail)
+	}
+	return truncatePromptText(strings.Join(parts, ": "), 512)
+}
+
+var (
+	feedbackKeyValuePattern = regexp.MustCompile(`(?i)\b(token|secret|password|passwd|api_key|apikey|authorization|cookie|credential)(\s*[:=]\s*)([^\s,;]+)`)
+	feedbackBearerPattern   = regexp.MustCompile(`(?i)\b(bearer\s+)([^\s,;]+)`)
+)
+
+func redactRunFeedback(value string) string {
+	value = truncatePromptText(value, 512)
+	if value == "" {
+		return ""
+	}
+	value = feedbackBearerPattern.ReplaceAllString(value, `${1}<redacted>`)
+	value = feedbackKeyValuePattern.ReplaceAllString(value, `${1}${2}<redacted>`)
+	return value
 }
 
 func (s *Server) RenewRunLease(ctx context.Context, req *daemonv1.RenewRunLeaseRequest) (*daemonv1.RenewRunLeaseResponse, error) {
@@ -2782,6 +2940,8 @@ func taskToProto(task storage.Task) *daemonv1.Task {
 		CreatedTimeUnix: task.CreatedUnix,
 		UpdatedTimeUnix: task.UpdatedUnix,
 		ClaimPolicy:     daemonv1.TaskClaimPolicy_TASK_CLAIM_POLICY_EXCLUSIVE,
+		GraphVersion:    task.Version,
+		ClaimLeaseId:    task.ClaimLeaseID,
 	}
 }
 

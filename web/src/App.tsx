@@ -1083,6 +1083,7 @@ function App() {
           <TasksPanel
             target={target}
             tasks={tasks}
+            daemonRuns={daemonRuns}
             selectedTask={selectedTask}
             onSelectTask={setSelectedTaskId}
             onChanged={loadData}
@@ -2456,6 +2457,7 @@ function AttachmentLightbox({ attachment, onClose }: { attachment: Attachment; o
 function TasksPanel({
   target,
   tasks,
+  daemonRuns,
   selectedTask,
   onSelectTask,
   onChanged,
@@ -2465,6 +2467,7 @@ function TasksPanel({
 }: {
   target: string;
   tasks: Task[];
+  daemonRuns: DaemonRun[];
   selectedTask: Task | null;
   onSelectTask: (taskId: string | null) => void;
   onChanged: () => Promise<void>;
@@ -2753,6 +2756,7 @@ function TasksPanel({
       </div>
       <TaskInspector
         task={selectedTask}
+        daemonRuns={daemonRuns}
         onClose={() => onSelectTask(null)}
         onMove={moveTask}
         onChanged={onChanged}
@@ -3201,11 +3205,13 @@ function TaskMoveActions({
 
 function TaskInspector({
   task,
+  daemonRuns,
   onClose,
   onMove,
   onChanged
 }: {
   task: Task | null;
+  daemonRuns: DaemonRun[];
   onClose: () => void;
   onMove: (task: Task, state: TaskState) => Promise<void>;
   onChanged: () => Promise<void>;
@@ -3257,6 +3263,11 @@ function TaskInspector({
       </aside>
     );
   }
+
+  const taskRuns = daemonRuns
+    .filter((run) => run.taskId === task.id)
+    .sort((a, b) => (b.updatedTimeUnix ?? b.startedTimeUnix ?? 0) - (a.updatedTimeUnix ?? a.startedTimeUnix ?? 0));
+  const latestTaskRun = taskRuns[0];
 
   const saveDetail = async (event: FormEvent) => {
     event.preventDefault();
@@ -3395,6 +3406,46 @@ function TaskInspector({
           <dd>{unixTime(task.updatedUnix)}</dd>
         </div>
       </dl>
+      <section className="inspector-subsection" aria-label="Task execution">
+        <div className="inspector-subheading">
+          <div>
+            <p className="eyebrow">Execution</p>
+            <h3>{taskRuns.length ? `${taskRuns.length} run${taskRuns.length === 1 ? "" : "s"}` : "No run"}</h3>
+          </div>
+        </div>
+        {latestTaskRun ? (
+          <dl className="definition-list">
+            <div>
+              <dt>Run</dt>
+              <dd>{latestTaskRun.runId}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>
+                <span className={`diagnostic-badge ${healthClass(latestTaskRun.state)}`}>{latestTaskRun.state}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>Agent</dt>
+              <dd>{latestTaskRun.agentId || task.assigneeId || "unassigned"}</dd>
+            </div>
+            <div>
+              <dt>Runtime</dt>
+              <dd>{latestTaskRun.runtimeProfileId || "unknown"}</dd>
+            </div>
+            <div>
+              <dt>Updated</dt>
+              <dd>{formatUnixTime(latestTaskRun.updatedTimeUnix || latestTaskRun.completedTimeUnix || latestTaskRun.startedTimeUnix)}</dd>
+            </div>
+            <div>
+              <dt>Feedback</dt>
+              <dd>{latestTaskRun.error || latestTaskRun.summary || "No daemon feedback yet"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <EmptyState icon={Activity} title="No execution run linked to this task" />
+        )}
+      </section>
       <section className="inspector-subsection" aria-label="Task comments">
         <div className="inspector-subheading">
           <div>

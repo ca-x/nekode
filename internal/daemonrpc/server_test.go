@@ -541,6 +541,233 @@ func TestMessageTaskAndActivityFlow(t *testing.T) {
 	}
 }
 
+func TestTaskClaimCreatesRunAndTerminalStatusUpdatesTask(t *testing.T) {
+	client, cleanup := newTestClient(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	if _, err := client.RegisterComputer(ctx, &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Hostname:   "test-host",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		Inventory: &daemonv1.ComputerInventory{
+			Agents: []*daemonv1.AgentProfile{
+				{
+					AgentId:          "agent-1",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-1",
+					RuntimeKind:      "codex",
+					Enabled:          true,
+				},
+				{
+					AgentId:          "agent-2",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-2",
+					RuntimeKind:      "claude",
+					Enabled:          true,
+				},
+			},
+		},
+		RequestId:      "register-task-run-1",
+		IdempotencyKey: "register-task-run-1",
+	}); err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+
+	task, err := client.CreateCollaborationTask(ctx, &daemonv1.CreateCollaborationTaskRequest{
+		Target:         "#general",
+		Summary:        "execute claimed task",
+		RequestId:      "task-run-1",
+		IdempotencyKey: "task-run-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateCollaborationTask() error = %v", err)
+	}
+	claim, err := client.ClaimCollaborationTask(ctx, &daemonv1.ClaimCollaborationTaskRequest{
+		TaskId:         task.GetTask().GetTaskId(),
+		AgentId:        "agent-1",
+		RequestId:      "claim-run-1",
+		IdempotencyKey: "claim-run-1",
+	})
+	if err != nil {
+		t.Fatalf("ClaimCollaborationTask() error = %v", err)
+	}
+	runID := claim.GetTask().GetCurrentRunId()
+	if !claim.GetAccepted() ||
+		claim.GetTask().GetAssigneeId() != "agent-1" ||
+		claim.GetTask().GetState() != daemonv1.TaskState_TASK_STATE_IN_PROGRESS ||
+		runID == "" {
+		t.Fatalf("ClaimCollaborationTask() = %+v, want accepted in-progress task with current run", claim)
+	}
+
+	assigned, err := client.FetchAssignedRuns(ctx, &daemonv1.FetchAssignedRunsRequest{
+		ComputerId: "computer-1",
+		AgentIds:   []string{"agent-1"},
+		Limit:      10,
+	})
+	if err != nil {
+		t.Fatalf("FetchAssignedRuns() error = %v", err)
+	}
+	if len(assigned.GetRuns()) != 1 ||
+		assigned.GetRuns()[0].GetRunId() != runID ||
+		assigned.GetRuns()[0].GetTaskId() != task.GetTask().GetTaskId() ||
+		assigned.GetRuns()[0].GetRuntimeProfileId() != "profile-agent-1" ||
+		assigned.GetRuns()[0].GetState() != daemonv1.RunState_RUN_STATE_QUEUED {
+		t.Fatalf("FetchAssignedRuns() = %+v, want queued task run %q", assigned.GetRuns(), runID)
+	}
+	conflict, err := client.ClaimCollaborationTask(ctx, &daemonv1.ClaimCollaborationTaskRequest{
+		TaskId:         task.GetTask().GetTaskId(),
+		AgentId:        "agent-2",
+		RequestId:      "claim-run-2",
+		IdempotencyKey: "claim-run-2",
+	})
+	if err != nil {
+		t.Fatalf("ClaimCollaborationTask(conflict) error = %v", err)
+	}
+	if conflict.GetAccepted() || conflict.GetCurrentAssigneeId() != "agent-1" {
+		t.Fatalf("ClaimCollaborationTask(conflict) = %+v, want agent-1 conflict", conflict)
+	}
+	runsAfterConflict, err := client.ListRuns(ctx, &daemonv1.ListRunsRequest{TaskId: task.GetTask().GetTaskId(), Limit: 10})
+	if err != nil {
+		t.Fatalf("ListRuns(after conflict) error = %v", err)
+	}
+	if len(runsAfterConflict.GetRuns()) != 1 || runsAfterConflict.GetRuns()[0].GetRunId() != runID {
+		t.Fatalf("ListRuns(after conflict) = %+v, want single original run", runsAfterConflict.GetRuns())
+	}
+
+	if _, err := client.UpdateRunStatus(ctx, &daemonv1.UpdateRunStatusRequest{
+		RunId:          runID,
+		AgentId:        "agent-1",
+		State:          daemonv1.RunState_RUN_STATE_COMPLETED,
+		Summary:        "implementation ready",
+		RequestId:      "run-complete-1",
+		IdempotencyKey: "run-complete-1",
+	}); err != nil {
+		t.Fatalf("UpdateRunStatus(completed) error = %v", err)
+	}
+	completedTask, err := client.GetTask(ctx, &daemonv1.GetTaskRequest{TaskId: task.GetTask().GetTaskId()})
+	if err != nil {
+		t.Fatalf("GetTask(completed) error = %v", err)
+	}
+	if completedTask.GetTask().GetState() != daemonv1.TaskState_TASK_STATE_IN_REVIEW ||
+		completedTask.GetTask().GetAssigneeId() != "agent-1" {
+		t.Fatalf("completed task = %+v, want in_review with assignee", completedTask.GetTask())
+	}
+	completedRuns, err := client.ListRuns(ctx, &daemonv1.ListRunsRequest{TaskId: task.GetTask().GetTaskId(), Limit: 10})
+	if err != nil {
+		t.Fatalf("ListRuns(completed) error = %v", err)
+	}
+	if len(completedRuns.GetRuns()) != 1 ||
+		completedRuns.GetRuns()[0].GetState() != daemonv1.RunState_RUN_STATE_COMPLETED {
+		t.Fatalf("ListRuns(completed) = %+v, want completed run", completedRuns.GetRuns())
+	}
+}
+
+func TestFailedTaskRunBlocksTaskWithRedactedReason(t *testing.T) {
+	client, cleanup := newTestClient(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	task, err := client.CreateCollaborationTask(ctx, &daemonv1.CreateCollaborationTaskRequest{
+		Target:         "#general",
+		Summary:        "handle failed runtime",
+		RequestId:      "task-run-failed-1",
+		IdempotencyKey: "task-run-failed-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateCollaborationTask() error = %v", err)
+	}
+	claim, err := client.ClaimCollaborationTask(ctx, &daemonv1.ClaimCollaborationTaskRequest{
+		TaskId:         task.GetTask().GetTaskId(),
+		AgentId:        "agent-1",
+		RequestId:      "claim-run-failed-1",
+		IdempotencyKey: "claim-run-failed-1",
+	})
+	if err != nil {
+		t.Fatalf("ClaimCollaborationTask() error = %v", err)
+	}
+	runID := claim.GetTask().GetCurrentRunId()
+	if runID == "" {
+		t.Fatalf("ClaimCollaborationTask() = %+v, want current run", claim)
+	}
+	if _, err := client.UpdateRunStatus(ctx, &daemonv1.UpdateRunStatusRequest{
+		RunId:          runID,
+		AgentId:        "agent-1",
+		State:          daemonv1.RunState_RUN_STATE_FAILED,
+		Summary:        "runtime failed with token=secret-token-value",
+		Error:          "exit 2 authorization: Bearer secret-token-value",
+		BlockedReason:  "argv failed password=super-secret",
+		RequestId:      "run-failed-1",
+		IdempotencyKey: "run-failed-1",
+	}); err != nil {
+		t.Fatalf("UpdateRunStatus(failed) error = %v", err)
+	}
+	failedTask, err := client.GetTask(ctx, &daemonv1.GetTaskRequest{TaskId: task.GetTask().GetTaskId()})
+	if err != nil {
+		t.Fatalf("GetTask(failed) error = %v", err)
+	}
+	if failedTask.GetTask().GetState() != daemonv1.TaskState_TASK_STATE_BLOCKED {
+		t.Fatalf("failed task state = %v, want blocked", failedTask.GetTask().GetState())
+	}
+	reason := failedTask.GetTask().GetBlockedReason()
+	if !strings.Contains(reason, runID) || !strings.Contains(reason, "agent agent-1") {
+		t.Fatalf("blocked reason = %q, want run and agent context", reason)
+	}
+	if strings.Contains(reason, "secret-token-value") || strings.Contains(reason, "super-secret") {
+		t.Fatalf("blocked reason leaked secret: %q", reason)
+	}
+	runs, err := client.ListRuns(ctx, &daemonv1.ListRunsRequest{TaskId: task.GetTask().GetTaskId(), Limit: 10})
+	if err != nil {
+		t.Fatalf("ListRuns(failed) error = %v", err)
+	}
+	if len(runs.GetRuns()) != 1 ||
+		runs.GetRuns()[0].GetState() != daemonv1.RunState_RUN_STATE_FAILED ||
+		strings.Contains(runs.GetRuns()[0].GetError(), "secret-token-value") {
+		t.Fatalf("ListRuns(failed) = %+v, want failed run with redacted error", runs.GetRuns())
+	}
+}
+
+func TestReviewerClaimDoesNotStartExecutionRun(t *testing.T) {
+	client, cleanup := newTestClient(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	task, err := client.CreateCollaborationTask(ctx, &daemonv1.CreateCollaborationTaskRequest{
+		Target:         "#general",
+		Summary:        "review only",
+		RequestId:      "task-review-claim-1",
+		IdempotencyKey: "task-review-claim-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateCollaborationTask() error = %v", err)
+	}
+	claim, err := client.ClaimCollaborationTask(ctx, &daemonv1.ClaimCollaborationTaskRequest{
+		TaskId:         task.GetTask().GetTaskId(),
+		AgentId:        "agent-reviewer",
+		ClaimMode:      daemonv1.TaskClaimMode_TASK_CLAIM_MODE_REVIEWER,
+		RequestId:      "claim-review-only-1",
+		IdempotencyKey: "claim-review-only-1",
+	})
+	if err != nil {
+		t.Fatalf("ClaimCollaborationTask(reviewer) error = %v", err)
+	}
+	if !claim.GetAccepted() ||
+		claim.GetTask().GetCurrentRunId() != "" ||
+		claim.GetTask().GetState() != daemonv1.TaskState_TASK_STATE_TODO {
+		t.Fatalf("ClaimCollaborationTask(reviewer) = %+v, want claim-only semantics without run", claim)
+	}
+	runs, err := client.ListRuns(ctx, &daemonv1.ListRunsRequest{TaskId: task.GetTask().GetTaskId(), Limit: 10})
+	if err != nil {
+		t.Fatalf("ListRuns(reviewer) error = %v", err)
+	}
+	if len(runs.GetRuns()) != 0 {
+		t.Fatalf("ListRuns(reviewer) = %+v, want no execution run", runs.GetRuns())
+	}
+}
+
 func TestOutboundDeliveryLifecycleForIMReply(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t, "daemonrpc_outbound")
