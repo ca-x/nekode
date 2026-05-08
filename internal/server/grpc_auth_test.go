@@ -183,6 +183,77 @@ func TestDaemonManagementScripts(t *testing.T) {
 	}
 }
 
+func TestDaemonInstallScriptsPinReleaseArtifactDownload(t *testing.T) {
+	t.Setenv("NEKODE_DAEMON_DOWNLOAD_VERSION", "v9.8.7")
+	t.Setenv("NEKODE_DAEMON_DOWNLOAD_BASE_URL", "https://downloads.example.test/nekode///")
+
+	server, cleanup := newDaemonGRPCTestClient(t)
+	defer cleanup.close()
+	token := bootstrapToken(t, server)
+	enrollment := createDaemonEnrollment(t, server, token)
+
+	resp := doGET(t, server, enrollment.InstallScriptURL, "")
+	if resp.Code != http.StatusOK {
+		t.Fatalf("install script status = %d body=%s", resp.Code, resp.Body.String())
+	}
+	body := resp.Body.String()
+	for _, want := range []string{
+		`VERSION="${NEKODE_DAEMON_VERSION:-v9.8.7}"`,
+		`DOWNLOAD_BASE_URL="${NEKODE_DAEMON_DOWNLOAD_BASE_URL:-https://downloads.example.test/nekode}"`,
+		`ARTIFACT="nekode-daemon_${VERSION}_${OS}_${ARCH}.tar.gz"`,
+		`"$DOWNLOAD_BASE_URL/$ARTIFACT"`,
+		`"$DOWNLOAD_BASE_URL/SHA256SUMS.txt"`,
+		`grep "  $ARTIFACT$" "$TMPDIR/SHA256SUMS.txt"`,
+		`sha256sum -c "$ARTIFACT.sha256"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("install script missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestDaemonManagementScriptsPinReleaseArtifactDownload(t *testing.T) {
+	t.Setenv("NEKODE_DAEMON_DOWNLOAD_VERSION", "v9.8.7")
+	t.Setenv("NEKODE_DAEMON_DOWNLOAD_BASE_URL", "https://downloads.example.test/nekode/")
+
+	server, cleanup := newDaemonGRPCTestClient(t)
+	defer cleanup.close()
+
+	shellResp := doGET(t, server, "/api/daemon/scripts/upgrade.sh", "")
+	if shellResp.Code != http.StatusOK {
+		t.Fatalf("upgrade shell status = %d body=%s", shellResp.Code, shellResp.Body.String())
+	}
+	shell := shellResp.Body.String()
+	for _, want := range []string{
+		`VERSION="${NEKODE_DAEMON_VERSION:-v9.8.7}"`,
+		`DOWNLOAD_BASE_URL="${NEKODE_DAEMON_DOWNLOAD_BASE_URL:-https://downloads.example.test/nekode}"`,
+		`ARTIFACT="nekode-daemon_${VERSION}_${OS}_${ARCH}.tar.gz"`,
+		`"$DOWNLOAD_BASE_URL/SHA256SUMS.txt"`,
+		`tar -xzf "$TMPDIR/$ARTIFACT"`,
+	} {
+		if !strings.Contains(shell, want) {
+			t.Fatalf("upgrade shell missing %q:\n%s", want, shell)
+		}
+	}
+
+	powerShellResp := doGET(t, server, "/api/daemon/scripts/upgrade.ps1", "")
+	if powerShellResp.Code != http.StatusOK {
+		t.Fatalf("upgrade powershell status = %d body=%s", powerShellResp.Code, powerShellResp.Body.String())
+	}
+	powerShell := powerShellResp.Body.String()
+	for _, want := range []string{
+		`$version = if ($env:NEKODE_DAEMON_VERSION) { $env:NEKODE_DAEMON_VERSION } else { "v9.8.7" }`,
+		`$downloadBaseUrl = if ($env:NEKODE_DAEMON_DOWNLOAD_BASE_URL) { $env:NEKODE_DAEMON_DOWNLOAD_BASE_URL.TrimEnd("/") } else { "https://downloads.example.test/nekode" }`,
+		`$artifact = "nekode-daemon_${version}_windows_${goarch}.zip"`,
+		`"$downloadBaseUrl/SHA256SUMS.txt"`,
+		`Get-FileHash -Algorithm SHA256`,
+	} {
+		if !strings.Contains(powerShell, want) {
+			t.Fatalf("upgrade powershell missing %q:\n%s", want, powerShell)
+		}
+	}
+}
+
 func TestDaemonEnrollmentRevokeBlocksTokenAndInstallCode(t *testing.T) {
 	server, cleanup := newDaemonGRPCTestClient(t)
 	defer cleanup.close()
