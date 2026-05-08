@@ -85,6 +85,113 @@ Do not treat the current single-server configuration as a hosted SaaS design.
 
 ## Runtime and Configuration
 
+## Initial User Setup
+
+Nekode should support two first-admin bootstrap paths that both call the same
+backend bootstrap service. Do not implement environment bootstrap and Web setup
+as separate user-creation paths; they must share password validation, hashing,
+transactional first-admin creation, session issuance, and the bootstrap marker.
+
+The current mainline already has `POST /api/auth/bootstrap` and a transactional
+`CreateFirstAdmin` guard. The next implementation slice should add setup-status
+and environment bootstrap around that same service.
+
+### Reference From Nekobot
+
+Nekobot's useful pattern is:
+
+- `GET /api/auth/init-status` lets the login page decide whether to redirect to
+  first-run setup;
+- `POST /api/auth/init` creates the first admin and returns a logged-in session;
+- the first-run page can show startup/bootstrap context before account creation;
+- once initialized, the setup endpoint rejects repeat initialization.
+
+Nekode should reuse the shape of that flow, not Nekobot's historical product
+surface. Keep the first screen narrow: create the first administrator and enter
+the console.
+
+### Initialization State
+
+The server is initialized when the database contains a user or the bootstrap
+marker has been written. The bootstrap marker must live in the same durable
+authority boundary as user creation so concurrent attempts cannot create more
+than one first admin.
+
+Expected status endpoint:
+
+```text
+GET /api/auth/setup-status
+```
+
+Minimum response:
+
+```json
+{
+  "initialized": false,
+  "webSetupEnabled": true,
+  "bootstrapMethods": ["env", "web"],
+  "serverId": "srv_...",
+  "dataDir": "/home/user/.nekode"
+}
+```
+
+If `initialized=true`, Web should show login only. If `initialized=false` and
+Web setup is enabled, Web should show the setup wizard.
+
+### Environment Bootstrap
+
+For unattended self-hosted deployment, support:
+
+| Variable | Purpose |
+| --- | --- |
+| `NEKODE_BOOTSTRAP_ADMIN_USERNAME` | initial admin login name; email can be used here if preferred |
+| `NEKODE_BOOTSTRAP_ADMIN_PASSWORD` | initial admin password; never log this value |
+| `NEKODE_BOOTSTRAP_ADMIN_NAME` | optional display name |
+| `NEKODE_BOOTSTRAP_DISABLE_WEB` | when `true`, disable browser setup while still allowing env bootstrap |
+
+Startup behavior:
+
+- if the database is uninitialized and username/password env values are present,
+  create the first admin during server startup;
+- if creation succeeds, write the bootstrap marker and continue serving normally;
+- if env values are incomplete, do not create a user and log only which required
+  bootstrap fields are missing, never the values;
+- if the database is already initialized, ignore env bootstrap and log a single
+  safe informational line;
+- if both env and Web setup race, the transactional first-admin guard allows
+  only one success; the loser receives `409 already_initialized`.
+
+### Web Setup Wizard
+
+For interactive self-hosted setup:
+
+- login page calls setup-status before showing login;
+- uninitialized server routes to setup wizard;
+- wizard fields: username/email, display name, password, confirm password;
+- submit calls the same backend bootstrap service as env bootstrap;
+- success returns a session token and enters the console;
+- `NEKODE_BOOTSTRAP_DISABLE_WEB=true` makes the wizard show an operator message
+  explaining that initialization must be done through env/secret injection.
+
+Do not include team invites, organization settings, daemon enrollment, cache
+selection, or hosted configuration in the first setup screen. Those belong in
+later settings pages.
+
+### Setup Acceptance
+
+- Empty DB + complete env values creates the first admin automatically at
+  startup.
+- Empty DB + no env values shows Web setup and creates the first admin through
+  the browser.
+- Empty DB + `NEKODE_BOOTSTRAP_DISABLE_WEB=true` and no env values does not
+  expose Web setup; operator must provide env bootstrap.
+- Existing DB/users cause env bootstrap and Web setup to return or log
+  `already_initialized` without changing users.
+- Concurrent env/Web attempts create exactly one admin and one session for the
+  winning request.
+- Password policy and hashing use the existing auth service.
+- Logs never include plaintext password, session token, or password hash.
+
 ### Backend
 
 Run locally:
