@@ -130,6 +130,94 @@ func TestDaemonControlFlow(t *testing.T) {
 	}
 }
 
+func TestComputerAndAgentStatusBecomeStaleOfflineAndRecover(t *testing.T) {
+	srv := New(newTestStore(t, "daemonrpc_stale"), "srv_test")
+	ctx := context.Background()
+	registerReq := &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Hostname:   "test-host",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		Inventory: &daemonv1.ComputerInventory{
+			Agents: []*daemonv1.AgentProfile{
+				{
+					AgentId:          "agent-1",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-1",
+					Status:           daemonv1.AgentPresence_AGENT_PRESENCE_IDLE,
+				},
+			},
+		},
+		RequestId:      "register-stale-1",
+		IdempotencyKey: "register-stale-1",
+	}
+	registered, err := srv.RegisterComputer(ctx, registerReq)
+	if err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+	_, err = srv.HeartbeatComputer(ctx, &daemonv1.HeartbeatComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		LeaseId: registered.GetLease().GetLeaseId(),
+		AgentStatuses: []*daemonv1.AgentStatusSnapshot{
+			{
+				AgentId:       "agent-1",
+				ComputerId:    "computer-1",
+				Presence:      daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE,
+				ActivityState: daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_THINKING,
+				Health:        daemonv1.AgentHealth_AGENT_HEALTH_OK,
+				Severity:      daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO,
+				Summary:       "working",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("HeartbeatComputer() error = %v", err)
+	}
+
+	assertComputerAndAgentStatus(t, srv, daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE, daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE, daemonv1.AgentHealth_AGENT_HEALTH_OK)
+
+	setComputerLastHeartbeat(t, srv, "computer-1", unixNow()-computerStaleAfterSeconds-5)
+	assertComputerAndAgentStatus(t, srv, daemonv1.ComputerStatus_COMPUTER_STATUS_STALE, daemonv1.AgentPresence_AGENT_PRESENCE_STALE, daemonv1.AgentHealth_AGENT_HEALTH_OK)
+	staleInventory := srv.ListComputerInventories(10)
+	if len(staleInventory) != 1 || len(staleInventory[0].Inventory.GetAgents()) != 1 ||
+		staleInventory[0].Inventory.GetAgents()[0].GetStatus() != daemonv1.AgentPresence_AGENT_PRESENCE_STALE {
+		t.Fatalf("stale inventory = %+v, want inventory agent marked stale", staleInventory)
+	}
+
+	setComputerLastHeartbeat(t, srv, "computer-1", unixNow()-computerOfflineAfterSeconds-5)
+	assertComputerAndAgentStatus(t, srv, daemonv1.ComputerStatus_COMPUTER_STATUS_OFFLINE, daemonv1.AgentPresence_AGENT_PRESENCE_OFFLINE, daemonv1.AgentHealth_AGENT_HEALTH_OFFLINE)
+
+	_, err = srv.HeartbeatComputer(ctx, &daemonv1.HeartbeatComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		LeaseId: registered.GetLease().GetLeaseId(),
+		AgentStatuses: []*daemonv1.AgentStatusSnapshot{
+			{
+				AgentId:       "agent-1",
+				ComputerId:    "computer-1",
+				Presence:      daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE,
+				ActivityState: daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_THINKING,
+				Health:        daemonv1.AgentHealth_AGENT_HEALTH_OK,
+				Severity:      daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO,
+				Summary:       "recovered",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("HeartbeatComputer(recover) error = %v", err)
+	}
+	assertComputerAndAgentStatus(t, srv, daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE, daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE, daemonv1.AgentHealth_AGENT_HEALTH_OK)
+}
+
 func TestMessageTaskAndActivityFlow(t *testing.T) {
 	client, cleanup := newTestClient(t)
 	defer cleanup()
@@ -413,6 +501,39 @@ func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 			seenMessage = payload.Message.GetMessageId() == direct.GetMessage().GetMessageId()
 		}
 	}
+}
+
+func assertComputerAndAgentStatus(t *testing.T, srv *Server, computerStatus daemonv1.ComputerStatus, agentPresence daemonv1.AgentPresence, agentHealth daemonv1.AgentHealth) {
+	t.Helper()
+	inventories := srv.ListComputerInventories(10)
+	if len(inventories) != 1 {
+		t.Fatalf("ListComputerInventories() returned %d items, want 1", len(inventories))
+	}
+	if inventories[0].Info.GetStatus() != computerStatus {
+		t.Fatalf("computer status = %v, want %v", inventories[0].Info.GetStatus(), computerStatus)
+	}
+	statuses, err := srv.ListAgentStatuses(context.Background(), &daemonv1.ListAgentStatusesRequest{AgentId: "agent-1"})
+	if err != nil {
+		t.Fatalf("ListAgentStatuses() error = %v", err)
+	}
+	if len(statuses.GetStatuses()) != 1 {
+		t.Fatalf("ListAgentStatuses() returned %d items, want 1", len(statuses.GetStatuses()))
+	}
+	got := statuses.GetStatuses()[0]
+	if got.GetPresence() != agentPresence || got.GetHealth() != agentHealth {
+		t.Fatalf("agent status = presence:%v health:%v summary:%q, want presence:%v health:%v", got.GetPresence(), got.GetHealth(), got.GetSummary(), agentPresence, agentHealth)
+	}
+}
+
+func setComputerLastHeartbeat(t *testing.T, srv *Server, computerID string, lastHeartbeat int64) {
+	t.Helper()
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	computer := srv.computers[computerID]
+	if computer == nil {
+		t.Fatalf("computer %q not found", computerID)
+	}
+	computer.lastHeartbeat = lastHeartbeat
 }
 
 func findEvent(events []*daemonv1.CollaborationEvent, kind daemonv1.CollaborationEventKind, operation daemonv1.EventOperation) *daemonv1.CollaborationEvent {

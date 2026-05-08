@@ -907,6 +907,25 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		Status: &daemonv1.AgentStatusSnapshot{
 			AgentId:       "agent-1",
 			ComputerId:    "computer-1",
+			Presence:      daemonv1.AgentPresence_AGENT_PRESENCE_STALE,
+			ActivityState: daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_THINKING,
+			Health:        daemonv1.AgentHealth_AGENT_HEALTH_OK,
+		},
+	}); err != nil {
+		t.Fatalf("UpdateAgentStatus(stale) error = %v", err)
+	}
+	info = doGET(t, s, "/api/daemon/info", token)
+	if err := json.Unmarshal(info.Body.Bytes(), &infoBody); err != nil {
+		t.Fatalf("decode daemon info stale: %v", err)
+	}
+	if infoBody["health"] != "degraded" {
+		t.Fatalf("daemon stale health = %+v, want degraded", infoBody)
+	}
+
+	if _, err := s.daemon.UpdateAgentStatus(context.Background(), &daemonv1.UpdateAgentStatusRequest{
+		Status: &daemonv1.AgentStatusSnapshot{
+			AgentId:       "agent-1",
+			ComputerId:    "computer-1",
 			Presence:      daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE,
 			ActivityState: daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_CODING,
 			Health:        daemonv1.AgentHealth_AGENT_HEALTH_TEST_FAILED,

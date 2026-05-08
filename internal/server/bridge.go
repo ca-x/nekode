@@ -29,8 +29,7 @@ func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
 		health = "idle"
 	}
 	for _, status := range statuses.GetStatuses() {
-		if status.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_OK &&
-			status.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_UNSPECIFIED {
+		if agentStatusNeedsAttention(status) {
 			health = "degraded"
 			break
 		}
@@ -50,6 +49,21 @@ func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
 		"runCount":           len(runs.GetRuns()),
 		"activityCount":      len(activities.GetActivities()),
 	})
+}
+
+func agentStatusNeedsAttention(status *daemonv1.AgentStatusSnapshot) bool {
+	if status.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_OK &&
+		status.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_UNSPECIFIED {
+		return true
+	}
+	switch status.GetPresence() {
+	case daemonv1.AgentPresence_AGENT_PRESENCE_STALE,
+		daemonv1.AgentPresence_AGENT_PRESENCE_OFFLINE,
+		daemonv1.AgentPresence_AGENT_PRESENCE_DEGRADED:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Server) handleDaemonInventory(w http.ResponseWriter, r *http.Request) {

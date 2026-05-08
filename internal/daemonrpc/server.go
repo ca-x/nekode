@@ -23,7 +23,14 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const protocolVersion int32 = 1
+const (
+	protocolVersion int32 = 1
+
+	daemonHeartbeatAfterSeconds uint32 = 30
+	computerLeaseSeconds        int64  = 90
+	computerStaleAfterSeconds   int64  = int64(daemonHeartbeatAfterSeconds) * 2
+	computerOfflineAfterSeconds int64  = computerLeaseSeconds
+)
 
 type Server struct {
 	daemonv1.UnimplementedDaemonControlServiceServer
@@ -120,7 +127,7 @@ func (s *Server) RegisterComputer(ctx context.Context, req *daemonv1.RegisterCom
 		return nil, status.Error(codes.InvalidArgument, "computer_id and daemon_id are required")
 	}
 	now := unixNow()
-	lease := newLease("computer", info.GetComputerId(), info.GetDaemonId(), 90)
+	lease := newLease("computer", info.GetComputerId(), info.GetDaemonId(), computerLeaseSeconds)
 
 	s.mu.Lock()
 	s.computers[info.GetComputerId()] = &computerState{
@@ -166,10 +173,10 @@ func (s *Server) HeartbeatComputer(_ context.Context, req *daemonv1.HeartbeatCom
 		if holder == "" {
 			holder = computerID
 		}
-		lease = newLease("computer", computerID, holder, 90)
+		lease = newLease("computer", computerID, holder, computerLeaseSeconds)
 		state.lease = lease
 	}
-	lease.ExpiresTimeUnix = now + 90
+	lease.ExpiresTimeUnix = now + computerLeaseSeconds
 	s.leases[lease.LeaseId] = lease
 	for _, snapshot := range req.GetAgentStatuses() {
 		if snapshot.GetAgentId() == "" {
@@ -186,7 +193,7 @@ func (s *Server) HeartbeatComputer(_ context.Context, req *daemonv1.HeartbeatCom
 	return &daemonv1.HeartbeatComputerResponse{
 		Accepted:                  true,
 		ServerTimeUnix:            now,
-		NextHeartbeatAfterSeconds: 30,
+		NextHeartbeatAfterSeconds: daemonHeartbeatAfterSeconds,
 		Lease:                     cloneLease(lease),
 	}, nil
 }
@@ -880,6 +887,7 @@ func (s *Server) UpdateAgentStatus(ctx context.Context, req *daemonv1.UpdateAgen
 func (s *Server) ListAgentStatuses(_ context.Context, req *daemonv1.ListAgentStatusesRequest) (*daemonv1.ListAgentStatusesResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	now := unixNow()
 	limit := int(req.GetLimit())
 	if limit <= 0 || limit > 200 {
 		limit = 100
@@ -892,7 +900,7 @@ func (s *Server) ListAgentStatuses(_ context.Context, req *daemonv1.ListAgentSta
 		if req.GetTarget() != "" && snapshot.GetTarget() != req.GetTarget() {
 			continue
 		}
-		statuses = append(statuses, proto.Clone(snapshot).(*daemonv1.AgentStatusSnapshot))
+		statuses = append(statuses, s.derivedAgentStatusLocked(snapshot, now))
 		if len(statuses) >= limit {
 			break
 		}
@@ -903,24 +911,28 @@ func (s *Server) ListAgentStatuses(_ context.Context, req *daemonv1.ListAgentSta
 func (s *Server) ListAgentProfiles(_ context.Context, req *daemonv1.ListAgentProfilesRequest) (*daemonv1.ListAgentProfilesResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	now := unixNow()
 	limit := int(req.GetLimit())
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
 	profiles := make([]*daemonv1.AgentProfile, 0, limit)
 	for _, computer := range s.computers {
+		computerStatus := computer.derivedStatus(now)
 		for _, profile := range computer.inventory.GetAgents() {
 			if profile.GetAgentId() == "" {
 				continue
 			}
-			profiles = append(profiles, proto.Clone(profile).(*daemonv1.AgentProfile))
+			cp := proto.Clone(profile).(*daemonv1.AgentProfile)
+			applyComputerStatusToAgentProfile(cp, computerStatus, computer.lastHeartbeat, now)
+			profiles = append(profiles, cp)
 			if len(profiles) >= limit {
 				return &daemonv1.ListAgentProfilesResponse{Profiles: profiles, NextCursor: cursorFromCount(len(profiles), "", s.serverID)}, nil
 			}
 		}
 	}
 	for _, snapshot := range s.statuses {
-		profiles = append(profiles, agentProfileFromStatus(snapshot))
+		profiles = append(profiles, agentProfileFromStatus(s.derivedAgentStatusLocked(snapshot, now)))
 		if len(profiles) >= limit {
 			break
 		}
@@ -1058,6 +1070,7 @@ func (s *Server) SendAgentDirectMessage(ctx context.Context, req *daemonv1.SendA
 func (s *Server) ListComputerInventories(limit int) []ComputerInventorySnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	now := unixNow()
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
@@ -1069,15 +1082,23 @@ func (s *Server) ListComputerInventories(limit int) []ComputerInventorySnapshot 
 	out := make([]ComputerInventorySnapshot, 0, min(limit, len(keys)))
 	for _, computerID := range keys {
 		computer := s.computers[computerID]
+		computerStatus := computer.derivedStatus(now)
 		snapshot := ComputerInventorySnapshot{
 			InventoryVersion:  computer.inventoryVersion,
 			LastHeartbeatUnix: computer.lastHeartbeat,
 		}
 		if computer.info != nil {
 			snapshot.Info = proto.Clone(computer.info).(*daemonv1.ComputerInfo)
+			snapshot.Info.Status = computerStatus
+			if computer.lastHeartbeat > 0 {
+				snapshot.Info.LastSeenUnix = computer.lastHeartbeat
+			}
 		}
 		if computer.inventory != nil {
 			snapshot.Inventory = proto.Clone(computer.inventory).(*daemonv1.ComputerInventory)
+			for _, profile := range snapshot.Inventory.GetAgents() {
+				applyComputerStatusToAgentProfile(profile, computerStatus, computer.lastHeartbeat, now)
+			}
 		}
 		out = append(out, snapshot)
 		if len(out) >= limit {
@@ -1320,6 +1341,130 @@ func sanitizeAgentSlug(value string) string {
 		}
 	}
 	return strings.Trim(b.String(), "-")
+}
+
+func (c *computerState) derivedStatus(now int64) daemonv1.ComputerStatus {
+	reported := daemonv1.ComputerStatus_COMPUTER_STATUS_UNSPECIFIED
+	if c != nil && c.info != nil {
+		reported = c.info.GetStatus()
+	}
+	if c == nil || c.lastHeartbeat <= 0 {
+		return reported
+	}
+	ageSeconds := now - c.lastHeartbeat
+	if ageSeconds >= computerOfflineAfterSeconds {
+		return daemonv1.ComputerStatus_COMPUTER_STATUS_OFFLINE
+	}
+	if ageSeconds >= computerStaleAfterSeconds {
+		return daemonv1.ComputerStatus_COMPUTER_STATUS_STALE
+	}
+	switch reported {
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_UNSPECIFIED,
+		daemonv1.ComputerStatus_COMPUTER_STATUS_STALE,
+		daemonv1.ComputerStatus_COMPUTER_STATUS_OFFLINE:
+		return daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE
+	default:
+		return reported
+	}
+}
+
+func (s *Server) derivedAgentStatusLocked(snapshot *daemonv1.AgentStatusSnapshot, now int64) *daemonv1.AgentStatusSnapshot {
+	cp := proto.Clone(snapshot).(*daemonv1.AgentStatusSnapshot)
+	if cp.UpdatedTimeUnix == 0 {
+		cp.UpdatedTimeUnix = now
+	}
+	computer := s.computers[cp.GetComputerId()]
+	if computer == nil {
+		return cp
+	}
+	return applyComputerStatusToAgentStatus(cp, computer.derivedStatus(now), computer.lastHeartbeat, now)
+}
+
+func applyComputerStatusToAgentProfile(profile *daemonv1.AgentProfile, computerStatus daemonv1.ComputerStatus, lastHeartbeat int64, now int64) {
+	if profile == nil {
+		return
+	}
+	switch computerStatus {
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_STALE:
+		profile.Status = daemonv1.AgentPresence_AGENT_PRESENCE_STALE
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_OFFLINE:
+		profile.Status = daemonv1.AgentPresence_AGENT_PRESENCE_OFFLINE
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_DEGRADED:
+		if profile.GetStatus() == daemonv1.AgentPresence_AGENT_PRESENCE_UNSPECIFIED ||
+			profile.GetStatus() == daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE ||
+			profile.GetStatus() == daemonv1.AgentPresence_AGENT_PRESENCE_IDLE ||
+			profile.GetStatus() == daemonv1.AgentPresence_AGENT_PRESENCE_BUSY {
+			profile.Status = daemonv1.AgentPresence_AGENT_PRESENCE_DEGRADED
+		}
+	}
+	if profile.LastActivityTimeUnix == 0 && lastHeartbeat > 0 {
+		profile.LastActivityTimeUnix = lastHeartbeat
+	}
+	if profile.StatusSnapshot == nil {
+		if computerStatus != daemonv1.ComputerStatus_COMPUTER_STATUS_STALE &&
+			computerStatus != daemonv1.ComputerStatus_COMPUTER_STATUS_OFFLINE &&
+			computerStatus != daemonv1.ComputerStatus_COMPUTER_STATUS_DEGRADED {
+			return
+		}
+		profile.StatusSnapshot = &daemonv1.AgentStatusSnapshot{
+			AgentId:          profile.GetAgentId(),
+			ComputerId:       profile.GetComputerId(),
+			RuntimeProfileId: profile.GetRuntimeProfileId(),
+			Presence:         profile.GetStatus(),
+			UpdatedTimeUnix:  firstNonZeroInt64(lastHeartbeat, now),
+		}
+	}
+	profile.StatusSnapshot = applyComputerStatusToAgentStatus(profile.StatusSnapshot, computerStatus, lastHeartbeat, now)
+	profile.Status = profile.StatusSnapshot.GetPresence()
+}
+
+func applyComputerStatusToAgentStatus(snapshot *daemonv1.AgentStatusSnapshot, computerStatus daemonv1.ComputerStatus, lastHeartbeat int64, now int64) *daemonv1.AgentStatusSnapshot {
+	if snapshot == nil {
+		return nil
+	}
+	if snapshot.UpdatedTimeUnix == 0 {
+		snapshot.UpdatedTimeUnix = firstNonZeroInt64(lastHeartbeat, now)
+	}
+	switch computerStatus {
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_STALE:
+		snapshot.Presence = daemonv1.AgentPresence_AGENT_PRESENCE_STALE
+		if snapshot.Severity == daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_UNSPECIFIED ||
+			snapshot.Severity == daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO {
+			snapshot.Severity = daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_WARNING
+		}
+		if snapshot.GetSummary() == "" ||
+			snapshot.GetHealth() == daemonv1.AgentHealth_AGENT_HEALTH_OK ||
+			snapshot.GetHealth() == daemonv1.AgentHealth_AGENT_HEALTH_UNSPECIFIED {
+			snapshot.Summary = "daemon heartbeat stale"
+		}
+		snapshot.Detail = heartbeatAgeDetail(lastHeartbeat, now)
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_OFFLINE:
+		snapshot.Presence = daemonv1.AgentPresence_AGENT_PRESENCE_OFFLINE
+		snapshot.ActivityState = daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING
+		snapshot.Health = daemonv1.AgentHealth_AGENT_HEALTH_OFFLINE
+		snapshot.Severity = daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_ERROR
+		snapshot.Summary = "daemon offline"
+		snapshot.Detail = heartbeatAgeDetail(lastHeartbeat, now)
+	case daemonv1.ComputerStatus_COMPUTER_STATUS_DEGRADED:
+		if snapshot.GetPresence() == daemonv1.AgentPresence_AGENT_PRESENCE_UNSPECIFIED ||
+			snapshot.GetPresence() == daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE ||
+			snapshot.GetPresence() == daemonv1.AgentPresence_AGENT_PRESENCE_IDLE ||
+			snapshot.GetPresence() == daemonv1.AgentPresence_AGENT_PRESENCE_BUSY {
+			snapshot.Presence = daemonv1.AgentPresence_AGENT_PRESENCE_DEGRADED
+		}
+		if snapshot.Severity == daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_UNSPECIFIED ||
+			snapshot.Severity == daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO {
+			snapshot.Severity = daemonv1.AgentStatusSeverity_AGENT_STATUS_SEVERITY_WARNING
+		}
+	}
+	return snapshot
+}
+
+func heartbeatAgeDetail(lastHeartbeat int64, now int64) string {
+	if lastHeartbeat <= 0 {
+		return "daemon heartbeat has not been observed"
+	}
+	return fmt.Sprintf("last daemon heartbeat was %d seconds ago", max(int64(0), now-lastHeartbeat))
 }
 
 func (s *Server) AcknowledgeServerEvents(_ context.Context, req *daemonv1.AcknowledgeServerEventsRequest) (*daemonv1.AcknowledgeServerEventsResponse, error) {
@@ -2739,6 +2884,15 @@ func first(values []string) string {
 		return ""
 	}
 	return values[0]
+}
+
+func firstNonZeroInt64(values ...int64) int64 {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
+	}
+	return 0
 }
 
 func defaultTTL(value uint32, fallback uint32) uint32 {
