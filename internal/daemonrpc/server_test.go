@@ -1222,6 +1222,15 @@ func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 		control.GetOperation().GetState() != daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED {
 		t.Fatalf("ControlAgent() = %+v, want queued operation for computer-1", control)
 	}
+	controlActivity, err := client.ListActivity(ctx, &daemonv1.ListActivityRequest{Target: "dm:agent-1", AgentId: "agent-1", Limit: 10})
+	if err != nil {
+		t.Fatalf("ListActivity(control) error = %v", err)
+	}
+	if len(controlActivity.GetActivities()) != 1 ||
+		controlActivity.GetActivities()[0].GetKind() != "agent_control_requested" ||
+		controlActivity.GetActivities()[0].GetStepId() != control.GetOperation().GetOperationId() {
+		t.Fatalf("ListActivity(control) = %+v, want persisted control activity", controlActivity.GetActivities())
+	}
 
 	direct, err := client.SendAgentDirectMessage(ctx, &daemonv1.SendAgentDirectMessageRequest{
 		AgentId:        "agent-1",
@@ -1265,6 +1274,56 @@ func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 		case *daemonv1.ServerEvent_Message:
 			seenMessage = payload.Message.GetMessageId() == direct.GetMessage().GetMessageId()
 		}
+	}
+}
+
+func TestAgentControlActivityPersistsAcrossServerRestart(t *testing.T) {
+	store := newTestStore(t, "daemonrpc_control_activity")
+	ctx := context.Background()
+	first := New(store, "srv_test")
+	if _, err := first.RegisterComputer(ctx, &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		Inventory: &daemonv1.ComputerInventory{
+			Agents: []*daemonv1.AgentProfile{
+				{
+					AgentId:          "agent-1",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-1",
+					Enabled:          true,
+				},
+			},
+		},
+		RequestId:      "register-control-persist-1",
+		IdempotencyKey: "register-control-persist-1",
+	}); err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+	control, err := first.ControlAgent(ctx, &daemonv1.ControlAgentRequest{
+		AgentId:        "agent-1",
+		Action:         daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET,
+		Reason:         "operator reset token=secret-token",
+		RequestId:      "control-persist-1",
+		IdempotencyKey: "control-persist-1",
+	})
+	if err != nil {
+		t.Fatalf("ControlAgent() error = %v", err)
+	}
+	afterRestart := New(store, "srv_test")
+	activity, err := afterRestart.ListActivity(ctx, &daemonv1.ListActivityRequest{AgentId: "agent-1", Limit: 10})
+	if err != nil {
+		t.Fatalf("ListActivity(after restart) error = %v", err)
+	}
+	if len(activity.GetActivities()) != 1 ||
+		activity.GetActivities()[0].GetKind() != "agent_control_requested" ||
+		activity.GetActivities()[0].GetStepId() != control.GetOperation().GetOperationId() ||
+		!strings.Contains(activity.GetActivities()[0].GetSummary(), "full reset") ||
+		!strings.Contains(activity.GetActivities()[0].GetDetail(), "operator reset token=<redacted>") ||
+		strings.Contains(activity.GetActivities()[0].GetDetail(), "secret-token") {
+		t.Fatalf("ListActivity(after restart) = %+v, want persisted full-reset control history", activity.GetActivities())
 	}
 }
 
@@ -1395,16 +1454,18 @@ func TestDaemonConsumedAgentEventsUpdateServerQueryViews(t *testing.T) {
 	}
 	if len(runs.GetRuns()) != 1 ||
 		runs.GetRuns()[0].GetRunId() != runID ||
-		runs.GetRuns()[0].GetState() != daemonv1.RunState_RUN_STATE_COMPLETED {
-		t.Fatalf("ListRuns() = %+v, want completed direct-message run %q", runs.GetRuns(), runID)
+		runs.GetRuns()[0].GetState() != daemonv1.RunState_RUN_STATE_COMPLETED ||
+		runs.GetRuns()[0].GetTarget() != "dm:agent-1" ||
+		runs.GetRuns()[0].GetComputerId() != "computer-1" ||
+		runs.GetRuns()[0].GetRuntimeProfileId() != "profile-agent-1" {
+		t.Fatalf("ListRuns() = %+v, want completed direct-message run %q with route metadata", runs.GetRuns(), runID)
 	}
 	activity, err := client.ListActivity(ctx, &daemonv1.ListActivityRequest{Target: "dm:agent-1", AgentId: "agent-1", Limit: 10})
 	if err != nil {
 		t.Fatalf("ListActivity() error = %v", err)
 	}
-	if len(activity.GetActivities()) != 1 ||
-		activity.GetActivities()[0].GetKind() != "direct_message_completed" ||
-		activity.GetActivities()[0].GetRunId() != runID {
+	directActivity := findActivity(activity.GetActivities(), "direct_message_completed")
+	if directActivity == nil || directActivity.GetRunId() != runID {
 		t.Fatalf("ListActivity() = %+v, want direct message activity for run %q", activity.GetActivities(), runID)
 	}
 	statuses, err := client.ListAgentStatuses(ctx, &daemonv1.ListAgentStatusesRequest{AgentId: "agent-1", Limit: 10})
@@ -1465,6 +1526,15 @@ func consumeAgentEventIDs(t *testing.T, stream daemonv1.DaemonControlService_Sub
 		}
 	}
 	return eventIDs
+}
+
+func findActivity(activities []*daemonv1.ActivityRecord, kind string) *daemonv1.ActivityRecord {
+	for _, activity := range activities {
+		if activity.GetKind() == kind {
+			return activity
+		}
+	}
+	return nil
 }
 
 func setComputerLastHeartbeat(t *testing.T, srv *Server, computerID string, lastHeartbeat int64) {

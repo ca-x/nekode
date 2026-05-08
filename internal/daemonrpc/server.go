@@ -1159,10 +1159,98 @@ func (s *Server) ControlAgent(ctx context.Context, req *daemonv1.ControlAgentReq
 	s.serverEvents[event.GetEventId()] = event
 	profile := s.agentProfileLocked(req.GetAgentId())
 	s.mu.Unlock()
+	if err := s.recordAgentControlActivity(ctx, operation); err != nil {
+		return nil, status.Errorf(codes.Internal, "append agent control activity: %v", err)
+	}
 
 	resp := &daemonv1.ControlAgentResponse{Accepted: true, Operation: operation, Profile: profile, Lease: lease}
 	remember(ctx, s, "ControlAgent", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 	return resp, nil
+}
+
+func (s *Server) recordAgentControlActivity(ctx context.Context, operation *daemonv1.AgentControlOperation) error {
+	if s == nil || s.store == nil || operation == nil {
+		return nil
+	}
+	target := "dm:" + operation.GetAgentId()
+	summary := fmt.Sprintf("%s queued", agentControlActionLabel(operation.GetAction()))
+	detailParts := []string{
+		"operation=" + operation.GetOperationId(),
+		"state=" + agentControlStateLabel(operation.GetState()),
+		"computer=" + firstNonEmpty(operation.GetComputerId(), "unknown"),
+	}
+	if operation.GetRuntimeProfileId() != "" {
+		detailParts = append(detailParts, "runtime="+operation.GetRuntimeProfileId())
+	}
+	if operation.GetReason() != "" {
+		detailParts = append(detailParts, "reason="+redactRunFeedback(operation.GetReason()))
+	}
+	activity := &daemonv1.ActivityRecord{
+		ActivityId:      storage.NewID("act"),
+		Target:          target,
+		AgentId:         operation.GetAgentId(),
+		Kind:            "agent_control_requested",
+		Summary:         summary,
+		Detail:          strings.Join(detailParts, " · "),
+		CreatedTimeUnix: firstNonZeroInt64(operation.GetCreatedTimeUnix(), unixNow()),
+		StepId:          operation.GetOperationId(),
+		AggregateId:     operation.GetOperationId(),
+		ProtocolVersion: protocolVersion,
+	}
+	payload, err := protojson.Marshal(activity)
+	if err != nil {
+		return err
+	}
+	event, err := s.store.AppendCollaborationEvent(ctx, storage.CollaborationEvent{
+		ServerID:        s.serverID,
+		Target:          activity.GetTarget(),
+		AggregateID:     activity.GetAggregateId(),
+		Kind:            "activity",
+		ActivityID:      activity.GetActivityId(),
+		Operation:       eventOperationToStorage(daemonv1.EventOperation_EVENT_OPERATION_CREATED),
+		ScopeType:       eventScopeTypeToStorage(daemonv1.EventScopeType_EVENT_SCOPE_TYPE_AGENT),
+		ScopeID:         operation.GetAgentId(),
+		PayloadJSON:     string(payload),
+		CreatedUnix:     activity.GetCreatedTimeUnix(),
+		ProtocolVersion: int(protocolVersion),
+	})
+	if err != nil {
+		return err
+	}
+	activity.Sequence = event.Sequence
+	return nil
+}
+
+func agentControlActionLabel(action daemonv1.AgentControlAction) string {
+	switch action {
+	case daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE:
+		return "terminate"
+	case daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART:
+		return "restart"
+	case daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION:
+		return "clear context + restart"
+	case daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET:
+		return "full reset + restart"
+	default:
+		return "control"
+	}
+}
+
+func agentControlStateLabel(state daemonv1.AgentControlState) string {
+	switch state {
+	case daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED:
+		return "queued"
+	case daemonv1.AgentControlState_AGENT_CONTROL_STATE_RUNNING:
+		return "running"
+	case daemonv1.AgentControlState_AGENT_CONTROL_STATE_COMPLETED:
+		return "completed"
+	case daemonv1.AgentControlState_AGENT_CONTROL_STATE_FAILED:
+		return "failed"
+	case daemonv1.AgentControlState_AGENT_CONTROL_STATE_UNSUPPORTED:
+		return "unsupported"
+	default:
+		return "unspecified"
+	}
 }
 
 func (s *Server) SendAgentDirectMessage(ctx context.Context, req *daemonv1.SendAgentDirectMessageRequest) (*daemonv1.SendAgentDirectMessageResponse, error) {
@@ -1798,13 +1886,41 @@ func (s *Server) UpdateRunStatus(ctx context.Context, req *daemonv1.UpdateRunSta
 	s.mu.Lock()
 	run := s.runs[req.GetRunId()]
 	if run == nil {
-		run = &daemonv1.Run{RunId: req.GetRunId(), AgentId: req.GetAgentId(), LeaseId: req.GetLeaseId(), StartedTimeUnix: now}
+		computerID, runtimeProfileID := s.agentRouteLocked(req.GetAgentId())
+		run = &daemonv1.Run{
+			RunId:            req.GetRunId(),
+			Target:           runTargetFromAgent(req.GetAgentId()),
+			AgentId:          req.GetAgentId(),
+			ComputerId:       computerID,
+			RuntimeProfileId: runtimeProfileID,
+			LeaseId:          req.GetLeaseId(),
+			StartedTimeUnix:  now,
+		}
 		s.runs[req.GetRunId()] = run
+	}
+	if run.GetAgentId() == "" && req.GetAgentId() != "" {
+		run.AgentId = req.GetAgentId()
+	}
+	if (run.GetComputerId() == "" || run.GetRuntimeProfileId() == "") && run.GetAgentId() != "" {
+		computerID, runtimeProfileID := s.agentRouteLocked(run.GetAgentId())
+		if run.GetComputerId() == "" {
+			run.ComputerId = computerID
+		}
+		if run.GetRuntimeProfileId() == "" {
+			run.RuntimeProfileId = runtimeProfileID
+		}
+	}
+	if run.GetTarget() == "" {
+		run.Target = runTargetFromAgent(run.GetAgentId())
+	}
+	if run.GetLeaseId() == "" {
+		run.LeaseId = req.GetLeaseId()
 	}
 	run.State = req.GetState()
 	run.Summary = summary
 	run.Error = runError
 	run.UpdatedTimeUnix = now
+	run.LastHeartbeatTimeUnix = now
 	if isTerminalRunState(run.State) {
 		run.CompletedTimeUnix = now
 	}
@@ -1880,6 +1996,13 @@ func runFailureReason(run *daemonv1.Run, req *daemonv1.UpdateRunStatusRequest) s
 		parts = append(parts, detail)
 	}
 	return truncatePromptText(strings.Join(parts, ": "), 512)
+}
+
+func runTargetFromAgent(agentID string) string {
+	if agentID == "" {
+		return ""
+	}
+	return "dm:" + agentID
 }
 
 var (

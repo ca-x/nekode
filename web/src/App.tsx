@@ -17,6 +17,7 @@ import {
   File,
   FileText,
   Hash,
+  History,
   Image,
   Inbox,
   LayoutGrid,
@@ -771,10 +772,10 @@ function App() {
         runtimePresetList
       ] = await Promise.all([
         capture("activity", api.listDaemonEvents({ target, limit: 80 }), { items: [] as CollaborationEvent[], nextCursor: undefined as EventCursor | undefined }),
-        capture("agentStatuses", api.listAgentStatuses({ target, limit: 100 }), { items: [] as AgentStatusSnapshot[] }),
+        capture("agentStatuses", api.listAgentStatuses({ limit: 100 }), { items: [] as AgentStatusSnapshot[] }),
         capture("daemonInventory", api.listDaemonInventory(100), { items: [] as DaemonInventoryComputer[] }),
-        capture("daemonRuns", api.listDaemonRuns({ target, limit: 100 }), { items: [] as DaemonRun[] }),
-        capture("daemonActivity", api.listDaemonActivity({ target, limit: 100 }), { items: [] as DaemonActivityRecord[] }),
+        capture("daemonRuns", api.listDaemonRuns({ limit: 100 }), { items: [] as DaemonRun[] }),
+        capture("daemonActivity", api.listDaemonActivity({ limit: 100 }), { items: [] as DaemonActivityRecord[] }),
         capture("runtimePresets", api.listRuntimePresets({ includeExperimental: true }), { items: [] as RuntimePreset[] })
       ]);
       setEvents(eventList.items);
@@ -5349,6 +5350,24 @@ function DaemonPanel({
     }
     return Array.from(byID.values()).sort((left, right) => left.agentId.localeCompare(right.agentId));
   }, [agentStatuses, daemonInventory]);
+  const runtimeKindByProfile = useMemo(() => {
+    const byProfile = new Map<string, string>();
+    for (const computer of daemonInventory) {
+      for (const agent of computer.agents) {
+        if (agent.runtimeProfileId && agent.runtimeKind) {
+          byProfile.set(agent.runtimeProfileId, agent.runtimeKind);
+        }
+      }
+      for (const runtime of computer.runtimes) {
+        for (const template of runtime.templates) {
+          if (template.templateId) {
+            byProfile.set(template.templateId, runtime.kind);
+          }
+        }
+      }
+    }
+    return byProfile;
+  }, [daemonInventory]);
 
   useEffect(() => {
     if (!enrollment?.id || canFinishEnrollment || currentEnrollmentStatus !== "pending") {
@@ -6072,6 +6091,10 @@ function DaemonPanel({
             <h2>Runtime run queue</h2>
           </div>
         </div>
+        <div className="board-note" role="note">
+          <Activity size={16} aria-hidden="true" />
+          Showing daemon runs across all targets, including direct-message and task-linked runs.
+        </div>
         {daemonRuns.length ? (
           <div className="task-list-shell">
             <table className="task-table diagnostic-table">
@@ -6080,6 +6103,7 @@ function DaemonPanel({
                   <th>Run</th>
                   <th>State</th>
                   <th>Agent</th>
+                  <th>Runtime</th>
                   <th>Target</th>
                   <th>Updated</th>
                   <th>Summary</th>
@@ -6091,6 +6115,7 @@ function DaemonPanel({
                     <td>{compactId(run.runId)}</td>
                     <td><span className={`diagnostic-badge ${healthClass(run.state)}`}>{run.state}</span></td>
                     <td>{run.agentId || "n/a"}</td>
+                    <td>{runtimeKindByProfile.get(run.runtimeProfileId || "") || run.runtimeProfileId || "unknown"}</td>
                     <td>{run.target || "global"}</td>
                     <td>{formatUnixTime(run.updatedTimeUnix || run.lastHeartbeatTimeUnix)}</td>
                     <td>{run.error || run.summary || "No summary"}</td>
@@ -6110,6 +6135,10 @@ function DaemonPanel({
             <h2>Daemon activity timeline</h2>
           </div>
         </div>
+        <div className="board-note" role="note">
+          <History size={16} aria-hidden="true" />
+          Showing persisted daemon activity across all scopes. Control requests remain visible after refresh.
+        </div>
         {daemonActivity.length ? (
           <div className="event-stream" role="log" aria-label="Daemon activity">
             {daemonActivity.map((activity) => (
@@ -6119,10 +6148,11 @@ function DaemonPanel({
                   <div>
                     <strong>{activity.kind || "activity"}</strong>
                     <span>{activity.summary || activity.detail || "No detail"}</span>
+                    {activity.detail && activity.summary ? <span>{activity.detail}</span> : null}
                   </div>
                 </div>
                 <span className="event-sequence">
-                  {activity.agentId || "system"} · seq {activity.sequence ?? "n/a"}
+                  {activity.agentId || "system"} · {activity.target || "global"} · seq {activity.sequence ?? "n/a"}
                 </span>
               </article>
             ))}

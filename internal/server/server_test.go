@@ -1672,6 +1672,11 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		t.Fatalf("activity status = %d body=%s", activity.Code, activity.Body.String())
 	}
 	assertJSONItems(t, activity.Body.Bytes(), 1)
+	globalActivity := doGET(t, s, "/api/daemon/activity", token)
+	if globalActivity.Code != http.StatusOK {
+		t.Fatalf("global activity status = %d body=%s", globalActivity.Code, globalActivity.Body.String())
+	}
+	assertJSONItems(t, globalActivity.Body.Bytes(), 2)
 
 	info = doGET(t, s, "/api/daemon/info", token)
 	if info.Code != http.StatusOK {
@@ -1681,7 +1686,7 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		t.Fatalf("decode daemon info after diagnostics: %v", err)
 	}
 	if infoBody["health"] != "ok" || infoBody["agentStatusCount"] != float64(1) ||
-		infoBody["runCount"] != float64(1) || infoBody["activityCount"] != float64(1) {
+		infoBody["runCount"] != float64(1) || infoBody["activityCount"] != float64(2) {
 		t.Fatalf("daemon info diagnostics = %+v, want health/count rollup", infoBody)
 	}
 
