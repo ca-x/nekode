@@ -14,6 +14,8 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const maxRunDetailBytes = 4096
@@ -22,6 +24,7 @@ type runSupervisorClient interface {
 	AcquireStartPermit(context.Context, *daemonv1.AcquireStartPermitRequest, ...grpc.CallOption) (*daemonv1.AcquireStartPermitResponse, error)
 	ReleaseStartPermit(context.Context, *daemonv1.ReleaseStartPermitRequest, ...grpc.CallOption) (*daemonv1.ReleaseStartPermitResponse, error)
 	FetchAssignedRuns(context.Context, *daemonv1.FetchAssignedRunsRequest, ...grpc.CallOption) (*daemonv1.FetchAssignedRunsResponse, error)
+	GetLaunchPromptSnapshot(context.Context, *daemonv1.GetLaunchPromptSnapshotRequest, ...grpc.CallOption) (*daemonv1.GetLaunchPromptSnapshotResponse, error)
 	UpdateRunStatus(context.Context, *daemonv1.UpdateRunStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateRunStatusResponse, error)
 	AppendRunStep(context.Context, *daemonv1.AppendRunStepRequest, ...grpc.CallOption) (*daemonv1.AppendRunStepResponse, error)
 	UpdateAgentStatus(context.Context, *daemonv1.UpdateAgentStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error)
@@ -334,12 +337,20 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 		return
 	}
 	startStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_START, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "daemon supervisor started run", "")
-	cmd, err := s.runtimeCommand(run, agentID)
+	snapshot, err := s.loadLaunchPromptSnapshot(ctx, run, agentID)
+	if err != nil {
+		s.failRun(ctx, run, agentID, permitLeaseID, "load launch prompt snapshot failed", err)
+		return
+	}
+	if snapshot != nil {
+		s.logPromptSnapshotLoaded(ctx, target, agentID, snapshot, run.GetRunId())
+	}
+	cmd, err := s.runtimeCommand(run, agentID, snapshot)
 	if err != nil {
 		s.failRun(ctx, run, agentID, permitLeaseID, "build runtime command failed", err)
 		return
 	}
-	commandSummary := strings.Join(append([]string{cmd.Command}, cmd.Args...), " ")
+	commandSummary := runtimeCommandSummary(cmd)
 	commandStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_RUNNING, "runtime command running", commandSummary)
 	if startStep != nil {
 		s.logActivity(ctx, target, agentID, "run_started", "daemon supervisor started run", "", run.GetRunId(), startStep.GetStepId())
@@ -547,12 +558,53 @@ func (s *runSupervisor) logActivity(ctx context.Context, target string, agentID 
 	}
 }
 
-func (s *runSupervisor) runtimeCommand(run *daemonv1.Run, agentID string) (runtimeCommand, error) {
+func (s *runSupervisor) loadLaunchPromptSnapshot(ctx context.Context, run *daemonv1.Run, agentID string) (*daemonv1.LaunchPromptSnapshot, error) {
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	resp, err := s.client.GetLaunchPromptSnapshot(callCtx, &daemonv1.GetLaunchPromptSnapshotRequest{
+		RunId:            run.GetRunId(),
+		AgentId:          agentID,
+		ComputerId:       s.cfg.ComputerID,
+		RuntimeProfileId: firstNonEmpty(run.GetRuntimeProfileId(), "profile-"+agentID),
+		RequestId:        newRequestID("prompt-snapshot"),
+		Context:          s.requestContext(),
+	})
+	if err != nil {
+		code := status.Code(err)
+		if code == codes.Unimplemented || code == codes.NotFound {
+			slog.Warn("daemon supervisor launch prompt snapshot unavailable; using legacy run prompt", "run_id", run.GetRunId(), "error", err)
+			return nil, nil
+		}
+		return nil, err
+	}
+	if resp.GetSnapshot().GetContent() == "" {
+		return nil, nil
+	}
+	return resp.GetSnapshot(), nil
+}
+
+func (s *runSupervisor) logPromptSnapshotLoaded(ctx context.Context, target string, agentID string, snapshot *daemonv1.LaunchPromptSnapshot, runID string) {
+	sectionNames := make([]string, 0, len(snapshot.GetSections()))
+	for _, section := range snapshot.GetSections() {
+		sectionNames = append(sectionNames, section.GetName())
+	}
+	detail := strings.Join(nonEmptyRuntimeLines(
+		"snapshot_id="+snapshot.GetSnapshotId(),
+		"content_hash="+snapshot.GetContentHash(),
+		"template_version="+snapshot.GetTemplateVersion(),
+		"sections="+strings.Join(sectionNames, ","),
+		"redaction_summary="+snapshot.GetRedactionSummary(),
+	), "\n")
+	s.logActivity(ctx, target, agentID, "prompt_snapshot_loaded", "launch prompt snapshot loaded", detail, runID, "")
+}
+
+func (s *runSupervisor) runtimeCommand(run *daemonv1.Run, agentID string, snapshot *daemonv1.LaunchPromptSnapshot) (runtimeCommand, error) {
+	env := runCommandEnv(s.cfg, run, agentID, snapshot)
 	if strings.TrimSpace(s.cfg.ExecutorCommand) != "" {
 		return runtimeCommand{
 			Command: s.cfg.ExecutorCommand,
 			Args:    append([]string(nil), s.cfg.ExecutorArgs...),
-			Env:     runCommandEnv(s.cfg, run, agentID),
+			Env:     env,
 		}, nil
 	}
 	kind := firstNonEmpty(s.cfg.RuntimeKind, "codex")
@@ -563,9 +615,13 @@ func (s *runSupervisor) runtimeCommand(run *daemonv1.Run, agentID string) (runti
 		Installed:   true,
 		Healthy:     true,
 	})
-	wrapped, err := runtimeadapter.BuildWrapCommand(template, map[string]string{
+	values := map[string]string{
 		"display_name": agentID,
-	})
+	}
+	if snapshot.GetContent() != "" {
+		values["system_message"] = snapshot.GetContent()
+	}
+	wrapped, err := runtimeadapter.BuildWrapCommand(template, values)
 	if err != nil {
 		return runtimeCommand{}, err
 	}
@@ -576,7 +632,7 @@ func (s *runSupervisor) runtimeCommand(run *daemonv1.Run, agentID string) (runti
 	return runtimeCommand{
 		Command: wrapped.Command,
 		Args:    args,
-		Env:     append(wrapped.Env, runCommandEnv(s.cfg, run, agentID)...),
+		Env:     append(wrapped.Env, env...),
 	}, nil
 }
 
@@ -594,8 +650,8 @@ func runPrompt(run *daemonv1.Run) string {
 	return strings.Join(parts, "\n")
 }
 
-func runCommandEnv(cfg daemonConfig, run *daemonv1.Run, agentID string) []string {
-	return []string{
+func runCommandEnv(cfg daemonConfig, run *daemonv1.Run, agentID string, snapshot *daemonv1.LaunchPromptSnapshot) []string {
+	env := []string{
 		"NEKODE_RUN_ID=" + run.GetRunId(),
 		"NEKODE_TASK_ID=" + run.GetTaskId(),
 		"NEKODE_AGENT_ID=" + agentID,
@@ -603,6 +659,38 @@ func runCommandEnv(cfg daemonConfig, run *daemonv1.Run, agentID string) []string
 		"NEKODE_TARGET=" + firstNonEmpty(run.GetTarget(), cfg.Target),
 		"NEKODE_RUNTIME_PROFILE_ID=" + firstNonEmpty(run.GetRuntimeProfileId(), "profile-"+agentID),
 	}
+	if snapshot.GetSnapshotId() != "" {
+		env = append(env,
+			"NEKODE_LAUNCH_PROMPT_SNAPSHOT_ID="+snapshot.GetSnapshotId(),
+			"NEKODE_LAUNCH_PROMPT_HASH="+snapshot.GetContentHash(),
+			"NEKODE_LAUNCH_PROMPT_TEMPLATE_VERSION="+snapshot.GetTemplateVersion(),
+		)
+		if snapshot.GetContent() != "" {
+			env = append(env, "NEKODE_LAUNCH_PROMPT="+snapshot.GetContent())
+		}
+	}
+	return env
+}
+
+func runtimeCommandSummary(cmd runtimeCommand) string {
+	parts := append([]string{cmd.Command}, cmd.Args...)
+	for i := 0; i < len(parts); i++ {
+		if parts[i] == "--system-message" && i+1 < len(parts) {
+			parts[i+1] = "<redacted launch prompt>"
+			i++
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func nonEmptyRuntimeLines(lines ...string) []string {
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			out = append(out, line)
+		}
+	}
+	return out
 }
 
 func (commandRunner) Run(ctx context.Context, cmd runtimeCommand) runtimeCommandResult {

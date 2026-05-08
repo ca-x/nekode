@@ -257,6 +257,57 @@ message Run {
   string failure_reason = 21;
   // Last daemon heartbeat/progress timestamp for this run.
   int64 last_heartbeat_time_unix = 22;
+  // Server-generated launch prompt snapshot consumed by the daemon when
+  // starting this run.
+  string launch_prompt_snapshot_id = 23;
+}
+message LaunchPromptSnapshotSection {
+  reserved 1000 to 1999;
+
+  // Stable section name such as agent_identity, runtime_profile, run_context,
+  // message_context, task_context, tools, or memory.
+  string name = 1;
+  // Server-side source for audit/debugging, such as agent_profile,
+  // runtime_profile.adapter_config, run, message, task, or policy.
+  string source = 2;
+  // Redacted, runtime-safe text for this section.
+  string content = 3;
+  // True when the source was known to contain sensitive material or fields that
+  // were omitted/redacted before inclusion.
+  bool redacted = 4;
+}
+message LaunchPromptSnapshot {
+  reserved 1000 to 1999;
+
+  string snapshot_id = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  string run_id = 4;
+  string runtime_profile_id = 5;
+  string target = 6;
+  string thread_id = 7;
+  string message_id = 8;
+  string task_id = 9;
+  string template_version = 10;
+  // Runtime-safe prompt text assembled from sections and intended for adapter
+  // system prompt injection. This must already be redacted.
+  string content = 11;
+  string content_hash = 12;
+  repeated LaunchPromptSnapshotSection sections = 13;
+  int64 created_time_unix = 14;
+  string redaction_summary = 15;
+  string source_version = 16;
+}
+message GetLaunchPromptSnapshotRequest {
+  string run_id = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  string runtime_profile_id = 4;
+  string request_id = 5;
+  RequestContext context = 6;
+}
+message GetLaunchPromptSnapshotResponse {
+  LaunchPromptSnapshot snapshot = 1;
 }
 message RunStep {
   reserved 1000 to 1999;

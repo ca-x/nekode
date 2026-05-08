@@ -185,6 +185,9 @@ service DaemonControlService {
   rpc ReleaseStartPermit(ReleaseStartPermitRequest) returns (ReleaseStartPermitResponse);
   // Fetch queued runs assigned to a computer or agent set.
   rpc FetchAssignedRuns(FetchAssignedRunsRequest) returns (FetchAssignedRunsResponse);
+  // Return the redacted launch prompt snapshot a daemon must inject into the
+  // runtime before starting a run.
+  rpc GetLaunchPromptSnapshot(GetLaunchPromptSnapshotRequest) returns (GetLaunchPromptSnapshotResponse);
   // Update run lifecycle state; idempotency_key deduplicates retries.
   rpc UpdateRunStatus(UpdateRunStatusRequest) returns (UpdateRunStatusResponse);
   // Renew an existing run lease.

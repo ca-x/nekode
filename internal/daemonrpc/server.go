@@ -45,6 +45,7 @@ type Server struct {
 	statuses     map[string]*daemonv1.AgentStatusSnapshot
 	runs         map[string]*daemonv1.Run
 	runSteps     map[string][]*daemonv1.RunStep
+	promptSnaps  map[string]*daemonv1.LaunchPromptSnapshot
 	controls     map[string]*daemonv1.AgentControlOperation
 	serverEvents map[string]*daemonv1.ServerEvent
 	activities   []*daemonv1.ActivityRecord
@@ -95,6 +96,7 @@ func New(store *storage.Store, serverID string) *Server {
 		statuses:     make(map[string]*daemonv1.AgentStatusSnapshot),
 		runs:         make(map[string]*daemonv1.Run),
 		runSteps:     make(map[string][]*daemonv1.RunStep),
+		promptSnaps:  make(map[string]*daemonv1.LaunchPromptSnapshot),
 		controls:     make(map[string]*daemonv1.AgentControlOperation),
 		serverEvents: make(map[string]*daemonv1.ServerEvent),
 		idempotency:  make(map[string]proto.Message),

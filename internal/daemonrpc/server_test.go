@@ -3,6 +3,7 @@ package daemonrpc
 import (
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -216,6 +217,133 @@ func TestComputerAndAgentStatusBecomeStaleOfflineAndRecover(t *testing.T) {
 		t.Fatalf("HeartbeatComputer(recover) error = %v", err)
 	}
 	assertComputerAndAgentStatus(t, srv, daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE, daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE, daemonv1.AgentHealth_AGENT_HEALTH_OK)
+}
+
+func TestGetLaunchPromptSnapshotBuildsRedactedManifest(t *testing.T) {
+	store := newTestStore(t, "daemonrpc_prompt")
+	srv := New(store, "srv_prompt")
+	ctx := context.Background()
+	_, err := srv.RegisterComputer(ctx, &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		Inventory: &daemonv1.ComputerInventory{
+			Agents: []*daemonv1.AgentProfile{
+				{
+					AgentId:          "agent-1",
+					Name:             "agent-one",
+					DisplayName:      "Agent One",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-1",
+					RuntimeKind:      "codex",
+					Provider:         "openai",
+					Model:            "gpt-test",
+					Capabilities: []*daemonv1.Capability{
+						{Name: "code_execution", Enabled: true},
+					},
+				},
+			},
+			RuntimeProfiles: []*daemonv1.RuntimeProfile{
+				{
+					RuntimeProfileId: "profile-agent-1",
+					Kind:             "codex",
+					Provider:         "openai",
+					Model:            "gpt-test",
+					AdapterConfigJson: `{
+						"selectedOptions":{
+							"display_name":"Agent One",
+							"system_message":"Prefer concise updates.",
+							"api_token":"secret-token-value"
+						}
+					}`,
+					Capabilities: []*daemonv1.Capability{
+						{Name: "file_write", Enabled: true},
+					},
+					Env: []*daemonv1.EnvVar{
+						{Name: "OPENAI_API_KEY", Redacted: true},
+					},
+				},
+			},
+		},
+		RequestId:      "register-prompt-1",
+		IdempotencyKey: "register-prompt-1",
+	})
+	if err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+	msg, err := store.CreateMessage(ctx, storage.Message{
+		ID:                "msg-1",
+		Target:            "#LightOsClub",
+		ThreadID:          "thread-1",
+		Role:              "user",
+		Content:           "Please finish prompt hardening.",
+		SenderDisplayName: "xczyt",
+		SenderKind:        "human",
+		MetadataJSON:      `{"api_token":"secret-token-value","safe":"ok"}`,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage() error = %v", err)
+	}
+	taskModel, err := store.CreateTask(ctx, storage.Task{
+		ID:          "task-188",
+		Target:      "#LightOsClub",
+		Summary:     "Prompt hardening",
+		Description: "Build launch prompt snapshot.",
+		State:       "in_progress",
+		AssigneeID:  "agent-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
+	}
+	srv.mu.Lock()
+	srv.runs["run-1"] = &daemonv1.Run{
+		RunId:            "run-1",
+		TaskId:           taskModel.ID,
+		Target:           msg.Target,
+		AgentId:          "agent-1",
+		ComputerId:       "computer-1",
+		RuntimeProfileId: "profile-agent-1",
+		InputMessageId:   msg.ID,
+		Summary:          "current objective",
+	}
+	srv.mu.Unlock()
+
+	resp, err := srv.GetLaunchPromptSnapshot(ctx, &daemonv1.GetLaunchPromptSnapshotRequest{
+		RunId:      "run-1",
+		AgentId:    "agent-1",
+		ComputerId: "computer-1",
+	})
+	if err != nil {
+		t.Fatalf("GetLaunchPromptSnapshot() error = %v", err)
+	}
+	snapshot := resp.GetSnapshot()
+	if snapshot.GetSnapshotId() == "" || snapshot.GetContentHash() == "" {
+		t.Fatalf("snapshot = %+v, want id and content hash", snapshot)
+	}
+	content := snapshot.GetContent()
+	for _, want := range []string{
+		"Agent One",
+		"Prefer concise updates.",
+		"Prompt hardening",
+		"Please finish prompt hardening.",
+		"code_execution",
+		"file_write",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("snapshot content missing %q:\n%s", want, content)
+		}
+	}
+	if strings.Contains(content, "secret-token-value") {
+		t.Fatalf("snapshot content leaked secret:\n%s", content)
+	}
+	if !strings.Contains(content, "<redacted>") || !strings.Contains(snapshot.GetRedactionSummary(), "redacted") {
+		t.Fatalf("snapshot redaction summary/content = %q / %q, want redaction", snapshot.GetRedactionSummary(), content)
+	}
+	if len(snapshot.GetSections()) < 6 {
+		t.Fatalf("snapshot sections = %+v, want layered manifest", snapshot.GetSections())
+	}
 }
 
 func TestMessageTaskAndActivityFlow(t *testing.T) {

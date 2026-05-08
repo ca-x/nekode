@@ -26,6 +26,7 @@ const (
 	DaemonControlService_AcquireStartPermit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/AcquireStartPermit"
 	DaemonControlService_ReleaseStartPermit_FullMethodName            = "/nekode.daemon.v1.DaemonControlService/ReleaseStartPermit"
 	DaemonControlService_FetchAssignedRuns_FullMethodName             = "/nekode.daemon.v1.DaemonControlService/FetchAssignedRuns"
+	DaemonControlService_GetLaunchPromptSnapshot_FullMethodName       = "/nekode.daemon.v1.DaemonControlService/GetLaunchPromptSnapshot"
 	DaemonControlService_UpdateRunStatus_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/UpdateRunStatus"
 	DaemonControlService_RenewRunLease_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/RenewRunLease"
 	DaemonControlService_AppendRunStep_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/AppendRunStep"
@@ -124,6 +125,9 @@ type DaemonControlServiceClient interface {
 	ReleaseStartPermit(ctx context.Context, in *ReleaseStartPermitRequest, opts ...grpc.CallOption) (*ReleaseStartPermitResponse, error)
 	// Fetch queued runs assigned to a computer or agent set.
 	FetchAssignedRuns(ctx context.Context, in *FetchAssignedRunsRequest, opts ...grpc.CallOption) (*FetchAssignedRunsResponse, error)
+	// Return the redacted launch prompt snapshot a daemon must inject into the
+	// runtime before starting a run.
+	GetLaunchPromptSnapshot(ctx context.Context, in *GetLaunchPromptSnapshotRequest, opts ...grpc.CallOption) (*GetLaunchPromptSnapshotResponse, error)
 	// Update run lifecycle state; idempotency_key deduplicates retries.
 	UpdateRunStatus(ctx context.Context, in *UpdateRunStatusRequest, opts ...grpc.CallOption) (*UpdateRunStatusResponse, error)
 	// Renew an existing run lease.
@@ -341,6 +345,16 @@ func (c *daemonControlServiceClient) FetchAssignedRuns(ctx context.Context, in *
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FetchAssignedRunsResponse)
 	err := c.cc.Invoke(ctx, DaemonControlService_FetchAssignedRuns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) GetLaunchPromptSnapshot(ctx context.Context, in *GetLaunchPromptSnapshotRequest, opts ...grpc.CallOption) (*GetLaunchPromptSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLaunchPromptSnapshotResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_GetLaunchPromptSnapshot_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1100,6 +1114,9 @@ type DaemonControlServiceServer interface {
 	ReleaseStartPermit(context.Context, *ReleaseStartPermitRequest) (*ReleaseStartPermitResponse, error)
 	// Fetch queued runs assigned to a computer or agent set.
 	FetchAssignedRuns(context.Context, *FetchAssignedRunsRequest) (*FetchAssignedRunsResponse, error)
+	// Return the redacted launch prompt snapshot a daemon must inject into the
+	// runtime before starting a run.
+	GetLaunchPromptSnapshot(context.Context, *GetLaunchPromptSnapshotRequest) (*GetLaunchPromptSnapshotResponse, error)
 	// Update run lifecycle state; idempotency_key deduplicates retries.
 	UpdateRunStatus(context.Context, *UpdateRunStatusRequest) (*UpdateRunStatusResponse, error)
 	// Renew an existing run lease.
@@ -1273,6 +1290,9 @@ func (UnimplementedDaemonControlServiceServer) ReleaseStartPermit(context.Contex
 }
 func (UnimplementedDaemonControlServiceServer) FetchAssignedRuns(context.Context, *FetchAssignedRunsRequest) (*FetchAssignedRunsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FetchAssignedRuns not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) GetLaunchPromptSnapshot(context.Context, *GetLaunchPromptSnapshotRequest) (*GetLaunchPromptSnapshotResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetLaunchPromptSnapshot not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) UpdateRunStatus(context.Context, *UpdateRunStatusRequest) (*UpdateRunStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateRunStatus not implemented")
@@ -1630,6 +1650,24 @@ func _DaemonControlService_FetchAssignedRuns_Handler(srv interface{}, ctx contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaemonControlServiceServer).FetchAssignedRuns(ctx, req.(*FetchAssignedRunsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_GetLaunchPromptSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLaunchPromptSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).GetLaunchPromptSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_GetLaunchPromptSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).GetLaunchPromptSnapshot(ctx, req.(*GetLaunchPromptSnapshotRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2932,6 +2970,10 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FetchAssignedRuns",
 			Handler:    _DaemonControlService_FetchAssignedRuns_Handler,
+		},
+		{
+			MethodName: "GetLaunchPromptSnapshot",
+			Handler:    _DaemonControlService_GetLaunchPromptSnapshot_Handler,
 		},
 		{
 			MethodName: "UpdateRunStatus",

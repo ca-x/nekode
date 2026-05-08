@@ -73,6 +73,70 @@ func TestRunSupervisorCompletesQueuedRun(t *testing.T) {
 	}
 }
 
+func TestRunSupervisorInjectsLaunchPromptSnapshot(t *testing.T) {
+	client := newFakeSupervisorClient(&daemonv1.Run{
+		RunId:            "run-prompt",
+		TaskId:           "task-1",
+		Target:           "#LightOsClub",
+		AgentId:          "agent-1",
+		ComputerId:       "computer-1",
+		RuntimeProfileId: "profile-agent-1",
+		State:            daemonv1.RunState_RUN_STATE_QUEUED,
+		Summary:          "say hello",
+	})
+	client.promptSnapshot = &daemonv1.LaunchPromptSnapshot{
+		SnapshotId:       "prompt-run-prompt",
+		RunId:            "run-prompt",
+		AgentId:          "agent-1",
+		RuntimeProfileId: "profile-agent-1",
+		TemplateVersion:  "nekode.launch-prompt.v1",
+		ContentHash:      "abc123",
+		Content:          "Nekode launch prompt\nruntime/profile system_message: stay concise",
+		Sections: []*daemonv1.LaunchPromptSnapshotSection{
+			{Name: "agent_identity"},
+			{Name: "runtime_profile", Redacted: true},
+		},
+		RedactionSummary: "redacted: runtime_profile.adapter_config",
+	}
+	runner := &fakeRuntimeRunner{result: runtimeCommandResult{Output: "hello\n"}}
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "agent-1",
+			RuntimeKind:       "codex",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+		},
+		Client: client,
+		Runner: runner,
+	})
+
+	if err := supervisor.pollOnce(context.Background()); err != nil {
+		t.Fatalf("pollOnce() error = %v", err)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("runner commands = %+v, want one runtime command", runner.commands)
+	}
+	args := runner.commands[0].Args
+	if !containsString(args, "--system-message") || !containsString(args, client.promptSnapshot.GetContent()) {
+		t.Fatalf("runner args = %+v, want launch prompt injected as system-message", args)
+	}
+	if !containsString(runner.commands[0].Env, "NEKODE_LAUNCH_PROMPT_SNAPSHOT_ID=prompt-run-prompt") ||
+		!containsString(runner.commands[0].Env, "NEKODE_LAUNCH_PROMPT_HASH=abc123") {
+		t.Fatalf("runner env = %+v, want launch prompt audit env", runner.commands[0].Env)
+	}
+	if !client.hasActivity("prompt_snapshot_loaded") {
+		t.Fatalf("activities = %+v, want prompt_snapshot_loaded", client.activities)
+	}
+	for _, activity := range client.activities {
+		if activity.GetKind() == "command_run" && strings.Contains(activity.GetDetail(), client.promptSnapshot.GetContent()) {
+			t.Fatalf("command_run detail leaked full launch prompt: %q", activity.GetDetail())
+		}
+	}
+}
+
 func TestRunSupervisorMarksRunFailed(t *testing.T) {
 	client := newFakeSupervisorClient(&daemonv1.Run{
 		RunId:      "run-fail",
@@ -325,6 +389,7 @@ func (r *fakeRuntimeRunner) Run(_ context.Context, cmd runtimeCommand) runtimeCo
 
 type fakeSupervisorClient struct {
 	runs            []*daemonv1.Run
+	promptSnapshot  *daemonv1.LaunchPromptSnapshot
 	updates         []*daemonv1.UpdateRunStatusRequest
 	steps           []*daemonv1.RunStep
 	activities      []*daemonv1.LogActivityRequest
@@ -361,6 +426,16 @@ func (c *fakeSupervisorClient) FetchAssignedRuns(_ context.Context, req *daemonv
 		out = append(out, run)
 	}
 	return &daemonv1.FetchAssignedRunsResponse{Runs: out}, nil
+}
+
+func (c *fakeSupervisorClient) GetLaunchPromptSnapshot(_ context.Context, req *daemonv1.GetLaunchPromptSnapshotRequest, _ ...grpc.CallOption) (*daemonv1.GetLaunchPromptSnapshotResponse, error) {
+	if c.promptSnapshot == nil {
+		return &daemonv1.GetLaunchPromptSnapshotResponse{}, nil
+	}
+	snapshot := *c.promptSnapshot
+	snapshot.RunId = req.GetRunId()
+	snapshot.AgentId = req.GetAgentId()
+	return &daemonv1.GetLaunchPromptSnapshotResponse{Snapshot: &snapshot}, nil
 }
 
 func (c *fakeSupervisorClient) UpdateRunStatus(_ context.Context, req *daemonv1.UpdateRunStatusRequest, _ ...grpc.CallOption) (*daemonv1.UpdateRunStatusResponse, error) {
