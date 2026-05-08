@@ -9,6 +9,9 @@ import {
   Columns3,
   Eye,
   Hash,
+  LayoutGrid,
+  List,
+  ListFilter,
   Loader2,
   LogOut,
   MessageSquare,
@@ -16,6 +19,7 @@ import {
   OctagonAlert,
   Plus,
   RefreshCw,
+  Search,
   Send,
   Server,
   Settings,
@@ -47,6 +51,9 @@ const DEFAULT_TARGET = "#general";
 type ViewKey = "overview" | "messages" | "tasks" | "activity" | "skills" | "endpoints" | "daemon";
 type LoadState = "idle" | "loading" | "ready" | "error";
 type RealtimeStatus = "disabled" | "connecting" | "connected" | "error";
+type TaskViewMode = "board" | "list";
+type TaskStateFilter = TaskState | "all" | "open";
+type TaskSortKey = "updated_desc" | "created_desc" | "summary_asc" | "state_asc";
 type StoredEventCursor = {
   serverId: string;
   protocolVersion: number;
@@ -62,6 +69,23 @@ const taskColumns: Array<{ state: TaskState; label: string; icon: typeof Circle 
   { state: "in_review", label: "In Review", icon: Eye },
   { state: "done", label: "Done", icon: CheckCircle2 },
   { state: "canceled", label: "Canceled", icon: CircleX }
+];
+
+const taskStateRank = new Map<TaskState, number>(
+  taskColumns.map((column, index) => [column.state, index])
+);
+
+const taskStateFilters: Array<{ value: TaskStateFilter; label: string }> = [
+  { value: "all", label: "All states" },
+  { value: "open", label: "Open" },
+  ...taskColumns.map((column) => ({ value: column.state, label: column.label }))
+];
+
+const taskSortOptions: Array<{ value: TaskSortKey; label: string }> = [
+  { value: "updated_desc", label: "Recently updated" },
+  { value: "created_desc", label: "Newest first" },
+  { value: "summary_asc", label: "Summary A-Z" },
+  { value: "state_asc", label: "Board order" }
 ];
 
 const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = [
@@ -153,6 +177,29 @@ function writeStoredEventCursor(info: DaemonInfo, sequence: number) {
 
 function taskColumnFor(state: TaskState) {
   return taskColumns.find((column) => column.state === state) ?? taskColumns[0];
+}
+
+function isOpenTask(task: Task) {
+  return task.state !== "done" && task.state !== "canceled";
+}
+
+function compareTasks(sortKey: TaskSortKey) {
+  return (left: Task, right: Task) => {
+    switch (sortKey) {
+      case "created_desc":
+        return right.createdUnix - left.createdUnix || right.updatedUnix - left.updatedUnix;
+      case "summary_asc":
+        return left.summary.localeCompare(right.summary) || right.updatedUnix - left.updatedUnix;
+      case "state_asc":
+        return (
+          (taskStateRank.get(left.state) ?? 0) - (taskStateRank.get(right.state) ?? 0) ||
+          right.updatedUnix - left.updatedUnix
+        );
+      case "updated_desc":
+      default:
+        return right.updatedUnix - left.updatedUnix || right.createdUnix - left.createdUnix;
+    }
+  };
 }
 
 function sameDaemonInfo(left: DaemonInfo | null, right: DaemonInfo | null) {
@@ -948,30 +995,63 @@ function TasksPanel({
   onChanged: () => Promise<void>;
 }) {
   const [summary, setSummary] = useState("");
+  const [newTaskState, setNewTaskState] = useState<TaskState>("todo");
+  const [viewMode, setViewMode] = useState<TaskViewMode>("board");
+  const [stateFilter, setStateFilter] = useState<TaskStateFilter>("all");
+  const [sortKey, setSortKey] = useState<TaskSortKey>("updated_desc");
+  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const taskStats = useMemo(
+    () => ({
+      total: tasks.length,
+      open: tasks.filter(isOpenTask).length,
+      blocked: tasks.filter((task) => task.state === "blocked").length,
+      inReview: tasks.filter((task) => task.state === "in_review").length
+    }),
+    [tasks]
+  );
+
+  const visibleTasks = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return tasks
+      .filter((task) => {
+        if (stateFilter === "open" && !isOpenTask(task)) return false;
+        if (stateFilter !== "all" && stateFilter !== "open" && task.state !== stateFilter) {
+          return false;
+        }
+        if (!search) return true;
+        return [task.summary, task.id, task.target, task.assigneeId ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+      })
+      .sort(compareTasks(sortKey));
+  }, [query, sortKey, stateFilter, tasks]);
 
   const grouped = useMemo(
     () =>
       taskColumns.map((column) => ({
         ...column,
-        tasks: tasks.filter((task) => task.state === column.state)
+        tasks: visibleTasks.filter((task) => task.state === column.state)
       })),
-    [tasks]
+    [visibleTasks]
   );
 
   useEffect(() => {
-    if (selectedTask && !tasks.some((task) => task.id === selectedTask.id)) {
+    if (selectedTask && !visibleTasks.some((task) => task.id === selectedTask.id)) {
       onSelectTask(null);
     }
-  }, [onSelectTask, selectedTask, tasks]);
+  }, [onSelectTask, selectedTask, visibleTasks]);
 
   const createTask = async (event: FormEvent) => {
     event.preventDefault();
     if (!summary.trim()) return;
     setBusy(true);
     try {
-      await api.createTask({ summary, target, state: "todo" });
+      await api.createTask({ summary, target, state: newTaskState });
       setSummary("");
+      setNewTaskState("todo");
       await onChanged();
     } finally {
       setBusy(false);
@@ -983,64 +1063,228 @@ function TasksPanel({
     await onChanged();
   };
 
+  const filtersActive = query.trim() !== "" || stateFilter !== "all" || sortKey !== "updated_desc";
+
   return (
     <section className="task-workspace">
       <div className="panel task-board-panel">
         <div className="panel-heading">
           <div>
             <p className="eyebrow">{target}</p>
-            <h2>Task Board</h2>
+            <h2>Task Workspace</h2>
           </div>
-          <form className="inline-form" onSubmit={createTask}>
+          <form className="quick-task-form" onSubmit={createTask}>
             <input
               aria-label="New task summary"
               value={summary}
               onChange={(event) => setSummary(event.target.value)}
               placeholder="New task summary"
             />
+            <select
+              aria-label="New task state"
+              value={newTaskState}
+              onChange={(event) => setNewTaskState(event.target.value as TaskState)}
+            >
+              {taskColumns.map((option) => (
+                <option key={option.state} value={option.state}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <button className="primary-button" type="submit" disabled={busy || !summary.trim()}>
               <Plus size={16} aria-hidden="true" />
               Add
             </button>
           </form>
         </div>
+        <div className="task-toolbar" aria-label="Task filters">
+          <label className="search-field">
+            <Search size={16} aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search tasks"
+            />
+          </label>
+          <label className="toolbar-field">
+            <ListFilter size={16} aria-hidden="true" />
+            <select
+              value={stateFilter}
+              onChange={(event) => setStateFilter(event.target.value as TaskStateFilter)}
+            >
+              {taskStateFilters.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="toolbar-field">
+            Sort
+            <select value={sortKey} onChange={(event) => setSortKey(event.target.value as TaskSortKey)}>
+              {taskSortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="segmented view-switch" role="tablist" aria-label="Task view">
+            <button
+              type="button"
+              className={viewMode === "board" ? "is-active" : ""}
+              onClick={() => setViewMode("board")}
+            >
+              <LayoutGrid size={16} aria-hidden="true" />
+              Board
+            </button>
+            <button
+              type="button"
+              className={viewMode === "list" ? "is-active" : ""}
+              onClick={() => setViewMode("list")}
+            >
+              <List size={16} aria-hidden="true" />
+              List
+            </button>
+          </div>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={!filtersActive}
+            onClick={() => {
+              setQuery("");
+              setStateFilter("all");
+              setSortKey("updated_desc");
+            }}
+          >
+            Reset
+          </button>
+        </div>
+        <div className="task-summary-strip" aria-label="Task counts">
+          <span>
+            Total <strong>{taskStats.total}</strong>
+          </span>
+          <span>
+            Open <strong>{taskStats.open}</strong>
+          </span>
+          <span>
+            Blocked <strong>{taskStats.blocked}</strong>
+          </span>
+          <span>
+            Review <strong>{taskStats.inReview}</strong>
+          </span>
+          <span>
+            Showing <strong>{visibleTasks.length}</strong>
+          </span>
+        </div>
         <div className="board-note" role="note">
           <AlertTriangle size={16} aria-hidden="true" />
           Column membership comes from server state. Status changes submit to the API and wait for the
           returned DTO/refetch before the board becomes authoritative.
         </div>
-        <div className="task-board">
-          {grouped.map((column) => (
-            <section
-              className={`task-column state-${column.state}`}
-              key={column.state}
-              aria-labelledby={`${column.state}-title`}
-            >
-              <h3 id={`${column.state}-title`}>
-                <TaskStatusBadge state={column.state} label={column.label} />
-                <span>{column.tasks.length}</span>
-              </h3>
-              <div className="task-stack">
-                {column.tasks.length ? (
-                  column.tasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      selected={selectedTask?.id === task.id}
-                      onSelect={() => onSelectTask(task.id)}
-                      onMove={moveTask}
-                    />
-                  ))
-                ) : (
-                  <div className="empty-column">No {column.label.toLowerCase()} tasks</div>
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
+        {viewMode === "board" ? (
+          <div className="task-board">
+            {grouped.map((column) => (
+              <section
+                className={`task-column state-${column.state}`}
+                key={column.state}
+                aria-labelledby={`${column.state}-title`}
+              >
+                <h3 id={`${column.state}-title`}>
+                  <TaskStatusBadge state={column.state} label={column.label} />
+                  <span>{column.tasks.length}</span>
+                </h3>
+                <div className="task-stack">
+                  {column.tasks.length ? (
+                    column.tasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        selected={selectedTask?.id === task.id}
+                        onSelect={() => onSelectTask(task.id)}
+                        onMove={moveTask}
+                      />
+                    ))
+                  ) : (
+                    <div className="empty-column">No {column.label.toLowerCase()} tasks</div>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="task-list-shell">
+            <table className="task-table">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Updated</th>
+                  <th>Move</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleTasks.map((task) => (
+                  <TaskListRow
+                    key={task.id}
+                    task={task}
+                    selected={selectedTask?.id === task.id}
+                    onSelect={() => onSelectTask(task.id)}
+                    onMove={moveTask}
+                  />
+                ))}
+              </tbody>
+            </table>
+            {!visibleTasks.length ? <div className="empty-list">No matching tasks</div> : null}
+          </div>
+        )}
       </div>
       <TaskInspector task={selectedTask} onClose={() => onSelectTask(null)} onMove={moveTask} />
     </section>
+  );
+}
+
+function TaskListRow({
+  task,
+  selected,
+  onSelect,
+  onMove
+}: {
+  task: Task;
+  selected: boolean;
+  onSelect: () => void;
+  onMove: (task: Task, state: TaskState) => Promise<void>;
+}) {
+  return (
+    <tr className={selected ? "is-selected" : ""}>
+      <td>
+        <button className="table-link" type="button" onClick={onSelect}>
+          <strong>{task.summary}</strong>
+          <span>
+            {task.id} · {task.target}
+          </span>
+        </button>
+      </td>
+      <td>
+        <TaskStatusBadge state={task.state} />
+      </td>
+      <td>{task.assigneeId || "unassigned"}</td>
+      <td>{unixTime(task.updatedUnix)}</td>
+      <td>
+        <select
+          aria-label={`Move ${task.summary}`}
+          value={task.state}
+          onChange={(event) => void onMove(task, event.target.value as TaskState)}
+        >
+          {taskColumns.map((option) => (
+            <option key={option.state} value={option.state}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </td>
+    </tr>
   );
 }
 
