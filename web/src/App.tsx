@@ -923,6 +923,9 @@ function App() {
                 key={item.key}
                 className={view === item.key ? "nav-item is-active" : "nav-item"}
                 type="button"
+                aria-label={item.label}
+                aria-current={view === item.key ? "page" : undefined}
+                title={item.label}
                 onClick={() => setView(item.key)}
               >
                 <Icon size={18} aria-hidden="true" />
@@ -937,6 +940,7 @@ function App() {
               key={channel.target}
               className={target === channel.target ? "side-link is-active" : "side-link"}
               type="button"
+              aria-label={`Open ${channel.displayName || channel.target} messages`}
               onClick={() => {
                 setActiveThread(null);
                 setTarget(channel.target);
@@ -955,6 +959,7 @@ function App() {
               key={agent.agentId}
               className="agent-link"
               type="button"
+              aria-label={`Open ${agent.label} direct messages`}
               onClick={() => {
                 setActiveThread(null);
                 setTarget(`dm:${agent.agentId}`);
@@ -970,6 +975,7 @@ function App() {
               key={agent.id}
               className="agent-link"
               type="button"
+              aria-label={`Open ${agent.name} daemon details`}
               onClick={() => setView("daemon")}
             >
               <AvatarBadge label={agent.name} color={agent.color} />
@@ -979,7 +985,7 @@ function App() {
           ))}
         </SidebarSection>
         <SidebarSection title="Machines">
-          <button className="side-link" type="button" onClick={() => setView("daemon")}>
+          <button className="side-link" type="button" aria-label="Open daemon bridge details" onClick={() => setView("daemon")}>
             <Monitor size={15} aria-hidden="true" />
             <span>Local bridge</span>
             <span className="machine-state">pending</span>
