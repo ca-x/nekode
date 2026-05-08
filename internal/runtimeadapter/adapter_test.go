@@ -110,6 +110,85 @@ func TestBuildWrapCommandValidatesOptions(t *testing.T) {
 	}); err == nil {
 		t.Fatal("BuildWrapCommand(invalid number) error = nil, want error")
 	}
+	if _, err := BuildWrapCommand(template, map[string]string{
+		"display_name":      "Release Bot",
+		"allow_file_write":  "sometimes",
+		"reasoning_effort":  "medium",
+		"runtime_extra_arg": "ignored",
+	}); err == nil {
+		t.Fatal("BuildWrapCommand(invalid boolean) error = nil, want error")
+	}
+}
+
+func TestBuildWrapCommandDefaultsAndTrimsOptionValues(t *testing.T) {
+	template := DefaultInstanceTemplate(RuntimeType{Kind: "codex", DisplayName: "Codex CLI", Command: "codex"})
+	cmd, err := BuildWrapCommand(template, map[string]string{
+		" display_name ":     " Release Bot ",
+		" reasoning_effort ": " xhigh ",
+		" workdir ":          " /tmp/nekode ",
+		" system_message ":   " stay concise ",
+		" api_token ":        " secret-token ",
+	})
+	if err != nil {
+		t.Fatalf("BuildWrapCommand() error = %v", err)
+	}
+	if !containsPair(cmd.Args, "--model", "gpt-5.5") {
+		t.Fatalf("args = %v, want default model flag", cmd.Args)
+	}
+	if !containsPair(cmd.Args, "--reasoning-effort", "xhigh") ||
+		!containsPair(cmd.Args, "--workdir", "/tmp/nekode") ||
+		!containsPair(cmd.Args, "--system-message", "stay concise") {
+		t.Fatalf("args = %v, want trimmed option flags", cmd.Args)
+	}
+	if containsValue(cmd.Args, "secret-token") {
+		t.Fatalf("args = %v, sensitive api_token must not be passed as a CLI argument", cmd.Args)
+	}
+}
+
+func TestBuildWrapCommandPreservesTemplateWrapAndRejectsInvalidSchema(t *testing.T) {
+	template := InstanceTemplate{
+		TemplateID:  "template-test",
+		RuntimeKind: "test",
+		Wrap: WrapSpec{
+			Command: "runner",
+			Args:    []string{"start", "--json"},
+			Env:     []string{"NEKODE_TEST=1"},
+		},
+		Options: []OptionSchema{
+			{Name: "display_name", Type: OptionString, Required: true},
+			{Name: "mode", Type: OptionEnum, Default: "fast", Enum: []string{"fast", "slow"}},
+			{Name: "enabled", Type: OptionBoolean, Default: "true"},
+			{Name: "notes", Type: OptionFreeText},
+		},
+	}
+	cmd, err := BuildWrapCommand(template, map[string]string{
+		"display_name": "Runner",
+		"notes":        "hello",
+	})
+	if err != nil {
+		t.Fatalf("BuildWrapCommand() error = %v", err)
+	}
+	if cmd.Command != "runner" || len(cmd.Args) < 2 || cmd.Args[0] != "start" || cmd.Args[1] != "--json" {
+		t.Fatalf("wrap command = %+v, want template command and leading args preserved", cmd)
+	}
+	if len(cmd.Env) != 1 || cmd.Env[0] != "NEKODE_TEST=1" {
+		t.Fatalf("env = %v, want template env preserved", cmd.Env)
+	}
+
+	missingRequired := template
+	if _, err := BuildWrapCommand(missingRequired, map[string]string{"display_name": " "}); err == nil {
+		t.Fatal("BuildWrapCommand(missing required after trim) error = nil, want error")
+	}
+	unsupported := template
+	unsupported.Options = append(unsupported.Options, OptionSchema{Name: "mystery", Type: "object"})
+	if _, err := BuildWrapCommand(unsupported, map[string]string{"display_name": "Runner", "mystery": "{}"}); err == nil {
+		t.Fatal("BuildWrapCommand(unsupported option type) error = nil, want error")
+	}
+	noCommand := template
+	noCommand.Wrap.Command = " "
+	if _, err := BuildWrapCommand(noCommand, map[string]string{"display_name": "Runner"}); err == nil {
+		t.Fatal("BuildWrapCommand(empty command) error = nil, want error")
+	}
 }
 
 func assertOption(t *testing.T, options []OptionSchema, name, kind string, required, sensitive bool) {
@@ -131,6 +210,15 @@ func assertOption(t *testing.T, options []OptionSchema, name, kind string, requi
 func containsPair(args []string, key, value string) bool {
 	for i := 0; i+1 < len(args); i++ {
 		if args[i] == key && args[i+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
+func containsValue(args []string, value string) bool {
+	for _, arg := range args {
+		if arg == value {
 			return true
 		}
 	}
