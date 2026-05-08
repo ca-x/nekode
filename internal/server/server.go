@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -21,6 +20,7 @@ import (
 	"github.com/ca-x/nekode/internal/cache"
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/daemonrpc"
+	"github.com/ca-x/nekode/internal/immedia"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
@@ -459,9 +459,8 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 }
 
 func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
-	const maxAttachmentBytes = 32 << 20
-	r.Body = http.MaxBytesReader(w, r.Body, maxAttachmentBytes)
-	if err := r.ParseMultipartForm(maxAttachmentBytes); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, immedia.DefaultMaxAttachmentBytes+(1<<20))
+	if err := r.ParseMultipartForm(immedia.DefaultMaxAttachmentBytes); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid multipart attachment upload")
 		return
 	}
@@ -477,56 +476,28 @@ func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) 
 	}
 	defer file.Close()
 
-	id := storage.NewID("att")
-	filename := safeAttachmentFilename(header.Filename)
-	dir := filepath.Join(s.cfg.DataDir, "attachments", id)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		writeError(w, http.StatusInternalServerError, "create attachment storage failed")
-		return
-	}
-	relativeStorageRef := filepath.Join("attachments", id, filename)
-	contentPath := filepath.Join(s.cfg.DataDir, relativeStorageRef)
-	out, err := os.OpenFile(contentPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "create attachment failed")
-		return
-	}
-	size, copyErr := io.Copy(out, file)
-	closeErr := out.Close()
-	if copyErr != nil || closeErr != nil {
-		_ = os.RemoveAll(dir)
-		writeError(w, http.StatusInternalServerError, "store attachment failed")
-		return
-	}
-
-	mimeType := strings.TrimSpace(header.Header.Get("Content-Type"))
-	if mimeType == "" || mimeType == "application/octet-stream" {
-		detected, err := detectFileContentType(contentPath)
-		if err == nil {
-			mimeType = detected
-		}
-	}
-	if mimeType == "" {
-		mimeType = "application/octet-stream"
-	}
 	principal := principalFromContext(r.Context())
-	attachment := storage.Attachment{
-		ID:          id,
-		Target:      target,
-		OwnerID:     principal.User.ID,
-		Filename:    filename,
-		MimeType:    mimeType,
-		SizeBytes:   size,
-		StorageRef:  filepath.ToSlash(relativeStorageRef),
-		DownloadURL: "/api/attachments/" + id + "/content",
-		CreatedUnix: time.Now().Unix(),
+	stored, err := immedia.Store(s.cfg.DataDir, immedia.StoreInput{
+		Target:   target,
+		OwnerID:  principal.User.ID,
+		Filename: header.Filename,
+		MimeType: header.Header.Get("Content-Type"),
+		Content:  file,
+		MaxBytes: immedia.DefaultMaxAttachmentBytes,
+	})
+	if errors.Is(err, immedia.ErrInvalidInput) {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
-	if err := s.saveAttachmentMetadata(attachment); err != nil {
-		_ = os.RemoveAll(dir)
+	if errors.Is(err, immedia.ErrTooLarge) {
+		writeError(w, http.StatusRequestEntityTooLarge, "attachment exceeds maximum size")
+		return
+	}
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "save attachment metadata failed")
 		return
 	}
-	writeJSON(w, http.StatusCreated, attachment)
+	writeJSON(w, http.StatusCreated, stored.Attachment)
 }
 
 func (s *Server) handleGetAttachment(w http.ResponseWriter, r *http.Request) {
@@ -542,7 +513,7 @@ func (s *Server) handleDownloadAttachment(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	contentPath := filepath.Join(s.cfg.DataDir, filepath.FromSlash(attachment.StorageRef))
+	contentPath := immedia.ContentPath(s.cfg.DataDir, attachment)
 	file, err := os.Open(contentPath)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "attachment content not found")
@@ -555,7 +526,7 @@ func (s *Server) handleDownloadAttachment(w http.ResponseWriter, r *http.Request
 		return
 	}
 	disposition := "inline"
-	if !isInlineAttachment(attachment.MimeType) {
+	if !immedia.IsInlineAttachment(attachment.MimeType) {
 		disposition = "attachment"
 	}
 	w.Header().Set("Content-Type", attachment.MimeType)
@@ -1323,7 +1294,7 @@ func (s *Server) loadMessageAttachments(target string, attachmentIDs []string) (
 			continue
 		}
 		seen[id] = struct{}{}
-		attachment, err := s.readAttachmentMetadata(id)
+		attachment, err := immedia.ReadMetadata(s.cfg.DataDir, id)
 		if err != nil {
 			return nil, err
 		}
@@ -1335,50 +1306,8 @@ func (s *Server) loadMessageAttachments(target string, attachmentIDs []string) (
 	return attachments, nil
 }
 
-func (s *Server) attachmentMetadataPath(id string) (string, error) {
-	id = strings.TrimSpace(id)
-	if id == "" || strings.ContainsAny(id, `/\`) || strings.HasPrefix(id, ".") {
-		return "", storage.ErrNotFound
-	}
-	return filepath.Join(s.cfg.DataDir, "attachments", id, "metadata.json"), nil
-}
-
-func (s *Server) saveAttachmentMetadata(attachment storage.Attachment) error {
-	metadataPath, err := s.attachmentMetadataPath(attachment.ID)
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(attachment, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(metadataPath, data, 0o600)
-}
-
-func (s *Server) readAttachmentMetadata(id string) (storage.Attachment, error) {
-	metadataPath, err := s.attachmentMetadataPath(id)
-	if err != nil {
-		return storage.Attachment{}, err
-	}
-	data, err := os.ReadFile(metadataPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return storage.Attachment{}, storage.ErrNotFound
-	}
-	if err != nil {
-		return storage.Attachment{}, err
-	}
-	var attachment storage.Attachment
-	if err := json.Unmarshal(data, &attachment); err != nil {
-		return storage.Attachment{}, err
-	}
-	if attachment.ID == "" {
-		return storage.Attachment{}, storage.ErrNotFound
-	}
-	return attachment, nil
-}
-
 func (s *Server) readAttachmentForRequest(w http.ResponseWriter, r *http.Request) (storage.Attachment, bool) {
-	attachment, err := s.readAttachmentMetadata(r.PathValue("id"))
+	attachment, err := immedia.ReadMetadata(s.cfg.DataDir, r.PathValue("id"))
 	if errors.Is(err, storage.ErrNotFound) {
 		writeError(w, http.StatusNotFound, "attachment not found")
 		return storage.Attachment{}, false
@@ -1388,40 +1317,6 @@ func (s *Server) readAttachmentForRequest(w http.ResponseWriter, r *http.Request
 		return storage.Attachment{}, false
 	}
 	return attachment, true
-}
-
-func safeAttachmentFilename(value string) string {
-	name := strings.TrimSpace(filepath.Base(value))
-	if name == "" || name == "." || name == string(filepath.Separator) {
-		return "attachment"
-	}
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case '/', '\\', '"', '\r', '\n', 0:
-			return -1
-		default:
-			return r
-		}
-	}, name)
-}
-
-func detectFileContentType(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	var head [512]byte
-	n, err := file.Read(head[:])
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "", err
-	}
-	return http.DetectContentType(head[:n]), nil
-}
-
-func isInlineAttachment(mimeType string) bool {
-	mimeType = strings.ToLower(strings.TrimSpace(strings.Split(mimeType, ";")[0]))
-	return strings.HasPrefix(mimeType, "image/") || mimeType == "text/html"
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
