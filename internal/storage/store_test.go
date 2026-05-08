@@ -284,6 +284,360 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	}
 }
 
+func TestMessageThreadSaveAndSearchInvariants(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	parent, err := store.CreateMessage(ctx, Message{
+		ID:                "msg-parent",
+		Target:            "#general",
+		Role:              "user",
+		Content:           "Root launch topic",
+		SenderUserID:      "user-1",
+		SenderDisplayName: "Alice",
+		SenderKind:        "human",
+		Attachments: []Attachment{{
+			ID:          "att-1",
+			Target:      "#general",
+			Filename:    "plan.txt",
+			MimeType:    "text/plain",
+			SizeBytes:   12,
+			StorageRef:  "local/plan.txt",
+			DownloadURL: "/api/attachments/att-1",
+		}},
+		CreatedUnix: 100,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(parent) error = %v", err)
+	}
+	reply1, err := store.CreateMessage(ctx, Message{
+		ID:               "msg-reply-1",
+		Target:           "#general",
+		ThreadID:         parent.ID,
+		Role:             "assistant",
+		Content:          "first reply",
+		ReplyToMessageID: parent.ID,
+		SenderAgentID:    "agent-1",
+		SenderKind:       "agent",
+		CreatedUnix:      101,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(reply1) error = %v", err)
+	}
+	reply2, err := store.CreateMessage(ctx, Message{
+		ID:               "msg-reply-2",
+		Target:           "#general",
+		ThreadID:         parent.ID,
+		Role:             "assistant",
+		Content:          "second reply",
+		ReplyToMessageID: reply1.ID,
+		SenderAgentID:    "agent-1",
+		SenderKind:       "agent",
+		CreatedUnix:      102,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(reply2) error = %v", err)
+	}
+	standalone, err := store.CreateMessage(ctx, Message{
+		ID:           "msg-standalone",
+		Target:       "#general",
+		Role:         "user",
+		Content:      "standalone",
+		SenderUserID: "user-1",
+		SenderKind:   "human",
+		CreatedUnix:  103,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(standalone) error = %v", err)
+	}
+
+	loadedParent, err := store.GetMessage(ctx, "#general", parent.ID)
+	if err != nil {
+		t.Fatalf("GetMessage(parent) error = %v", err)
+	}
+	if len(loadedParent.Attachments) != 1 || loadedParent.Attachments[0].ID != "att-1" {
+		t.Fatalf("loaded parent attachments = %+v, want att-1 round trip", loadedParent.Attachments)
+	}
+	if _, err := store.GetMessage(ctx, "#other", parent.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("GetMessage(wrong target) error = %v, want %v", err, ErrNotFound)
+	}
+
+	topLevel, err := store.ListMessages(ctx, "#general", "", 10)
+	if err != nil {
+		t.Fatalf("ListMessages(top-level) error = %v", err)
+	}
+	assertMessageIDs(t, topLevel, standalone.ID, parent.ID)
+	threadMessages, err := store.ListMessages(ctx, "#general", parent.ID, 10)
+	if err != nil {
+		t.Fatalf("ListMessages(thread) error = %v", err)
+	}
+	assertMessageIDs(t, threadMessages, reply2.ID, reply1.ID)
+	comments, err := store.ListTaskComments(ctx, parent.ID, 10)
+	if err != nil {
+		t.Fatalf("ListTaskComments() error = %v", err)
+	}
+	assertMessageIDs(t, comments, reply1.ID, reply2.ID)
+
+	inbox, err := store.ListThreadInbox(ctx, "user-1", "#", 10)
+	if err != nil {
+		t.Fatalf("ListThreadInbox() error = %v", err)
+	}
+	if len(inbox) != 1 || inbox[0].ThreadID != parent.ID || inbox[0].MessageCount != 2 || inbox[0].UnreadCount != 2 {
+		t.Fatalf("inbox = %+v, want one unread thread with two replies", inbox)
+	}
+	if inbox[0].FirstMessage.ID != parent.ID || inbox[0].LatestMessage.ID != reply2.ID || inbox[0].Topic != "Root launch topic" {
+		t.Fatalf("inbox item = %+v, want parent topic and latest reply", inbox[0])
+	}
+	if err := store.MarkThreadRead(ctx, "user-1", "#general", parent.ID); err != nil {
+		t.Fatalf("MarkThreadRead() error = %v", err)
+	}
+	inbox, err = store.ListThreadInbox(ctx, "user-1", "#", 10)
+	if err != nil {
+		t.Fatalf("ListThreadInbox(after read) error = %v", err)
+	}
+	if len(inbox) != 1 || inbox[0].UnreadCount != 0 || inbox[0].LastReadMessageID != reply2.ID {
+		t.Fatalf("inbox after read = %+v, want no unread messages at reply2", inbox)
+	}
+	reply3, err := store.CreateMessage(ctx, Message{
+		ID:               "msg-reply-3",
+		Target:           "#general",
+		ThreadID:         parent.ID,
+		Role:             "assistant",
+		Content:          "third reply from agent",
+		ReplyToMessageID: reply2.ID,
+		SenderAgentID:    "agent-1",
+		SenderKind:       "agent",
+		CreatedUnix:      104,
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(reply3) error = %v", err)
+	}
+	inbox, err = store.ListThreadInbox(ctx, "user-1", "#", 10)
+	if err != nil {
+		t.Fatalf("ListThreadInbox(after new reply) error = %v", err)
+	}
+	if len(inbox) != 1 || inbox[0].UnreadCount != 1 || inbox[0].LatestMessage.ID != reply3.ID {
+		t.Fatalf("inbox after new reply = %+v, want one unread latest reply3", inbox)
+	}
+
+	saved, err := store.SaveMessage(ctx, "#general", reply3.ID, "user-1", "")
+	if err != nil {
+		t.Fatalf("SaveMessage() error = %v", err)
+	}
+	duplicate, err := store.SaveMessage(ctx, "#general", reply3.ID, "user-1", "")
+	if err != nil {
+		t.Fatalf("SaveMessage(duplicate) error = %v", err)
+	}
+	if duplicate.ID != saved.ID || duplicate.Message.ID != reply3.ID {
+		t.Fatalf("duplicate saved = %+v, want existing saved message %s", duplicate, saved.ID)
+	}
+	savedMessages, err := store.ListSavedMessages(ctx, "#general", "user-1", "", 10)
+	if err != nil {
+		t.Fatalf("ListSavedMessages() error = %v", err)
+	}
+	if len(savedMessages) != 1 || savedMessages[0].Message.ID != reply3.ID {
+		t.Fatalf("savedMessages = %+v, want reply3", savedMessages)
+	}
+	unsaved, err := store.UnsaveMessage(ctx, "#general", reply3.ID, "user-1", "")
+	if err != nil {
+		t.Fatalf("UnsaveMessage() error = %v", err)
+	}
+	if unsaved.ID != saved.ID || unsaved.Message.ID != reply3.ID {
+		t.Fatalf("unsaved = %+v, want removed saved record with message", unsaved)
+	}
+	if _, err := store.GetSavedMessage(ctx, "#general", reply3.ID, "user-1", ""); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("GetSavedMessage(after unsave) error = %v, want %v", err, ErrNotFound)
+	}
+
+	searchResults, err := store.SearchMessages(ctx, MessageSearchOptions{Query: "third", SenderHandle: "@agent-1", Limit: 10})
+	if err != nil {
+		t.Fatalf("SearchMessages() error = %v", err)
+	}
+	assertMessageIDs(t, searchResults, reply3.ID)
+}
+
+func TestTaskStateVersionAndClaimInvariants(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	task, err := store.CreateTask(ctx, Task{
+		Summary:       "ship release",
+		State:         "cancelled",
+		Target:        "#general",
+		BlockedReason: "waiting",
+	})
+	if err != nil {
+		t.Fatalf("CreateTask(cancelled alias) error = %v", err)
+	}
+	if task.State != "canceled" || task.Version != 1 {
+		t.Fatalf("task = %+v, want canceled state and version 1", task)
+	}
+	if task.CreatedUnix == 0 || task.UpdatedUnix == 0 {
+		t.Fatalf("task timestamps = %+v, want persisted timestamps", task)
+	}
+
+	state := "blocked"
+	assignee := "agent-1"
+	blockedReason := "needs artifact"
+	updated, err := store.UpdateTask(ctx, task.ID, TaskPatch{
+		State:         &state,
+		AssigneeID:    &assignee,
+		BlockedReason: &blockedReason,
+	})
+	if err != nil {
+		t.Fatalf("UpdateTask() error = %v", err)
+	}
+	if updated.State != "blocked" || updated.AssigneeID != "agent-1" || updated.BlockedReason != "needs artifact" || updated.Version != task.Version+1 {
+		t.Fatalf("updated task = %+v, want blocked agent-1 version increment", updated)
+	}
+	claimed, accepted, err := store.ClaimTaskCAS(ctx, task.ID, "agent-1", "lease-1")
+	if err != nil {
+		t.Fatalf("ClaimTaskCAS(same assignee) error = %v", err)
+	}
+	if !accepted || claimed.AssigneeID != "agent-1" || claimed.ClaimLeaseID != "lease-1" || claimed.Version != updated.Version+1 {
+		t.Fatalf("ClaimTaskCAS(same assignee) = %+v accepted=%v, want lease update and version increment", claimed, accepted)
+	}
+	conflict, accepted, err := store.ClaimTaskCAS(ctx, task.ID, "agent-2", "lease-2")
+	if err != nil {
+		t.Fatalf("ClaimTaskCAS(conflict) error = %v", err)
+	}
+	if accepted || conflict.AssigneeID != "agent-1" || conflict.ClaimLeaseID != "lease-1" || conflict.Version != claimed.Version {
+		t.Fatalf("ClaimTaskCAS(conflict) = %+v accepted=%v, want existing claim unchanged", conflict, accepted)
+	}
+
+	missingState := "done"
+	if _, err := store.UpdateTask(ctx, "missing-task", TaskPatch{State: &missingState}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("UpdateTask(missing) error = %v, want %v", err, ErrNotFound)
+	}
+	if _, _, err := store.ClaimTaskCAS(ctx, "missing-task", "agent-1", "lease"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ClaimTaskCAS(missing) error = %v, want %v", err, ErrNotFound)
+	}
+}
+
+func TestReminderLifecycleEventInvariants(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	reminder, err := store.CreateReminder(ctx, Reminder{
+		ID:                    "rem-release",
+		Target:                "#general",
+		ScheduleKind:          "REMINDER_SCHEDULE_KIND_CRON",
+		Schedule:              "0 9 * * *",
+		Prompt:                "standup",
+		NextRunUnix:           200,
+		Title:                 "Daily standup",
+		Status:                "ACTIVE",
+		MsgRef:                "msg-1",
+		RecurrenceRule:        "FREQ=DAILY",
+		RecurrenceDescription: "daily",
+		RecurrenceTimezone:    "Asia/Shanghai",
+		CancelToken:           "cancel-1",
+	}, "alien", "actor-1", "created from test")
+	if err != nil {
+		t.Fatalf("CreateReminder() error = %v", err)
+	}
+	if reminder.ScheduleKind != "cron" || reminder.Status != "active" || !reminder.Enabled {
+		t.Fatalf("reminder = %+v, want normalized active cron reminder", reminder)
+	}
+	if reminder.CreatedUnix == 0 || reminder.UpdatedUnix == 0 || reminder.NextRunUnix != 200 {
+		t.Fatalf("reminder timestamps = %+v, want created/updated and next run preserved", reminder)
+	}
+	events, err := store.ListReminderEvents(ctx, reminder.ID, 10)
+	if err != nil {
+		t.Fatalf("ListReminderEvents(created) error = %v", err)
+	}
+	if len(events) != 1 || events[0].EventType != "created" || events[0].ActorType != "system" || events[0].NextFireTimeUnix != 200 {
+		t.Fatalf("created events = %+v, want normalized system created event", events)
+	}
+
+	canceled, err := store.CancelReminder(ctx, reminder.ID, "human", "user-1", "no longer needed")
+	if err != nil {
+		t.Fatalf("CancelReminder() error = %v", err)
+	}
+	if canceled.Status != "canceled" || canceled.Enabled {
+		t.Fatalf("canceled reminder = %+v, want disabled canceled reminder", canceled)
+	}
+	active, err := store.ListReminders(ctx, "#general", nil, false, 10)
+	if err != nil {
+		t.Fatalf("ListReminders(active only) error = %v", err)
+	}
+	if len(active) != 0 {
+		t.Fatalf("active reminders = %+v, want canceled reminder hidden by default", active)
+	}
+	all, err := store.ListReminders(ctx, "#general", nil, true, 10)
+	if err != nil {
+		t.Fatalf("ListReminders(include canceled) error = %v", err)
+	}
+	if len(all) != 1 || all[0].ID != reminder.ID {
+		t.Fatalf("all reminders = %+v, want canceled reminder when included", all)
+	}
+
+	snoozed, err := store.SnoozeReminder(ctx, reminder.ID, 300, "in 10 minutes", "agent", "agent-1", "snooze")
+	if err != nil {
+		t.Fatalf("SnoozeReminder() error = %v", err)
+	}
+	if snoozed.Status != "active" || !snoozed.Enabled || snoozed.ScheduleKind != "at" || snoozed.NextRunUnix != 300 {
+		t.Fatalf("snoozed reminder = %+v, want active one-shot reminder at 300", snoozed)
+	}
+	title := " Updated title "
+	kind := "REMINDER_SCHEDULE_KIND_RRULE"
+	schedule := "FREQ=WEEKLY"
+	nextRun := int64(400)
+	recurrenceRule := " FREQ=WEEKLY;COUNT=3 "
+	timezone := " UTC "
+	updated, err := store.UpdateReminder(ctx, reminder.ID, ReminderPatch{
+		Title:              &title,
+		ScheduleKind:       &kind,
+		Schedule:           &schedule,
+		NextRunUnix:        &nextRun,
+		RecurrenceRule:     &recurrenceRule,
+		RecurrenceTimezone: &timezone,
+	}, "human", "user-1", "update")
+	if err != nil {
+		t.Fatalf("UpdateReminder() error = %v", err)
+	}
+	if updated.Title != "Updated title" || updated.ScheduleKind != "rrule" || updated.NextRunUnix != 400 ||
+		updated.RecurrenceRule != "FREQ=WEEKLY;COUNT=3" || updated.RecurrenceTimezone != "UTC" || !updated.Enabled || updated.Status != "active" {
+		t.Fatalf("updated reminder = %+v, want trimmed active rrule reminder", updated)
+	}
+	badKind := "calendar"
+	if _, err := store.UpdateReminder(ctx, reminder.ID, ReminderPatch{ScheduleKind: &badKind}, "human", "user-1", "bad"); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("UpdateReminder(invalid kind) error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.CreateReminder(ctx, Reminder{
+		Target:       "#general",
+		ScheduleKind: "calendar",
+		Status:       "active",
+		Title:        "bad",
+	}, "human", "user-1", "bad"); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("CreateReminder(invalid kind) error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.ListReminders(ctx, "#general", []string{"unknown"}, false, 10); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("ListReminders(invalid status) error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.ListReminderEvents(ctx, "missing-reminder", 10); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ListReminderEvents(missing) error = %v, want %v", err, ErrNotFound)
+	}
+
+	events, err = store.ListReminderEvents(ctx, reminder.ID, 10)
+	if err != nil {
+		t.Fatalf("ListReminderEvents(final) error = %v", err)
+	}
+	if len(events) != 4 {
+		t.Fatalf("events = %+v, want created/canceled/snoozed/updated events", events)
+	}
+	createdEvent := requireReminderEvent(t, events, "created")
+	canceledEvent := requireReminderEvent(t, events, "canceled")
+	snoozedEvent := requireReminderEvent(t, events, "snoozed")
+	updatedEvent := requireReminderEvent(t, events, "updated")
+	if createdEvent.ActorType != "system" || canceledEvent.ActorType != "human" || snoozedEvent.ActorType != "agent" || updatedEvent.ActorType != "human" {
+		t.Fatalf("events = %+v, want actor types normalized/preserved by event type", events)
+	}
+	if createdEvent.NextFireTimeUnix != 200 || canceledEvent.NextFireTimeUnix != 200 || snoozedEvent.NextFireTimeUnix != 300 || updatedEvent.NextFireTimeUnix != 400 {
+		t.Fatalf("events = %+v, want next fire timestamps captured per lifecycle operation", events)
+	}
+}
+
 func TestNotificationRouteResolution(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
@@ -664,6 +1018,29 @@ func TestStoreRejectsInvalidTaskState(t *testing.T) {
 
 func stringPtr(value string) *string {
 	return &value
+}
+
+func assertMessageIDs(t *testing.T, messages []Message, want ...string) {
+	t.Helper()
+	if len(messages) != len(want) {
+		t.Fatalf("message ids length = %d, want %d; messages = %+v", len(messages), len(want), messages)
+	}
+	for i, message := range messages {
+		if message.ID != want[i] {
+			t.Fatalf("message ids[%d] = %q, want %q; messages = %+v", i, message.ID, want[i], messages)
+		}
+	}
+}
+
+func requireReminderEvent(t *testing.T, events []ReminderEvent, eventType string) ReminderEvent {
+	t.Helper()
+	for _, event := range events {
+		if event.EventType == eventType {
+			return event
+		}
+	}
+	t.Fatalf("event type %q not found in %+v", eventType, events)
+	return ReminderEvent{}
 }
 
 func newTestStore(t *testing.T) *Store {
