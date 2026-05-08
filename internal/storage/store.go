@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	entschema "entgo.io/ent/dialect/sql/schema"
 	"github.com/ca-x/nekode/internal/ent"
+	"github.com/ca-x/nekode/internal/ent/collaborationevent"
+	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/session"
@@ -102,6 +104,62 @@ func (s *Store) CreateUser(ctx context.Context, userModel User) (User, error) {
 		return User{}, ErrConflict
 	}
 	if err != nil {
+		return User{}, err
+	}
+	return userFromEnt(row), nil
+}
+
+func (s *Store) CreateFirstAdmin(ctx context.Context, userModel User) (User, error) {
+	now := unixNow()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.IdempotencyRecord.Create().
+		SetScope("server").
+		SetMethod("bootstrap").
+		SetActorID("").
+		SetIdempotencyKey("first_admin").
+		SetStatus("completed").
+		SetCreatedUnix(now).
+		SetExpiresUnix(0).
+		Save(ctx)
+	if ent.IsConstraintError(err) {
+		return User{}, ErrConflict
+	}
+	if err != nil {
+		return User{}, err
+	}
+	count, err := tx.User.Query().Count(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	if count != 0 {
+		return User{}, ErrConflict
+	}
+	role := userModel.Role
+	if role == "" {
+		role = "admin"
+	}
+	row, err := tx.User.Create().
+		SetUsername(userModel.Username).
+		SetDisplayName(userModel.DisplayName).
+		SetPasswordHash(userModel.PasswordHash).
+		SetRole(role).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if ent.IsConstraintError(err) {
+		_ = tx.Rollback()
+		return User{}, ErrConflict
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		return User{}, err
+	}
+	if err := tx.Commit(); err != nil {
 		return User{}, err
 	}
 	return userFromEnt(row), nil
@@ -261,6 +319,7 @@ func (s *Store) ListMessages(ctx context.Context, target string, limit int) ([]M
 
 func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {
 	now := unixNow()
+	taskModel.State = normalizeTaskState(taskModel.State)
 	if taskModel.State == "" {
 		taskModel.State = "todo"
 	}
@@ -273,6 +332,8 @@ func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {
 		SetTarget(taskModel.Target).
 		SetAssigneeID(taskModel.AssigneeID).
 		SetCreatedByUserID(taskModel.CreatedByUserID).
+		SetVersion(1).
+		SetClaimLeaseID(taskModel.ClaimLeaseID).
 		SetCreatedUnix(now).
 		SetUpdatedUnix(now)
 	if taskModel.ID != "" {
@@ -288,6 +349,10 @@ func (s *Store) CreateTask(ctx context.Context, taskModel Task) (Task, error) {
 func (s *Store) ListTasks(ctx context.Context, state, target string, limit int) ([]Task, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 100
+	}
+	state = normalizeTaskState(state)
+	if state != "" && !validTaskState(state) {
+		return nil, ErrInvalidState
 	}
 	query := s.client.Task.Query()
 	if state != "" {
@@ -316,14 +381,16 @@ func (s *Store) UpdateTask(ctx context.Context, id string, patch TaskPatch) (Tas
 		update.SetSummary(*patch.Summary)
 	}
 	if patch.State != nil {
-		if !validTaskState(*patch.State) {
+		state := normalizeTaskState(*patch.State)
+		if !validTaskState(state) {
 			return Task{}, ErrInvalidState
 		}
-		update.SetState(*patch.State)
+		update.SetState(state)
 	}
 	if patch.AssigneeID != nil {
 		update.SetAssigneeID(*patch.AssigneeID)
 	}
+	update.AddVersion(1)
 	update.SetUpdatedUnix(unixNow())
 	row, err := update.Save(ctx)
 	if ent.IsNotFound(err) {
@@ -335,6 +402,35 @@ func (s *Store) UpdateTask(ctx context.Context, id string, patch TaskPatch) (Tas
 	return taskFromEnt(row), nil
 }
 
+func (s *Store) ClaimTaskCAS(ctx context.Context, id, assigneeID, leaseID string) (Task, bool, error) {
+	now := unixNow()
+	affected, err := s.client.Task.Update().
+		Where(
+			task.IDEQ(id),
+			task.Or(task.AssigneeIDEQ(""), task.AssigneeIDEQ(assigneeID)),
+		).
+		SetAssigneeID(assigneeID).
+		SetClaimLeaseID(leaseID).
+		AddVersion(1).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if err != nil {
+		return Task{}, false, err
+	}
+	if affected == 0 {
+		current, getErr := s.GetTask(ctx, id)
+		if getErr != nil {
+			return Task{}, false, getErr
+		}
+		return current, false, nil
+	}
+	current, err := s.GetTask(ctx, id)
+	if err != nil {
+		return Task{}, false, err
+	}
+	return current, true, nil
+}
+
 func (s *Store) GetTask(ctx context.Context, id string) (Task, error) {
 	row, err := s.client.Task.Query().Where(task.IDEQ(id)).Only(ctx)
 	if ent.IsNotFound(err) {
@@ -344,6 +440,207 @@ func (s *Store) GetTask(ctx context.Context, id string) (Task, error) {
 		return Task{}, err
 	}
 	return taskFromEnt(row), nil
+}
+
+func (s *Store) AppendCollaborationEvent(ctx context.Context, event CollaborationEvent) (CollaborationEvent, error) {
+	if event.ServerID == "" {
+		return CollaborationEvent{}, errors.New("server_id is required")
+	}
+	if event.EventID == "" {
+		event.EventID = NewID("cev")
+	}
+	if event.CreatedUnix == 0 {
+		event.CreatedUnix = unixNow()
+	}
+	if event.ProtocolVersion == 0 {
+		event.ProtocolVersion = 1
+	}
+	if event.PayloadJSON == "" {
+		event.PayloadJSON = "{}"
+	}
+	if event.ScopeID == "" {
+		event.ScopeID = firstNonEmpty(event.AggregateID, event.Target)
+	}
+	for attempt := 0; attempt < 5; attempt++ {
+		tx, err := s.client.Tx(ctx)
+		if err != nil {
+			return CollaborationEvent{}, err
+		}
+		last, err := tx.CollaborationEvent.Query().
+			Where(collaborationevent.ServerIDEQ(event.ServerID)).
+			Order(collaborationevent.BySequence(sql.OrderDesc())).
+			First(ctx)
+		if ent.IsNotFound(err) {
+			event.Sequence = 1
+		} else if err != nil {
+			_ = tx.Rollback()
+			return CollaborationEvent{}, err
+		} else {
+			event.Sequence = last.Sequence + 1
+		}
+		row, err := tx.CollaborationEvent.Create().
+			SetServerID(event.ServerID).
+			SetSequence(event.Sequence).
+			SetEventID(event.EventID).
+			SetTarget(event.Target).
+			SetAggregateID(event.AggregateID).
+			SetKind(event.Kind).
+			SetOperation(event.Operation).
+			SetScopeType(event.ScopeType).
+			SetScopeID(event.ScopeID).
+			SetWorkspaceID(event.WorkspaceID).
+			SetActivityID(event.ActivityID).
+			SetPayloadJSON(event.PayloadJSON).
+			SetCreatedUnix(event.CreatedUnix).
+			SetProtocolVersion(event.ProtocolVersion).
+			Save(ctx)
+		if ent.IsConstraintError(err) {
+			_ = tx.Rollback()
+			continue
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			return CollaborationEvent{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return CollaborationEvent{}, err
+		}
+		return collaborationEventFromEnt(row), nil
+	}
+	return CollaborationEvent{}, ErrConflict
+}
+
+func (s *Store) ListCollaborationEvents(ctx context.Context, serverID, target, aggregateID string, afterSequence int64, limit int) ([]CollaborationEvent, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	query := s.client.CollaborationEvent.Query().Where(
+		collaborationevent.ServerIDEQ(serverID),
+		collaborationevent.SequenceGT(afterSequence),
+	)
+	if target != "" {
+		query.Where(collaborationevent.TargetEQ(target))
+	}
+	if aggregateID != "" {
+		query.Where(collaborationevent.AggregateIDEQ(aggregateID))
+	}
+	rows, err := query.
+		Order(collaborationevent.BySequence(sql.OrderAsc())).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events := make([]CollaborationEvent, 0, len(rows))
+	for _, row := range rows {
+		events = append(events, collaborationEventFromEnt(row))
+	}
+	return events, nil
+}
+
+func (s *Store) ListRecentCollaborationEvents(ctx context.Context, serverID, target, kind string, limit int) ([]CollaborationEvent, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	query := s.client.CollaborationEvent.Query().Where(collaborationevent.ServerIDEQ(serverID))
+	if target != "" {
+		query.Where(collaborationevent.TargetEQ(target))
+	}
+	if kind != "" {
+		query.Where(collaborationevent.KindEQ(kind))
+	}
+	rows, err := query.
+		Order(collaborationevent.BySequence(sql.OrderDesc())).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	events := make([]CollaborationEvent, 0, len(rows))
+	for _, row := range rows {
+		events = append(events, collaborationEventFromEnt(row))
+	}
+	return events, nil
+}
+
+func (s *Store) GetIdempotencyRecord(ctx context.Context, scope, method, actorID, key string) (IdempotencyRecord, error) {
+	row, err := s.client.IdempotencyRecord.Query().
+		Where(
+			idempotencyrecord.ScopeEQ(scope),
+			idempotencyrecord.MethodEQ(method),
+			idempotencyrecord.ActorIDEQ(actorID),
+			idempotencyrecord.IdempotencyKeyEQ(key),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return IdempotencyRecord{}, ErrNotFound
+	}
+	if err != nil {
+		return IdempotencyRecord{}, err
+	}
+	return idempotencyRecordFromEnt(row), nil
+}
+
+func (s *Store) ReserveIdempotencyRecord(ctx context.Context, record IdempotencyRecord) (IdempotencyRecord, bool, error) {
+	now := unixNow()
+	if record.CreatedUnix == 0 {
+		record.CreatedUnix = now
+	}
+	if record.ExpiresUnix == 0 {
+		record.ExpiresUnix = now + int64((24 * time.Hour).Seconds())
+	}
+	if record.Status == "" {
+		record.Status = "pending"
+	}
+	row, err := s.client.IdempotencyRecord.Create().
+		SetScope(record.Scope).
+		SetMethod(record.Method).
+		SetActorID(record.ActorID).
+		SetIdempotencyKey(record.IdempotencyKey).
+		SetRequestHash(record.RequestHash).
+		SetResponseType(record.ResponseType).
+		SetResponseJSON(record.ResponseJSON).
+		SetResourceType(record.ResourceType).
+		SetResourceID(record.ResourceID).
+		SetStatus(record.Status).
+		SetCreatedUnix(record.CreatedUnix).
+		SetExpiresUnix(record.ExpiresUnix).
+		Save(ctx)
+	if ent.IsConstraintError(err) {
+		existing, getErr := s.GetIdempotencyRecord(ctx, record.Scope, record.Method, record.ActorID, record.IdempotencyKey)
+		if getErr != nil {
+			return IdempotencyRecord{}, false, getErr
+		}
+		return existing, false, nil
+	}
+	if err != nil {
+		return IdempotencyRecord{}, false, err
+	}
+	return idempotencyRecordFromEnt(row), true, nil
+}
+
+func (s *Store) CompleteIdempotencyRecord(ctx context.Context, record IdempotencyRecord) error {
+	affected, err := s.client.IdempotencyRecord.Update().
+		Where(
+			idempotencyrecord.ScopeEQ(record.Scope),
+			idempotencyrecord.MethodEQ(record.Method),
+			idempotencyrecord.ActorIDEQ(record.ActorID),
+			idempotencyrecord.IdempotencyKeyEQ(record.IdempotencyKey),
+		).
+		SetRequestHash(record.RequestHash).
+		SetResponseType(record.ResponseType).
+		SetResponseJSON(record.ResponseJSON).
+		SetResourceType(record.ResourceType).
+		SetResourceID(record.ResourceID).
+		SetStatus("completed").
+		Save(ctx)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func userFromEnt(row *ent.User) User {
@@ -411,8 +708,48 @@ func taskFromEnt(row *ent.Task) Task {
 		Target:          row.Target,
 		AssigneeID:      row.AssigneeID,
 		CreatedByUserID: row.CreatedByUserID,
+		Version:         row.Version,
+		ClaimLeaseID:    row.ClaimLeaseID,
 		CreatedUnix:     row.CreatedUnix,
 		UpdatedUnix:     row.UpdatedUnix,
+	}
+}
+
+func collaborationEventFromEnt(row *ent.CollaborationEvent) CollaborationEvent {
+	return CollaborationEvent{
+		ID:              row.ID,
+		ServerID:        row.ServerID,
+		Sequence:        row.Sequence,
+		EventID:         row.EventID,
+		Target:          row.Target,
+		AggregateID:     row.AggregateID,
+		Kind:            row.Kind,
+		Operation:       row.Operation,
+		ScopeType:       row.ScopeType,
+		ScopeID:         row.ScopeID,
+		WorkspaceID:     row.WorkspaceID,
+		ActivityID:      row.ActivityID,
+		PayloadJSON:     row.PayloadJSON,
+		CreatedUnix:     row.CreatedUnix,
+		ProtocolVersion: row.ProtocolVersion,
+	}
+}
+
+func idempotencyRecordFromEnt(row *ent.IdempotencyRecord) IdempotencyRecord {
+	return IdempotencyRecord{
+		ID:             row.ID,
+		Scope:          row.Scope,
+		Method:         row.Method,
+		ActorID:        row.ActorID,
+		IdempotencyKey: row.IdempotencyKey,
+		RequestHash:    row.RequestHash,
+		ResponseType:   row.ResponseType,
+		ResponseJSON:   row.ResponseJSON,
+		ResourceType:   row.ResourceType,
+		ResourceID:     row.ResourceID,
+		Status:         row.Status,
+		CreatedUnix:    row.CreatedUnix,
+		ExpiresUnix:    row.ExpiresUnix,
 	}
 }
 
@@ -420,13 +757,30 @@ func unixNow() int64 {
 	return time.Now().Unix()
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 func validTaskState(state string) bool {
-	switch state {
-	case "todo", "in_progress", "in_review", "done":
+	switch normalizeTaskState(state) {
+	case "todo", "in_progress", "in_review", "blocked", "done", "canceled":
 		return true
 	default:
 		return false
 	}
+}
+
+func normalizeTaskState(state string) string {
+	state = strings.ToLower(strings.TrimSpace(state))
+	if state == "cancelled" {
+		return "canceled"
+	}
+	return state
 }
 
 func normalizeDBType(value string) string {
@@ -454,7 +808,7 @@ func entDialect(dbType string) string {
 }
 
 func sqliteDSN(path string) string {
-	return fmt.Sprintf("file:%s?cache=shared&_pragma=foreign_keys(1)&_pragma=journal_mode(DELETE)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(10000)", path)
+	return fmt.Sprintf("file:%s?cache=shared&_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(10000)", path)
 }
 
 func ensureSQLiteForeignKeys(dsn string) string {

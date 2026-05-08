@@ -97,6 +97,41 @@ func (_u *TaskUpdate) SetNillableCreatedByUserID(v *string) *TaskUpdate {
 	return _u
 }
 
+// SetVersion sets the "version" field.
+func (_u *TaskUpdate) SetVersion(v int64) *TaskUpdate {
+	_u.mutation.ResetVersion()
+	_u.mutation.SetVersion(v)
+	return _u
+}
+
+// SetNillableVersion sets the "version" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableVersion(v *int64) *TaskUpdate {
+	if v != nil {
+		_u.SetVersion(*v)
+	}
+	return _u
+}
+
+// AddVersion adds value to the "version" field.
+func (_u *TaskUpdate) AddVersion(v int64) *TaskUpdate {
+	_u.mutation.AddVersion(v)
+	return _u
+}
+
+// SetClaimLeaseID sets the "claim_lease_id" field.
+func (_u *TaskUpdate) SetClaimLeaseID(v string) *TaskUpdate {
+	_u.mutation.SetClaimLeaseID(v)
+	return _u
+}
+
+// SetNillableClaimLeaseID sets the "claim_lease_id" field if the given value is not nil.
+func (_u *TaskUpdate) SetNillableClaimLeaseID(v *string) *TaskUpdate {
+	if v != nil {
+		_u.SetClaimLeaseID(*v)
+	}
+	return _u
+}
+
 // SetCreatedUnix sets the "created_unix" field.
 func (_u *TaskUpdate) SetCreatedUnix(v int64) *TaskUpdate {
 	_u.mutation.ResetCreatedUnix()
@@ -213,6 +248,15 @@ func (_u *TaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.CreatedByUserID(); ok {
 		_spec.SetField(task.FieldCreatedByUserID, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Version(); ok {
+		_spec.SetField(task.FieldVersion, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedVersion(); ok {
+		_spec.AddField(task.FieldVersion, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ClaimLeaseID(); ok {
+		_spec.SetField(task.FieldClaimLeaseID, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.CreatedUnix(); ok {
 		_spec.SetField(task.FieldCreatedUnix, field.TypeInt64, value)
 	}
@@ -311,6 +355,41 @@ func (_u *TaskUpdateOne) SetCreatedByUserID(v string) *TaskUpdateOne {
 func (_u *TaskUpdateOne) SetNillableCreatedByUserID(v *string) *TaskUpdateOne {
 	if v != nil {
 		_u.SetCreatedByUserID(*v)
+	}
+	return _u
+}
+
+// SetVersion sets the "version" field.
+func (_u *TaskUpdateOne) SetVersion(v int64) *TaskUpdateOne {
+	_u.mutation.ResetVersion()
+	_u.mutation.SetVersion(v)
+	return _u
+}
+
+// SetNillableVersion sets the "version" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableVersion(v *int64) *TaskUpdateOne {
+	if v != nil {
+		_u.SetVersion(*v)
+	}
+	return _u
+}
+
+// AddVersion adds value to the "version" field.
+func (_u *TaskUpdateOne) AddVersion(v int64) *TaskUpdateOne {
+	_u.mutation.AddVersion(v)
+	return _u
+}
+
+// SetClaimLeaseID sets the "claim_lease_id" field.
+func (_u *TaskUpdateOne) SetClaimLeaseID(v string) *TaskUpdateOne {
+	_u.mutation.SetClaimLeaseID(v)
+	return _u
+}
+
+// SetNillableClaimLeaseID sets the "claim_lease_id" field if the given value is not nil.
+func (_u *TaskUpdateOne) SetNillableClaimLeaseID(v *string) *TaskUpdateOne {
+	if v != nil {
+		_u.SetClaimLeaseID(*v)
 	}
 	return _u
 }
@@ -460,6 +539,15 @@ func (_u *TaskUpdateOne) sqlSave(ctx context.Context) (_node *Task, err error) {
 	}
 	if value, ok := _u.mutation.CreatedByUserID(); ok {
 		_spec.SetField(task.FieldCreatedByUserID, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Version(); ok {
+		_spec.SetField(task.FieldVersion, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedVersion(); ok {
+		_spec.AddField(task.FieldVersion, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ClaimLeaseID(); ok {
+		_spec.SetField(task.FieldClaimLeaseID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.CreatedUnix(); ok {
 		_spec.SetField(task.FieldCreatedUnix, field.TypeInt64, value)

@@ -15,6 +15,38 @@ import "nekode/daemon/v1/task.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// ServerEventKind is the closed routing taxonomy for events emitted by the server
+// to daemons. The oneof payload on ServerEvent is authoritative; kind is a
+// routing hint and must match the payload type when set.
+enum ServerEventKind {
+  // Event kind is omitted or unknown.
+  SERVER_EVENT_KIND_UNSPECIFIED = 0;
+  // A run has been assigned to a daemon/agent.
+  SERVER_EVENT_KIND_RUN_ASSIGNED = 1;
+  // An agent control operation was requested.
+  SERVER_EVENT_KIND_AGENT_CONTROL = 2;
+  // A collaboration message changed.
+  SERVER_EVENT_KIND_MESSAGE = 3;
+  // A task changed.
+  SERVER_EVENT_KIND_TASK = 4;
+  // A reminder changed or fired.
+  SERVER_EVENT_KIND_REMINDER = 5;
+  // Activity was logged.
+  SERVER_EVENT_KIND_ACTIVITY = 6;
+  // An MCP resource update is available.
+  SERVER_EVENT_KIND_MCP_RESOURCE = 7;
+  // Keepalive ping from server to daemon.
+  SERVER_EVENT_KIND_PING = 8;
+  // A coordination record changed.
+  SERVER_EVENT_KIND_COORDINATION = 9;
+  // Server-visible memory changed.
+  SERVER_EVENT_KIND_MEMORY = 10;
+  // Outbound webhook/IM delivery state changed.
+  SERVER_EVENT_KIND_OUTBOUND_DELIVERY = 11;
+}
+
+// GetServerInfoRequest is intentionally empty in v1. Clients use it as a cheap
+// protocol/version handshake before opening long-lived streams.
 message GetServerInfoRequest {
   reserved 1 to 5;
   reserved "include_channels", "include_agents", "include_interaction_endpoints", "limit", "cursor";
@@ -24,14 +56,23 @@ message GetServerInfoResponse {
   reserved 3 to 6;
   reserved "channels", "agents", "interaction_endpoints", "next_cursor";
 
+  // Human-readable server name.
   string server_name = 1;
+  // Server implementation version.
   string version = 2;
+  // Current daemon protocol version spoken by this server.
   int32 protocol_version = 7;
+  // Minimum protocol version accepted by this server.
   int32 min_protocol_version = 8;
+  // Maximum protocol version accepted by this server.
   int32 max_protocol_version = 9;
+  // Stable server identity used to invalidate cursors after migration.
   string server_id = 10;
 }
 
+// SubscribeServerEventsRequest opens the server-to-daemon stream.
+// Cursor resumes at-least-once delivery; include_all_* flags must be explicit
+// because default subscriptions are scoped to the daemon/computer identity.
 message SubscribeServerEventsRequest {
   string daemon_id = 1;
   string computer_id = 2;
@@ -45,6 +86,15 @@ message SubscribeServerEventsRequest {
   bool include_all_agents = 8;
   bool include_all_targets = 9;
   string idempotency_key = 10;
+  // Optional scope subscriptions. Empty keeps legacy daemon/computer scoped behavior.
+  repeated EventScope scopes = 11;
+  // Optional event kind filters.
+  repeated ServerEventKind kinds = 12;
+  // Optional operation filters for clients that use events as cache invalidations.
+  repeated EventOperation operations = 13;
+  // Explicitly request all visible scopes for the caller. Servers may reject
+  // this for unprivileged clients.
+  bool include_all_scopes = 14;
 }
 
 message ServerEvent {
@@ -55,10 +105,16 @@ message ServerEvent {
   string aggregate_id = 3;
   string target = 4;
   // Routing hint. The oneof payload is authoritative and mismatches are invalid.
-  string kind = 5; // run_assigned | agent_control | message | task | reminder | activity | mcp_resource | ping
+  ServerEventKind kind = 5;
   int64 created_time_unix = 6;
   int32 protocol_version = 7;
   string request_id = 8;
+  // Fine-grained change verb for cache invalidation and UI routing.
+  EventOperation operation = 9;
+  // Primary fanout/projection scope for this event.
+  EventScope scope = 10;
+  // Workspace id when the event belongs to a workspace-bound projection.
+  string workspace_id = 11;
 
   oneof payload {
     Run run = 20;
@@ -84,10 +140,15 @@ message SubscribeServerEventsResponse {
   ServerEvent event = 1;
 }
 
+// SubscribeActivityResponse is emitted by SubscribeActivity. Clients must ack
+// processed events with AcknowledgeActivityEvents before advancing local cursors.
 message SubscribeActivityResponse {
   CollaborationEvent event = 1;
 }
 
+// AcknowledgeServerEventsRequest commits daemon progress on the server event
+// stream. Delivery is at-least-once; daemons should ack only after durable local
+// handling and must tolerate duplicate events after reconnect.
 message AcknowledgeServerEventsRequest {
   string daemon_id = 1;
   string computer_id = 2;
@@ -103,80 +164,160 @@ message AcknowledgeServerEventsResponse {
   EventCursor cursor = 2;
 }
 
+// DaemonControlService is the gRPC control plane shared by server, local daemon,
+// bridge, and trusted automation clients. Mutating RPCs use request_id and/or
+// idempotency_key for at-least-once retry safety; list/stream RPCs use EventCursor
+// for replay. Browser clients should consume this through an HTTP/SSE/WebSocket
+// bridge rather than directly binding to gRPC.
 service DaemonControlService {
+  // Register or resume a daemon-managed computer and receive the computer lease.
   rpc RegisterComputer(RegisterComputerRequest) returns (RegisterComputerResponse);
+  // Renew computer liveness and submit agent status snapshots.
   rpc HeartbeatComputer(HeartbeatComputerRequest) returns (HeartbeatComputerResponse);
+  // Replace the server-visible runtime/workspace inventory for a computer.
   rpc SyncComputerInventory(SyncComputerInventoryRequest) returns (SyncComputerInventoryResponse);
+  // Acquire an exclusive launch permit before starting an agent run.
   rpc AcquireStartPermit(AcquireStartPermitRequest) returns (AcquireStartPermitResponse);
+  // Release a launch permit that is no longer needed.
   rpc ReleaseStartPermit(ReleaseStartPermitRequest) returns (ReleaseStartPermitResponse);
+  // Fetch queued runs assigned to a computer or agent set.
   rpc FetchAssignedRuns(FetchAssignedRunsRequest) returns (FetchAssignedRunsResponse);
+  // Update run lifecycle state; idempotency_key deduplicates retries.
   rpc UpdateRunStatus(UpdateRunStatusRequest) returns (UpdateRunStatusResponse);
+  // Renew an existing run lease.
   rpc RenewRunLease(RenewRunLeaseRequest) returns (RenewRunLeaseResponse);
+  // Append a server-visible run step.
   rpc AppendRunStep(AppendRunStepRequest) returns (AppendRunStepResponse);
+  // List runs for Web/bridge views.
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  // Load one run and its steps.
   rpc GetRun(GetRunRequest) returns (GetRunResponse);
+  // List files visible inside a daemon workspace.
   rpc ListWorkspaceTree(ListWorkspaceTreeRequest) returns (ListWorkspaceTreeResponse);
+  // Read one file inside a daemon workspace.
   rpc ReadWorkspaceFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
+  // List channels visible to the caller.
   rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  // List configured interaction endpoints.
   rpc ListInteractionEndpoints(ListInteractionEndpointsRequest) returns (ListInteractionEndpointsResponse);
+  // List known threads.
   rpc ListThreads(ListThreadsRequest) returns (ListThreadsResponse);
+  // Load one thread record.
   rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
+  // Read messages with cursor pagination.
   rpc ReadMessages(ReadMessagesRequest) returns (ReadMessagesResponse);
+  // Send a collaboration message; idempotency_key deduplicates retries.
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  // Save/bookmark a message for an agent or user.
   rpc SaveMessage(SaveMessageRequest) returns (SaveMessageResponse);
+  // Remove a saved-message marker.
   rpc UnsaveMessage(UnsaveMessageRequest) returns (UnsaveMessageResponse);
+  // List saved messages.
   rpc ListSavedMessages(ListSavedMessagesRequest) returns (ListSavedMessagesResponse);
+  // Follow a thread for future delivery.
   rpc FollowThread(FollowThreadRequest) returns (FollowThreadResponse);
+  // Stop following a thread.
   rpc UnfollowThread(UnfollowThreadRequest) returns (UnfollowThreadResponse);
+  // Create a collaboration task.
   rpc CreateCollaborationTask(CreateCollaborationTaskRequest) returns (CreateCollaborationTaskResponse);
+  // Load one task.
   rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  // Patch task fields and lifecycle state.
   rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+  // List tasks with filters.
   rpc ListCollaborationTasks(ListCollaborationTasksRequest) returns (ListCollaborationTasksResponse);
+  // Return the task-board projection grouped by board columns.
   rpc ListTaskBoard(ListTaskBoardRequest) returns (ListTaskBoardResponse);
+  // Claim task ownership or reviewer/assistant responsibility.
   rpc ClaimCollaborationTask(ClaimCollaborationTaskRequest) returns (ClaimCollaborationTaskResponse);
+  // Propose splitting a task into subtasks.
   rpc ProposeTaskSplit(ProposeTaskSplitRequest) returns (ProposeTaskSplitResponse);
+  // Apply an accepted task split proposal.
   rpc ApplyTaskSplit(ApplyTaskSplitRequest) returns (ApplyTaskSplitResponse);
+  // Cancel a pending task split proposal.
   rpc CancelTaskSplitProposal(CancelTaskSplitProposalRequest) returns (CancelTaskSplitProposalResponse);
+  // Create a task graph atomically.
   rpc CreateTaskGraph(CreateTaskGraphRequest) returns (CreateTaskGraphResponse);
+  // List the latest task graph snapshot.
   rpc ListTaskGraph(ListTaskGraphRequest) returns (ListTaskGraphResponse);
+  // Mutate task graph edges/ownership with optimistic concurrency.
   rpc UpdateTaskGraph(UpdateTaskGraphRequest) returns (UpdateTaskGraphResponse);
+  // Renew a task claim lease.
   rpc RenewTaskClaimLease(RenewTaskClaimLeaseRequest) returns (RenewTaskClaimLeaseResponse);
+  // Mark a task release after a release gate passes or is waived.
   rpc ReleaseTask(ReleaseTaskRequest) returns (ReleaseTaskResponse);
+  // Load a release gate by id.
   rpc GetReleaseGate(GetReleaseGateRequest) returns (GetReleaseGateResponse);
+  // Return lightweight server/protocol metadata.
   rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
+  // Publish a structured coordination record.
   rpc PublishCoordinationRecord(PublishCoordinationRecordRequest) returns (PublishCoordinationRecordResponse);
+  // List coordination records for a target/task.
   rpc ListCoordinationRecords(ListCoordinationRecordsRequest) returns (ListCoordinationRecordsResponse);
+  // Add a counter-proposal to a deadline or scope negotiation.
   rpc CounterProposeNegotiation(CounterProposeNegotiationRequest) returns (CounterProposeNegotiationResponse);
+  // Accept, decline, complete, or cancel a role handoff.
   rpc RespondRoleHandoff(RespondRoleHandoffRequest) returns (RespondRoleHandoffResponse);
+  // List server-visible memory records for an agent.
   rpc ListAgentMemory(ListAgentMemoryRequest) returns (ListAgentMemoryResponse);
+  // Create or update a server-visible memory record.
   rpc UpsertAgentMemory(UpsertAgentMemoryRequest) returns (UpsertAgentMemoryResponse);
+  // Load one agent profile.
   rpc GetAgentProfile(GetAgentProfileRequest) returns (GetAgentProfileResponse);
+  // Update user-facing profile metadata.
   rpc UpdateAgentProfile(UpdateAgentProfileRequest) returns (UpdateAgentProfileResponse);
+  // Set agent environment variables; secret values must be redacted on read.
   rpc SetAgentEnv(SetAgentEnvRequest) returns (SetAgentEnvResponse);
+  // List agent profiles.
   rpc ListAgentProfiles(ListAgentProfilesRequest) returns (ListAgentProfilesResponse);
+  // List direct-message surfaces for an agent.
   rpc ListAgentDMs(ListAgentDMsRequest) returns (ListAgentDMsResponse);
+  // Request an agent control operation.
   rpc ControlAgent(ControlAgentRequest) returns (ControlAgentResponse);
+  // Send a direct message to an agent.
   rpc SendAgentDirectMessage(SendAgentDirectMessageRequest) returns (SendAgentDirectMessageResponse);
+  // Update a server-visible agent status snapshot.
   rpc UpdateAgentStatus(UpdateAgentStatusRequest) returns (UpdateAgentStatusResponse);
+  // List latest agent status snapshots.
   rpc ListAgentStatuses(ListAgentStatusesRequest) returns (ListAgentStatusesResponse);
+  // Schedule a reminder.
   rpc ScheduleReminder(ScheduleReminderRequest) returns (ScheduleReminderResponse);
+  // List reminders.
   rpc ListReminders(ListRemindersRequest) returns (ListRemindersResponse);
+  // Cancel a reminder.
   rpc CancelReminder(CancelReminderRequest) returns (CancelReminderResponse);
+  // Snooze a reminder by a relative delay.
   rpc SnoozeReminder(SnoozeReminderRequest) returns (SnoozeReminderResponse);
+  // Update reminder schedule metadata.
   rpc UpdateReminder(UpdateReminderRequest) returns (UpdateReminderResponse);
+  // Read reminder lifecycle events.
   rpc GetReminderLog(GetReminderLogRequest) returns (GetReminderLogResponse);
+  // Upload or request a presigned upload URL for an attachment.
   rpc UploadAttachment(UploadAttachmentRequest) returns (UploadAttachmentResponse);
+  // Fetch attachment metadata or content.
   rpc GetAttachment(GetAttachmentRequest) returns (GetAttachmentResponse);
+  // List outbound webhook/IM deliveries.
   rpc ListOutboundDeliveries(ListOutboundDeliveriesRequest) returns (ListOutboundDeliveriesResponse);
+  // Retry one outbound delivery.
   rpc RetryOutboundDelivery(RetryOutboundDeliveryRequest) returns (RetryOutboundDeliveryResponse);
+  // Append an activity record.
   rpc LogActivity(LogActivityRequest) returns (LogActivityResponse);
+  // List activity records.
   rpc ListActivity(ListActivityRequest) returns (ListActivityResponse);
+  // Replay collaboration events after a cursor.
   rpc ListEventsSince(ListEventsSinceRequest) returns (ListEventsSinceResponse);
+  // Open the low-latency server-to-daemon event stream.
   rpc SubscribeServerEvents(SubscribeServerEventsRequest) returns (stream SubscribeServerEventsResponse);
+  // Acknowledge server event stream progress.
   rpc AcknowledgeServerEvents(AcknowledgeServerEventsRequest) returns (AcknowledgeServerEventsResponse);
+  // Open the collaboration activity event stream.
   rpc SubscribeActivity(SubscribeActivityRequest) returns (stream SubscribeActivityResponse);
+  // Acknowledge activity stream progress.
   rpc AcknowledgeActivityEvents(AcknowledgeActivityEventsRequest) returns (AcknowledgeActivityEventsResponse);
+  // Subscribe to MCP resource updates.
   rpc SubscribeMcpResource(SubscribeMcpResourceRequest) returns (SubscribeMcpResourceResponse);
+  // Cancel an MCP resource subscription.
   rpc CancelMcpResourceSubscription(CancelMcpResourceSubscriptionRequest) returns (CancelMcpResourceSubscriptionResponse);
+  // List MCP resource updates after a cursor.
   rpc ListMcpResourceUpdates(ListMcpResourceUpdatesRequest) returns (ListMcpResourceUpdatesResponse);
 }

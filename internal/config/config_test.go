@@ -3,15 +3,11 @@ package config
 import (
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestLoadDefaults(t *testing.T) {
-	t.Setenv("NEKODE_ADDR", "")
-	t.Setenv("NEKODE_BASE_URL", "")
-	t.Setenv("NEKODE_DATA_DIR", "")
-	t.Setenv("NEKODE_DB_TYPE", "")
-	t.Setenv("NEKODE_DB_DSN", "")
-	t.Setenv("NEKODE_DB_PATH", "")
+	clearEnv(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -19,6 +15,12 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.Addr != DefaultAddr {
 		t.Fatalf("Addr = %q, want %q", cfg.Addr, DefaultAddr)
+	}
+	if cfg.GRPCAddr != DefaultGRPCAddr {
+		t.Fatalf("GRPCAddr = %q, want %q", cfg.GRPCAddr, DefaultGRPCAddr)
+	}
+	if cfg.DaemonTransport != "grpc" {
+		t.Fatalf("DaemonTransport = %q, want grpc", cfg.DaemonTransport)
 	}
 	if cfg.BaseURL != DefaultBaseURL {
 		t.Fatalf("BaseURL = %q, want %q", cfg.BaseURL, DefaultBaseURL)
@@ -32,15 +34,31 @@ func TestLoadDefaults(t *testing.T) {
 	if filepath.Base(cfg.DBDSN) != "nekode.db" {
 		t.Fatalf("DBDSN = %q, want nekode.db suffix", cfg.DBDSN)
 	}
+	if cfg.CacheDriver != "badger" {
+		t.Fatalf("CacheDriver = %q, want badger", cfg.CacheDriver)
+	}
+	if filepath.Base(cfg.CacheDir) != "cache" {
+		t.Fatalf("CacheDir = %q, want cache suffix", cfg.CacheDir)
+	}
+	if cfg.CacheTTL != 5*time.Minute {
+		t.Fatalf("CacheTTL = %v, want 5m", cfg.CacheTTL)
+	}
 }
 
 func TestLoadFromEnvironment(t *testing.T) {
+	clearEnv(t)
 	t.Setenv("NEKODE_ADDR", ":19000")
+	t.Setenv("NEKODE_GRPC_ADDR", "127.0.0.1:19001")
+	t.Setenv("NEKODE_DAEMON_TRANSPORT", "grpc_http2")
 	t.Setenv("NEKODE_BASE_URL", "https://nekode.example.test")
 	t.Setenv("NEKODE_DATA_DIR", "/tmp/nekode-test")
 	t.Setenv("NEKODE_DB_TYPE", "postgresql")
 	t.Setenv("NEKODE_DB_DSN", "postgres://user:pass@localhost/nekode?sslmode=disable")
 	t.Setenv("NEKODE_DB_PATH", "")
+	t.Setenv("NEKODE_CACHE_DRIVER", "redis")
+	t.Setenv("NEKODE_CACHE_REDIS_ADDR", "127.0.0.1:6379")
+	t.Setenv("NEKODE_CACHE_REDIS_DB", "2")
+	t.Setenv("NEKODE_CACHE_TTL", "30s")
 
 	cfg, err := Load()
 	if err != nil {
@@ -48,6 +66,12 @@ func TestLoadFromEnvironment(t *testing.T) {
 	}
 	if cfg.Addr != ":19000" {
 		t.Fatalf("Addr = %q", cfg.Addr)
+	}
+	if cfg.GRPCAddr != "127.0.0.1:19001" {
+		t.Fatalf("GRPCAddr = %q", cfg.GRPCAddr)
+	}
+	if cfg.DaemonTransport != "grpc_http2" {
+		t.Fatalf("DaemonTransport = %q", cfg.DaemonTransport)
 	}
 	if cfg.BaseURL != "https://nekode.example.test" {
 		t.Fatalf("BaseURL = %q", cfg.BaseURL)
@@ -61,9 +85,16 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if cfg.DBDSN != "postgres://user:pass@localhost/nekode?sslmode=disable" {
 		t.Fatalf("DBDSN = %q", cfg.DBDSN)
 	}
+	if cfg.CacheDriver != "redis" || cfg.CacheRedisAddr != "127.0.0.1:6379" || cfg.CacheRedisDB != 2 {
+		t.Fatalf("cache config = %+v", cfg)
+	}
+	if cfg.CacheTTL != 30*time.Second {
+		t.Fatalf("CacheTTL = %v", cfg.CacheTTL)
+	}
 }
 
 func TestLoadLegacyDBPath(t *testing.T) {
+	clearEnv(t)
 	t.Setenv("NEKODE_DB_TYPE", "")
 	t.Setenv("NEKODE_DB_DSN", "")
 	t.Setenv("NEKODE_DB_PATH", "/tmp/nekode-test/legacy.db")
@@ -79,13 +110,39 @@ func TestLoadLegacyDBPath(t *testing.T) {
 
 func TestValidateRejectsBadBaseURL(t *testing.T) {
 	cfg := Config{
-		Addr:    ":18790",
-		BaseURL: "://bad",
-		DataDir: "/tmp/nekode-test",
-		DBType:  "sqlite",
-		DBDSN:   "/tmp/nekode-test/nekode.db",
+		Addr:     ":18790",
+		GRPCAddr: "127.0.0.1:18789",
+		BaseURL:  "://bad",
+		DataDir:  "/tmp/nekode-test",
+		DBType:   "sqlite",
+		DBDSN:    "/tmp/nekode-test/nekode.db",
+		CacheDir: "/tmp/nekode-test/cache",
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("Validate() error = nil, want error")
+	}
+}
+
+func clearEnv(t *testing.T) {
+	t.Helper()
+	for _, name := range []string{
+		"NEKODE_ADDR",
+		"NEKODE_GRPC_ADDR",
+		"NEKODE_DAEMON_TRANSPORT",
+		"NEKODE_BASE_URL",
+		"NEKODE_DATA_DIR",
+		"NEKODE_DB_TYPE",
+		"NEKODE_DB_DSN",
+		"NEKODE_DB_PATH",
+		"NEKODE_CACHE_DRIVER",
+		"NEKODE_CACHE_DIR",
+		"NEKODE_CACHE_TTL",
+		"NEKODE_CACHE_KEY_VERSION",
+		"NEKODE_CACHE_REDIS_ADDR",
+		"NEKODE_CACHE_REDIS_USERNAME",
+		"NEKODE_CACHE_REDIS_PASSWORD",
+		"NEKODE_CACHE_REDIS_DB",
+	} {
+		t.Setenv(name, "")
 	}
 }

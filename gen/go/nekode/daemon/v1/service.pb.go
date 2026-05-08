@@ -21,6 +21,99 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ServerEventKind is the closed routing taxonomy for events emitted by the server
+// to daemons. The oneof payload on ServerEvent is authoritative; kind is a
+// routing hint and must match the payload type when set.
+type ServerEventKind int32
+
+const (
+	// Event kind is omitted or unknown.
+	ServerEventKind_SERVER_EVENT_KIND_UNSPECIFIED ServerEventKind = 0
+	// A run has been assigned to a daemon/agent.
+	ServerEventKind_SERVER_EVENT_KIND_RUN_ASSIGNED ServerEventKind = 1
+	// An agent control operation was requested.
+	ServerEventKind_SERVER_EVENT_KIND_AGENT_CONTROL ServerEventKind = 2
+	// A collaboration message changed.
+	ServerEventKind_SERVER_EVENT_KIND_MESSAGE ServerEventKind = 3
+	// A task changed.
+	ServerEventKind_SERVER_EVENT_KIND_TASK ServerEventKind = 4
+	// A reminder changed or fired.
+	ServerEventKind_SERVER_EVENT_KIND_REMINDER ServerEventKind = 5
+	// Activity was logged.
+	ServerEventKind_SERVER_EVENT_KIND_ACTIVITY ServerEventKind = 6
+	// An MCP resource update is available.
+	ServerEventKind_SERVER_EVENT_KIND_MCP_RESOURCE ServerEventKind = 7
+	// Keepalive ping from server to daemon.
+	ServerEventKind_SERVER_EVENT_KIND_PING ServerEventKind = 8
+	// A coordination record changed.
+	ServerEventKind_SERVER_EVENT_KIND_COORDINATION ServerEventKind = 9
+	// Server-visible memory changed.
+	ServerEventKind_SERVER_EVENT_KIND_MEMORY ServerEventKind = 10
+	// Outbound webhook/IM delivery state changed.
+	ServerEventKind_SERVER_EVENT_KIND_OUTBOUND_DELIVERY ServerEventKind = 11
+)
+
+// Enum value maps for ServerEventKind.
+var (
+	ServerEventKind_name = map[int32]string{
+		0:  "SERVER_EVENT_KIND_UNSPECIFIED",
+		1:  "SERVER_EVENT_KIND_RUN_ASSIGNED",
+		2:  "SERVER_EVENT_KIND_AGENT_CONTROL",
+		3:  "SERVER_EVENT_KIND_MESSAGE",
+		4:  "SERVER_EVENT_KIND_TASK",
+		5:  "SERVER_EVENT_KIND_REMINDER",
+		6:  "SERVER_EVENT_KIND_ACTIVITY",
+		7:  "SERVER_EVENT_KIND_MCP_RESOURCE",
+		8:  "SERVER_EVENT_KIND_PING",
+		9:  "SERVER_EVENT_KIND_COORDINATION",
+		10: "SERVER_EVENT_KIND_MEMORY",
+		11: "SERVER_EVENT_KIND_OUTBOUND_DELIVERY",
+	}
+	ServerEventKind_value = map[string]int32{
+		"SERVER_EVENT_KIND_UNSPECIFIED":       0,
+		"SERVER_EVENT_KIND_RUN_ASSIGNED":      1,
+		"SERVER_EVENT_KIND_AGENT_CONTROL":     2,
+		"SERVER_EVENT_KIND_MESSAGE":           3,
+		"SERVER_EVENT_KIND_TASK":              4,
+		"SERVER_EVENT_KIND_REMINDER":          5,
+		"SERVER_EVENT_KIND_ACTIVITY":          6,
+		"SERVER_EVENT_KIND_MCP_RESOURCE":      7,
+		"SERVER_EVENT_KIND_PING":              8,
+		"SERVER_EVENT_KIND_COORDINATION":      9,
+		"SERVER_EVENT_KIND_MEMORY":            10,
+		"SERVER_EVENT_KIND_OUTBOUND_DELIVERY": 11,
+	}
+)
+
+func (x ServerEventKind) Enum() *ServerEventKind {
+	p := new(ServerEventKind)
+	*p = x
+	return p
+}
+
+func (x ServerEventKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ServerEventKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_service_proto_enumTypes[0].Descriptor()
+}
+
+func (ServerEventKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_service_proto_enumTypes[0]
+}
+
+func (x ServerEventKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ServerEventKind.Descriptor instead.
+func (ServerEventKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_service_proto_rawDescGZIP(), []int{0}
+}
+
+// GetServerInfoRequest is intentionally empty in v1. Clients use it as a cheap
+// protocol/version handshake before opening long-lived streams.
 type GetServerInfoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -58,15 +151,21 @@ func (*GetServerInfoRequest) Descriptor() ([]byte, []int) {
 }
 
 type GetServerInfoResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	ServerName         string                 `protobuf:"bytes,1,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
-	Version            string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	ProtocolVersion    int32                  `protobuf:"varint,7,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
-	MinProtocolVersion int32                  `protobuf:"varint,8,opt,name=min_protocol_version,json=minProtocolVersion,proto3" json:"min_protocol_version,omitempty"`
-	MaxProtocolVersion int32                  `protobuf:"varint,9,opt,name=max_protocol_version,json=maxProtocolVersion,proto3" json:"max_protocol_version,omitempty"`
-	ServerId           string                 `protobuf:"bytes,10,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Human-readable server name.
+	ServerName string `protobuf:"bytes,1,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	// Server implementation version.
+	Version string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	// Current daemon protocol version spoken by this server.
+	ProtocolVersion int32 `protobuf:"varint,7,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	// Minimum protocol version accepted by this server.
+	MinProtocolVersion int32 `protobuf:"varint,8,opt,name=min_protocol_version,json=minProtocolVersion,proto3" json:"min_protocol_version,omitempty"`
+	// Maximum protocol version accepted by this server.
+	MaxProtocolVersion int32 `protobuf:"varint,9,opt,name=max_protocol_version,json=maxProtocolVersion,proto3" json:"max_protocol_version,omitempty"`
+	// Stable server identity used to invalidate cursors after migration.
+	ServerId      string `protobuf:"bytes,10,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetServerInfoResponse) Reset() {
@@ -141,6 +240,9 @@ func (x *GetServerInfoResponse) GetServerId() string {
 	return ""
 }
 
+// SubscribeServerEventsRequest opens the server-to-daemon stream.
+// Cursor resumes at-least-once delivery; include_all_* flags must be explicit
+// because default subscriptions are scoped to the daemon/computer identity.
 type SubscribeServerEventsRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	DaemonId   string                 `protobuf:"bytes,1,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
@@ -155,8 +257,17 @@ type SubscribeServerEventsRequest struct {
 	IncludeAllAgents  bool         `protobuf:"varint,8,opt,name=include_all_agents,json=includeAllAgents,proto3" json:"include_all_agents,omitempty"`
 	IncludeAllTargets bool         `protobuf:"varint,9,opt,name=include_all_targets,json=includeAllTargets,proto3" json:"include_all_targets,omitempty"`
 	IdempotencyKey    string       `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Optional scope subscriptions. Empty keeps legacy daemon/computer scoped behavior.
+	Scopes []*EventScope `protobuf:"bytes,11,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	// Optional event kind filters.
+	Kinds []ServerEventKind `protobuf:"varint,12,rep,packed,name=kinds,proto3,enum=nekode.daemon.v1.ServerEventKind" json:"kinds,omitempty"`
+	// Optional operation filters for clients that use events as cache invalidations.
+	Operations []EventOperation `protobuf:"varint,13,rep,packed,name=operations,proto3,enum=nekode.daemon.v1.EventOperation" json:"operations,omitempty"`
+	// Explicitly request all visible scopes for the caller. Servers may reject
+	// this for unprivileged clients.
+	IncludeAllScopes bool `protobuf:"varint,14,opt,name=include_all_scopes,json=includeAllScopes,proto3" json:"include_all_scopes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SubscribeServerEventsRequest) Reset() {
@@ -259,6 +370,34 @@ func (x *SubscribeServerEventsRequest) GetIdempotencyKey() string {
 	return ""
 }
 
+func (x *SubscribeServerEventsRequest) GetScopes() []*EventScope {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+func (x *SubscribeServerEventsRequest) GetKinds() []ServerEventKind {
+	if x != nil {
+		return x.Kinds
+	}
+	return nil
+}
+
+func (x *SubscribeServerEventsRequest) GetOperations() []EventOperation {
+	if x != nil {
+		return x.Operations
+	}
+	return nil
+}
+
+func (x *SubscribeServerEventsRequest) GetIncludeAllScopes() bool {
+	if x != nil {
+		return x.IncludeAllScopes
+	}
+	return false
+}
+
 type ServerEvent struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	EventId     string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -266,10 +405,16 @@ type ServerEvent struct {
 	AggregateId string                 `protobuf:"bytes,3,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
 	Target      string                 `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
 	// Routing hint. The oneof payload is authoritative and mismatches are invalid.
-	Kind            string `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"` // run_assigned | agent_control | message | task | reminder | activity | mcp_resource | ping
-	CreatedTimeUnix int64  `protobuf:"varint,6,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	ProtocolVersion int32  `protobuf:"varint,7,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
-	RequestId       string `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Kind            ServerEventKind `protobuf:"varint,5,opt,name=kind,proto3,enum=nekode.daemon.v1.ServerEventKind" json:"kind,omitempty"`
+	CreatedTimeUnix int64           `protobuf:"varint,6,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	ProtocolVersion int32           `protobuf:"varint,7,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	RequestId       string          `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Fine-grained change verb for cache invalidation and UI routing.
+	Operation EventOperation `protobuf:"varint,9,opt,name=operation,proto3,enum=nekode.daemon.v1.EventOperation" json:"operation,omitempty"`
+	// Primary fanout/projection scope for this event.
+	Scope *EventScope `protobuf:"bytes,10,opt,name=scope,proto3" json:"scope,omitempty"`
+	// Workspace id when the event belongs to a workspace-bound projection.
+	WorkspaceId string `protobuf:"bytes,11,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*ServerEvent_Run
@@ -346,11 +491,11 @@ func (x *ServerEvent) GetTarget() string {
 	return ""
 }
 
-func (x *ServerEvent) GetKind() string {
+func (x *ServerEvent) GetKind() ServerEventKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return ServerEventKind_SERVER_EVENT_KIND_UNSPECIFIED
 }
 
 func (x *ServerEvent) GetCreatedTimeUnix() int64 {
@@ -370,6 +515,27 @@ func (x *ServerEvent) GetProtocolVersion() int32 {
 func (x *ServerEvent) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ServerEvent) GetOperation() EventOperation {
+	if x != nil {
+		return x.Operation
+	}
+	return EventOperation_EVENT_OPERATION_UNSPECIFIED
+}
+
+func (x *ServerEvent) GetScope() *EventScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *ServerEvent) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
 	}
 	return ""
 }
@@ -646,6 +812,8 @@ func (x *SubscribeServerEventsResponse) GetEvent() *ServerEvent {
 	return nil
 }
 
+// SubscribeActivityResponse is emitted by SubscribeActivity. Clients must ack
+// processed events with AcknowledgeActivityEvents before advancing local cursors.
 type SubscribeActivityResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Event         *CollaborationEvent    `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
@@ -690,6 +858,9 @@ func (x *SubscribeActivityResponse) GetEvent() *CollaborationEvent {
 	return nil
 }
 
+// AcknowledgeServerEventsRequest commits daemon progress on the server event
+// stream. Delivery is at-least-once; daemons should ack only after durable local
+// handling and must tolerate duplicate events after reconnect.
 type AcknowledgeServerEventsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	DaemonId       string                 `protobuf:"bytes,1,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
@@ -848,7 +1019,7 @@ const file_nekode_daemon_v1_service_proto_rawDesc = "" +
 	"\x14min_protocol_version\x18\b \x01(\x05R\x12minProtocolVersion\x120\n" +
 	"\x14max_protocol_version\x18\t \x01(\x05R\x12maxProtocolVersion\x12\x1b\n" +
 	"\tserver_id\x18\n" +
-	" \x01(\tR\bserverIdJ\x04\b\x03\x10\aR\bchannelsR\x06agentsR\x15interaction_endpointsR\vnext_cursor\"\x8b\x03\n" +
+	" \x01(\tR\bserverIdJ\x04\b\x03\x10\aR\bchannelsR\x06agentsR\x15interaction_endpointsR\vnext_cursor\"\xea\x04\n" +
 	"\x1cSubscribeServerEventsRequest\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
@@ -862,17 +1033,27 @@ const file_nekode_daemon_v1_service_proto_rawDesc = "" +
 	"\x12include_all_agents\x18\b \x01(\bR\x10includeAllAgents\x12.\n" +
 	"\x13include_all_targets\x18\t \x01(\bR\x11includeAllTargets\x12'\n" +
 	"\x0fidempotency_key\x18\n" +
-	" \x01(\tR\x0eidempotencyKey\"\x8d\b\n" +
+	" \x01(\tR\x0eidempotencyKey\x124\n" +
+	"\x06scopes\x18\v \x03(\v2\x1c.nekode.daemon.v1.EventScopeR\x06scopes\x127\n" +
+	"\x05kinds\x18\f \x03(\x0e2!.nekode.daemon.v1.ServerEventKindR\x05kinds\x12@\n" +
+	"\n" +
+	"operations\x18\r \x03(\x0e2 .nekode.daemon.v1.EventOperationR\n" +
+	"operations\x12,\n" +
+	"\x12include_all_scopes\x18\x0e \x01(\bR\x10includeAllScopes\"\xc7\t\n" +
 	"\vServerEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1a\n" +
 	"\bsequence\x18\x02 \x01(\x03R\bsequence\x12!\n" +
 	"\faggregate_id\x18\x03 \x01(\tR\vaggregateId\x12\x16\n" +
-	"\x06target\x18\x04 \x01(\tR\x06target\x12\x12\n" +
-	"\x04kind\x18\x05 \x01(\tR\x04kind\x12*\n" +
+	"\x06target\x18\x04 \x01(\tR\x06target\x125\n" +
+	"\x04kind\x18\x05 \x01(\x0e2!.nekode.daemon.v1.ServerEventKindR\x04kind\x12*\n" +
 	"\x11created_time_unix\x18\x06 \x01(\x03R\x0fcreatedTimeUnix\x12)\n" +
 	"\x10protocol_version\x18\a \x01(\x05R\x0fprotocolVersion\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\b \x01(\tR\trequestId\x12)\n" +
+	"request_id\x18\b \x01(\tR\trequestId\x12>\n" +
+	"\toperation\x18\t \x01(\x0e2 .nekode.daemon.v1.EventOperationR\toperation\x122\n" +
+	"\x05scope\x18\n" +
+	" \x01(\v2\x1c.nekode.daemon.v1.EventScopeR\x05scope\x12!\n" +
+	"\fworkspace_id\x18\v \x01(\tR\vworkspaceId\x12)\n" +
 	"\x03run\x18\x14 \x01(\v2\x15.nekode.daemon.v1.RunH\x00R\x03run\x12N\n" +
 	"\ragent_control\x18\x15 \x01(\v2'.nekode.daemon.v1.AgentControlOperationH\x00R\fagentControl\x12B\n" +
 	"\amessage\x18\x16 \x01(\v2&.nekode.daemon.v1.CollaborationMessageH\x00R\amessage\x12,\n" +
@@ -905,7 +1086,21 @@ const file_nekode_daemon_v1_service_proto_rawDesc = "" +
 	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"t\n" +
 	"\x1fAcknowledgeServerEventsResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x125\n" +
-	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor2\x90?\n" +
+	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor*\xa3\x03\n" +
+	"\x0fServerEventKind\x12!\n" +
+	"\x1dSERVER_EVENT_KIND_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eSERVER_EVENT_KIND_RUN_ASSIGNED\x10\x01\x12#\n" +
+	"\x1fSERVER_EVENT_KIND_AGENT_CONTROL\x10\x02\x12\x1d\n" +
+	"\x19SERVER_EVENT_KIND_MESSAGE\x10\x03\x12\x1a\n" +
+	"\x16SERVER_EVENT_KIND_TASK\x10\x04\x12\x1e\n" +
+	"\x1aSERVER_EVENT_KIND_REMINDER\x10\x05\x12\x1e\n" +
+	"\x1aSERVER_EVENT_KIND_ACTIVITY\x10\x06\x12\"\n" +
+	"\x1eSERVER_EVENT_KIND_MCP_RESOURCE\x10\a\x12\x1a\n" +
+	"\x16SERVER_EVENT_KIND_PING\x10\b\x12\"\n" +
+	"\x1eSERVER_EVENT_KIND_COORDINATION\x10\t\x12\x1c\n" +
+	"\x18SERVER_EVENT_KIND_MEMORY\x10\n" +
+	"\x12'\n" +
+	"#SERVER_EVENT_KIND_OUTBOUND_DELIVERY\x10\v2\x90?\n" +
 	"\x14DaemonControlService\x12i\n" +
 	"\x10RegisterComputer\x12).nekode.daemon.v1.RegisterComputerRequest\x1a*.nekode.daemon.v1.RegisterComputerResponse\x12l\n" +
 	"\x11HeartbeatComputer\x12*.nekode.daemon.v1.HeartbeatComputerRequest\x1a+.nekode.daemon.v1.HeartbeatComputerResponse\x12x\n" +
@@ -996,347 +1191,357 @@ func file_nekode_daemon_v1_service_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_service_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_nekode_daemon_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_nekode_daemon_v1_service_proto_goTypes = []any{
-	(*GetServerInfoRequest)(nil),                  // 0: nekode.daemon.v1.GetServerInfoRequest
-	(*GetServerInfoResponse)(nil),                 // 1: nekode.daemon.v1.GetServerInfoResponse
-	(*SubscribeServerEventsRequest)(nil),          // 2: nekode.daemon.v1.SubscribeServerEventsRequest
-	(*ServerEvent)(nil),                           // 3: nekode.daemon.v1.ServerEvent
-	(*ServerPing)(nil),                            // 4: nekode.daemon.v1.ServerPing
-	(*SubscribeServerEventsResponse)(nil),         // 5: nekode.daemon.v1.SubscribeServerEventsResponse
-	(*SubscribeActivityResponse)(nil),             // 6: nekode.daemon.v1.SubscribeActivityResponse
-	(*AcknowledgeServerEventsRequest)(nil),        // 7: nekode.daemon.v1.AcknowledgeServerEventsRequest
-	(*AcknowledgeServerEventsResponse)(nil),       // 8: nekode.daemon.v1.AcknowledgeServerEventsResponse
-	(*EventCursor)(nil),                           // 9: nekode.daemon.v1.EventCursor
-	(*Run)(nil),                                   // 10: nekode.daemon.v1.Run
-	(*AgentControlOperation)(nil),                 // 11: nekode.daemon.v1.AgentControlOperation
-	(*CollaborationMessage)(nil),                  // 12: nekode.daemon.v1.CollaborationMessage
-	(*Task)(nil),                                  // 13: nekode.daemon.v1.Task
-	(*ReminderRecord)(nil),                        // 14: nekode.daemon.v1.ReminderRecord
-	(*ActivityRecord)(nil),                        // 15: nekode.daemon.v1.ActivityRecord
-	(*McpResourceUpdate)(nil),                     // 16: nekode.daemon.v1.McpResourceUpdate
-	(*CoordinationRecord)(nil),                    // 17: nekode.daemon.v1.CoordinationRecord
-	(*MemoryRecord)(nil),                          // 18: nekode.daemon.v1.MemoryRecord
-	(*OutboundDeliveryRecord)(nil),                // 19: nekode.daemon.v1.OutboundDeliveryRecord
-	(*CollaborationEvent)(nil),                    // 20: nekode.daemon.v1.CollaborationEvent
-	(*RequestContext)(nil),                        // 21: nekode.daemon.v1.RequestContext
-	(*RegisterComputerRequest)(nil),               // 22: nekode.daemon.v1.RegisterComputerRequest
-	(*HeartbeatComputerRequest)(nil),              // 23: nekode.daemon.v1.HeartbeatComputerRequest
-	(*SyncComputerInventoryRequest)(nil),          // 24: nekode.daemon.v1.SyncComputerInventoryRequest
-	(*AcquireStartPermitRequest)(nil),             // 25: nekode.daemon.v1.AcquireStartPermitRequest
-	(*ReleaseStartPermitRequest)(nil),             // 26: nekode.daemon.v1.ReleaseStartPermitRequest
-	(*FetchAssignedRunsRequest)(nil),              // 27: nekode.daemon.v1.FetchAssignedRunsRequest
-	(*UpdateRunStatusRequest)(nil),                // 28: nekode.daemon.v1.UpdateRunStatusRequest
-	(*RenewRunLeaseRequest)(nil),                  // 29: nekode.daemon.v1.RenewRunLeaseRequest
-	(*AppendRunStepRequest)(nil),                  // 30: nekode.daemon.v1.AppendRunStepRequest
-	(*ListRunsRequest)(nil),                       // 31: nekode.daemon.v1.ListRunsRequest
-	(*GetRunRequest)(nil),                         // 32: nekode.daemon.v1.GetRunRequest
-	(*ListWorkspaceTreeRequest)(nil),              // 33: nekode.daemon.v1.ListWorkspaceTreeRequest
-	(*ReadWorkspaceFileRequest)(nil),              // 34: nekode.daemon.v1.ReadWorkspaceFileRequest
-	(*ListChannelsRequest)(nil),                   // 35: nekode.daemon.v1.ListChannelsRequest
-	(*ListInteractionEndpointsRequest)(nil),       // 36: nekode.daemon.v1.ListInteractionEndpointsRequest
-	(*ListThreadsRequest)(nil),                    // 37: nekode.daemon.v1.ListThreadsRequest
-	(*GetThreadRequest)(nil),                      // 38: nekode.daemon.v1.GetThreadRequest
-	(*ReadMessagesRequest)(nil),                   // 39: nekode.daemon.v1.ReadMessagesRequest
-	(*SendMessageRequest)(nil),                    // 40: nekode.daemon.v1.SendMessageRequest
-	(*SaveMessageRequest)(nil),                    // 41: nekode.daemon.v1.SaveMessageRequest
-	(*UnsaveMessageRequest)(nil),                  // 42: nekode.daemon.v1.UnsaveMessageRequest
-	(*ListSavedMessagesRequest)(nil),              // 43: nekode.daemon.v1.ListSavedMessagesRequest
-	(*FollowThreadRequest)(nil),                   // 44: nekode.daemon.v1.FollowThreadRequest
-	(*UnfollowThreadRequest)(nil),                 // 45: nekode.daemon.v1.UnfollowThreadRequest
-	(*CreateCollaborationTaskRequest)(nil),        // 46: nekode.daemon.v1.CreateCollaborationTaskRequest
-	(*GetTaskRequest)(nil),                        // 47: nekode.daemon.v1.GetTaskRequest
-	(*UpdateTaskRequest)(nil),                     // 48: nekode.daemon.v1.UpdateTaskRequest
-	(*ListCollaborationTasksRequest)(nil),         // 49: nekode.daemon.v1.ListCollaborationTasksRequest
-	(*ListTaskBoardRequest)(nil),                  // 50: nekode.daemon.v1.ListTaskBoardRequest
-	(*ClaimCollaborationTaskRequest)(nil),         // 51: nekode.daemon.v1.ClaimCollaborationTaskRequest
-	(*ProposeTaskSplitRequest)(nil),               // 52: nekode.daemon.v1.ProposeTaskSplitRequest
-	(*ApplyTaskSplitRequest)(nil),                 // 53: nekode.daemon.v1.ApplyTaskSplitRequest
-	(*CancelTaskSplitProposalRequest)(nil),        // 54: nekode.daemon.v1.CancelTaskSplitProposalRequest
-	(*CreateTaskGraphRequest)(nil),                // 55: nekode.daemon.v1.CreateTaskGraphRequest
-	(*ListTaskGraphRequest)(nil),                  // 56: nekode.daemon.v1.ListTaskGraphRequest
-	(*UpdateTaskGraphRequest)(nil),                // 57: nekode.daemon.v1.UpdateTaskGraphRequest
-	(*RenewTaskClaimLeaseRequest)(nil),            // 58: nekode.daemon.v1.RenewTaskClaimLeaseRequest
-	(*ReleaseTaskRequest)(nil),                    // 59: nekode.daemon.v1.ReleaseTaskRequest
-	(*GetReleaseGateRequest)(nil),                 // 60: nekode.daemon.v1.GetReleaseGateRequest
-	(*PublishCoordinationRecordRequest)(nil),      // 61: nekode.daemon.v1.PublishCoordinationRecordRequest
-	(*ListCoordinationRecordsRequest)(nil),        // 62: nekode.daemon.v1.ListCoordinationRecordsRequest
-	(*CounterProposeNegotiationRequest)(nil),      // 63: nekode.daemon.v1.CounterProposeNegotiationRequest
-	(*RespondRoleHandoffRequest)(nil),             // 64: nekode.daemon.v1.RespondRoleHandoffRequest
-	(*ListAgentMemoryRequest)(nil),                // 65: nekode.daemon.v1.ListAgentMemoryRequest
-	(*UpsertAgentMemoryRequest)(nil),              // 66: nekode.daemon.v1.UpsertAgentMemoryRequest
-	(*GetAgentProfileRequest)(nil),                // 67: nekode.daemon.v1.GetAgentProfileRequest
-	(*UpdateAgentProfileRequest)(nil),             // 68: nekode.daemon.v1.UpdateAgentProfileRequest
-	(*SetAgentEnvRequest)(nil),                    // 69: nekode.daemon.v1.SetAgentEnvRequest
-	(*ListAgentProfilesRequest)(nil),              // 70: nekode.daemon.v1.ListAgentProfilesRequest
-	(*ListAgentDMsRequest)(nil),                   // 71: nekode.daemon.v1.ListAgentDMsRequest
-	(*ControlAgentRequest)(nil),                   // 72: nekode.daemon.v1.ControlAgentRequest
-	(*SendAgentDirectMessageRequest)(nil),         // 73: nekode.daemon.v1.SendAgentDirectMessageRequest
-	(*UpdateAgentStatusRequest)(nil),              // 74: nekode.daemon.v1.UpdateAgentStatusRequest
-	(*ListAgentStatusesRequest)(nil),              // 75: nekode.daemon.v1.ListAgentStatusesRequest
-	(*ScheduleReminderRequest)(nil),               // 76: nekode.daemon.v1.ScheduleReminderRequest
-	(*ListRemindersRequest)(nil),                  // 77: nekode.daemon.v1.ListRemindersRequest
-	(*CancelReminderRequest)(nil),                 // 78: nekode.daemon.v1.CancelReminderRequest
-	(*SnoozeReminderRequest)(nil),                 // 79: nekode.daemon.v1.SnoozeReminderRequest
-	(*UpdateReminderRequest)(nil),                 // 80: nekode.daemon.v1.UpdateReminderRequest
-	(*GetReminderLogRequest)(nil),                 // 81: nekode.daemon.v1.GetReminderLogRequest
-	(*UploadAttachmentRequest)(nil),               // 82: nekode.daemon.v1.UploadAttachmentRequest
-	(*GetAttachmentRequest)(nil),                  // 83: nekode.daemon.v1.GetAttachmentRequest
-	(*ListOutboundDeliveriesRequest)(nil),         // 84: nekode.daemon.v1.ListOutboundDeliveriesRequest
-	(*RetryOutboundDeliveryRequest)(nil),          // 85: nekode.daemon.v1.RetryOutboundDeliveryRequest
-	(*LogActivityRequest)(nil),                    // 86: nekode.daemon.v1.LogActivityRequest
-	(*ListActivityRequest)(nil),                   // 87: nekode.daemon.v1.ListActivityRequest
-	(*ListEventsSinceRequest)(nil),                // 88: nekode.daemon.v1.ListEventsSinceRequest
-	(*SubscribeActivityRequest)(nil),              // 89: nekode.daemon.v1.SubscribeActivityRequest
-	(*AcknowledgeActivityEventsRequest)(nil),      // 90: nekode.daemon.v1.AcknowledgeActivityEventsRequest
-	(*SubscribeMcpResourceRequest)(nil),           // 91: nekode.daemon.v1.SubscribeMcpResourceRequest
-	(*CancelMcpResourceSubscriptionRequest)(nil),  // 92: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
-	(*ListMcpResourceUpdatesRequest)(nil),         // 93: nekode.daemon.v1.ListMcpResourceUpdatesRequest
-	(*RegisterComputerResponse)(nil),              // 94: nekode.daemon.v1.RegisterComputerResponse
-	(*HeartbeatComputerResponse)(nil),             // 95: nekode.daemon.v1.HeartbeatComputerResponse
-	(*SyncComputerInventoryResponse)(nil),         // 96: nekode.daemon.v1.SyncComputerInventoryResponse
-	(*AcquireStartPermitResponse)(nil),            // 97: nekode.daemon.v1.AcquireStartPermitResponse
-	(*ReleaseStartPermitResponse)(nil),            // 98: nekode.daemon.v1.ReleaseStartPermitResponse
-	(*FetchAssignedRunsResponse)(nil),             // 99: nekode.daemon.v1.FetchAssignedRunsResponse
-	(*UpdateRunStatusResponse)(nil),               // 100: nekode.daemon.v1.UpdateRunStatusResponse
-	(*RenewRunLeaseResponse)(nil),                 // 101: nekode.daemon.v1.RenewRunLeaseResponse
-	(*AppendRunStepResponse)(nil),                 // 102: nekode.daemon.v1.AppendRunStepResponse
-	(*ListRunsResponse)(nil),                      // 103: nekode.daemon.v1.ListRunsResponse
-	(*GetRunResponse)(nil),                        // 104: nekode.daemon.v1.GetRunResponse
-	(*ListWorkspaceTreeResponse)(nil),             // 105: nekode.daemon.v1.ListWorkspaceTreeResponse
-	(*ReadWorkspaceFileResponse)(nil),             // 106: nekode.daemon.v1.ReadWorkspaceFileResponse
-	(*ListChannelsResponse)(nil),                  // 107: nekode.daemon.v1.ListChannelsResponse
-	(*ListInteractionEndpointsResponse)(nil),      // 108: nekode.daemon.v1.ListInteractionEndpointsResponse
-	(*ListThreadsResponse)(nil),                   // 109: nekode.daemon.v1.ListThreadsResponse
-	(*GetThreadResponse)(nil),                     // 110: nekode.daemon.v1.GetThreadResponse
-	(*ReadMessagesResponse)(nil),                  // 111: nekode.daemon.v1.ReadMessagesResponse
-	(*SendMessageResponse)(nil),                   // 112: nekode.daemon.v1.SendMessageResponse
-	(*SaveMessageResponse)(nil),                   // 113: nekode.daemon.v1.SaveMessageResponse
-	(*UnsaveMessageResponse)(nil),                 // 114: nekode.daemon.v1.UnsaveMessageResponse
-	(*ListSavedMessagesResponse)(nil),             // 115: nekode.daemon.v1.ListSavedMessagesResponse
-	(*FollowThreadResponse)(nil),                  // 116: nekode.daemon.v1.FollowThreadResponse
-	(*UnfollowThreadResponse)(nil),                // 117: nekode.daemon.v1.UnfollowThreadResponse
-	(*CreateCollaborationTaskResponse)(nil),       // 118: nekode.daemon.v1.CreateCollaborationTaskResponse
-	(*GetTaskResponse)(nil),                       // 119: nekode.daemon.v1.GetTaskResponse
-	(*UpdateTaskResponse)(nil),                    // 120: nekode.daemon.v1.UpdateTaskResponse
-	(*ListCollaborationTasksResponse)(nil),        // 121: nekode.daemon.v1.ListCollaborationTasksResponse
-	(*ListTaskBoardResponse)(nil),                 // 122: nekode.daemon.v1.ListTaskBoardResponse
-	(*ClaimCollaborationTaskResponse)(nil),        // 123: nekode.daemon.v1.ClaimCollaborationTaskResponse
-	(*ProposeTaskSplitResponse)(nil),              // 124: nekode.daemon.v1.ProposeTaskSplitResponse
-	(*ApplyTaskSplitResponse)(nil),                // 125: nekode.daemon.v1.ApplyTaskSplitResponse
-	(*CancelTaskSplitProposalResponse)(nil),       // 126: nekode.daemon.v1.CancelTaskSplitProposalResponse
-	(*CreateTaskGraphResponse)(nil),               // 127: nekode.daemon.v1.CreateTaskGraphResponse
-	(*ListTaskGraphResponse)(nil),                 // 128: nekode.daemon.v1.ListTaskGraphResponse
-	(*UpdateTaskGraphResponse)(nil),               // 129: nekode.daemon.v1.UpdateTaskGraphResponse
-	(*RenewTaskClaimLeaseResponse)(nil),           // 130: nekode.daemon.v1.RenewTaskClaimLeaseResponse
-	(*ReleaseTaskResponse)(nil),                   // 131: nekode.daemon.v1.ReleaseTaskResponse
-	(*GetReleaseGateResponse)(nil),                // 132: nekode.daemon.v1.GetReleaseGateResponse
-	(*PublishCoordinationRecordResponse)(nil),     // 133: nekode.daemon.v1.PublishCoordinationRecordResponse
-	(*ListCoordinationRecordsResponse)(nil),       // 134: nekode.daemon.v1.ListCoordinationRecordsResponse
-	(*CounterProposeNegotiationResponse)(nil),     // 135: nekode.daemon.v1.CounterProposeNegotiationResponse
-	(*RespondRoleHandoffResponse)(nil),            // 136: nekode.daemon.v1.RespondRoleHandoffResponse
-	(*ListAgentMemoryResponse)(nil),               // 137: nekode.daemon.v1.ListAgentMemoryResponse
-	(*UpsertAgentMemoryResponse)(nil),             // 138: nekode.daemon.v1.UpsertAgentMemoryResponse
-	(*GetAgentProfileResponse)(nil),               // 139: nekode.daemon.v1.GetAgentProfileResponse
-	(*UpdateAgentProfileResponse)(nil),            // 140: nekode.daemon.v1.UpdateAgentProfileResponse
-	(*SetAgentEnvResponse)(nil),                   // 141: nekode.daemon.v1.SetAgentEnvResponse
-	(*ListAgentProfilesResponse)(nil),             // 142: nekode.daemon.v1.ListAgentProfilesResponse
-	(*ListAgentDMsResponse)(nil),                  // 143: nekode.daemon.v1.ListAgentDMsResponse
-	(*ControlAgentResponse)(nil),                  // 144: nekode.daemon.v1.ControlAgentResponse
-	(*SendAgentDirectMessageResponse)(nil),        // 145: nekode.daemon.v1.SendAgentDirectMessageResponse
-	(*UpdateAgentStatusResponse)(nil),             // 146: nekode.daemon.v1.UpdateAgentStatusResponse
-	(*ListAgentStatusesResponse)(nil),             // 147: nekode.daemon.v1.ListAgentStatusesResponse
-	(*ScheduleReminderResponse)(nil),              // 148: nekode.daemon.v1.ScheduleReminderResponse
-	(*ListRemindersResponse)(nil),                 // 149: nekode.daemon.v1.ListRemindersResponse
-	(*CancelReminderResponse)(nil),                // 150: nekode.daemon.v1.CancelReminderResponse
-	(*SnoozeReminderResponse)(nil),                // 151: nekode.daemon.v1.SnoozeReminderResponse
-	(*UpdateReminderResponse)(nil),                // 152: nekode.daemon.v1.UpdateReminderResponse
-	(*GetReminderLogResponse)(nil),                // 153: nekode.daemon.v1.GetReminderLogResponse
-	(*UploadAttachmentResponse)(nil),              // 154: nekode.daemon.v1.UploadAttachmentResponse
-	(*GetAttachmentResponse)(nil),                 // 155: nekode.daemon.v1.GetAttachmentResponse
-	(*ListOutboundDeliveriesResponse)(nil),        // 156: nekode.daemon.v1.ListOutboundDeliveriesResponse
-	(*RetryOutboundDeliveryResponse)(nil),         // 157: nekode.daemon.v1.RetryOutboundDeliveryResponse
-	(*LogActivityResponse)(nil),                   // 158: nekode.daemon.v1.LogActivityResponse
-	(*ListActivityResponse)(nil),                  // 159: nekode.daemon.v1.ListActivityResponse
-	(*ListEventsSinceResponse)(nil),               // 160: nekode.daemon.v1.ListEventsSinceResponse
-	(*AcknowledgeActivityEventsResponse)(nil),     // 161: nekode.daemon.v1.AcknowledgeActivityEventsResponse
-	(*SubscribeMcpResourceResponse)(nil),          // 162: nekode.daemon.v1.SubscribeMcpResourceResponse
-	(*CancelMcpResourceSubscriptionResponse)(nil), // 163: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
-	(*ListMcpResourceUpdatesResponse)(nil),        // 164: nekode.daemon.v1.ListMcpResourceUpdatesResponse
+	(ServerEventKind)(0),                          // 0: nekode.daemon.v1.ServerEventKind
+	(*GetServerInfoRequest)(nil),                  // 1: nekode.daemon.v1.GetServerInfoRequest
+	(*GetServerInfoResponse)(nil),                 // 2: nekode.daemon.v1.GetServerInfoResponse
+	(*SubscribeServerEventsRequest)(nil),          // 3: nekode.daemon.v1.SubscribeServerEventsRequest
+	(*ServerEvent)(nil),                           // 4: nekode.daemon.v1.ServerEvent
+	(*ServerPing)(nil),                            // 5: nekode.daemon.v1.ServerPing
+	(*SubscribeServerEventsResponse)(nil),         // 6: nekode.daemon.v1.SubscribeServerEventsResponse
+	(*SubscribeActivityResponse)(nil),             // 7: nekode.daemon.v1.SubscribeActivityResponse
+	(*AcknowledgeServerEventsRequest)(nil),        // 8: nekode.daemon.v1.AcknowledgeServerEventsRequest
+	(*AcknowledgeServerEventsResponse)(nil),       // 9: nekode.daemon.v1.AcknowledgeServerEventsResponse
+	(*EventCursor)(nil),                           // 10: nekode.daemon.v1.EventCursor
+	(*EventScope)(nil),                            // 11: nekode.daemon.v1.EventScope
+	(EventOperation)(0),                           // 12: nekode.daemon.v1.EventOperation
+	(*Run)(nil),                                   // 13: nekode.daemon.v1.Run
+	(*AgentControlOperation)(nil),                 // 14: nekode.daemon.v1.AgentControlOperation
+	(*CollaborationMessage)(nil),                  // 15: nekode.daemon.v1.CollaborationMessage
+	(*Task)(nil),                                  // 16: nekode.daemon.v1.Task
+	(*ReminderRecord)(nil),                        // 17: nekode.daemon.v1.ReminderRecord
+	(*ActivityRecord)(nil),                        // 18: nekode.daemon.v1.ActivityRecord
+	(*McpResourceUpdate)(nil),                     // 19: nekode.daemon.v1.McpResourceUpdate
+	(*CoordinationRecord)(nil),                    // 20: nekode.daemon.v1.CoordinationRecord
+	(*MemoryRecord)(nil),                          // 21: nekode.daemon.v1.MemoryRecord
+	(*OutboundDeliveryRecord)(nil),                // 22: nekode.daemon.v1.OutboundDeliveryRecord
+	(*CollaborationEvent)(nil),                    // 23: nekode.daemon.v1.CollaborationEvent
+	(*RequestContext)(nil),                        // 24: nekode.daemon.v1.RequestContext
+	(*RegisterComputerRequest)(nil),               // 25: nekode.daemon.v1.RegisterComputerRequest
+	(*HeartbeatComputerRequest)(nil),              // 26: nekode.daemon.v1.HeartbeatComputerRequest
+	(*SyncComputerInventoryRequest)(nil),          // 27: nekode.daemon.v1.SyncComputerInventoryRequest
+	(*AcquireStartPermitRequest)(nil),             // 28: nekode.daemon.v1.AcquireStartPermitRequest
+	(*ReleaseStartPermitRequest)(nil),             // 29: nekode.daemon.v1.ReleaseStartPermitRequest
+	(*FetchAssignedRunsRequest)(nil),              // 30: nekode.daemon.v1.FetchAssignedRunsRequest
+	(*UpdateRunStatusRequest)(nil),                // 31: nekode.daemon.v1.UpdateRunStatusRequest
+	(*RenewRunLeaseRequest)(nil),                  // 32: nekode.daemon.v1.RenewRunLeaseRequest
+	(*AppendRunStepRequest)(nil),                  // 33: nekode.daemon.v1.AppendRunStepRequest
+	(*ListRunsRequest)(nil),                       // 34: nekode.daemon.v1.ListRunsRequest
+	(*GetRunRequest)(nil),                         // 35: nekode.daemon.v1.GetRunRequest
+	(*ListWorkspaceTreeRequest)(nil),              // 36: nekode.daemon.v1.ListWorkspaceTreeRequest
+	(*ReadWorkspaceFileRequest)(nil),              // 37: nekode.daemon.v1.ReadWorkspaceFileRequest
+	(*ListChannelsRequest)(nil),                   // 38: nekode.daemon.v1.ListChannelsRequest
+	(*ListInteractionEndpointsRequest)(nil),       // 39: nekode.daemon.v1.ListInteractionEndpointsRequest
+	(*ListThreadsRequest)(nil),                    // 40: nekode.daemon.v1.ListThreadsRequest
+	(*GetThreadRequest)(nil),                      // 41: nekode.daemon.v1.GetThreadRequest
+	(*ReadMessagesRequest)(nil),                   // 42: nekode.daemon.v1.ReadMessagesRequest
+	(*SendMessageRequest)(nil),                    // 43: nekode.daemon.v1.SendMessageRequest
+	(*SaveMessageRequest)(nil),                    // 44: nekode.daemon.v1.SaveMessageRequest
+	(*UnsaveMessageRequest)(nil),                  // 45: nekode.daemon.v1.UnsaveMessageRequest
+	(*ListSavedMessagesRequest)(nil),              // 46: nekode.daemon.v1.ListSavedMessagesRequest
+	(*FollowThreadRequest)(nil),                   // 47: nekode.daemon.v1.FollowThreadRequest
+	(*UnfollowThreadRequest)(nil),                 // 48: nekode.daemon.v1.UnfollowThreadRequest
+	(*CreateCollaborationTaskRequest)(nil),        // 49: nekode.daemon.v1.CreateCollaborationTaskRequest
+	(*GetTaskRequest)(nil),                        // 50: nekode.daemon.v1.GetTaskRequest
+	(*UpdateTaskRequest)(nil),                     // 51: nekode.daemon.v1.UpdateTaskRequest
+	(*ListCollaborationTasksRequest)(nil),         // 52: nekode.daemon.v1.ListCollaborationTasksRequest
+	(*ListTaskBoardRequest)(nil),                  // 53: nekode.daemon.v1.ListTaskBoardRequest
+	(*ClaimCollaborationTaskRequest)(nil),         // 54: nekode.daemon.v1.ClaimCollaborationTaskRequest
+	(*ProposeTaskSplitRequest)(nil),               // 55: nekode.daemon.v1.ProposeTaskSplitRequest
+	(*ApplyTaskSplitRequest)(nil),                 // 56: nekode.daemon.v1.ApplyTaskSplitRequest
+	(*CancelTaskSplitProposalRequest)(nil),        // 57: nekode.daemon.v1.CancelTaskSplitProposalRequest
+	(*CreateTaskGraphRequest)(nil),                // 58: nekode.daemon.v1.CreateTaskGraphRequest
+	(*ListTaskGraphRequest)(nil),                  // 59: nekode.daemon.v1.ListTaskGraphRequest
+	(*UpdateTaskGraphRequest)(nil),                // 60: nekode.daemon.v1.UpdateTaskGraphRequest
+	(*RenewTaskClaimLeaseRequest)(nil),            // 61: nekode.daemon.v1.RenewTaskClaimLeaseRequest
+	(*ReleaseTaskRequest)(nil),                    // 62: nekode.daemon.v1.ReleaseTaskRequest
+	(*GetReleaseGateRequest)(nil),                 // 63: nekode.daemon.v1.GetReleaseGateRequest
+	(*PublishCoordinationRecordRequest)(nil),      // 64: nekode.daemon.v1.PublishCoordinationRecordRequest
+	(*ListCoordinationRecordsRequest)(nil),        // 65: nekode.daemon.v1.ListCoordinationRecordsRequest
+	(*CounterProposeNegotiationRequest)(nil),      // 66: nekode.daemon.v1.CounterProposeNegotiationRequest
+	(*RespondRoleHandoffRequest)(nil),             // 67: nekode.daemon.v1.RespondRoleHandoffRequest
+	(*ListAgentMemoryRequest)(nil),                // 68: nekode.daemon.v1.ListAgentMemoryRequest
+	(*UpsertAgentMemoryRequest)(nil),              // 69: nekode.daemon.v1.UpsertAgentMemoryRequest
+	(*GetAgentProfileRequest)(nil),                // 70: nekode.daemon.v1.GetAgentProfileRequest
+	(*UpdateAgentProfileRequest)(nil),             // 71: nekode.daemon.v1.UpdateAgentProfileRequest
+	(*SetAgentEnvRequest)(nil),                    // 72: nekode.daemon.v1.SetAgentEnvRequest
+	(*ListAgentProfilesRequest)(nil),              // 73: nekode.daemon.v1.ListAgentProfilesRequest
+	(*ListAgentDMsRequest)(nil),                   // 74: nekode.daemon.v1.ListAgentDMsRequest
+	(*ControlAgentRequest)(nil),                   // 75: nekode.daemon.v1.ControlAgentRequest
+	(*SendAgentDirectMessageRequest)(nil),         // 76: nekode.daemon.v1.SendAgentDirectMessageRequest
+	(*UpdateAgentStatusRequest)(nil),              // 77: nekode.daemon.v1.UpdateAgentStatusRequest
+	(*ListAgentStatusesRequest)(nil),              // 78: nekode.daemon.v1.ListAgentStatusesRequest
+	(*ScheduleReminderRequest)(nil),               // 79: nekode.daemon.v1.ScheduleReminderRequest
+	(*ListRemindersRequest)(nil),                  // 80: nekode.daemon.v1.ListRemindersRequest
+	(*CancelReminderRequest)(nil),                 // 81: nekode.daemon.v1.CancelReminderRequest
+	(*SnoozeReminderRequest)(nil),                 // 82: nekode.daemon.v1.SnoozeReminderRequest
+	(*UpdateReminderRequest)(nil),                 // 83: nekode.daemon.v1.UpdateReminderRequest
+	(*GetReminderLogRequest)(nil),                 // 84: nekode.daemon.v1.GetReminderLogRequest
+	(*UploadAttachmentRequest)(nil),               // 85: nekode.daemon.v1.UploadAttachmentRequest
+	(*GetAttachmentRequest)(nil),                  // 86: nekode.daemon.v1.GetAttachmentRequest
+	(*ListOutboundDeliveriesRequest)(nil),         // 87: nekode.daemon.v1.ListOutboundDeliveriesRequest
+	(*RetryOutboundDeliveryRequest)(nil),          // 88: nekode.daemon.v1.RetryOutboundDeliveryRequest
+	(*LogActivityRequest)(nil),                    // 89: nekode.daemon.v1.LogActivityRequest
+	(*ListActivityRequest)(nil),                   // 90: nekode.daemon.v1.ListActivityRequest
+	(*ListEventsSinceRequest)(nil),                // 91: nekode.daemon.v1.ListEventsSinceRequest
+	(*SubscribeActivityRequest)(nil),              // 92: nekode.daemon.v1.SubscribeActivityRequest
+	(*AcknowledgeActivityEventsRequest)(nil),      // 93: nekode.daemon.v1.AcknowledgeActivityEventsRequest
+	(*SubscribeMcpResourceRequest)(nil),           // 94: nekode.daemon.v1.SubscribeMcpResourceRequest
+	(*CancelMcpResourceSubscriptionRequest)(nil),  // 95: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
+	(*ListMcpResourceUpdatesRequest)(nil),         // 96: nekode.daemon.v1.ListMcpResourceUpdatesRequest
+	(*RegisterComputerResponse)(nil),              // 97: nekode.daemon.v1.RegisterComputerResponse
+	(*HeartbeatComputerResponse)(nil),             // 98: nekode.daemon.v1.HeartbeatComputerResponse
+	(*SyncComputerInventoryResponse)(nil),         // 99: nekode.daemon.v1.SyncComputerInventoryResponse
+	(*AcquireStartPermitResponse)(nil),            // 100: nekode.daemon.v1.AcquireStartPermitResponse
+	(*ReleaseStartPermitResponse)(nil),            // 101: nekode.daemon.v1.ReleaseStartPermitResponse
+	(*FetchAssignedRunsResponse)(nil),             // 102: nekode.daemon.v1.FetchAssignedRunsResponse
+	(*UpdateRunStatusResponse)(nil),               // 103: nekode.daemon.v1.UpdateRunStatusResponse
+	(*RenewRunLeaseResponse)(nil),                 // 104: nekode.daemon.v1.RenewRunLeaseResponse
+	(*AppendRunStepResponse)(nil),                 // 105: nekode.daemon.v1.AppendRunStepResponse
+	(*ListRunsResponse)(nil),                      // 106: nekode.daemon.v1.ListRunsResponse
+	(*GetRunResponse)(nil),                        // 107: nekode.daemon.v1.GetRunResponse
+	(*ListWorkspaceTreeResponse)(nil),             // 108: nekode.daemon.v1.ListWorkspaceTreeResponse
+	(*ReadWorkspaceFileResponse)(nil),             // 109: nekode.daemon.v1.ReadWorkspaceFileResponse
+	(*ListChannelsResponse)(nil),                  // 110: nekode.daemon.v1.ListChannelsResponse
+	(*ListInteractionEndpointsResponse)(nil),      // 111: nekode.daemon.v1.ListInteractionEndpointsResponse
+	(*ListThreadsResponse)(nil),                   // 112: nekode.daemon.v1.ListThreadsResponse
+	(*GetThreadResponse)(nil),                     // 113: nekode.daemon.v1.GetThreadResponse
+	(*ReadMessagesResponse)(nil),                  // 114: nekode.daemon.v1.ReadMessagesResponse
+	(*SendMessageResponse)(nil),                   // 115: nekode.daemon.v1.SendMessageResponse
+	(*SaveMessageResponse)(nil),                   // 116: nekode.daemon.v1.SaveMessageResponse
+	(*UnsaveMessageResponse)(nil),                 // 117: nekode.daemon.v1.UnsaveMessageResponse
+	(*ListSavedMessagesResponse)(nil),             // 118: nekode.daemon.v1.ListSavedMessagesResponse
+	(*FollowThreadResponse)(nil),                  // 119: nekode.daemon.v1.FollowThreadResponse
+	(*UnfollowThreadResponse)(nil),                // 120: nekode.daemon.v1.UnfollowThreadResponse
+	(*CreateCollaborationTaskResponse)(nil),       // 121: nekode.daemon.v1.CreateCollaborationTaskResponse
+	(*GetTaskResponse)(nil),                       // 122: nekode.daemon.v1.GetTaskResponse
+	(*UpdateTaskResponse)(nil),                    // 123: nekode.daemon.v1.UpdateTaskResponse
+	(*ListCollaborationTasksResponse)(nil),        // 124: nekode.daemon.v1.ListCollaborationTasksResponse
+	(*ListTaskBoardResponse)(nil),                 // 125: nekode.daemon.v1.ListTaskBoardResponse
+	(*ClaimCollaborationTaskResponse)(nil),        // 126: nekode.daemon.v1.ClaimCollaborationTaskResponse
+	(*ProposeTaskSplitResponse)(nil),              // 127: nekode.daemon.v1.ProposeTaskSplitResponse
+	(*ApplyTaskSplitResponse)(nil),                // 128: nekode.daemon.v1.ApplyTaskSplitResponse
+	(*CancelTaskSplitProposalResponse)(nil),       // 129: nekode.daemon.v1.CancelTaskSplitProposalResponse
+	(*CreateTaskGraphResponse)(nil),               // 130: nekode.daemon.v1.CreateTaskGraphResponse
+	(*ListTaskGraphResponse)(nil),                 // 131: nekode.daemon.v1.ListTaskGraphResponse
+	(*UpdateTaskGraphResponse)(nil),               // 132: nekode.daemon.v1.UpdateTaskGraphResponse
+	(*RenewTaskClaimLeaseResponse)(nil),           // 133: nekode.daemon.v1.RenewTaskClaimLeaseResponse
+	(*ReleaseTaskResponse)(nil),                   // 134: nekode.daemon.v1.ReleaseTaskResponse
+	(*GetReleaseGateResponse)(nil),                // 135: nekode.daemon.v1.GetReleaseGateResponse
+	(*PublishCoordinationRecordResponse)(nil),     // 136: nekode.daemon.v1.PublishCoordinationRecordResponse
+	(*ListCoordinationRecordsResponse)(nil),       // 137: nekode.daemon.v1.ListCoordinationRecordsResponse
+	(*CounterProposeNegotiationResponse)(nil),     // 138: nekode.daemon.v1.CounterProposeNegotiationResponse
+	(*RespondRoleHandoffResponse)(nil),            // 139: nekode.daemon.v1.RespondRoleHandoffResponse
+	(*ListAgentMemoryResponse)(nil),               // 140: nekode.daemon.v1.ListAgentMemoryResponse
+	(*UpsertAgentMemoryResponse)(nil),             // 141: nekode.daemon.v1.UpsertAgentMemoryResponse
+	(*GetAgentProfileResponse)(nil),               // 142: nekode.daemon.v1.GetAgentProfileResponse
+	(*UpdateAgentProfileResponse)(nil),            // 143: nekode.daemon.v1.UpdateAgentProfileResponse
+	(*SetAgentEnvResponse)(nil),                   // 144: nekode.daemon.v1.SetAgentEnvResponse
+	(*ListAgentProfilesResponse)(nil),             // 145: nekode.daemon.v1.ListAgentProfilesResponse
+	(*ListAgentDMsResponse)(nil),                  // 146: nekode.daemon.v1.ListAgentDMsResponse
+	(*ControlAgentResponse)(nil),                  // 147: nekode.daemon.v1.ControlAgentResponse
+	(*SendAgentDirectMessageResponse)(nil),        // 148: nekode.daemon.v1.SendAgentDirectMessageResponse
+	(*UpdateAgentStatusResponse)(nil),             // 149: nekode.daemon.v1.UpdateAgentStatusResponse
+	(*ListAgentStatusesResponse)(nil),             // 150: nekode.daemon.v1.ListAgentStatusesResponse
+	(*ScheduleReminderResponse)(nil),              // 151: nekode.daemon.v1.ScheduleReminderResponse
+	(*ListRemindersResponse)(nil),                 // 152: nekode.daemon.v1.ListRemindersResponse
+	(*CancelReminderResponse)(nil),                // 153: nekode.daemon.v1.CancelReminderResponse
+	(*SnoozeReminderResponse)(nil),                // 154: nekode.daemon.v1.SnoozeReminderResponse
+	(*UpdateReminderResponse)(nil),                // 155: nekode.daemon.v1.UpdateReminderResponse
+	(*GetReminderLogResponse)(nil),                // 156: nekode.daemon.v1.GetReminderLogResponse
+	(*UploadAttachmentResponse)(nil),              // 157: nekode.daemon.v1.UploadAttachmentResponse
+	(*GetAttachmentResponse)(nil),                 // 158: nekode.daemon.v1.GetAttachmentResponse
+	(*ListOutboundDeliveriesResponse)(nil),        // 159: nekode.daemon.v1.ListOutboundDeliveriesResponse
+	(*RetryOutboundDeliveryResponse)(nil),         // 160: nekode.daemon.v1.RetryOutboundDeliveryResponse
+	(*LogActivityResponse)(nil),                   // 161: nekode.daemon.v1.LogActivityResponse
+	(*ListActivityResponse)(nil),                  // 162: nekode.daemon.v1.ListActivityResponse
+	(*ListEventsSinceResponse)(nil),               // 163: nekode.daemon.v1.ListEventsSinceResponse
+	(*AcknowledgeActivityEventsResponse)(nil),     // 164: nekode.daemon.v1.AcknowledgeActivityEventsResponse
+	(*SubscribeMcpResourceResponse)(nil),          // 165: nekode.daemon.v1.SubscribeMcpResourceResponse
+	(*CancelMcpResourceSubscriptionResponse)(nil), // 166: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
+	(*ListMcpResourceUpdatesResponse)(nil),        // 167: nekode.daemon.v1.ListMcpResourceUpdatesResponse
 }
 var file_nekode_daemon_v1_service_proto_depIdxs = []int32{
-	9,   // 0: nekode.daemon.v1.SubscribeServerEventsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	10,  // 1: nekode.daemon.v1.ServerEvent.run:type_name -> nekode.daemon.v1.Run
-	11,  // 2: nekode.daemon.v1.ServerEvent.agent_control:type_name -> nekode.daemon.v1.AgentControlOperation
-	12,  // 3: nekode.daemon.v1.ServerEvent.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	13,  // 4: nekode.daemon.v1.ServerEvent.task:type_name -> nekode.daemon.v1.Task
-	14,  // 5: nekode.daemon.v1.ServerEvent.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	15,  // 6: nekode.daemon.v1.ServerEvent.activity:type_name -> nekode.daemon.v1.ActivityRecord
-	16,  // 7: nekode.daemon.v1.ServerEvent.mcp_resource_update:type_name -> nekode.daemon.v1.McpResourceUpdate
-	17,  // 8: nekode.daemon.v1.ServerEvent.coordination_record:type_name -> nekode.daemon.v1.CoordinationRecord
-	18,  // 9: nekode.daemon.v1.ServerEvent.memory_record:type_name -> nekode.daemon.v1.MemoryRecord
-	19,  // 10: nekode.daemon.v1.ServerEvent.outbound_delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	4,   // 11: nekode.daemon.v1.ServerEvent.ping:type_name -> nekode.daemon.v1.ServerPing
-	3,   // 12: nekode.daemon.v1.SubscribeServerEventsResponse.event:type_name -> nekode.daemon.v1.ServerEvent
-	20,  // 13: nekode.daemon.v1.SubscribeActivityResponse.event:type_name -> nekode.daemon.v1.CollaborationEvent
-	9,   // 14: nekode.daemon.v1.AcknowledgeServerEventsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	21,  // 15: nekode.daemon.v1.AcknowledgeServerEventsRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	9,   // 16: nekode.daemon.v1.AcknowledgeServerEventsResponse.cursor:type_name -> nekode.daemon.v1.EventCursor
-	22,  // 17: nekode.daemon.v1.DaemonControlService.RegisterComputer:input_type -> nekode.daemon.v1.RegisterComputerRequest
-	23,  // 18: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:input_type -> nekode.daemon.v1.HeartbeatComputerRequest
-	24,  // 19: nekode.daemon.v1.DaemonControlService.SyncComputerInventory:input_type -> nekode.daemon.v1.SyncComputerInventoryRequest
-	25,  // 20: nekode.daemon.v1.DaemonControlService.AcquireStartPermit:input_type -> nekode.daemon.v1.AcquireStartPermitRequest
-	26,  // 21: nekode.daemon.v1.DaemonControlService.ReleaseStartPermit:input_type -> nekode.daemon.v1.ReleaseStartPermitRequest
-	27,  // 22: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:input_type -> nekode.daemon.v1.FetchAssignedRunsRequest
-	28,  // 23: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:input_type -> nekode.daemon.v1.UpdateRunStatusRequest
-	29,  // 24: nekode.daemon.v1.DaemonControlService.RenewRunLease:input_type -> nekode.daemon.v1.RenewRunLeaseRequest
-	30,  // 25: nekode.daemon.v1.DaemonControlService.AppendRunStep:input_type -> nekode.daemon.v1.AppendRunStepRequest
-	31,  // 26: nekode.daemon.v1.DaemonControlService.ListRuns:input_type -> nekode.daemon.v1.ListRunsRequest
-	32,  // 27: nekode.daemon.v1.DaemonControlService.GetRun:input_type -> nekode.daemon.v1.GetRunRequest
-	33,  // 28: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:input_type -> nekode.daemon.v1.ListWorkspaceTreeRequest
-	34,  // 29: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:input_type -> nekode.daemon.v1.ReadWorkspaceFileRequest
-	35,  // 30: nekode.daemon.v1.DaemonControlService.ListChannels:input_type -> nekode.daemon.v1.ListChannelsRequest
-	36,  // 31: nekode.daemon.v1.DaemonControlService.ListInteractionEndpoints:input_type -> nekode.daemon.v1.ListInteractionEndpointsRequest
-	37,  // 32: nekode.daemon.v1.DaemonControlService.ListThreads:input_type -> nekode.daemon.v1.ListThreadsRequest
-	38,  // 33: nekode.daemon.v1.DaemonControlService.GetThread:input_type -> nekode.daemon.v1.GetThreadRequest
-	39,  // 34: nekode.daemon.v1.DaemonControlService.ReadMessages:input_type -> nekode.daemon.v1.ReadMessagesRequest
-	40,  // 35: nekode.daemon.v1.DaemonControlService.SendMessage:input_type -> nekode.daemon.v1.SendMessageRequest
-	41,  // 36: nekode.daemon.v1.DaemonControlService.SaveMessage:input_type -> nekode.daemon.v1.SaveMessageRequest
-	42,  // 37: nekode.daemon.v1.DaemonControlService.UnsaveMessage:input_type -> nekode.daemon.v1.UnsaveMessageRequest
-	43,  // 38: nekode.daemon.v1.DaemonControlService.ListSavedMessages:input_type -> nekode.daemon.v1.ListSavedMessagesRequest
-	44,  // 39: nekode.daemon.v1.DaemonControlService.FollowThread:input_type -> nekode.daemon.v1.FollowThreadRequest
-	45,  // 40: nekode.daemon.v1.DaemonControlService.UnfollowThread:input_type -> nekode.daemon.v1.UnfollowThreadRequest
-	46,  // 41: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:input_type -> nekode.daemon.v1.CreateCollaborationTaskRequest
-	47,  // 42: nekode.daemon.v1.DaemonControlService.GetTask:input_type -> nekode.daemon.v1.GetTaskRequest
-	48,  // 43: nekode.daemon.v1.DaemonControlService.UpdateTask:input_type -> nekode.daemon.v1.UpdateTaskRequest
-	49,  // 44: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:input_type -> nekode.daemon.v1.ListCollaborationTasksRequest
-	50,  // 45: nekode.daemon.v1.DaemonControlService.ListTaskBoard:input_type -> nekode.daemon.v1.ListTaskBoardRequest
-	51,  // 46: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:input_type -> nekode.daemon.v1.ClaimCollaborationTaskRequest
-	52,  // 47: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:input_type -> nekode.daemon.v1.ProposeTaskSplitRequest
-	53,  // 48: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:input_type -> nekode.daemon.v1.ApplyTaskSplitRequest
-	54,  // 49: nekode.daemon.v1.DaemonControlService.CancelTaskSplitProposal:input_type -> nekode.daemon.v1.CancelTaskSplitProposalRequest
-	55,  // 50: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:input_type -> nekode.daemon.v1.CreateTaskGraphRequest
-	56,  // 51: nekode.daemon.v1.DaemonControlService.ListTaskGraph:input_type -> nekode.daemon.v1.ListTaskGraphRequest
-	57,  // 52: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:input_type -> nekode.daemon.v1.UpdateTaskGraphRequest
-	58,  // 53: nekode.daemon.v1.DaemonControlService.RenewTaskClaimLease:input_type -> nekode.daemon.v1.RenewTaskClaimLeaseRequest
-	59,  // 54: nekode.daemon.v1.DaemonControlService.ReleaseTask:input_type -> nekode.daemon.v1.ReleaseTaskRequest
-	60,  // 55: nekode.daemon.v1.DaemonControlService.GetReleaseGate:input_type -> nekode.daemon.v1.GetReleaseGateRequest
-	0,   // 56: nekode.daemon.v1.DaemonControlService.GetServerInfo:input_type -> nekode.daemon.v1.GetServerInfoRequest
-	61,  // 57: nekode.daemon.v1.DaemonControlService.PublishCoordinationRecord:input_type -> nekode.daemon.v1.PublishCoordinationRecordRequest
-	62,  // 58: nekode.daemon.v1.DaemonControlService.ListCoordinationRecords:input_type -> nekode.daemon.v1.ListCoordinationRecordsRequest
-	63,  // 59: nekode.daemon.v1.DaemonControlService.CounterProposeNegotiation:input_type -> nekode.daemon.v1.CounterProposeNegotiationRequest
-	64,  // 60: nekode.daemon.v1.DaemonControlService.RespondRoleHandoff:input_type -> nekode.daemon.v1.RespondRoleHandoffRequest
-	65,  // 61: nekode.daemon.v1.DaemonControlService.ListAgentMemory:input_type -> nekode.daemon.v1.ListAgentMemoryRequest
-	66,  // 62: nekode.daemon.v1.DaemonControlService.UpsertAgentMemory:input_type -> nekode.daemon.v1.UpsertAgentMemoryRequest
-	67,  // 63: nekode.daemon.v1.DaemonControlService.GetAgentProfile:input_type -> nekode.daemon.v1.GetAgentProfileRequest
-	68,  // 64: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:input_type -> nekode.daemon.v1.UpdateAgentProfileRequest
-	69,  // 65: nekode.daemon.v1.DaemonControlService.SetAgentEnv:input_type -> nekode.daemon.v1.SetAgentEnvRequest
-	70,  // 66: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:input_type -> nekode.daemon.v1.ListAgentProfilesRequest
-	71,  // 67: nekode.daemon.v1.DaemonControlService.ListAgentDMs:input_type -> nekode.daemon.v1.ListAgentDMsRequest
-	72,  // 68: nekode.daemon.v1.DaemonControlService.ControlAgent:input_type -> nekode.daemon.v1.ControlAgentRequest
-	73,  // 69: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:input_type -> nekode.daemon.v1.SendAgentDirectMessageRequest
-	74,  // 70: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:input_type -> nekode.daemon.v1.UpdateAgentStatusRequest
-	75,  // 71: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:input_type -> nekode.daemon.v1.ListAgentStatusesRequest
-	76,  // 72: nekode.daemon.v1.DaemonControlService.ScheduleReminder:input_type -> nekode.daemon.v1.ScheduleReminderRequest
-	77,  // 73: nekode.daemon.v1.DaemonControlService.ListReminders:input_type -> nekode.daemon.v1.ListRemindersRequest
-	78,  // 74: nekode.daemon.v1.DaemonControlService.CancelReminder:input_type -> nekode.daemon.v1.CancelReminderRequest
-	79,  // 75: nekode.daemon.v1.DaemonControlService.SnoozeReminder:input_type -> nekode.daemon.v1.SnoozeReminderRequest
-	80,  // 76: nekode.daemon.v1.DaemonControlService.UpdateReminder:input_type -> nekode.daemon.v1.UpdateReminderRequest
-	81,  // 77: nekode.daemon.v1.DaemonControlService.GetReminderLog:input_type -> nekode.daemon.v1.GetReminderLogRequest
-	82,  // 78: nekode.daemon.v1.DaemonControlService.UploadAttachment:input_type -> nekode.daemon.v1.UploadAttachmentRequest
-	83,  // 79: nekode.daemon.v1.DaemonControlService.GetAttachment:input_type -> nekode.daemon.v1.GetAttachmentRequest
-	84,  // 80: nekode.daemon.v1.DaemonControlService.ListOutboundDeliveries:input_type -> nekode.daemon.v1.ListOutboundDeliveriesRequest
-	85,  // 81: nekode.daemon.v1.DaemonControlService.RetryOutboundDelivery:input_type -> nekode.daemon.v1.RetryOutboundDeliveryRequest
-	86,  // 82: nekode.daemon.v1.DaemonControlService.LogActivity:input_type -> nekode.daemon.v1.LogActivityRequest
-	87,  // 83: nekode.daemon.v1.DaemonControlService.ListActivity:input_type -> nekode.daemon.v1.ListActivityRequest
-	88,  // 84: nekode.daemon.v1.DaemonControlService.ListEventsSince:input_type -> nekode.daemon.v1.ListEventsSinceRequest
-	2,   // 85: nekode.daemon.v1.DaemonControlService.SubscribeServerEvents:input_type -> nekode.daemon.v1.SubscribeServerEventsRequest
-	7,   // 86: nekode.daemon.v1.DaemonControlService.AcknowledgeServerEvents:input_type -> nekode.daemon.v1.AcknowledgeServerEventsRequest
-	89,  // 87: nekode.daemon.v1.DaemonControlService.SubscribeActivity:input_type -> nekode.daemon.v1.SubscribeActivityRequest
-	90,  // 88: nekode.daemon.v1.DaemonControlService.AcknowledgeActivityEvents:input_type -> nekode.daemon.v1.AcknowledgeActivityEventsRequest
-	91,  // 89: nekode.daemon.v1.DaemonControlService.SubscribeMcpResource:input_type -> nekode.daemon.v1.SubscribeMcpResourceRequest
-	92,  // 90: nekode.daemon.v1.DaemonControlService.CancelMcpResourceSubscription:input_type -> nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
-	93,  // 91: nekode.daemon.v1.DaemonControlService.ListMcpResourceUpdates:input_type -> nekode.daemon.v1.ListMcpResourceUpdatesRequest
-	94,  // 92: nekode.daemon.v1.DaemonControlService.RegisterComputer:output_type -> nekode.daemon.v1.RegisterComputerResponse
-	95,  // 93: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:output_type -> nekode.daemon.v1.HeartbeatComputerResponse
-	96,  // 94: nekode.daemon.v1.DaemonControlService.SyncComputerInventory:output_type -> nekode.daemon.v1.SyncComputerInventoryResponse
-	97,  // 95: nekode.daemon.v1.DaemonControlService.AcquireStartPermit:output_type -> nekode.daemon.v1.AcquireStartPermitResponse
-	98,  // 96: nekode.daemon.v1.DaemonControlService.ReleaseStartPermit:output_type -> nekode.daemon.v1.ReleaseStartPermitResponse
-	99,  // 97: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:output_type -> nekode.daemon.v1.FetchAssignedRunsResponse
-	100, // 98: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:output_type -> nekode.daemon.v1.UpdateRunStatusResponse
-	101, // 99: nekode.daemon.v1.DaemonControlService.RenewRunLease:output_type -> nekode.daemon.v1.RenewRunLeaseResponse
-	102, // 100: nekode.daemon.v1.DaemonControlService.AppendRunStep:output_type -> nekode.daemon.v1.AppendRunStepResponse
-	103, // 101: nekode.daemon.v1.DaemonControlService.ListRuns:output_type -> nekode.daemon.v1.ListRunsResponse
-	104, // 102: nekode.daemon.v1.DaemonControlService.GetRun:output_type -> nekode.daemon.v1.GetRunResponse
-	105, // 103: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:output_type -> nekode.daemon.v1.ListWorkspaceTreeResponse
-	106, // 104: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:output_type -> nekode.daemon.v1.ReadWorkspaceFileResponse
-	107, // 105: nekode.daemon.v1.DaemonControlService.ListChannels:output_type -> nekode.daemon.v1.ListChannelsResponse
-	108, // 106: nekode.daemon.v1.DaemonControlService.ListInteractionEndpoints:output_type -> nekode.daemon.v1.ListInteractionEndpointsResponse
-	109, // 107: nekode.daemon.v1.DaemonControlService.ListThreads:output_type -> nekode.daemon.v1.ListThreadsResponse
-	110, // 108: nekode.daemon.v1.DaemonControlService.GetThread:output_type -> nekode.daemon.v1.GetThreadResponse
-	111, // 109: nekode.daemon.v1.DaemonControlService.ReadMessages:output_type -> nekode.daemon.v1.ReadMessagesResponse
-	112, // 110: nekode.daemon.v1.DaemonControlService.SendMessage:output_type -> nekode.daemon.v1.SendMessageResponse
-	113, // 111: nekode.daemon.v1.DaemonControlService.SaveMessage:output_type -> nekode.daemon.v1.SaveMessageResponse
-	114, // 112: nekode.daemon.v1.DaemonControlService.UnsaveMessage:output_type -> nekode.daemon.v1.UnsaveMessageResponse
-	115, // 113: nekode.daemon.v1.DaemonControlService.ListSavedMessages:output_type -> nekode.daemon.v1.ListSavedMessagesResponse
-	116, // 114: nekode.daemon.v1.DaemonControlService.FollowThread:output_type -> nekode.daemon.v1.FollowThreadResponse
-	117, // 115: nekode.daemon.v1.DaemonControlService.UnfollowThread:output_type -> nekode.daemon.v1.UnfollowThreadResponse
-	118, // 116: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:output_type -> nekode.daemon.v1.CreateCollaborationTaskResponse
-	119, // 117: nekode.daemon.v1.DaemonControlService.GetTask:output_type -> nekode.daemon.v1.GetTaskResponse
-	120, // 118: nekode.daemon.v1.DaemonControlService.UpdateTask:output_type -> nekode.daemon.v1.UpdateTaskResponse
-	121, // 119: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:output_type -> nekode.daemon.v1.ListCollaborationTasksResponse
-	122, // 120: nekode.daemon.v1.DaemonControlService.ListTaskBoard:output_type -> nekode.daemon.v1.ListTaskBoardResponse
-	123, // 121: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:output_type -> nekode.daemon.v1.ClaimCollaborationTaskResponse
-	124, // 122: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:output_type -> nekode.daemon.v1.ProposeTaskSplitResponse
-	125, // 123: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:output_type -> nekode.daemon.v1.ApplyTaskSplitResponse
-	126, // 124: nekode.daemon.v1.DaemonControlService.CancelTaskSplitProposal:output_type -> nekode.daemon.v1.CancelTaskSplitProposalResponse
-	127, // 125: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:output_type -> nekode.daemon.v1.CreateTaskGraphResponse
-	128, // 126: nekode.daemon.v1.DaemonControlService.ListTaskGraph:output_type -> nekode.daemon.v1.ListTaskGraphResponse
-	129, // 127: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:output_type -> nekode.daemon.v1.UpdateTaskGraphResponse
-	130, // 128: nekode.daemon.v1.DaemonControlService.RenewTaskClaimLease:output_type -> nekode.daemon.v1.RenewTaskClaimLeaseResponse
-	131, // 129: nekode.daemon.v1.DaemonControlService.ReleaseTask:output_type -> nekode.daemon.v1.ReleaseTaskResponse
-	132, // 130: nekode.daemon.v1.DaemonControlService.GetReleaseGate:output_type -> nekode.daemon.v1.GetReleaseGateResponse
-	1,   // 131: nekode.daemon.v1.DaemonControlService.GetServerInfo:output_type -> nekode.daemon.v1.GetServerInfoResponse
-	133, // 132: nekode.daemon.v1.DaemonControlService.PublishCoordinationRecord:output_type -> nekode.daemon.v1.PublishCoordinationRecordResponse
-	134, // 133: nekode.daemon.v1.DaemonControlService.ListCoordinationRecords:output_type -> nekode.daemon.v1.ListCoordinationRecordsResponse
-	135, // 134: nekode.daemon.v1.DaemonControlService.CounterProposeNegotiation:output_type -> nekode.daemon.v1.CounterProposeNegotiationResponse
-	136, // 135: nekode.daemon.v1.DaemonControlService.RespondRoleHandoff:output_type -> nekode.daemon.v1.RespondRoleHandoffResponse
-	137, // 136: nekode.daemon.v1.DaemonControlService.ListAgentMemory:output_type -> nekode.daemon.v1.ListAgentMemoryResponse
-	138, // 137: nekode.daemon.v1.DaemonControlService.UpsertAgentMemory:output_type -> nekode.daemon.v1.UpsertAgentMemoryResponse
-	139, // 138: nekode.daemon.v1.DaemonControlService.GetAgentProfile:output_type -> nekode.daemon.v1.GetAgentProfileResponse
-	140, // 139: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:output_type -> nekode.daemon.v1.UpdateAgentProfileResponse
-	141, // 140: nekode.daemon.v1.DaemonControlService.SetAgentEnv:output_type -> nekode.daemon.v1.SetAgentEnvResponse
-	142, // 141: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:output_type -> nekode.daemon.v1.ListAgentProfilesResponse
-	143, // 142: nekode.daemon.v1.DaemonControlService.ListAgentDMs:output_type -> nekode.daemon.v1.ListAgentDMsResponse
-	144, // 143: nekode.daemon.v1.DaemonControlService.ControlAgent:output_type -> nekode.daemon.v1.ControlAgentResponse
-	145, // 144: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:output_type -> nekode.daemon.v1.SendAgentDirectMessageResponse
-	146, // 145: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:output_type -> nekode.daemon.v1.UpdateAgentStatusResponse
-	147, // 146: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:output_type -> nekode.daemon.v1.ListAgentStatusesResponse
-	148, // 147: nekode.daemon.v1.DaemonControlService.ScheduleReminder:output_type -> nekode.daemon.v1.ScheduleReminderResponse
-	149, // 148: nekode.daemon.v1.DaemonControlService.ListReminders:output_type -> nekode.daemon.v1.ListRemindersResponse
-	150, // 149: nekode.daemon.v1.DaemonControlService.CancelReminder:output_type -> nekode.daemon.v1.CancelReminderResponse
-	151, // 150: nekode.daemon.v1.DaemonControlService.SnoozeReminder:output_type -> nekode.daemon.v1.SnoozeReminderResponse
-	152, // 151: nekode.daemon.v1.DaemonControlService.UpdateReminder:output_type -> nekode.daemon.v1.UpdateReminderResponse
-	153, // 152: nekode.daemon.v1.DaemonControlService.GetReminderLog:output_type -> nekode.daemon.v1.GetReminderLogResponse
-	154, // 153: nekode.daemon.v1.DaemonControlService.UploadAttachment:output_type -> nekode.daemon.v1.UploadAttachmentResponse
-	155, // 154: nekode.daemon.v1.DaemonControlService.GetAttachment:output_type -> nekode.daemon.v1.GetAttachmentResponse
-	156, // 155: nekode.daemon.v1.DaemonControlService.ListOutboundDeliveries:output_type -> nekode.daemon.v1.ListOutboundDeliveriesResponse
-	157, // 156: nekode.daemon.v1.DaemonControlService.RetryOutboundDelivery:output_type -> nekode.daemon.v1.RetryOutboundDeliveryResponse
-	158, // 157: nekode.daemon.v1.DaemonControlService.LogActivity:output_type -> nekode.daemon.v1.LogActivityResponse
-	159, // 158: nekode.daemon.v1.DaemonControlService.ListActivity:output_type -> nekode.daemon.v1.ListActivityResponse
-	160, // 159: nekode.daemon.v1.DaemonControlService.ListEventsSince:output_type -> nekode.daemon.v1.ListEventsSinceResponse
-	5,   // 160: nekode.daemon.v1.DaemonControlService.SubscribeServerEvents:output_type -> nekode.daemon.v1.SubscribeServerEventsResponse
-	8,   // 161: nekode.daemon.v1.DaemonControlService.AcknowledgeServerEvents:output_type -> nekode.daemon.v1.AcknowledgeServerEventsResponse
-	6,   // 162: nekode.daemon.v1.DaemonControlService.SubscribeActivity:output_type -> nekode.daemon.v1.SubscribeActivityResponse
-	161, // 163: nekode.daemon.v1.DaemonControlService.AcknowledgeActivityEvents:output_type -> nekode.daemon.v1.AcknowledgeActivityEventsResponse
-	162, // 164: nekode.daemon.v1.DaemonControlService.SubscribeMcpResource:output_type -> nekode.daemon.v1.SubscribeMcpResourceResponse
-	163, // 165: nekode.daemon.v1.DaemonControlService.CancelMcpResourceSubscription:output_type -> nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
-	164, // 166: nekode.daemon.v1.DaemonControlService.ListMcpResourceUpdates:output_type -> nekode.daemon.v1.ListMcpResourceUpdatesResponse
-	92,  // [92:167] is the sub-list for method output_type
-	17,  // [17:92] is the sub-list for method input_type
-	17,  // [17:17] is the sub-list for extension type_name
-	17,  // [17:17] is the sub-list for extension extendee
-	0,   // [0:17] is the sub-list for field type_name
+	10,  // 0: nekode.daemon.v1.SubscribeServerEventsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	11,  // 1: nekode.daemon.v1.SubscribeServerEventsRequest.scopes:type_name -> nekode.daemon.v1.EventScope
+	0,   // 2: nekode.daemon.v1.SubscribeServerEventsRequest.kinds:type_name -> nekode.daemon.v1.ServerEventKind
+	12,  // 3: nekode.daemon.v1.SubscribeServerEventsRequest.operations:type_name -> nekode.daemon.v1.EventOperation
+	0,   // 4: nekode.daemon.v1.ServerEvent.kind:type_name -> nekode.daemon.v1.ServerEventKind
+	12,  // 5: nekode.daemon.v1.ServerEvent.operation:type_name -> nekode.daemon.v1.EventOperation
+	11,  // 6: nekode.daemon.v1.ServerEvent.scope:type_name -> nekode.daemon.v1.EventScope
+	13,  // 7: nekode.daemon.v1.ServerEvent.run:type_name -> nekode.daemon.v1.Run
+	14,  // 8: nekode.daemon.v1.ServerEvent.agent_control:type_name -> nekode.daemon.v1.AgentControlOperation
+	15,  // 9: nekode.daemon.v1.ServerEvent.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	16,  // 10: nekode.daemon.v1.ServerEvent.task:type_name -> nekode.daemon.v1.Task
+	17,  // 11: nekode.daemon.v1.ServerEvent.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	18,  // 12: nekode.daemon.v1.ServerEvent.activity:type_name -> nekode.daemon.v1.ActivityRecord
+	19,  // 13: nekode.daemon.v1.ServerEvent.mcp_resource_update:type_name -> nekode.daemon.v1.McpResourceUpdate
+	20,  // 14: nekode.daemon.v1.ServerEvent.coordination_record:type_name -> nekode.daemon.v1.CoordinationRecord
+	21,  // 15: nekode.daemon.v1.ServerEvent.memory_record:type_name -> nekode.daemon.v1.MemoryRecord
+	22,  // 16: nekode.daemon.v1.ServerEvent.outbound_delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	5,   // 17: nekode.daemon.v1.ServerEvent.ping:type_name -> nekode.daemon.v1.ServerPing
+	4,   // 18: nekode.daemon.v1.SubscribeServerEventsResponse.event:type_name -> nekode.daemon.v1.ServerEvent
+	23,  // 19: nekode.daemon.v1.SubscribeActivityResponse.event:type_name -> nekode.daemon.v1.CollaborationEvent
+	10,  // 20: nekode.daemon.v1.AcknowledgeServerEventsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	24,  // 21: nekode.daemon.v1.AcknowledgeServerEventsRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	10,  // 22: nekode.daemon.v1.AcknowledgeServerEventsResponse.cursor:type_name -> nekode.daemon.v1.EventCursor
+	25,  // 23: nekode.daemon.v1.DaemonControlService.RegisterComputer:input_type -> nekode.daemon.v1.RegisterComputerRequest
+	26,  // 24: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:input_type -> nekode.daemon.v1.HeartbeatComputerRequest
+	27,  // 25: nekode.daemon.v1.DaemonControlService.SyncComputerInventory:input_type -> nekode.daemon.v1.SyncComputerInventoryRequest
+	28,  // 26: nekode.daemon.v1.DaemonControlService.AcquireStartPermit:input_type -> nekode.daemon.v1.AcquireStartPermitRequest
+	29,  // 27: nekode.daemon.v1.DaemonControlService.ReleaseStartPermit:input_type -> nekode.daemon.v1.ReleaseStartPermitRequest
+	30,  // 28: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:input_type -> nekode.daemon.v1.FetchAssignedRunsRequest
+	31,  // 29: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:input_type -> nekode.daemon.v1.UpdateRunStatusRequest
+	32,  // 30: nekode.daemon.v1.DaemonControlService.RenewRunLease:input_type -> nekode.daemon.v1.RenewRunLeaseRequest
+	33,  // 31: nekode.daemon.v1.DaemonControlService.AppendRunStep:input_type -> nekode.daemon.v1.AppendRunStepRequest
+	34,  // 32: nekode.daemon.v1.DaemonControlService.ListRuns:input_type -> nekode.daemon.v1.ListRunsRequest
+	35,  // 33: nekode.daemon.v1.DaemonControlService.GetRun:input_type -> nekode.daemon.v1.GetRunRequest
+	36,  // 34: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:input_type -> nekode.daemon.v1.ListWorkspaceTreeRequest
+	37,  // 35: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:input_type -> nekode.daemon.v1.ReadWorkspaceFileRequest
+	38,  // 36: nekode.daemon.v1.DaemonControlService.ListChannels:input_type -> nekode.daemon.v1.ListChannelsRequest
+	39,  // 37: nekode.daemon.v1.DaemonControlService.ListInteractionEndpoints:input_type -> nekode.daemon.v1.ListInteractionEndpointsRequest
+	40,  // 38: nekode.daemon.v1.DaemonControlService.ListThreads:input_type -> nekode.daemon.v1.ListThreadsRequest
+	41,  // 39: nekode.daemon.v1.DaemonControlService.GetThread:input_type -> nekode.daemon.v1.GetThreadRequest
+	42,  // 40: nekode.daemon.v1.DaemonControlService.ReadMessages:input_type -> nekode.daemon.v1.ReadMessagesRequest
+	43,  // 41: nekode.daemon.v1.DaemonControlService.SendMessage:input_type -> nekode.daemon.v1.SendMessageRequest
+	44,  // 42: nekode.daemon.v1.DaemonControlService.SaveMessage:input_type -> nekode.daemon.v1.SaveMessageRequest
+	45,  // 43: nekode.daemon.v1.DaemonControlService.UnsaveMessage:input_type -> nekode.daemon.v1.UnsaveMessageRequest
+	46,  // 44: nekode.daemon.v1.DaemonControlService.ListSavedMessages:input_type -> nekode.daemon.v1.ListSavedMessagesRequest
+	47,  // 45: nekode.daemon.v1.DaemonControlService.FollowThread:input_type -> nekode.daemon.v1.FollowThreadRequest
+	48,  // 46: nekode.daemon.v1.DaemonControlService.UnfollowThread:input_type -> nekode.daemon.v1.UnfollowThreadRequest
+	49,  // 47: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:input_type -> nekode.daemon.v1.CreateCollaborationTaskRequest
+	50,  // 48: nekode.daemon.v1.DaemonControlService.GetTask:input_type -> nekode.daemon.v1.GetTaskRequest
+	51,  // 49: nekode.daemon.v1.DaemonControlService.UpdateTask:input_type -> nekode.daemon.v1.UpdateTaskRequest
+	52,  // 50: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:input_type -> nekode.daemon.v1.ListCollaborationTasksRequest
+	53,  // 51: nekode.daemon.v1.DaemonControlService.ListTaskBoard:input_type -> nekode.daemon.v1.ListTaskBoardRequest
+	54,  // 52: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:input_type -> nekode.daemon.v1.ClaimCollaborationTaskRequest
+	55,  // 53: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:input_type -> nekode.daemon.v1.ProposeTaskSplitRequest
+	56,  // 54: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:input_type -> nekode.daemon.v1.ApplyTaskSplitRequest
+	57,  // 55: nekode.daemon.v1.DaemonControlService.CancelTaskSplitProposal:input_type -> nekode.daemon.v1.CancelTaskSplitProposalRequest
+	58,  // 56: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:input_type -> nekode.daemon.v1.CreateTaskGraphRequest
+	59,  // 57: nekode.daemon.v1.DaemonControlService.ListTaskGraph:input_type -> nekode.daemon.v1.ListTaskGraphRequest
+	60,  // 58: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:input_type -> nekode.daemon.v1.UpdateTaskGraphRequest
+	61,  // 59: nekode.daemon.v1.DaemonControlService.RenewTaskClaimLease:input_type -> nekode.daemon.v1.RenewTaskClaimLeaseRequest
+	62,  // 60: nekode.daemon.v1.DaemonControlService.ReleaseTask:input_type -> nekode.daemon.v1.ReleaseTaskRequest
+	63,  // 61: nekode.daemon.v1.DaemonControlService.GetReleaseGate:input_type -> nekode.daemon.v1.GetReleaseGateRequest
+	1,   // 62: nekode.daemon.v1.DaemonControlService.GetServerInfo:input_type -> nekode.daemon.v1.GetServerInfoRequest
+	64,  // 63: nekode.daemon.v1.DaemonControlService.PublishCoordinationRecord:input_type -> nekode.daemon.v1.PublishCoordinationRecordRequest
+	65,  // 64: nekode.daemon.v1.DaemonControlService.ListCoordinationRecords:input_type -> nekode.daemon.v1.ListCoordinationRecordsRequest
+	66,  // 65: nekode.daemon.v1.DaemonControlService.CounterProposeNegotiation:input_type -> nekode.daemon.v1.CounterProposeNegotiationRequest
+	67,  // 66: nekode.daemon.v1.DaemonControlService.RespondRoleHandoff:input_type -> nekode.daemon.v1.RespondRoleHandoffRequest
+	68,  // 67: nekode.daemon.v1.DaemonControlService.ListAgentMemory:input_type -> nekode.daemon.v1.ListAgentMemoryRequest
+	69,  // 68: nekode.daemon.v1.DaemonControlService.UpsertAgentMemory:input_type -> nekode.daemon.v1.UpsertAgentMemoryRequest
+	70,  // 69: nekode.daemon.v1.DaemonControlService.GetAgentProfile:input_type -> nekode.daemon.v1.GetAgentProfileRequest
+	71,  // 70: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:input_type -> nekode.daemon.v1.UpdateAgentProfileRequest
+	72,  // 71: nekode.daemon.v1.DaemonControlService.SetAgentEnv:input_type -> nekode.daemon.v1.SetAgentEnvRequest
+	73,  // 72: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:input_type -> nekode.daemon.v1.ListAgentProfilesRequest
+	74,  // 73: nekode.daemon.v1.DaemonControlService.ListAgentDMs:input_type -> nekode.daemon.v1.ListAgentDMsRequest
+	75,  // 74: nekode.daemon.v1.DaemonControlService.ControlAgent:input_type -> nekode.daemon.v1.ControlAgentRequest
+	76,  // 75: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:input_type -> nekode.daemon.v1.SendAgentDirectMessageRequest
+	77,  // 76: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:input_type -> nekode.daemon.v1.UpdateAgentStatusRequest
+	78,  // 77: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:input_type -> nekode.daemon.v1.ListAgentStatusesRequest
+	79,  // 78: nekode.daemon.v1.DaemonControlService.ScheduleReminder:input_type -> nekode.daemon.v1.ScheduleReminderRequest
+	80,  // 79: nekode.daemon.v1.DaemonControlService.ListReminders:input_type -> nekode.daemon.v1.ListRemindersRequest
+	81,  // 80: nekode.daemon.v1.DaemonControlService.CancelReminder:input_type -> nekode.daemon.v1.CancelReminderRequest
+	82,  // 81: nekode.daemon.v1.DaemonControlService.SnoozeReminder:input_type -> nekode.daemon.v1.SnoozeReminderRequest
+	83,  // 82: nekode.daemon.v1.DaemonControlService.UpdateReminder:input_type -> nekode.daemon.v1.UpdateReminderRequest
+	84,  // 83: nekode.daemon.v1.DaemonControlService.GetReminderLog:input_type -> nekode.daemon.v1.GetReminderLogRequest
+	85,  // 84: nekode.daemon.v1.DaemonControlService.UploadAttachment:input_type -> nekode.daemon.v1.UploadAttachmentRequest
+	86,  // 85: nekode.daemon.v1.DaemonControlService.GetAttachment:input_type -> nekode.daemon.v1.GetAttachmentRequest
+	87,  // 86: nekode.daemon.v1.DaemonControlService.ListOutboundDeliveries:input_type -> nekode.daemon.v1.ListOutboundDeliveriesRequest
+	88,  // 87: nekode.daemon.v1.DaemonControlService.RetryOutboundDelivery:input_type -> nekode.daemon.v1.RetryOutboundDeliveryRequest
+	89,  // 88: nekode.daemon.v1.DaemonControlService.LogActivity:input_type -> nekode.daemon.v1.LogActivityRequest
+	90,  // 89: nekode.daemon.v1.DaemonControlService.ListActivity:input_type -> nekode.daemon.v1.ListActivityRequest
+	91,  // 90: nekode.daemon.v1.DaemonControlService.ListEventsSince:input_type -> nekode.daemon.v1.ListEventsSinceRequest
+	3,   // 91: nekode.daemon.v1.DaemonControlService.SubscribeServerEvents:input_type -> nekode.daemon.v1.SubscribeServerEventsRequest
+	8,   // 92: nekode.daemon.v1.DaemonControlService.AcknowledgeServerEvents:input_type -> nekode.daemon.v1.AcknowledgeServerEventsRequest
+	92,  // 93: nekode.daemon.v1.DaemonControlService.SubscribeActivity:input_type -> nekode.daemon.v1.SubscribeActivityRequest
+	93,  // 94: nekode.daemon.v1.DaemonControlService.AcknowledgeActivityEvents:input_type -> nekode.daemon.v1.AcknowledgeActivityEventsRequest
+	94,  // 95: nekode.daemon.v1.DaemonControlService.SubscribeMcpResource:input_type -> nekode.daemon.v1.SubscribeMcpResourceRequest
+	95,  // 96: nekode.daemon.v1.DaemonControlService.CancelMcpResourceSubscription:input_type -> nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
+	96,  // 97: nekode.daemon.v1.DaemonControlService.ListMcpResourceUpdates:input_type -> nekode.daemon.v1.ListMcpResourceUpdatesRequest
+	97,  // 98: nekode.daemon.v1.DaemonControlService.RegisterComputer:output_type -> nekode.daemon.v1.RegisterComputerResponse
+	98,  // 99: nekode.daemon.v1.DaemonControlService.HeartbeatComputer:output_type -> nekode.daemon.v1.HeartbeatComputerResponse
+	99,  // 100: nekode.daemon.v1.DaemonControlService.SyncComputerInventory:output_type -> nekode.daemon.v1.SyncComputerInventoryResponse
+	100, // 101: nekode.daemon.v1.DaemonControlService.AcquireStartPermit:output_type -> nekode.daemon.v1.AcquireStartPermitResponse
+	101, // 102: nekode.daemon.v1.DaemonControlService.ReleaseStartPermit:output_type -> nekode.daemon.v1.ReleaseStartPermitResponse
+	102, // 103: nekode.daemon.v1.DaemonControlService.FetchAssignedRuns:output_type -> nekode.daemon.v1.FetchAssignedRunsResponse
+	103, // 104: nekode.daemon.v1.DaemonControlService.UpdateRunStatus:output_type -> nekode.daemon.v1.UpdateRunStatusResponse
+	104, // 105: nekode.daemon.v1.DaemonControlService.RenewRunLease:output_type -> nekode.daemon.v1.RenewRunLeaseResponse
+	105, // 106: nekode.daemon.v1.DaemonControlService.AppendRunStep:output_type -> nekode.daemon.v1.AppendRunStepResponse
+	106, // 107: nekode.daemon.v1.DaemonControlService.ListRuns:output_type -> nekode.daemon.v1.ListRunsResponse
+	107, // 108: nekode.daemon.v1.DaemonControlService.GetRun:output_type -> nekode.daemon.v1.GetRunResponse
+	108, // 109: nekode.daemon.v1.DaemonControlService.ListWorkspaceTree:output_type -> nekode.daemon.v1.ListWorkspaceTreeResponse
+	109, // 110: nekode.daemon.v1.DaemonControlService.ReadWorkspaceFile:output_type -> nekode.daemon.v1.ReadWorkspaceFileResponse
+	110, // 111: nekode.daemon.v1.DaemonControlService.ListChannels:output_type -> nekode.daemon.v1.ListChannelsResponse
+	111, // 112: nekode.daemon.v1.DaemonControlService.ListInteractionEndpoints:output_type -> nekode.daemon.v1.ListInteractionEndpointsResponse
+	112, // 113: nekode.daemon.v1.DaemonControlService.ListThreads:output_type -> nekode.daemon.v1.ListThreadsResponse
+	113, // 114: nekode.daemon.v1.DaemonControlService.GetThread:output_type -> nekode.daemon.v1.GetThreadResponse
+	114, // 115: nekode.daemon.v1.DaemonControlService.ReadMessages:output_type -> nekode.daemon.v1.ReadMessagesResponse
+	115, // 116: nekode.daemon.v1.DaemonControlService.SendMessage:output_type -> nekode.daemon.v1.SendMessageResponse
+	116, // 117: nekode.daemon.v1.DaemonControlService.SaveMessage:output_type -> nekode.daemon.v1.SaveMessageResponse
+	117, // 118: nekode.daemon.v1.DaemonControlService.UnsaveMessage:output_type -> nekode.daemon.v1.UnsaveMessageResponse
+	118, // 119: nekode.daemon.v1.DaemonControlService.ListSavedMessages:output_type -> nekode.daemon.v1.ListSavedMessagesResponse
+	119, // 120: nekode.daemon.v1.DaemonControlService.FollowThread:output_type -> nekode.daemon.v1.FollowThreadResponse
+	120, // 121: nekode.daemon.v1.DaemonControlService.UnfollowThread:output_type -> nekode.daemon.v1.UnfollowThreadResponse
+	121, // 122: nekode.daemon.v1.DaemonControlService.CreateCollaborationTask:output_type -> nekode.daemon.v1.CreateCollaborationTaskResponse
+	122, // 123: nekode.daemon.v1.DaemonControlService.GetTask:output_type -> nekode.daemon.v1.GetTaskResponse
+	123, // 124: nekode.daemon.v1.DaemonControlService.UpdateTask:output_type -> nekode.daemon.v1.UpdateTaskResponse
+	124, // 125: nekode.daemon.v1.DaemonControlService.ListCollaborationTasks:output_type -> nekode.daemon.v1.ListCollaborationTasksResponse
+	125, // 126: nekode.daemon.v1.DaemonControlService.ListTaskBoard:output_type -> nekode.daemon.v1.ListTaskBoardResponse
+	126, // 127: nekode.daemon.v1.DaemonControlService.ClaimCollaborationTask:output_type -> nekode.daemon.v1.ClaimCollaborationTaskResponse
+	127, // 128: nekode.daemon.v1.DaemonControlService.ProposeTaskSplit:output_type -> nekode.daemon.v1.ProposeTaskSplitResponse
+	128, // 129: nekode.daemon.v1.DaemonControlService.ApplyTaskSplit:output_type -> nekode.daemon.v1.ApplyTaskSplitResponse
+	129, // 130: nekode.daemon.v1.DaemonControlService.CancelTaskSplitProposal:output_type -> nekode.daemon.v1.CancelTaskSplitProposalResponse
+	130, // 131: nekode.daemon.v1.DaemonControlService.CreateTaskGraph:output_type -> nekode.daemon.v1.CreateTaskGraphResponse
+	131, // 132: nekode.daemon.v1.DaemonControlService.ListTaskGraph:output_type -> nekode.daemon.v1.ListTaskGraphResponse
+	132, // 133: nekode.daemon.v1.DaemonControlService.UpdateTaskGraph:output_type -> nekode.daemon.v1.UpdateTaskGraphResponse
+	133, // 134: nekode.daemon.v1.DaemonControlService.RenewTaskClaimLease:output_type -> nekode.daemon.v1.RenewTaskClaimLeaseResponse
+	134, // 135: nekode.daemon.v1.DaemonControlService.ReleaseTask:output_type -> nekode.daemon.v1.ReleaseTaskResponse
+	135, // 136: nekode.daemon.v1.DaemonControlService.GetReleaseGate:output_type -> nekode.daemon.v1.GetReleaseGateResponse
+	2,   // 137: nekode.daemon.v1.DaemonControlService.GetServerInfo:output_type -> nekode.daemon.v1.GetServerInfoResponse
+	136, // 138: nekode.daemon.v1.DaemonControlService.PublishCoordinationRecord:output_type -> nekode.daemon.v1.PublishCoordinationRecordResponse
+	137, // 139: nekode.daemon.v1.DaemonControlService.ListCoordinationRecords:output_type -> nekode.daemon.v1.ListCoordinationRecordsResponse
+	138, // 140: nekode.daemon.v1.DaemonControlService.CounterProposeNegotiation:output_type -> nekode.daemon.v1.CounterProposeNegotiationResponse
+	139, // 141: nekode.daemon.v1.DaemonControlService.RespondRoleHandoff:output_type -> nekode.daemon.v1.RespondRoleHandoffResponse
+	140, // 142: nekode.daemon.v1.DaemonControlService.ListAgentMemory:output_type -> nekode.daemon.v1.ListAgentMemoryResponse
+	141, // 143: nekode.daemon.v1.DaemonControlService.UpsertAgentMemory:output_type -> nekode.daemon.v1.UpsertAgentMemoryResponse
+	142, // 144: nekode.daemon.v1.DaemonControlService.GetAgentProfile:output_type -> nekode.daemon.v1.GetAgentProfileResponse
+	143, // 145: nekode.daemon.v1.DaemonControlService.UpdateAgentProfile:output_type -> nekode.daemon.v1.UpdateAgentProfileResponse
+	144, // 146: nekode.daemon.v1.DaemonControlService.SetAgentEnv:output_type -> nekode.daemon.v1.SetAgentEnvResponse
+	145, // 147: nekode.daemon.v1.DaemonControlService.ListAgentProfiles:output_type -> nekode.daemon.v1.ListAgentProfilesResponse
+	146, // 148: nekode.daemon.v1.DaemonControlService.ListAgentDMs:output_type -> nekode.daemon.v1.ListAgentDMsResponse
+	147, // 149: nekode.daemon.v1.DaemonControlService.ControlAgent:output_type -> nekode.daemon.v1.ControlAgentResponse
+	148, // 150: nekode.daemon.v1.DaemonControlService.SendAgentDirectMessage:output_type -> nekode.daemon.v1.SendAgentDirectMessageResponse
+	149, // 151: nekode.daemon.v1.DaemonControlService.UpdateAgentStatus:output_type -> nekode.daemon.v1.UpdateAgentStatusResponse
+	150, // 152: nekode.daemon.v1.DaemonControlService.ListAgentStatuses:output_type -> nekode.daemon.v1.ListAgentStatusesResponse
+	151, // 153: nekode.daemon.v1.DaemonControlService.ScheduleReminder:output_type -> nekode.daemon.v1.ScheduleReminderResponse
+	152, // 154: nekode.daemon.v1.DaemonControlService.ListReminders:output_type -> nekode.daemon.v1.ListRemindersResponse
+	153, // 155: nekode.daemon.v1.DaemonControlService.CancelReminder:output_type -> nekode.daemon.v1.CancelReminderResponse
+	154, // 156: nekode.daemon.v1.DaemonControlService.SnoozeReminder:output_type -> nekode.daemon.v1.SnoozeReminderResponse
+	155, // 157: nekode.daemon.v1.DaemonControlService.UpdateReminder:output_type -> nekode.daemon.v1.UpdateReminderResponse
+	156, // 158: nekode.daemon.v1.DaemonControlService.GetReminderLog:output_type -> nekode.daemon.v1.GetReminderLogResponse
+	157, // 159: nekode.daemon.v1.DaemonControlService.UploadAttachment:output_type -> nekode.daemon.v1.UploadAttachmentResponse
+	158, // 160: nekode.daemon.v1.DaemonControlService.GetAttachment:output_type -> nekode.daemon.v1.GetAttachmentResponse
+	159, // 161: nekode.daemon.v1.DaemonControlService.ListOutboundDeliveries:output_type -> nekode.daemon.v1.ListOutboundDeliveriesResponse
+	160, // 162: nekode.daemon.v1.DaemonControlService.RetryOutboundDelivery:output_type -> nekode.daemon.v1.RetryOutboundDeliveryResponse
+	161, // 163: nekode.daemon.v1.DaemonControlService.LogActivity:output_type -> nekode.daemon.v1.LogActivityResponse
+	162, // 164: nekode.daemon.v1.DaemonControlService.ListActivity:output_type -> nekode.daemon.v1.ListActivityResponse
+	163, // 165: nekode.daemon.v1.DaemonControlService.ListEventsSince:output_type -> nekode.daemon.v1.ListEventsSinceResponse
+	6,   // 166: nekode.daemon.v1.DaemonControlService.SubscribeServerEvents:output_type -> nekode.daemon.v1.SubscribeServerEventsResponse
+	9,   // 167: nekode.daemon.v1.DaemonControlService.AcknowledgeServerEvents:output_type -> nekode.daemon.v1.AcknowledgeServerEventsResponse
+	7,   // 168: nekode.daemon.v1.DaemonControlService.SubscribeActivity:output_type -> nekode.daemon.v1.SubscribeActivityResponse
+	164, // 169: nekode.daemon.v1.DaemonControlService.AcknowledgeActivityEvents:output_type -> nekode.daemon.v1.AcknowledgeActivityEventsResponse
+	165, // 170: nekode.daemon.v1.DaemonControlService.SubscribeMcpResource:output_type -> nekode.daemon.v1.SubscribeMcpResourceResponse
+	166, // 171: nekode.daemon.v1.DaemonControlService.CancelMcpResourceSubscription:output_type -> nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
+	167, // 172: nekode.daemon.v1.DaemonControlService.ListMcpResourceUpdates:output_type -> nekode.daemon.v1.ListMcpResourceUpdatesResponse
+	98,  // [98:173] is the sub-list for method output_type
+	23,  // [23:98] is the sub-list for method input_type
+	23,  // [23:23] is the sub-list for extension type_name
+	23,  // [23:23] is the sub-list for extension extendee
+	0,   // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_service_proto_init() }
@@ -1372,13 +1577,14 @@ func file_nekode_daemon_v1_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_service_proto_rawDesc), len(file_nekode_daemon_v1_service_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_nekode_daemon_v1_service_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_service_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_service_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_service_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_service_proto = out.File

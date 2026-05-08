@@ -99,81 +99,162 @@ const (
 // DaemonControlServiceClient is the client API for DaemonControlService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// DaemonControlService is the gRPC control plane shared by server, local daemon,
+// bridge, and trusted automation clients. Mutating RPCs use request_id and/or
+// idempotency_key for at-least-once retry safety; list/stream RPCs use EventCursor
+// for replay. Browser clients should consume this through an HTTP/SSE/WebSocket
+// bridge rather than directly binding to gRPC.
 type DaemonControlServiceClient interface {
+	// Register or resume a daemon-managed computer and receive the computer lease.
 	RegisterComputer(ctx context.Context, in *RegisterComputerRequest, opts ...grpc.CallOption) (*RegisterComputerResponse, error)
+	// Renew computer liveness and submit agent status snapshots.
 	HeartbeatComputer(ctx context.Context, in *HeartbeatComputerRequest, opts ...grpc.CallOption) (*HeartbeatComputerResponse, error)
+	// Replace the server-visible runtime/workspace inventory for a computer.
 	SyncComputerInventory(ctx context.Context, in *SyncComputerInventoryRequest, opts ...grpc.CallOption) (*SyncComputerInventoryResponse, error)
+	// Acquire an exclusive launch permit before starting an agent run.
 	AcquireStartPermit(ctx context.Context, in *AcquireStartPermitRequest, opts ...grpc.CallOption) (*AcquireStartPermitResponse, error)
+	// Release a launch permit that is no longer needed.
 	ReleaseStartPermit(ctx context.Context, in *ReleaseStartPermitRequest, opts ...grpc.CallOption) (*ReleaseStartPermitResponse, error)
+	// Fetch queued runs assigned to a computer or agent set.
 	FetchAssignedRuns(ctx context.Context, in *FetchAssignedRunsRequest, opts ...grpc.CallOption) (*FetchAssignedRunsResponse, error)
+	// Update run lifecycle state; idempotency_key deduplicates retries.
 	UpdateRunStatus(ctx context.Context, in *UpdateRunStatusRequest, opts ...grpc.CallOption) (*UpdateRunStatusResponse, error)
+	// Renew an existing run lease.
 	RenewRunLease(ctx context.Context, in *RenewRunLeaseRequest, opts ...grpc.CallOption) (*RenewRunLeaseResponse, error)
+	// Append a server-visible run step.
 	AppendRunStep(ctx context.Context, in *AppendRunStepRequest, opts ...grpc.CallOption) (*AppendRunStepResponse, error)
+	// List runs for Web/bridge views.
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
+	// Load one run and its steps.
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error)
+	// List files visible inside a daemon workspace.
 	ListWorkspaceTree(ctx context.Context, in *ListWorkspaceTreeRequest, opts ...grpc.CallOption) (*ListWorkspaceTreeResponse, error)
+	// Read one file inside a daemon workspace.
 	ReadWorkspaceFile(ctx context.Context, in *ReadWorkspaceFileRequest, opts ...grpc.CallOption) (*ReadWorkspaceFileResponse, error)
+	// List channels visible to the caller.
 	ListChannels(ctx context.Context, in *ListChannelsRequest, opts ...grpc.CallOption) (*ListChannelsResponse, error)
+	// List configured interaction endpoints.
 	ListInteractionEndpoints(ctx context.Context, in *ListInteractionEndpointsRequest, opts ...grpc.CallOption) (*ListInteractionEndpointsResponse, error)
+	// List known threads.
 	ListThreads(ctx context.Context, in *ListThreadsRequest, opts ...grpc.CallOption) (*ListThreadsResponse, error)
+	// Load one thread record.
 	GetThread(ctx context.Context, in *GetThreadRequest, opts ...grpc.CallOption) (*GetThreadResponse, error)
+	// Read messages with cursor pagination.
 	ReadMessages(ctx context.Context, in *ReadMessagesRequest, opts ...grpc.CallOption) (*ReadMessagesResponse, error)
+	// Send a collaboration message; idempotency_key deduplicates retries.
 	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
+	// Save/bookmark a message for an agent or user.
 	SaveMessage(ctx context.Context, in *SaveMessageRequest, opts ...grpc.CallOption) (*SaveMessageResponse, error)
+	// Remove a saved-message marker.
 	UnsaveMessage(ctx context.Context, in *UnsaveMessageRequest, opts ...grpc.CallOption) (*UnsaveMessageResponse, error)
+	// List saved messages.
 	ListSavedMessages(ctx context.Context, in *ListSavedMessagesRequest, opts ...grpc.CallOption) (*ListSavedMessagesResponse, error)
+	// Follow a thread for future delivery.
 	FollowThread(ctx context.Context, in *FollowThreadRequest, opts ...grpc.CallOption) (*FollowThreadResponse, error)
+	// Stop following a thread.
 	UnfollowThread(ctx context.Context, in *UnfollowThreadRequest, opts ...grpc.CallOption) (*UnfollowThreadResponse, error)
+	// Create a collaboration task.
 	CreateCollaborationTask(ctx context.Context, in *CreateCollaborationTaskRequest, opts ...grpc.CallOption) (*CreateCollaborationTaskResponse, error)
+	// Load one task.
 	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskResponse, error)
+	// Patch task fields and lifecycle state.
 	UpdateTask(ctx context.Context, in *UpdateTaskRequest, opts ...grpc.CallOption) (*UpdateTaskResponse, error)
+	// List tasks with filters.
 	ListCollaborationTasks(ctx context.Context, in *ListCollaborationTasksRequest, opts ...grpc.CallOption) (*ListCollaborationTasksResponse, error)
+	// Return the task-board projection grouped by board columns.
 	ListTaskBoard(ctx context.Context, in *ListTaskBoardRequest, opts ...grpc.CallOption) (*ListTaskBoardResponse, error)
+	// Claim task ownership or reviewer/assistant responsibility.
 	ClaimCollaborationTask(ctx context.Context, in *ClaimCollaborationTaskRequest, opts ...grpc.CallOption) (*ClaimCollaborationTaskResponse, error)
+	// Propose splitting a task into subtasks.
 	ProposeTaskSplit(ctx context.Context, in *ProposeTaskSplitRequest, opts ...grpc.CallOption) (*ProposeTaskSplitResponse, error)
+	// Apply an accepted task split proposal.
 	ApplyTaskSplit(ctx context.Context, in *ApplyTaskSplitRequest, opts ...grpc.CallOption) (*ApplyTaskSplitResponse, error)
+	// Cancel a pending task split proposal.
 	CancelTaskSplitProposal(ctx context.Context, in *CancelTaskSplitProposalRequest, opts ...grpc.CallOption) (*CancelTaskSplitProposalResponse, error)
+	// Create a task graph atomically.
 	CreateTaskGraph(ctx context.Context, in *CreateTaskGraphRequest, opts ...grpc.CallOption) (*CreateTaskGraphResponse, error)
+	// List the latest task graph snapshot.
 	ListTaskGraph(ctx context.Context, in *ListTaskGraphRequest, opts ...grpc.CallOption) (*ListTaskGraphResponse, error)
+	// Mutate task graph edges/ownership with optimistic concurrency.
 	UpdateTaskGraph(ctx context.Context, in *UpdateTaskGraphRequest, opts ...grpc.CallOption) (*UpdateTaskGraphResponse, error)
+	// Renew a task claim lease.
 	RenewTaskClaimLease(ctx context.Context, in *RenewTaskClaimLeaseRequest, opts ...grpc.CallOption) (*RenewTaskClaimLeaseResponse, error)
+	// Mark a task release after a release gate passes or is waived.
 	ReleaseTask(ctx context.Context, in *ReleaseTaskRequest, opts ...grpc.CallOption) (*ReleaseTaskResponse, error)
+	// Load a release gate by id.
 	GetReleaseGate(ctx context.Context, in *GetReleaseGateRequest, opts ...grpc.CallOption) (*GetReleaseGateResponse, error)
+	// Return lightweight server/protocol metadata.
 	GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error)
+	// Publish a structured coordination record.
 	PublishCoordinationRecord(ctx context.Context, in *PublishCoordinationRecordRequest, opts ...grpc.CallOption) (*PublishCoordinationRecordResponse, error)
+	// List coordination records for a target/task.
 	ListCoordinationRecords(ctx context.Context, in *ListCoordinationRecordsRequest, opts ...grpc.CallOption) (*ListCoordinationRecordsResponse, error)
+	// Add a counter-proposal to a deadline or scope negotiation.
 	CounterProposeNegotiation(ctx context.Context, in *CounterProposeNegotiationRequest, opts ...grpc.CallOption) (*CounterProposeNegotiationResponse, error)
+	// Accept, decline, complete, or cancel a role handoff.
 	RespondRoleHandoff(ctx context.Context, in *RespondRoleHandoffRequest, opts ...grpc.CallOption) (*RespondRoleHandoffResponse, error)
+	// List server-visible memory records for an agent.
 	ListAgentMemory(ctx context.Context, in *ListAgentMemoryRequest, opts ...grpc.CallOption) (*ListAgentMemoryResponse, error)
+	// Create or update a server-visible memory record.
 	UpsertAgentMemory(ctx context.Context, in *UpsertAgentMemoryRequest, opts ...grpc.CallOption) (*UpsertAgentMemoryResponse, error)
+	// Load one agent profile.
 	GetAgentProfile(ctx context.Context, in *GetAgentProfileRequest, opts ...grpc.CallOption) (*GetAgentProfileResponse, error)
+	// Update user-facing profile metadata.
 	UpdateAgentProfile(ctx context.Context, in *UpdateAgentProfileRequest, opts ...grpc.CallOption) (*UpdateAgentProfileResponse, error)
+	// Set agent environment variables; secret values must be redacted on read.
 	SetAgentEnv(ctx context.Context, in *SetAgentEnvRequest, opts ...grpc.CallOption) (*SetAgentEnvResponse, error)
+	// List agent profiles.
 	ListAgentProfiles(ctx context.Context, in *ListAgentProfilesRequest, opts ...grpc.CallOption) (*ListAgentProfilesResponse, error)
+	// List direct-message surfaces for an agent.
 	ListAgentDMs(ctx context.Context, in *ListAgentDMsRequest, opts ...grpc.CallOption) (*ListAgentDMsResponse, error)
+	// Request an agent control operation.
 	ControlAgent(ctx context.Context, in *ControlAgentRequest, opts ...grpc.CallOption) (*ControlAgentResponse, error)
+	// Send a direct message to an agent.
 	SendAgentDirectMessage(ctx context.Context, in *SendAgentDirectMessageRequest, opts ...grpc.CallOption) (*SendAgentDirectMessageResponse, error)
+	// Update a server-visible agent status snapshot.
 	UpdateAgentStatus(ctx context.Context, in *UpdateAgentStatusRequest, opts ...grpc.CallOption) (*UpdateAgentStatusResponse, error)
+	// List latest agent status snapshots.
 	ListAgentStatuses(ctx context.Context, in *ListAgentStatusesRequest, opts ...grpc.CallOption) (*ListAgentStatusesResponse, error)
+	// Schedule a reminder.
 	ScheduleReminder(ctx context.Context, in *ScheduleReminderRequest, opts ...grpc.CallOption) (*ScheduleReminderResponse, error)
+	// List reminders.
 	ListReminders(ctx context.Context, in *ListRemindersRequest, opts ...grpc.CallOption) (*ListRemindersResponse, error)
+	// Cancel a reminder.
 	CancelReminder(ctx context.Context, in *CancelReminderRequest, opts ...grpc.CallOption) (*CancelReminderResponse, error)
+	// Snooze a reminder by a relative delay.
 	SnoozeReminder(ctx context.Context, in *SnoozeReminderRequest, opts ...grpc.CallOption) (*SnoozeReminderResponse, error)
+	// Update reminder schedule metadata.
 	UpdateReminder(ctx context.Context, in *UpdateReminderRequest, opts ...grpc.CallOption) (*UpdateReminderResponse, error)
+	// Read reminder lifecycle events.
 	GetReminderLog(ctx context.Context, in *GetReminderLogRequest, opts ...grpc.CallOption) (*GetReminderLogResponse, error)
+	// Upload or request a presigned upload URL for an attachment.
 	UploadAttachment(ctx context.Context, in *UploadAttachmentRequest, opts ...grpc.CallOption) (*UploadAttachmentResponse, error)
+	// Fetch attachment metadata or content.
 	GetAttachment(ctx context.Context, in *GetAttachmentRequest, opts ...grpc.CallOption) (*GetAttachmentResponse, error)
+	// List outbound webhook/IM deliveries.
 	ListOutboundDeliveries(ctx context.Context, in *ListOutboundDeliveriesRequest, opts ...grpc.CallOption) (*ListOutboundDeliveriesResponse, error)
+	// Retry one outbound delivery.
 	RetryOutboundDelivery(ctx context.Context, in *RetryOutboundDeliveryRequest, opts ...grpc.CallOption) (*RetryOutboundDeliveryResponse, error)
+	// Append an activity record.
 	LogActivity(ctx context.Context, in *LogActivityRequest, opts ...grpc.CallOption) (*LogActivityResponse, error)
+	// List activity records.
 	ListActivity(ctx context.Context, in *ListActivityRequest, opts ...grpc.CallOption) (*ListActivityResponse, error)
+	// Replay collaboration events after a cursor.
 	ListEventsSince(ctx context.Context, in *ListEventsSinceRequest, opts ...grpc.CallOption) (*ListEventsSinceResponse, error)
+	// Open the low-latency server-to-daemon event stream.
 	SubscribeServerEvents(ctx context.Context, in *SubscribeServerEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeServerEventsResponse], error)
+	// Acknowledge server event stream progress.
 	AcknowledgeServerEvents(ctx context.Context, in *AcknowledgeServerEventsRequest, opts ...grpc.CallOption) (*AcknowledgeServerEventsResponse, error)
+	// Open the collaboration activity event stream.
 	SubscribeActivity(ctx context.Context, in *SubscribeActivityRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeActivityResponse], error)
+	// Acknowledge activity stream progress.
 	AcknowledgeActivityEvents(ctx context.Context, in *AcknowledgeActivityEventsRequest, opts ...grpc.CallOption) (*AcknowledgeActivityEventsResponse, error)
+	// Subscribe to MCP resource updates.
 	SubscribeMcpResource(ctx context.Context, in *SubscribeMcpResourceRequest, opts ...grpc.CallOption) (*SubscribeMcpResourceResponse, error)
+	// Cancel an MCP resource subscription.
 	CancelMcpResourceSubscription(ctx context.Context, in *CancelMcpResourceSubscriptionRequest, opts ...grpc.CallOption) (*CancelMcpResourceSubscriptionResponse, error)
+	// List MCP resource updates after a cursor.
 	ListMcpResourceUpdates(ctx context.Context, in *ListMcpResourceUpdatesRequest, opts ...grpc.CallOption) (*ListMcpResourceUpdatesResponse, error)
 }
 
@@ -956,81 +1037,162 @@ func (c *daemonControlServiceClient) ListMcpResourceUpdates(ctx context.Context,
 // DaemonControlServiceServer is the server API for DaemonControlService service.
 // All implementations must embed UnimplementedDaemonControlServiceServer
 // for forward compatibility.
+//
+// DaemonControlService is the gRPC control plane shared by server, local daemon,
+// bridge, and trusted automation clients. Mutating RPCs use request_id and/or
+// idempotency_key for at-least-once retry safety; list/stream RPCs use EventCursor
+// for replay. Browser clients should consume this through an HTTP/SSE/WebSocket
+// bridge rather than directly binding to gRPC.
 type DaemonControlServiceServer interface {
+	// Register or resume a daemon-managed computer and receive the computer lease.
 	RegisterComputer(context.Context, *RegisterComputerRequest) (*RegisterComputerResponse, error)
+	// Renew computer liveness and submit agent status snapshots.
 	HeartbeatComputer(context.Context, *HeartbeatComputerRequest) (*HeartbeatComputerResponse, error)
+	// Replace the server-visible runtime/workspace inventory for a computer.
 	SyncComputerInventory(context.Context, *SyncComputerInventoryRequest) (*SyncComputerInventoryResponse, error)
+	// Acquire an exclusive launch permit before starting an agent run.
 	AcquireStartPermit(context.Context, *AcquireStartPermitRequest) (*AcquireStartPermitResponse, error)
+	// Release a launch permit that is no longer needed.
 	ReleaseStartPermit(context.Context, *ReleaseStartPermitRequest) (*ReleaseStartPermitResponse, error)
+	// Fetch queued runs assigned to a computer or agent set.
 	FetchAssignedRuns(context.Context, *FetchAssignedRunsRequest) (*FetchAssignedRunsResponse, error)
+	// Update run lifecycle state; idempotency_key deduplicates retries.
 	UpdateRunStatus(context.Context, *UpdateRunStatusRequest) (*UpdateRunStatusResponse, error)
+	// Renew an existing run lease.
 	RenewRunLease(context.Context, *RenewRunLeaseRequest) (*RenewRunLeaseResponse, error)
+	// Append a server-visible run step.
 	AppendRunStep(context.Context, *AppendRunStepRequest) (*AppendRunStepResponse, error)
+	// List runs for Web/bridge views.
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
+	// Load one run and its steps.
 	GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error)
+	// List files visible inside a daemon workspace.
 	ListWorkspaceTree(context.Context, *ListWorkspaceTreeRequest) (*ListWorkspaceTreeResponse, error)
+	// Read one file inside a daemon workspace.
 	ReadWorkspaceFile(context.Context, *ReadWorkspaceFileRequest) (*ReadWorkspaceFileResponse, error)
+	// List channels visible to the caller.
 	ListChannels(context.Context, *ListChannelsRequest) (*ListChannelsResponse, error)
+	// List configured interaction endpoints.
 	ListInteractionEndpoints(context.Context, *ListInteractionEndpointsRequest) (*ListInteractionEndpointsResponse, error)
+	// List known threads.
 	ListThreads(context.Context, *ListThreadsRequest) (*ListThreadsResponse, error)
+	// Load one thread record.
 	GetThread(context.Context, *GetThreadRequest) (*GetThreadResponse, error)
+	// Read messages with cursor pagination.
 	ReadMessages(context.Context, *ReadMessagesRequest) (*ReadMessagesResponse, error)
+	// Send a collaboration message; idempotency_key deduplicates retries.
 	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+	// Save/bookmark a message for an agent or user.
 	SaveMessage(context.Context, *SaveMessageRequest) (*SaveMessageResponse, error)
+	// Remove a saved-message marker.
 	UnsaveMessage(context.Context, *UnsaveMessageRequest) (*UnsaveMessageResponse, error)
+	// List saved messages.
 	ListSavedMessages(context.Context, *ListSavedMessagesRequest) (*ListSavedMessagesResponse, error)
+	// Follow a thread for future delivery.
 	FollowThread(context.Context, *FollowThreadRequest) (*FollowThreadResponse, error)
+	// Stop following a thread.
 	UnfollowThread(context.Context, *UnfollowThreadRequest) (*UnfollowThreadResponse, error)
+	// Create a collaboration task.
 	CreateCollaborationTask(context.Context, *CreateCollaborationTaskRequest) (*CreateCollaborationTaskResponse, error)
+	// Load one task.
 	GetTask(context.Context, *GetTaskRequest) (*GetTaskResponse, error)
+	// Patch task fields and lifecycle state.
 	UpdateTask(context.Context, *UpdateTaskRequest) (*UpdateTaskResponse, error)
+	// List tasks with filters.
 	ListCollaborationTasks(context.Context, *ListCollaborationTasksRequest) (*ListCollaborationTasksResponse, error)
+	// Return the task-board projection grouped by board columns.
 	ListTaskBoard(context.Context, *ListTaskBoardRequest) (*ListTaskBoardResponse, error)
+	// Claim task ownership or reviewer/assistant responsibility.
 	ClaimCollaborationTask(context.Context, *ClaimCollaborationTaskRequest) (*ClaimCollaborationTaskResponse, error)
+	// Propose splitting a task into subtasks.
 	ProposeTaskSplit(context.Context, *ProposeTaskSplitRequest) (*ProposeTaskSplitResponse, error)
+	// Apply an accepted task split proposal.
 	ApplyTaskSplit(context.Context, *ApplyTaskSplitRequest) (*ApplyTaskSplitResponse, error)
+	// Cancel a pending task split proposal.
 	CancelTaskSplitProposal(context.Context, *CancelTaskSplitProposalRequest) (*CancelTaskSplitProposalResponse, error)
+	// Create a task graph atomically.
 	CreateTaskGraph(context.Context, *CreateTaskGraphRequest) (*CreateTaskGraphResponse, error)
+	// List the latest task graph snapshot.
 	ListTaskGraph(context.Context, *ListTaskGraphRequest) (*ListTaskGraphResponse, error)
+	// Mutate task graph edges/ownership with optimistic concurrency.
 	UpdateTaskGraph(context.Context, *UpdateTaskGraphRequest) (*UpdateTaskGraphResponse, error)
+	// Renew a task claim lease.
 	RenewTaskClaimLease(context.Context, *RenewTaskClaimLeaseRequest) (*RenewTaskClaimLeaseResponse, error)
+	// Mark a task release after a release gate passes or is waived.
 	ReleaseTask(context.Context, *ReleaseTaskRequest) (*ReleaseTaskResponse, error)
+	// Load a release gate by id.
 	GetReleaseGate(context.Context, *GetReleaseGateRequest) (*GetReleaseGateResponse, error)
+	// Return lightweight server/protocol metadata.
 	GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error)
+	// Publish a structured coordination record.
 	PublishCoordinationRecord(context.Context, *PublishCoordinationRecordRequest) (*PublishCoordinationRecordResponse, error)
+	// List coordination records for a target/task.
 	ListCoordinationRecords(context.Context, *ListCoordinationRecordsRequest) (*ListCoordinationRecordsResponse, error)
+	// Add a counter-proposal to a deadline or scope negotiation.
 	CounterProposeNegotiation(context.Context, *CounterProposeNegotiationRequest) (*CounterProposeNegotiationResponse, error)
+	// Accept, decline, complete, or cancel a role handoff.
 	RespondRoleHandoff(context.Context, *RespondRoleHandoffRequest) (*RespondRoleHandoffResponse, error)
+	// List server-visible memory records for an agent.
 	ListAgentMemory(context.Context, *ListAgentMemoryRequest) (*ListAgentMemoryResponse, error)
+	// Create or update a server-visible memory record.
 	UpsertAgentMemory(context.Context, *UpsertAgentMemoryRequest) (*UpsertAgentMemoryResponse, error)
+	// Load one agent profile.
 	GetAgentProfile(context.Context, *GetAgentProfileRequest) (*GetAgentProfileResponse, error)
+	// Update user-facing profile metadata.
 	UpdateAgentProfile(context.Context, *UpdateAgentProfileRequest) (*UpdateAgentProfileResponse, error)
+	// Set agent environment variables; secret values must be redacted on read.
 	SetAgentEnv(context.Context, *SetAgentEnvRequest) (*SetAgentEnvResponse, error)
+	// List agent profiles.
 	ListAgentProfiles(context.Context, *ListAgentProfilesRequest) (*ListAgentProfilesResponse, error)
+	// List direct-message surfaces for an agent.
 	ListAgentDMs(context.Context, *ListAgentDMsRequest) (*ListAgentDMsResponse, error)
+	// Request an agent control operation.
 	ControlAgent(context.Context, *ControlAgentRequest) (*ControlAgentResponse, error)
+	// Send a direct message to an agent.
 	SendAgentDirectMessage(context.Context, *SendAgentDirectMessageRequest) (*SendAgentDirectMessageResponse, error)
+	// Update a server-visible agent status snapshot.
 	UpdateAgentStatus(context.Context, *UpdateAgentStatusRequest) (*UpdateAgentStatusResponse, error)
+	// List latest agent status snapshots.
 	ListAgentStatuses(context.Context, *ListAgentStatusesRequest) (*ListAgentStatusesResponse, error)
+	// Schedule a reminder.
 	ScheduleReminder(context.Context, *ScheduleReminderRequest) (*ScheduleReminderResponse, error)
+	// List reminders.
 	ListReminders(context.Context, *ListRemindersRequest) (*ListRemindersResponse, error)
+	// Cancel a reminder.
 	CancelReminder(context.Context, *CancelReminderRequest) (*CancelReminderResponse, error)
+	// Snooze a reminder by a relative delay.
 	SnoozeReminder(context.Context, *SnoozeReminderRequest) (*SnoozeReminderResponse, error)
+	// Update reminder schedule metadata.
 	UpdateReminder(context.Context, *UpdateReminderRequest) (*UpdateReminderResponse, error)
+	// Read reminder lifecycle events.
 	GetReminderLog(context.Context, *GetReminderLogRequest) (*GetReminderLogResponse, error)
+	// Upload or request a presigned upload URL for an attachment.
 	UploadAttachment(context.Context, *UploadAttachmentRequest) (*UploadAttachmentResponse, error)
+	// Fetch attachment metadata or content.
 	GetAttachment(context.Context, *GetAttachmentRequest) (*GetAttachmentResponse, error)
+	// List outbound webhook/IM deliveries.
 	ListOutboundDeliveries(context.Context, *ListOutboundDeliveriesRequest) (*ListOutboundDeliveriesResponse, error)
+	// Retry one outbound delivery.
 	RetryOutboundDelivery(context.Context, *RetryOutboundDeliveryRequest) (*RetryOutboundDeliveryResponse, error)
+	// Append an activity record.
 	LogActivity(context.Context, *LogActivityRequest) (*LogActivityResponse, error)
+	// List activity records.
 	ListActivity(context.Context, *ListActivityRequest) (*ListActivityResponse, error)
+	// Replay collaboration events after a cursor.
 	ListEventsSince(context.Context, *ListEventsSinceRequest) (*ListEventsSinceResponse, error)
+	// Open the low-latency server-to-daemon event stream.
 	SubscribeServerEvents(*SubscribeServerEventsRequest, grpc.ServerStreamingServer[SubscribeServerEventsResponse]) error
+	// Acknowledge server event stream progress.
 	AcknowledgeServerEvents(context.Context, *AcknowledgeServerEventsRequest) (*AcknowledgeServerEventsResponse, error)
+	// Open the collaboration activity event stream.
 	SubscribeActivity(*SubscribeActivityRequest, grpc.ServerStreamingServer[SubscribeActivityResponse]) error
+	// Acknowledge activity stream progress.
 	AcknowledgeActivityEvents(context.Context, *AcknowledgeActivityEventsRequest) (*AcknowledgeActivityEventsResponse, error)
+	// Subscribe to MCP resource updates.
 	SubscribeMcpResource(context.Context, *SubscribeMcpResourceRequest) (*SubscribeMcpResourceResponse, error)
+	// Cancel an MCP resource subscription.
 	CancelMcpResourceSubscription(context.Context, *CancelMcpResourceSubscriptionRequest) (*CancelMcpResourceSubscriptionResponse, error)
+	// List MCP resource updates after a cursor.
 	ListMcpResourceUpdates(context.Context, *ListMcpResourceUpdatesRequest) (*ListMcpResourceUpdatesResponse, error)
 	mustEmbedUnimplementedDaemonControlServiceServer()
 }

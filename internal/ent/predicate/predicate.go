@@ -6,6 +6,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// CollaborationEvent is the predicate function for collaborationevent builders.
+type CollaborationEvent func(*sql.Selector)
+
+// IdempotencyRecord is the predicate function for idempotencyrecord builders.
+type IdempotencyRecord func(*sql.Selector)
+
 // InteractionEndpoint is the predicate function for interactionendpoint builders.
 type InteractionEndpoint func(*sql.Selector)
 

@@ -22,7 +22,7 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 ## Run Locally
 
 ```bash
-go run ./cmd/nekode serve --addr :18790
+go run ./cmd/nekode serve --addr :18790 --grpc-addr 127.0.0.1:18789
 curl http://localhost:18790/health
 ```
 
@@ -31,11 +31,20 @@ Environment variables:
 | Name | Default | Purpose |
 | --- | --- | --- |
 | `NEKODE_ADDR` | `:18790` | HTTP listen address |
+| `NEKODE_GRPC_ADDR` | `127.0.0.1:18789` | local daemon gRPC listen address |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | Public server URL |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | Persistent data directory |
 | `NEKODE_DB_TYPE` | `sqlite` | Database type: `sqlite`, `postgres`, or `mysql` |
 | `NEKODE_DB_DSN` | `$NEKODE_DATA_DIR/nekode.db` | Database DSN |
 | `NEKODE_DB_PATH` | empty | Legacy SQLite path alias if `NEKODE_DB_DSN` is unset |
+| `NEKODE_CACHE_DRIVER` | `badger` | Cache provider: `badger`, `redis`, or `none` |
+| `NEKODE_CACHE_DIR` | `$NEKODE_DATA_DIR/cache` | Badger cache directory |
+| `NEKODE_CACHE_TTL` | `5m` | Default projection/read-through cache TTL |
+| `NEKODE_CACHE_REDIS_ADDR` | empty | Redis address when using the Redis cache provider |
+
+The cache is a rebuildable projection/read-through layer. The database and
+durable event log remain authoritative for idempotency, leases, event sequence,
+task claims, sessions, secrets, and config.
 
 ## Protocol
 

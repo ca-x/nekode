@@ -26,6 +26,10 @@ type Task struct {
 	AssigneeID string `json:"assignee_id,omitempty"`
 	// CreatedByUserID holds the value of the "created_by_user_id" field.
 	CreatedByUserID string `json:"created_by_user_id,omitempty"`
+	// Version holds the value of the "version" field.
+	Version int64 `json:"version,omitempty"`
+	// ClaimLeaseID holds the value of the "claim_lease_id" field.
+	ClaimLeaseID string `json:"claim_lease_id,omitempty"`
 	// CreatedUnix holds the value of the "created_unix" field.
 	CreatedUnix int64 `json:"created_unix,omitempty"`
 	// UpdatedUnix holds the value of the "updated_unix" field.
@@ -38,9 +42,9 @@ func (*Task) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case task.FieldCreatedUnix, task.FieldUpdatedUnix:
+		case task.FieldVersion, task.FieldCreatedUnix, task.FieldUpdatedUnix:
 			values[i] = new(sql.NullInt64)
-		case task.FieldID, task.FieldSummary, task.FieldState, task.FieldTarget, task.FieldAssigneeID, task.FieldCreatedByUserID:
+		case task.FieldID, task.FieldSummary, task.FieldState, task.FieldTarget, task.FieldAssigneeID, task.FieldCreatedByUserID, task.FieldClaimLeaseID:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -92,6 +96,18 @@ func (_m *Task) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field created_by_user_id", values[i])
 			} else if value.Valid {
 				_m.CreatedByUserID = value.String
+			}
+		case task.FieldVersion:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field version", values[i])
+			} else if value.Valid {
+				_m.Version = value.Int64
+			}
+		case task.FieldClaimLeaseID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field claim_lease_id", values[i])
+			} else if value.Valid {
+				_m.ClaimLeaseID = value.String
 			}
 		case task.FieldCreatedUnix:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -155,6 +171,12 @@ func (_m *Task) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_by_user_id=")
 	builder.WriteString(_m.CreatedByUserID)
+	builder.WriteString(", ")
+	builder.WriteString("version=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Version))
+	builder.WriteString(", ")
+	builder.WriteString("claim_lease_id=")
+	builder.WriteString(_m.ClaimLeaseID)
 	builder.WriteString(", ")
 	builder.WriteString("created_unix=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CreatedUnix))

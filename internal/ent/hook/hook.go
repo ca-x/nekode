@@ -9,6 +9,30 @@ import (
 	"github.com/ca-x/nekode/internal/ent"
 )
 
+// The CollaborationEventFunc type is an adapter to allow the use of ordinary
+// function as CollaborationEvent mutator.
+type CollaborationEventFunc func(context.Context, *ent.CollaborationEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CollaborationEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CollaborationEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CollaborationEventMutation", m)
+}
+
+// The IdempotencyRecordFunc type is an adapter to allow the use of ordinary
+// function as IdempotencyRecord mutator.
+type IdempotencyRecordFunc func(context.Context, *ent.IdempotencyRecordMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f IdempotencyRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IdempotencyRecordMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IdempotencyRecordMutation", m)
+}
+
 // The InteractionEndpointFunc type is an adapter to allow the use of ordinary
 // function as InteractionEndpoint mutator.
 type InteractionEndpointFunc func(context.Context, *ent.InteractionEndpointMutation) (ent.Value, error)

@@ -21,17 +21,355 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// AgentRoleName is the closed set of built-in collaboration roles.
+// Use AGENT_ROLE_NAME_CUSTOM only when AgentRoleAssignment.name is extended later
+// through an explicit custom-role field.
+type AgentRoleName int32
+
+const (
+	// Role name is omitted or unknown.
+	AgentRoleName_AGENT_ROLE_NAME_UNSPECIFIED AgentRoleName = 0
+	// Agent owns implementation work.
+	AgentRoleName_AGENT_ROLE_NAME_IMPLEMENTER AgentRoleName = 1
+	// Agent owns review work.
+	AgentRoleName_AGENT_ROLE_NAME_REVIEWER AgentRoleName = 2
+	// Agent owns design work.
+	AgentRoleName_AGENT_ROLE_NAME_DESIGNER AgentRoleName = 3
+	// Agent owns release work.
+	AgentRoleName_AGENT_ROLE_NAME_RELEASER AgentRoleName = 4
+	// Agent observes without owning work.
+	AgentRoleName_AGENT_ROLE_NAME_OBSERVER AgentRoleName = 5
+	// Custom role outside the built-in set.
+	AgentRoleName_AGENT_ROLE_NAME_CUSTOM AgentRoleName = 6
+)
+
+// Enum value maps for AgentRoleName.
+var (
+	AgentRoleName_name = map[int32]string{
+		0: "AGENT_ROLE_NAME_UNSPECIFIED",
+		1: "AGENT_ROLE_NAME_IMPLEMENTER",
+		2: "AGENT_ROLE_NAME_REVIEWER",
+		3: "AGENT_ROLE_NAME_DESIGNER",
+		4: "AGENT_ROLE_NAME_RELEASER",
+		5: "AGENT_ROLE_NAME_OBSERVER",
+		6: "AGENT_ROLE_NAME_CUSTOM",
+	}
+	AgentRoleName_value = map[string]int32{
+		"AGENT_ROLE_NAME_UNSPECIFIED": 0,
+		"AGENT_ROLE_NAME_IMPLEMENTER": 1,
+		"AGENT_ROLE_NAME_REVIEWER":    2,
+		"AGENT_ROLE_NAME_DESIGNER":    3,
+		"AGENT_ROLE_NAME_RELEASER":    4,
+		"AGENT_ROLE_NAME_OBSERVER":    5,
+		"AGENT_ROLE_NAME_CUSTOM":      6,
+	}
+)
+
+func (x AgentRoleName) Enum() *AgentRoleName {
+	p := new(AgentRoleName)
+	*p = x
+	return p
+}
+
+func (x AgentRoleName) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentRoleName) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_agent_proto_enumTypes[0].Descriptor()
+}
+
+func (AgentRoleName) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[0]
+}
+
+func (x AgentRoleName) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentRoleName.Descriptor instead.
+func (AgentRoleName) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{0}
+}
+
+// AgentRoleScope is the closed set of scopes a role assignment can target.
+type AgentRoleScope int32
+
+const (
+	// Scope is omitted or unknown.
+	AgentRoleScope_AGENT_ROLE_SCOPE_UNSPECIFIED AgentRoleScope = 0
+	// Role applies to the whole server.
+	AgentRoleScope_AGENT_ROLE_SCOPE_SERVER AgentRoleScope = 1
+	// Role applies to a channel.
+	AgentRoleScope_AGENT_ROLE_SCOPE_CHANNEL AgentRoleScope = 2
+	// Role applies to a thread.
+	AgentRoleScope_AGENT_ROLE_SCOPE_THREAD AgentRoleScope = 3
+	// Role applies to a task.
+	AgentRoleScope_AGENT_ROLE_SCOPE_TASK AgentRoleScope = 4
+	// Role applies to a run.
+	AgentRoleScope_AGENT_ROLE_SCOPE_RUN AgentRoleScope = 5
+)
+
+// Enum value maps for AgentRoleScope.
+var (
+	AgentRoleScope_name = map[int32]string{
+		0: "AGENT_ROLE_SCOPE_UNSPECIFIED",
+		1: "AGENT_ROLE_SCOPE_SERVER",
+		2: "AGENT_ROLE_SCOPE_CHANNEL",
+		3: "AGENT_ROLE_SCOPE_THREAD",
+		4: "AGENT_ROLE_SCOPE_TASK",
+		5: "AGENT_ROLE_SCOPE_RUN",
+	}
+	AgentRoleScope_value = map[string]int32{
+		"AGENT_ROLE_SCOPE_UNSPECIFIED": 0,
+		"AGENT_ROLE_SCOPE_SERVER":      1,
+		"AGENT_ROLE_SCOPE_CHANNEL":     2,
+		"AGENT_ROLE_SCOPE_THREAD":      3,
+		"AGENT_ROLE_SCOPE_TASK":        4,
+		"AGENT_ROLE_SCOPE_RUN":         5,
+	}
+)
+
+func (x AgentRoleScope) Enum() *AgentRoleScope {
+	p := new(AgentRoleScope)
+	*p = x
+	return p
+}
+
+func (x AgentRoleScope) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentRoleScope) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_agent_proto_enumTypes[1].Descriptor()
+}
+
+func (AgentRoleScope) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[1]
+}
+
+func (x AgentRoleScope) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentRoleScope.Descriptor instead.
+func (AgentRoleScope) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{1}
+}
+
+// AgentControlAction is the closed set of built-in agent control operations.
+// Custom control should use AGENT_CONTROL_ACTION_CUSTOM with reason/details.
+type AgentControlAction int32
+
+const (
+	// Action is omitted or unknown.
+	AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED AgentControlAction = 0
+	// Terminate the agent process.
+	AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE AgentControlAction = 1
+	// Restart without clearing session state.
+	AgentControlAction_AGENT_CONTROL_ACTION_RESTART AgentControlAction = 2
+	// Restart and reset active session state.
+	AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION AgentControlAction = 3
+	// Restart and clear all runtime-local state that is safe to reset.
+	AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET AgentControlAction = 4
+	// Custom action outside the built-in control set.
+	AgentControlAction_AGENT_CONTROL_ACTION_CUSTOM AgentControlAction = 5
+)
+
+// Enum value maps for AgentControlAction.
+var (
+	AgentControlAction_name = map[int32]string{
+		0: "AGENT_CONTROL_ACTION_UNSPECIFIED",
+		1: "AGENT_CONTROL_ACTION_TERMINATE",
+		2: "AGENT_CONTROL_ACTION_RESTART",
+		3: "AGENT_CONTROL_ACTION_RESTART_RESET_SESSION",
+		4: "AGENT_CONTROL_ACTION_RESTART_FULL_RESET",
+		5: "AGENT_CONTROL_ACTION_CUSTOM",
+	}
+	AgentControlAction_value = map[string]int32{
+		"AGENT_CONTROL_ACTION_UNSPECIFIED":           0,
+		"AGENT_CONTROL_ACTION_TERMINATE":             1,
+		"AGENT_CONTROL_ACTION_RESTART":               2,
+		"AGENT_CONTROL_ACTION_RESTART_RESET_SESSION": 3,
+		"AGENT_CONTROL_ACTION_RESTART_FULL_RESET":    4,
+		"AGENT_CONTROL_ACTION_CUSTOM":                5,
+	}
+)
+
+func (x AgentControlAction) Enum() *AgentControlAction {
+	p := new(AgentControlAction)
+	*p = x
+	return p
+}
+
+func (x AgentControlAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentControlAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_agent_proto_enumTypes[2].Descriptor()
+}
+
+func (AgentControlAction) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[2]
+}
+
+func (x AgentControlAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentControlAction.Descriptor instead.
+func (AgentControlAction) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{2}
+}
+
+// AgentControlState is the closed lifecycle for an agent control operation.
+type AgentControlState int32
+
+const (
+	// State is omitted or unknown.
+	AgentControlState_AGENT_CONTROL_STATE_UNSPECIFIED AgentControlState = 0
+	// Operation was requested.
+	AgentControlState_AGENT_CONTROL_STATE_REQUESTED AgentControlState = 1
+	// Operation is queued for a daemon.
+	AgentControlState_AGENT_CONTROL_STATE_QUEUED AgentControlState = 2
+	// Operation is running.
+	AgentControlState_AGENT_CONTROL_STATE_RUNNING AgentControlState = 3
+	// Operation completed successfully.
+	AgentControlState_AGENT_CONTROL_STATE_COMPLETED AgentControlState = 4
+	// Operation failed.
+	AgentControlState_AGENT_CONTROL_STATE_FAILED AgentControlState = 5
+	// Operation is unsupported by the runtime/daemon.
+	AgentControlState_AGENT_CONTROL_STATE_UNSUPPORTED AgentControlState = 6
+)
+
+// Enum value maps for AgentControlState.
+var (
+	AgentControlState_name = map[int32]string{
+		0: "AGENT_CONTROL_STATE_UNSPECIFIED",
+		1: "AGENT_CONTROL_STATE_REQUESTED",
+		2: "AGENT_CONTROL_STATE_QUEUED",
+		3: "AGENT_CONTROL_STATE_RUNNING",
+		4: "AGENT_CONTROL_STATE_COMPLETED",
+		5: "AGENT_CONTROL_STATE_FAILED",
+		6: "AGENT_CONTROL_STATE_UNSUPPORTED",
+	}
+	AgentControlState_value = map[string]int32{
+		"AGENT_CONTROL_STATE_UNSPECIFIED": 0,
+		"AGENT_CONTROL_STATE_REQUESTED":   1,
+		"AGENT_CONTROL_STATE_QUEUED":      2,
+		"AGENT_CONTROL_STATE_RUNNING":     3,
+		"AGENT_CONTROL_STATE_COMPLETED":   4,
+		"AGENT_CONTROL_STATE_FAILED":      5,
+		"AGENT_CONTROL_STATE_UNSUPPORTED": 6,
+	}
+)
+
+func (x AgentControlState) Enum() *AgentControlState {
+	p := new(AgentControlState)
+	*p = x
+	return p
+}
+
+func (x AgentControlState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentControlState) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_agent_proto_enumTypes[3].Descriptor()
+}
+
+func (AgentControlState) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[3]
+}
+
+func (x AgentControlState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentControlState.Descriptor instead.
+func (AgentControlState) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{3}
+}
+
+// AgentStatusSeverity is the closed severity set for status snapshots.
+type AgentStatusSeverity int32
+
+const (
+	// Severity is omitted or unknown.
+	AgentStatusSeverity_AGENT_STATUS_SEVERITY_UNSPECIFIED AgentStatusSeverity = 0
+	// Informational status.
+	AgentStatusSeverity_AGENT_STATUS_SEVERITY_INFO AgentStatusSeverity = 1
+	// Warning status that may need attention.
+	AgentStatusSeverity_AGENT_STATUS_SEVERITY_WARNING AgentStatusSeverity = 2
+	// Error status that needs attention.
+	AgentStatusSeverity_AGENT_STATUS_SEVERITY_ERROR AgentStatusSeverity = 3
+)
+
+// Enum value maps for AgentStatusSeverity.
+var (
+	AgentStatusSeverity_name = map[int32]string{
+		0: "AGENT_STATUS_SEVERITY_UNSPECIFIED",
+		1: "AGENT_STATUS_SEVERITY_INFO",
+		2: "AGENT_STATUS_SEVERITY_WARNING",
+		3: "AGENT_STATUS_SEVERITY_ERROR",
+	}
+	AgentStatusSeverity_value = map[string]int32{
+		"AGENT_STATUS_SEVERITY_UNSPECIFIED": 0,
+		"AGENT_STATUS_SEVERITY_INFO":        1,
+		"AGENT_STATUS_SEVERITY_WARNING":     2,
+		"AGENT_STATUS_SEVERITY_ERROR":       3,
+	}
+)
+
+func (x AgentStatusSeverity) Enum() *AgentStatusSeverity {
+	p := new(AgentStatusSeverity)
+	*p = x
+	return p
+}
+
+func (x AgentStatusSeverity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AgentStatusSeverity) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_agent_proto_enumTypes[4].Descriptor()
+}
+
+func (AgentStatusSeverity) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[4]
+}
+
+func (x AgentStatusSeverity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AgentStatusSeverity.Descriptor instead.
+func (AgentStatusSeverity) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{4}
+}
+
+// AgentPresence is the closed presence set derived from daemon heartbeat and
+// runtime status. UNSPECIFIED is for omitted/legacy values only.
 type AgentPresence int32
 
 const (
+	// Presence is omitted or unknown.
 	AgentPresence_AGENT_PRESENCE_UNSPECIFIED AgentPresence = 0
-	AgentPresence_AGENT_PRESENCE_ONLINE      AgentPresence = 1
-	AgentPresence_AGENT_PRESENCE_IDLE        AgentPresence = 2
-	AgentPresence_AGENT_PRESENCE_BUSY        AgentPresence = 3
-	AgentPresence_AGENT_PRESENCE_SLEEPING    AgentPresence = 4
-	AgentPresence_AGENT_PRESENCE_STALE       AgentPresence = 5
-	AgentPresence_AGENT_PRESENCE_OFFLINE     AgentPresence = 6
-	AgentPresence_AGENT_PRESENCE_DEGRADED    AgentPresence = 7
+	// Agent is connected and available.
+	AgentPresence_AGENT_PRESENCE_ONLINE AgentPresence = 1
+	// Agent is online but idle.
+	AgentPresence_AGENT_PRESENCE_IDLE AgentPresence = 2
+	// Agent is online and actively working.
+	AgentPresence_AGENT_PRESENCE_BUSY AgentPresence = 3
+	// Agent is intentionally sleeping/suspended.
+	AgentPresence_AGENT_PRESENCE_SLEEPING AgentPresence = 4
+	// Agent has missed recent updates but is not fully offline.
+	AgentPresence_AGENT_PRESENCE_STALE AgentPresence = 5
+	// Agent is disconnected or lease-expired.
+	AgentPresence_AGENT_PRESENCE_OFFLINE AgentPresence = 6
+	// Agent is online but reports degraded capability.
+	AgentPresence_AGENT_PRESENCE_DEGRADED AgentPresence = 7
 )
 
 // Enum value maps for AgentPresence.
@@ -69,11 +407,11 @@ func (x AgentPresence) String() string {
 }
 
 func (AgentPresence) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[0].Descriptor()
+	return file_nekode_daemon_v1_agent_proto_enumTypes[5].Descriptor()
 }
 
 func (AgentPresence) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[0]
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[5]
 }
 
 func (x AgentPresence) Number() protoreflect.EnumNumber {
@@ -82,25 +420,40 @@ func (x AgentPresence) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentPresence.Descriptor instead.
 func (AgentPresence) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{0}
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{5}
 }
 
+// AgentActivityState is the closed set of fine-grained activity hints that UI
+// and peers can display while an agent is online.
 type AgentActivityState int32
 
 const (
-	AgentActivityState_AGENT_ACTIVITY_STATE_UNSPECIFIED        AgentActivityState = 0
-	AgentActivityState_AGENT_ACTIVITY_STATE_RECEIVING_MESSAGE  AgentActivityState = 1
-	AgentActivityState_AGENT_ACTIVITY_STATE_READING_CONTEXT    AgentActivityState = 2
+	// Activity state is omitted or unknown.
+	AgentActivityState_AGENT_ACTIVITY_STATE_UNSPECIFIED AgentActivityState = 0
+	// Agent received a message.
+	AgentActivityState_AGENT_ACTIVITY_STATE_RECEIVING_MESSAGE AgentActivityState = 1
+	// Agent is reading files, messages, memory, or task context.
+	AgentActivityState_AGENT_ACTIVITY_STATE_READING_CONTEXT AgentActivityState = 2
+	// Agent is compacting or summarizing context.
 	AgentActivityState_AGENT_ACTIVITY_STATE_COMPACTING_CONTEXT AgentActivityState = 3
-	AgentActivityState_AGENT_ACTIVITY_STATE_THINKING           AgentActivityState = 4
-	AgentActivityState_AGENT_ACTIVITY_STATE_CODING             AgentActivityState = 5
-	AgentActivityState_AGENT_ACTIVITY_STATE_RUNNING_COMMAND    AgentActivityState = 6
-	AgentActivityState_AGENT_ACTIVITY_STATE_RUNNING_TEST       AgentActivityState = 7
-	AgentActivityState_AGENT_ACTIVITY_STATE_REVIEWING          AgentActivityState = 8
-	AgentActivityState_AGENT_ACTIVITY_STATE_WAITING            AgentActivityState = 9
-	AgentActivityState_AGENT_ACTIVITY_STATE_BLOCKED            AgentActivityState = 10
-	AgentActivityState_AGENT_ACTIVITY_STATE_RESTARTING         AgentActivityState = 11
-	AgentActivityState_AGENT_ACTIVITY_STATE_RESTORING_MEMORY   AgentActivityState = 12
+	// Agent is reasoning before acting.
+	AgentActivityState_AGENT_ACTIVITY_STATE_THINKING AgentActivityState = 4
+	// Agent is editing code or artifacts.
+	AgentActivityState_AGENT_ACTIVITY_STATE_CODING AgentActivityState = 5
+	// Agent is running a command.
+	AgentActivityState_AGENT_ACTIVITY_STATE_RUNNING_COMMAND AgentActivityState = 6
+	// Agent is running tests or verification.
+	AgentActivityState_AGENT_ACTIVITY_STATE_RUNNING_TEST AgentActivityState = 7
+	// Agent is reviewing code, design, or output.
+	AgentActivityState_AGENT_ACTIVITY_STATE_REVIEWING AgentActivityState = 8
+	// Agent is waiting for an external event.
+	AgentActivityState_AGENT_ACTIVITY_STATE_WAITING AgentActivityState = 9
+	// Agent cannot proceed without intervention.
+	AgentActivityState_AGENT_ACTIVITY_STATE_BLOCKED AgentActivityState = 10
+	// Agent runtime is restarting.
+	AgentActivityState_AGENT_ACTIVITY_STATE_RESTARTING AgentActivityState = 11
+	// Agent is restoring local/server memory.
+	AgentActivityState_AGENT_ACTIVITY_STATE_RESTORING_MEMORY AgentActivityState = 12
 )
 
 // Enum value maps for AgentActivityState.
@@ -148,11 +501,11 @@ func (x AgentActivityState) String() string {
 }
 
 func (AgentActivityState) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[1].Descriptor()
+	return file_nekode_daemon_v1_agent_proto_enumTypes[6].Descriptor()
 }
 
 func (AgentActivityState) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[1]
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[6]
 }
 
 func (x AgentActivityState) Number() protoreflect.EnumNumber {
@@ -161,20 +514,30 @@ func (x AgentActivityState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentActivityState.Descriptor instead.
 func (AgentActivityState) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{1}
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{6}
 }
 
+// AgentHealth is the closed set of health causes surfaced by daemon/runtime
+// monitoring. It complements presence; it does not replace activity state.
 type AgentHealth int32
 
 const (
-	AgentHealth_AGENT_HEALTH_UNSPECIFIED    AgentHealth = 0
-	AgentHealth_AGENT_HEALTH_OK             AgentHealth = 1
+	// Health is omitted or unknown.
+	AgentHealth_AGENT_HEALTH_UNSPECIFIED AgentHealth = 0
+	// Agent reports healthy operation.
+	AgentHealth_AGENT_HEALTH_OK AgentHealth = 1
+	// Provider quota/rate limit is blocking or degrading work.
 	AgentHealth_AGENT_HEALTH_PROVIDER_QUOTA AgentHealth = 2
+	// Last command failed.
 	AgentHealth_AGENT_HEALTH_COMMAND_FAILED AgentHealth = 3
-	AgentHealth_AGENT_HEALTH_TEST_FAILED    AgentHealth = 4
-	AgentHealth_AGENT_HEALTH_AUTH_REQUIRED  AgentHealth = 5
-	AgentHealth_AGENT_HEALTH_RUNTIME_ERROR  AgentHealth = 6
-	AgentHealth_AGENT_HEALTH_OFFLINE        AgentHealth = 7
+	// Last test/verification failed.
+	AgentHealth_AGENT_HEALTH_TEST_FAILED AgentHealth = 4
+	// Runtime/provider authentication is required.
+	AgentHealth_AGENT_HEALTH_AUTH_REQUIRED AgentHealth = 5
+	// Runtime reported an internal error.
+	AgentHealth_AGENT_HEALTH_RUNTIME_ERROR AgentHealth = 6
+	// Daemon/runtime reports the agent offline.
+	AgentHealth_AGENT_HEALTH_OFFLINE AgentHealth = 7
 )
 
 // Enum value maps for AgentHealth.
@@ -212,11 +575,11 @@ func (x AgentHealth) String() string {
 }
 
 func (AgentHealth) Descriptor() protoreflect.EnumDescriptor {
-	return file_nekode_daemon_v1_agent_proto_enumTypes[2].Descriptor()
+	return file_nekode_daemon_v1_agent_proto_enumTypes[7].Descriptor()
 }
 
 func (AgentHealth) Type() protoreflect.EnumType {
-	return &file_nekode_daemon_v1_agent_proto_enumTypes[2]
+	return &file_nekode_daemon_v1_agent_proto_enumTypes[7]
 }
 
 func (x AgentHealth) Number() protoreflect.EnumNumber {
@@ -225,14 +588,14 @@ func (x AgentHealth) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use AgentHealth.Descriptor instead.
 func (AgentHealth) EnumDescriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{2}
+	return file_nekode_daemon_v1_agent_proto_rawDescGZIP(), []int{7}
 }
 
 type AgentRoleAssignment struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	RoleId            string                 `protobuf:"bytes,1,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
-	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`   // implementer | reviewer | designer | releaser | observer | custom
-	Scope             string                 `protobuf:"bytes,3,opt,name=scope,proto3" json:"scope,omitempty"` // server | channel | thread | task | run
+	Name              AgentRoleName          `protobuf:"varint,2,opt,name=name,proto3,enum=nekode.daemon.v1.AgentRoleName" json:"name,omitempty"`
+	Scope             AgentRoleScope         `protobuf:"varint,3,opt,name=scope,proto3,enum=nekode.daemon.v1.AgentRoleScope" json:"scope,omitempty"`
 	Target            string                 `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
 	TaskId            string                 `protobuf:"bytes,5,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Active            bool                   `protobuf:"varint,6,opt,name=active,proto3" json:"active,omitempty"`
@@ -280,18 +643,18 @@ func (x *AgentRoleAssignment) GetRoleId() string {
 	return ""
 }
 
-func (x *AgentRoleAssignment) GetName() string {
+func (x *AgentRoleAssignment) GetName() AgentRoleName {
 	if x != nil {
 		return x.Name
 	}
-	return ""
+	return AgentRoleName_AGENT_ROLE_NAME_UNSPECIFIED
 }
 
-func (x *AgentRoleAssignment) GetScope() string {
+func (x *AgentRoleAssignment) GetScope() AgentRoleScope {
 	if x != nil {
 		return x.Scope
 	}
-	return ""
+	return AgentRoleScope_AGENT_ROLE_SCOPE_UNSPECIFIED
 }
 
 func (x *AgentRoleAssignment) GetTarget() string {
@@ -337,34 +700,42 @@ func (x *AgentRoleAssignment) GetAssignedByUserId() string {
 }
 
 type AgentProfile struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	AgentId              string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Name                 string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	DisplayName          string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Description          string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Enabled              bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Provider             string                 `protobuf:"bytes,6,opt,name=provider,proto3" json:"provider,omitempty"`
-	Model                string                 `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`
-	Env                  []*EnvVar              `protobuf:"bytes,8,rep,name=env,proto3" json:"env,omitempty"`
-	Skills               []*SkillRecord         `protobuf:"bytes,9,rep,name=skills,proto3" json:"skills,omitempty"`
-	DmTargets            []string               `protobuf:"bytes,10,rep,name=dm_targets,json=dmTargets,proto3" json:"dm_targets,omitempty"`
-	ComputerId           string                 `protobuf:"bytes,11,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
-	RuntimeProfileId     string                 `protobuf:"bytes,12,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	Status               string                 `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
-	LastActivityTimeUnix int64                  `protobuf:"varint,14,opt,name=last_activity_time_unix,json=lastActivityTimeUnix,proto3" json:"last_activity_time_unix,omitempty"`
-	Capabilities         []*Capability          `protobuf:"bytes,15,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	Permissions          []*Permission          `protobuf:"bytes,16,rep,name=permissions,proto3" json:"permissions,omitempty"`
-	StatusSnapshot       *AgentStatusSnapshot   `protobuf:"bytes,17,opt,name=status_snapshot,json=statusSnapshot,proto3" json:"status_snapshot,omitempty"`
-	AvatarUrl            string                 `protobuf:"bytes,18,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	RuntimeKind          string                 `protobuf:"bytes,19,opt,name=runtime_kind,json=runtimeKind,proto3" json:"runtime_kind,omitempty"`
-	ReasoningEffort      string                 `protobuf:"bytes,20,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"`
-	ExecutionMode        string                 `protobuf:"bytes,21,opt,name=execution_mode,json=executionMode,proto3" json:"execution_mode,omitempty"`
-	DaemonVersion        string                 `protobuf:"bytes,22,opt,name=daemon_version,json=daemonVersion,proto3" json:"daemon_version,omitempty"`
-	Roles                []*AgentRoleAssignment `protobuf:"bytes,23,rep,name=roles,proto3" json:"roles,omitempty"`
-	MemoryRoot           string                 `protobuf:"bytes,24,opt,name=memory_root,json=memoryRoot,proto3" json:"memory_root,omitempty"`
-	CoordinationTags     []string               `protobuf:"bytes,25,rep,name=coordination_tags,json=coordinationTags,proto3" json:"coordination_tags,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	AgentId     string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	DisplayName string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Description string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Enabled     bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Open model provider name, such as openai, anthropic, google, or custom.
+	Provider string `protobuf:"bytes,6,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Open model identifier; do not make this a closed enum.
+	Model                string               `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`
+	Env                  []*EnvVar            `protobuf:"bytes,8,rep,name=env,proto3" json:"env,omitempty"`
+	Skills               []*SkillRecord       `protobuf:"bytes,9,rep,name=skills,proto3" json:"skills,omitempty"`
+	DmTargets            []string             `protobuf:"bytes,10,rep,name=dm_targets,json=dmTargets,proto3" json:"dm_targets,omitempty"`
+	ComputerId           string               `protobuf:"bytes,11,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
+	RuntimeProfileId     string               `protobuf:"bytes,12,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
+	Status               AgentPresence        `protobuf:"varint,13,opt,name=status,proto3,enum=nekode.daemon.v1.AgentPresence" json:"status,omitempty"`
+	LastActivityTimeUnix int64                `protobuf:"varint,14,opt,name=last_activity_time_unix,json=lastActivityTimeUnix,proto3" json:"last_activity_time_unix,omitempty"`
+	Capabilities         []*Capability        `protobuf:"bytes,15,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	Permissions          []*Permission        `protobuf:"bytes,16,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	StatusSnapshot       *AgentStatusSnapshot `protobuf:"bytes,17,opt,name=status_snapshot,json=statusSnapshot,proto3" json:"status_snapshot,omitempty"`
+	AvatarUrl            string               `protobuf:"bytes,18,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Open runtime adapter kind. Canonical values include codex, claude,
+	// opencode, kimi, gemini, and custom runtime adapters.
+	RuntimeKind string `protobuf:"bytes,19,opt,name=runtime_kind,json=runtimeKind,proto3" json:"runtime_kind,omitempty"`
+	// Open runtime/provider effort hint, such as low, medium, high, xhigh, or
+	// provider-specific values.
+	ReasoningEffort string `protobuf:"bytes,20,opt,name=reasoning_effort,json=reasoningEffort,proto3" json:"reasoning_effort,omitempty"`
+	// Open execution-mode hint, such as interactive, autonomous, review, or
+	// runtime-specific modes.
+	ExecutionMode    string                 `protobuf:"bytes,21,opt,name=execution_mode,json=executionMode,proto3" json:"execution_mode,omitempty"`
+	DaemonVersion    string                 `protobuf:"bytes,22,opt,name=daemon_version,json=daemonVersion,proto3" json:"daemon_version,omitempty"`
+	Roles            []*AgentRoleAssignment `protobuf:"bytes,23,rep,name=roles,proto3" json:"roles,omitempty"`
+	MemoryRoot       string                 `protobuf:"bytes,24,opt,name=memory_root,json=memoryRoot,proto3" json:"memory_root,omitempty"`
+	CoordinationTags []string               `protobuf:"bytes,25,rep,name=coordination_tags,json=coordinationTags,proto3" json:"coordination_tags,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AgentProfile) Reset() {
@@ -481,11 +852,11 @@ func (x *AgentProfile) GetRuntimeProfileId() string {
 	return ""
 }
 
-func (x *AgentProfile) GetStatus() string {
+func (x *AgentProfile) GetStatus() AgentPresence {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return AgentPresence_AGENT_PRESENCE_UNSPECIFIED
 }
 
 func (x *AgentProfile) GetLastActivityTimeUnix() int64 {
@@ -1154,8 +1525,8 @@ type AgentControlOperation struct {
 	AgentId            string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ComputerId         string                 `protobuf:"bytes,3,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
 	RuntimeProfileId   string                 `protobuf:"bytes,4,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	Action             string                 `protobuf:"bytes,5,opt,name=action,proto3" json:"action,omitempty"` // terminate | restart | restart_reset_session | restart_full_reset | custom
-	State              string                 `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"`   // requested | queued | running | completed | failed | unsupported
+	Action             AgentControlAction     `protobuf:"varint,5,opt,name=action,proto3,enum=nekode.daemon.v1.AgentControlAction" json:"action,omitempty"`
+	State              AgentControlState      `protobuf:"varint,6,opt,name=state,proto3,enum=nekode.daemon.v1.AgentControlState" json:"state,omitempty"`
 	Reason             string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
 	RequestedByAgentId string                 `protobuf:"bytes,8,opt,name=requested_by_agent_id,json=requestedByAgentId,proto3" json:"requested_by_agent_id,omitempty"`
 	CreatedTimeUnix    int64                  `protobuf:"varint,9,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
@@ -1222,18 +1593,18 @@ func (x *AgentControlOperation) GetRuntimeProfileId() string {
 	return ""
 }
 
-func (x *AgentControlOperation) GetAction() string {
+func (x *AgentControlOperation) GetAction() AgentControlAction {
 	if x != nil {
 		return x.Action
 	}
-	return ""
+	return AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED
 }
 
-func (x *AgentControlOperation) GetState() string {
+func (x *AgentControlOperation) GetState() AgentControlState {
 	if x != nil {
 		return x.State
 	}
-	return ""
+	return AgentControlState_AGENT_CONTROL_STATE_UNSPECIFIED
 }
 
 func (x *AgentControlOperation) GetReason() string {
@@ -1269,7 +1640,7 @@ type ControlAgentRequest struct {
 	AgentId            string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ComputerId         string                 `protobuf:"bytes,2,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
 	RuntimeProfileId   string                 `protobuf:"bytes,3,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	Action             string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"` // terminate | restart | restart_reset_session | restart_full_reset | custom
+	Action             AgentControlAction     `protobuf:"varint,4,opt,name=action,proto3,enum=nekode.daemon.v1.AgentControlAction" json:"action,omitempty"`
 	Reason             string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	RequestedByAgentId string                 `protobuf:"bytes,6,opt,name=requested_by_agent_id,json=requestedByAgentId,proto3" json:"requested_by_agent_id,omitempty"`
 	RequestId          string                 `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -1334,11 +1705,11 @@ func (x *ControlAgentRequest) GetRuntimeProfileId() string {
 	return ""
 }
 
-func (x *ControlAgentRequest) GetAction() string {
+func (x *ControlAgentRequest) GetAction() AgentControlAction {
 	if x != nil {
 		return x.Action
 	}
-	return ""
+	return AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED
 }
 
 func (x *ControlAgentRequest) GetReason() string {
@@ -1626,7 +1997,7 @@ type AgentStatusSnapshot struct {
 	TaskId           string                 `protobuf:"bytes,12,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	RunId            string                 `protobuf:"bytes,13,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	OperationId      string                 `protobuf:"bytes,14,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
-	Severity         string                 `protobuf:"bytes,15,opt,name=severity,proto3" json:"severity,omitempty"`
+	Severity         AgentStatusSeverity    `protobuf:"varint,15,opt,name=severity,proto3,enum=nekode.daemon.v1.AgentStatusSeverity" json:"severity,omitempty"`
 	StartedTimeUnix  int64                  `protobuf:"varint,16,opt,name=started_time_unix,json=startedTimeUnix,proto3" json:"started_time_unix,omitempty"`
 	UpdatedTimeUnix  int64                  `protobuf:"varint,17,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
 	ExpiresTimeUnix  int64                  `protobuf:"varint,18,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
@@ -1762,11 +2133,11 @@ func (x *AgentStatusSnapshot) GetOperationId() string {
 	return ""
 }
 
-func (x *AgentStatusSnapshot) GetSeverity() string {
+func (x *AgentStatusSnapshot) GetSeverity() AgentStatusSeverity {
 	if x != nil {
 		return x.Severity
 	}
-	return ""
+	return AgentStatusSeverity_AGENT_STATUS_SEVERITY_UNSPECIFIED
 }
 
 func (x *AgentStatusSnapshot) GetStartedTimeUnix() int64 {
@@ -2026,17 +2397,17 @@ var File_nekode_daemon_v1_agent_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x1cnekode/daemon/v1/agent.proto\x12\x10nekode.daemon.v1\x1a$nekode/daemon/v1/collaboration.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xb7\x02\n" +
+	"\x1cnekode/daemon/v1/agent.proto\x12\x10nekode.daemon.v1\x1a$nekode/daemon/v1/collaboration.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xfa\x02\n" +
 	"\x13AgentRoleAssignment\x12\x17\n" +
-	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05scope\x18\x03 \x01(\tR\x05scope\x12\x16\n" +
+	"\arole_id\x18\x01 \x01(\tR\x06roleId\x123\n" +
+	"\x04name\x18\x02 \x01(\x0e2\x1f.nekode.daemon.v1.AgentRoleNameR\x04name\x126\n" +
+	"\x05scope\x18\x03 \x01(\x0e2 .nekode.daemon.v1.AgentRoleScopeR\x05scope\x12\x16\n" +
 	"\x06target\x18\x04 \x01(\tR\x06target\x12\x17\n" +
 	"\atask_id\x18\x05 \x01(\tR\x06taskId\x12\x16\n" +
 	"\x06active\x18\x06 \x01(\bR\x06active\x12,\n" +
 	"\x12assigned_time_unix\x18\a \x01(\x03R\x10assignedTimeUnix\x12/\n" +
 	"\x14assigned_by_agent_id\x18\b \x01(\tR\x11assignedByAgentId\x12-\n" +
-	"\x13assigned_by_user_id\x18\t \x01(\tR\x10assignedByUserIdJ\x06\b\xe8\a\x10\xd0\x0f\"\x8e\b\n" +
+	"\x13assigned_by_user_id\x18\t \x01(\tR\x10assignedByUserIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xaf\b\n" +
 	"\fAgentProfile\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
@@ -2052,8 +2423,8 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	" \x03(\tR\tdmTargets\x12\x1f\n" +
 	"\vcomputer_id\x18\v \x01(\tR\n" +
 	"computerId\x12,\n" +
-	"\x12runtime_profile_id\x18\f \x01(\tR\x10runtimeProfileId\x12\x16\n" +
-	"\x06status\x18\r \x01(\tR\x06status\x125\n" +
+	"\x12runtime_profile_id\x18\f \x01(\tR\x10runtimeProfileId\x127\n" +
+	"\x06status\x18\r \x01(\x0e2\x1f.nekode.daemon.v1.AgentPresenceR\x06status\x125\n" +
 	"\x17last_activity_time_unix\x18\x0e \x01(\x03R\x14lastActivityTimeUnix\x12@\n" +
 	"\fcapabilities\x18\x0f \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\x12>\n" +
 	"\vpermissions\x18\x10 \x03(\v2\x1c.nekode.daemon.v1.PermissionR\vpermissions\x12N\n" +
@@ -2110,26 +2481,26 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x14ListAgentDMsResponse\x121\n" +
 	"\x03dms\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\x03dms\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"\xfd\x02\n" +
+	"nextCursor\"\xc8\x03\n" +
 	"\x15AgentControlOperation\x12!\n" +
 	"\foperation_id\x18\x01 \x01(\tR\voperationId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x03 \x01(\tR\n" +
 	"computerId\x12,\n" +
-	"\x12runtime_profile_id\x18\x04 \x01(\tR\x10runtimeProfileId\x12\x16\n" +
-	"\x06action\x18\x05 \x01(\tR\x06action\x12\x14\n" +
-	"\x05state\x18\x06 \x01(\tR\x05state\x12\x16\n" +
+	"\x12runtime_profile_id\x18\x04 \x01(\tR\x10runtimeProfileId\x12<\n" +
+	"\x06action\x18\x05 \x01(\x0e2$.nekode.daemon.v1.AgentControlActionR\x06action\x129\n" +
+	"\x05state\x18\x06 \x01(\x0e2#.nekode.daemon.v1.AgentControlStateR\x05state\x12\x16\n" +
 	"\x06reason\x18\a \x01(\tR\x06reason\x121\n" +
 	"\x15requested_by_agent_id\x18\b \x01(\tR\x12requestedByAgentId\x12*\n" +
 	"\x11created_time_unix\x18\t \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\n" +
-	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xad\x03\n" +
+	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xd3\x03\n" +
 	"\x13ControlAgentRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
 	"computerId\x12,\n" +
-	"\x12runtime_profile_id\x18\x03 \x01(\tR\x10runtimeProfileId\x12\x16\n" +
-	"\x06action\x18\x04 \x01(\tR\x06action\x12\x16\n" +
+	"\x12runtime_profile_id\x18\x03 \x01(\tR\x10runtimeProfileId\x12<\n" +
+	"\x06action\x18\x04 \x01(\x0e2$.nekode.daemon.v1.AgentControlActionR\x06action\x12\x16\n" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x121\n" +
 	"\x15requested_by_agent_id\x18\x06 \x01(\tR\x12requestedByAgentId\x12\x1d\n" +
 	"\n" +
@@ -2157,7 +2528,7 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	" \x01(\v2\x17.nekode.daemon.v1.ActorR\x06senderJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x0fsender_agent_idR\x13sender_display_name\"~\n" +
 	"\x1eSendAgentDirectMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
-	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xc1\x05\n" +
+	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xe8\x05\n" +
 	"\x13AgentStatusSnapshot\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
@@ -2175,8 +2546,8 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"message_id\x18\v \x01(\tR\tmessageId\x12\x17\n" +
 	"\atask_id\x18\f \x01(\tR\x06taskId\x12\x15\n" +
 	"\x06run_id\x18\r \x01(\tR\x05runId\x12!\n" +
-	"\foperation_id\x18\x0e \x01(\tR\voperationId\x12\x1a\n" +
-	"\bseverity\x18\x0f \x01(\tR\bseverity\x12*\n" +
+	"\foperation_id\x18\x0e \x01(\tR\voperationId\x12A\n" +
+	"\bseverity\x18\x0f \x01(\x0e2%.nekode.daemon.v1.AgentStatusSeverityR\bseverity\x12*\n" +
 	"\x11started_time_unix\x18\x10 \x01(\x03R\x0fstartedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\x11 \x01(\x03R\x0fupdatedTimeUnix\x12*\n" +
 	"\x11expires_time_unix\x18\x12 \x01(\x03R\x0fexpiresTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xdd\x01\n" +
@@ -2196,7 +2567,42 @@ const file_nekode_daemon_v1_agent_proto_rawDesc = "" +
 	"\x19ListAgentStatusesResponse\x12A\n" +
 	"\bstatuses\x18\x01 \x03(\v2%.nekode.daemon.v1.AgentStatusSnapshotR\bstatuses\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor*\xec\x01\n" +
+	"nextCursor*\xe5\x01\n" +
+	"\rAgentRoleName\x12\x1f\n" +
+	"\x1bAGENT_ROLE_NAME_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bAGENT_ROLE_NAME_IMPLEMENTER\x10\x01\x12\x1c\n" +
+	"\x18AGENT_ROLE_NAME_REVIEWER\x10\x02\x12\x1c\n" +
+	"\x18AGENT_ROLE_NAME_DESIGNER\x10\x03\x12\x1c\n" +
+	"\x18AGENT_ROLE_NAME_RELEASER\x10\x04\x12\x1c\n" +
+	"\x18AGENT_ROLE_NAME_OBSERVER\x10\x05\x12\x1a\n" +
+	"\x16AGENT_ROLE_NAME_CUSTOM\x10\x06*\xbf\x01\n" +
+	"\x0eAgentRoleScope\x12 \n" +
+	"\x1cAGENT_ROLE_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17AGENT_ROLE_SCOPE_SERVER\x10\x01\x12\x1c\n" +
+	"\x18AGENT_ROLE_SCOPE_CHANNEL\x10\x02\x12\x1b\n" +
+	"\x17AGENT_ROLE_SCOPE_THREAD\x10\x03\x12\x19\n" +
+	"\x15AGENT_ROLE_SCOPE_TASK\x10\x04\x12\x18\n" +
+	"\x14AGENT_ROLE_SCOPE_RUN\x10\x05*\xfe\x01\n" +
+	"\x12AgentControlAction\x12$\n" +
+	" AGENT_CONTROL_ACTION_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eAGENT_CONTROL_ACTION_TERMINATE\x10\x01\x12 \n" +
+	"\x1cAGENT_CONTROL_ACTION_RESTART\x10\x02\x12.\n" +
+	"*AGENT_CONTROL_ACTION_RESTART_RESET_SESSION\x10\x03\x12+\n" +
+	"'AGENT_CONTROL_ACTION_RESTART_FULL_RESET\x10\x04\x12\x1f\n" +
+	"\x1bAGENT_CONTROL_ACTION_CUSTOM\x10\x05*\x84\x02\n" +
+	"\x11AgentControlState\x12#\n" +
+	"\x1fAGENT_CONTROL_STATE_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dAGENT_CONTROL_STATE_REQUESTED\x10\x01\x12\x1e\n" +
+	"\x1aAGENT_CONTROL_STATE_QUEUED\x10\x02\x12\x1f\n" +
+	"\x1bAGENT_CONTROL_STATE_RUNNING\x10\x03\x12!\n" +
+	"\x1dAGENT_CONTROL_STATE_COMPLETED\x10\x04\x12\x1e\n" +
+	"\x1aAGENT_CONTROL_STATE_FAILED\x10\x05\x12#\n" +
+	"\x1fAGENT_CONTROL_STATE_UNSUPPORTED\x10\x06*\xa0\x01\n" +
+	"\x13AgentStatusSeverity\x12%\n" +
+	"!AGENT_STATUS_SEVERITY_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aAGENT_STATUS_SEVERITY_INFO\x10\x01\x12!\n" +
+	"\x1dAGENT_STATUS_SEVERITY_WARNING\x10\x02\x12\x1f\n" +
+	"\x1bAGENT_STATUS_SEVERITY_ERROR\x10\x03*\xec\x01\n" +
 	"\rAgentPresence\x12\x1e\n" +
 	"\x1aAGENT_PRESENCE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15AGENT_PRESENCE_ONLINE\x10\x01\x12\x17\n" +
@@ -2243,85 +2649,97 @@ func file_nekode_daemon_v1_agent_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_agent_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_nekode_daemon_v1_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
 var file_nekode_daemon_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_nekode_daemon_v1_agent_proto_goTypes = []any{
-	(AgentPresence)(0),                     // 0: nekode.daemon.v1.AgentPresence
-	(AgentActivityState)(0),                // 1: nekode.daemon.v1.AgentActivityState
-	(AgentHealth)(0),                       // 2: nekode.daemon.v1.AgentHealth
-	(*AgentRoleAssignment)(nil),            // 3: nekode.daemon.v1.AgentRoleAssignment
-	(*AgentProfile)(nil),                   // 4: nekode.daemon.v1.AgentProfile
-	(*GetAgentProfileRequest)(nil),         // 5: nekode.daemon.v1.GetAgentProfileRequest
-	(*GetAgentProfileResponse)(nil),        // 6: nekode.daemon.v1.GetAgentProfileResponse
-	(*UpdateAgentProfileRequest)(nil),      // 7: nekode.daemon.v1.UpdateAgentProfileRequest
-	(*UpdateAgentProfileResponse)(nil),     // 8: nekode.daemon.v1.UpdateAgentProfileResponse
-	(*SetAgentEnvRequest)(nil),             // 9: nekode.daemon.v1.SetAgentEnvRequest
-	(*SetAgentEnvResponse)(nil),            // 10: nekode.daemon.v1.SetAgentEnvResponse
-	(*ListAgentProfilesRequest)(nil),       // 11: nekode.daemon.v1.ListAgentProfilesRequest
-	(*ListAgentProfilesResponse)(nil),      // 12: nekode.daemon.v1.ListAgentProfilesResponse
-	(*ListAgentDMsRequest)(nil),            // 13: nekode.daemon.v1.ListAgentDMsRequest
-	(*ListAgentDMsResponse)(nil),           // 14: nekode.daemon.v1.ListAgentDMsResponse
-	(*AgentControlOperation)(nil),          // 15: nekode.daemon.v1.AgentControlOperation
-	(*ControlAgentRequest)(nil),            // 16: nekode.daemon.v1.ControlAgentRequest
-	(*ControlAgentResponse)(nil),           // 17: nekode.daemon.v1.ControlAgentResponse
-	(*SendAgentDirectMessageRequest)(nil),  // 18: nekode.daemon.v1.SendAgentDirectMessageRequest
-	(*SendAgentDirectMessageResponse)(nil), // 19: nekode.daemon.v1.SendAgentDirectMessageResponse
-	(*AgentStatusSnapshot)(nil),            // 20: nekode.daemon.v1.AgentStatusSnapshot
-	(*UpdateAgentStatusRequest)(nil),       // 21: nekode.daemon.v1.UpdateAgentStatusRequest
-	(*UpdateAgentStatusResponse)(nil),      // 22: nekode.daemon.v1.UpdateAgentStatusResponse
-	(*ListAgentStatusesRequest)(nil),       // 23: nekode.daemon.v1.ListAgentStatusesRequest
-	(*ListAgentStatusesResponse)(nil),      // 24: nekode.daemon.v1.ListAgentStatusesResponse
-	(*EnvVar)(nil),                         // 25: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil),                    // 26: nekode.daemon.v1.SkillRecord
-	(*Capability)(nil),                     // 27: nekode.daemon.v1.Capability
-	(*Permission)(nil),                     // 28: nekode.daemon.v1.Permission
-	(*RequestContext)(nil),                 // 29: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),                    // 30: nekode.daemon.v1.EventCursor
-	(*ChannelRecord)(nil),                  // 31: nekode.daemon.v1.ChannelRecord
-	(*Lease)(nil),                          // 32: nekode.daemon.v1.Lease
-	(*Actor)(nil),                          // 33: nekode.daemon.v1.Actor
-	(*CollaborationMessage)(nil),           // 34: nekode.daemon.v1.CollaborationMessage
+	(AgentRoleName)(0),                     // 0: nekode.daemon.v1.AgentRoleName
+	(AgentRoleScope)(0),                    // 1: nekode.daemon.v1.AgentRoleScope
+	(AgentControlAction)(0),                // 2: nekode.daemon.v1.AgentControlAction
+	(AgentControlState)(0),                 // 3: nekode.daemon.v1.AgentControlState
+	(AgentStatusSeverity)(0),               // 4: nekode.daemon.v1.AgentStatusSeverity
+	(AgentPresence)(0),                     // 5: nekode.daemon.v1.AgentPresence
+	(AgentActivityState)(0),                // 6: nekode.daemon.v1.AgentActivityState
+	(AgentHealth)(0),                       // 7: nekode.daemon.v1.AgentHealth
+	(*AgentRoleAssignment)(nil),            // 8: nekode.daemon.v1.AgentRoleAssignment
+	(*AgentProfile)(nil),                   // 9: nekode.daemon.v1.AgentProfile
+	(*GetAgentProfileRequest)(nil),         // 10: nekode.daemon.v1.GetAgentProfileRequest
+	(*GetAgentProfileResponse)(nil),        // 11: nekode.daemon.v1.GetAgentProfileResponse
+	(*UpdateAgentProfileRequest)(nil),      // 12: nekode.daemon.v1.UpdateAgentProfileRequest
+	(*UpdateAgentProfileResponse)(nil),     // 13: nekode.daemon.v1.UpdateAgentProfileResponse
+	(*SetAgentEnvRequest)(nil),             // 14: nekode.daemon.v1.SetAgentEnvRequest
+	(*SetAgentEnvResponse)(nil),            // 15: nekode.daemon.v1.SetAgentEnvResponse
+	(*ListAgentProfilesRequest)(nil),       // 16: nekode.daemon.v1.ListAgentProfilesRequest
+	(*ListAgentProfilesResponse)(nil),      // 17: nekode.daemon.v1.ListAgentProfilesResponse
+	(*ListAgentDMsRequest)(nil),            // 18: nekode.daemon.v1.ListAgentDMsRequest
+	(*ListAgentDMsResponse)(nil),           // 19: nekode.daemon.v1.ListAgentDMsResponse
+	(*AgentControlOperation)(nil),          // 20: nekode.daemon.v1.AgentControlOperation
+	(*ControlAgentRequest)(nil),            // 21: nekode.daemon.v1.ControlAgentRequest
+	(*ControlAgentResponse)(nil),           // 22: nekode.daemon.v1.ControlAgentResponse
+	(*SendAgentDirectMessageRequest)(nil),  // 23: nekode.daemon.v1.SendAgentDirectMessageRequest
+	(*SendAgentDirectMessageResponse)(nil), // 24: nekode.daemon.v1.SendAgentDirectMessageResponse
+	(*AgentStatusSnapshot)(nil),            // 25: nekode.daemon.v1.AgentStatusSnapshot
+	(*UpdateAgentStatusRequest)(nil),       // 26: nekode.daemon.v1.UpdateAgentStatusRequest
+	(*UpdateAgentStatusResponse)(nil),      // 27: nekode.daemon.v1.UpdateAgentStatusResponse
+	(*ListAgentStatusesRequest)(nil),       // 28: nekode.daemon.v1.ListAgentStatusesRequest
+	(*ListAgentStatusesResponse)(nil),      // 29: nekode.daemon.v1.ListAgentStatusesResponse
+	(*EnvVar)(nil),                         // 30: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),                    // 31: nekode.daemon.v1.SkillRecord
+	(*Capability)(nil),                     // 32: nekode.daemon.v1.Capability
+	(*Permission)(nil),                     // 33: nekode.daemon.v1.Permission
+	(*RequestContext)(nil),                 // 34: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                    // 35: nekode.daemon.v1.EventCursor
+	(*ChannelRecord)(nil),                  // 36: nekode.daemon.v1.ChannelRecord
+	(*Lease)(nil),                          // 37: nekode.daemon.v1.Lease
+	(*Actor)(nil),                          // 38: nekode.daemon.v1.Actor
+	(*CollaborationMessage)(nil),           // 39: nekode.daemon.v1.CollaborationMessage
 }
 var file_nekode_daemon_v1_agent_proto_depIdxs = []int32{
-	25, // 0: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
-	26, // 1: nekode.daemon.v1.AgentProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
-	27, // 2: nekode.daemon.v1.AgentProfile.capabilities:type_name -> nekode.daemon.v1.Capability
-	28, // 3: nekode.daemon.v1.AgentProfile.permissions:type_name -> nekode.daemon.v1.Permission
-	20, // 4: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	3,  // 5: nekode.daemon.v1.AgentProfile.roles:type_name -> nekode.daemon.v1.AgentRoleAssignment
-	4,  // 6: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	29, // 7: nekode.daemon.v1.UpdateAgentProfileRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	4,  // 8: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	25, // 9: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
-	29, // 10: nekode.daemon.v1.SetAgentEnvRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	4,  // 11: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	30, // 12: nekode.daemon.v1.ListAgentProfilesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	4,  // 13: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
-	30, // 14: nekode.daemon.v1.ListAgentProfilesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	30, // 15: nekode.daemon.v1.ListAgentDMsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	31, // 16: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
-	30, // 17: nekode.daemon.v1.ListAgentDMsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	29, // 18: nekode.daemon.v1.ControlAgentRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	15, // 19: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
-	4,  // 20: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
-	32, // 21: nekode.daemon.v1.ControlAgentResponse.lease:type_name -> nekode.daemon.v1.Lease
-	29, // 22: nekode.daemon.v1.SendAgentDirectMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	33, // 23: nekode.daemon.v1.SendAgentDirectMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
-	34, // 24: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	0,  // 25: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
-	1,  // 26: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
-	2,  // 27: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
-	20, // 28: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	29, // 29: nekode.daemon.v1.UpdateAgentStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	20, // 30: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	30, // 31: nekode.daemon.v1.ListAgentStatusesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	20, // 32: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	30, // 33: nekode.daemon.v1.ListAgentStatusesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	0,  // 0: nekode.daemon.v1.AgentRoleAssignment.name:type_name -> nekode.daemon.v1.AgentRoleName
+	1,  // 1: nekode.daemon.v1.AgentRoleAssignment.scope:type_name -> nekode.daemon.v1.AgentRoleScope
+	30, // 2: nekode.daemon.v1.AgentProfile.env:type_name -> nekode.daemon.v1.EnvVar
+	31, // 3: nekode.daemon.v1.AgentProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
+	5,  // 4: nekode.daemon.v1.AgentProfile.status:type_name -> nekode.daemon.v1.AgentPresence
+	32, // 5: nekode.daemon.v1.AgentProfile.capabilities:type_name -> nekode.daemon.v1.Capability
+	33, // 6: nekode.daemon.v1.AgentProfile.permissions:type_name -> nekode.daemon.v1.Permission
+	25, // 7: nekode.daemon.v1.AgentProfile.status_snapshot:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	8,  // 8: nekode.daemon.v1.AgentProfile.roles:type_name -> nekode.daemon.v1.AgentRoleAssignment
+	9,  // 9: nekode.daemon.v1.GetAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	34, // 10: nekode.daemon.v1.UpdateAgentProfileRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	9,  // 11: nekode.daemon.v1.UpdateAgentProfileResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	30, // 12: nekode.daemon.v1.SetAgentEnvRequest.env:type_name -> nekode.daemon.v1.EnvVar
+	34, // 13: nekode.daemon.v1.SetAgentEnvRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	9,  // 14: nekode.daemon.v1.SetAgentEnvResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	35, // 15: nekode.daemon.v1.ListAgentProfilesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	9,  // 16: nekode.daemon.v1.ListAgentProfilesResponse.profiles:type_name -> nekode.daemon.v1.AgentProfile
+	35, // 17: nekode.daemon.v1.ListAgentProfilesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	35, // 18: nekode.daemon.v1.ListAgentDMsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 19: nekode.daemon.v1.ListAgentDMsResponse.dms:type_name -> nekode.daemon.v1.ChannelRecord
+	35, // 20: nekode.daemon.v1.ListAgentDMsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	2,  // 21: nekode.daemon.v1.AgentControlOperation.action:type_name -> nekode.daemon.v1.AgentControlAction
+	3,  // 22: nekode.daemon.v1.AgentControlOperation.state:type_name -> nekode.daemon.v1.AgentControlState
+	2,  // 23: nekode.daemon.v1.ControlAgentRequest.action:type_name -> nekode.daemon.v1.AgentControlAction
+	34, // 24: nekode.daemon.v1.ControlAgentRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	20, // 25: nekode.daemon.v1.ControlAgentResponse.operation:type_name -> nekode.daemon.v1.AgentControlOperation
+	9,  // 26: nekode.daemon.v1.ControlAgentResponse.profile:type_name -> nekode.daemon.v1.AgentProfile
+	37, // 27: nekode.daemon.v1.ControlAgentResponse.lease:type_name -> nekode.daemon.v1.Lease
+	34, // 28: nekode.daemon.v1.SendAgentDirectMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	38, // 29: nekode.daemon.v1.SendAgentDirectMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
+	39, // 30: nekode.daemon.v1.SendAgentDirectMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	5,  // 31: nekode.daemon.v1.AgentStatusSnapshot.presence:type_name -> nekode.daemon.v1.AgentPresence
+	6,  // 32: nekode.daemon.v1.AgentStatusSnapshot.activity_state:type_name -> nekode.daemon.v1.AgentActivityState
+	7,  // 33: nekode.daemon.v1.AgentStatusSnapshot.health:type_name -> nekode.daemon.v1.AgentHealth
+	4,  // 34: nekode.daemon.v1.AgentStatusSnapshot.severity:type_name -> nekode.daemon.v1.AgentStatusSeverity
+	25, // 35: nekode.daemon.v1.UpdateAgentStatusRequest.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	34, // 36: nekode.daemon.v1.UpdateAgentStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	25, // 37: nekode.daemon.v1.UpdateAgentStatusResponse.status:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	35, // 38: nekode.daemon.v1.ListAgentStatusesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	25, // 39: nekode.daemon.v1.ListAgentStatusesResponse.statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	35, // 40: nekode.daemon.v1.ListAgentStatusesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	41, // [41:41] is the sub-list for method output_type
+	41, // [41:41] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_agent_proto_init() }
@@ -2337,7 +2755,7 @@ func file_nekode_daemon_v1_agent_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_agent_proto_rawDesc), len(file_nekode_daemon_v1_agent_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      8,
 			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,

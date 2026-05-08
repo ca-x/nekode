@@ -111,7 +111,7 @@ Design and implement the nekode frontend console with:
 **Task Board**:
 - [ ] Create/edit/delete tasks
 - [ ] Assign tasks to users
-- [ ] Change task status (todo → in_progress → in_review → done)
+- [ ] Change task status (todo → in_progress → blocked → in_review → done → canceled)
 - [ ] Add task descriptions and comments
 - [ ] Task filtering and sorting
 - [ ] Task board view (Kanban-style)

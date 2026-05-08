@@ -36,14 +36,28 @@ func New(store *storage.Store) *Service {
 }
 
 func (s *Service) Bootstrap(ctx context.Context, username, password, displayName string) (SessionToken, error) {
-	count, err := s.store.CountUsers(ctx)
+	passwordHash, err := HashPassword(password)
 	if err != nil {
 		return SessionToken{}, err
 	}
-	if count != 0 {
+	username = strings.TrimSpace(username)
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		displayName = username
+	}
+	user, err := s.store.CreateFirstAdmin(ctx, storage.User{
+		Username:     username,
+		DisplayName:  displayName,
+		PasswordHash: passwordHash,
+		Role:         "admin",
+	})
+	if errors.Is(err, storage.ErrConflict) {
 		return SessionToken{}, ErrBootstrapClosed
 	}
-	return s.createUserAndSession(ctx, username, password, displayName, "admin")
+	if err != nil {
+		return SessionToken{}, err
+	}
+	return s.issueSession(ctx, user)
 }
 
 func (s *Service) Login(ctx context.Context, username, password string) (SessionToken, error) {

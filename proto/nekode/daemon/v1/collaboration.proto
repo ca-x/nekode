@@ -7,15 +7,65 @@ import "nekode/daemon/v1/common.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// EndpointAuthMode is the closed set of transport auth modes Nekode understands.
+// Endpoint kind/provider remain strings because integrations are open-ended.
+enum EndpointAuthMode {
+  // Auth mode is omitted or unknown; servers should reject new endpoints unless a default is configured.
+  ENDPOINT_AUTH_MODE_UNSPECIFIED = 0;
+  // Browser cookie authentication.
+  ENDPOINT_AUTH_MODE_COOKIE = 1;
+  // Bearer token authentication.
+  ENDPOINT_AUTH_MODE_BEARER = 2;
+  // Signed webhook requests.
+  ENDPOINT_AUTH_MODE_WEBHOOK_SIGNATURE = 3;
+  // MCP token authentication.
+  ENDPOINT_AUTH_MODE_MCP_TOKEN = 4;
+  // No authentication; use only for local or explicitly public endpoints.
+  ENDPOINT_AUTH_MODE_NONE = 5;
+}
+
+// OutboundPolicy controls whether SendMessage also emits to external endpoints.
+enum OutboundPolicy {
+  // Use server default outbound policy, normally NONE for daemon-originated writes.
+  OUTBOUND_POLICY_UNSPECIFIED = 0;
+  // Do not emit to any external endpoint.
+  OUTBOUND_POLICY_NONE = 1;
+  // Emit only to the source endpoint if it supports outbound delivery.
+  OUTBOUND_POLICY_SOURCE_ONLY = 2;
+  // Emit to all bound endpoints for the target.
+  OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS = 3;
+  // Emit to a server-selected subset supplied out of band.
+  OUTBOUND_POLICY_SELECTED_ENDPOINTS = 4;
+}
+
+// OutboundDeliveryStatus is the closed lifecycle for webhook/IM delivery attempts.
+enum OutboundDeliveryStatus {
+  // Delivery status is omitted or unknown.
+  OUTBOUND_DELIVERY_STATUS_UNSPECIFIED = 0;
+  // Delivery is waiting to be attempted.
+  OUTBOUND_DELIVERY_STATUS_PENDING = 1;
+  // Delivery succeeded.
+  OUTBOUND_DELIVERY_STATUS_DELIVERED = 2;
+  // Delivery failed and is not currently retrying.
+  OUTBOUND_DELIVERY_STATUS_FAILED = 3;
+  // Delivery failed and is scheduled for retry.
+  OUTBOUND_DELIVERY_STATUS_RETRYING = 4;
+  // Delivery was canceled.
+  OUTBOUND_DELIVERY_STATUS_CANCELED = 5;
+}
+
 message ChannelRecord {
   reserved 1000 to 1999;
 
   string target = 1;
   string channel_id = 2;
   string display_name = 3;
+  // Open channel taxonomy. Canonical values include channel, dm, thread,
+  // external, and custom integration-specific names.
   string channel_type = 4;
   bool enabled = 5;
   string interaction_endpoint_id = 6;
+  // Open source taxonomy that mirrors InteractionEndpoint.kind when known.
   string source_kind = 7;
   string external_id = 8;
   repeated Capability capabilities = 9;
@@ -24,13 +74,17 @@ message InteractionEndpoint {
   reserved 1000 to 1999;
 
   string endpoint_id = 1;
-  string kind = 2; // web | cli | api | webhook | mcp | im | custom
-  string provider = 3; // browser | mobile | wechat | slack | openapi | custom
+  // Open endpoint taxonomy. Canonical values include web, cli, api, webhook,
+  // mcp, im, and custom; providers may add new endpoint kinds.
+  string kind = 2;
+  // Open provider name. Canonical values include browser, mobile, wechat,
+  // slack, openapi, and custom product/provider identifiers.
+  string provider = 3;
   string display_name = 4;
   string target_prefix = 5;
   bool inbound_enabled = 6;
   bool outbound_enabled = 7;
-  string auth_mode = 8; // cookie | bearer | webhook_signature | mcp_token | none
+  EndpointAuthMode auth_mode = 8;
   string config_json = 9; // non-secret endpoint configuration
   repeated Capability capabilities = 10;
 }
@@ -86,6 +140,8 @@ message CollaborationMessage {
   string message_id = 1;
   string target = 2;
   string thread_id = 3;
+  // Open rendering/model role. Canonical values include user, assistant,
+  // system, tool, and custom runtime/provider roles.
   string role = 4;
   string content = 5;
   string reply_to_message_id = 8;
@@ -121,6 +177,8 @@ message SendMessageRequest {
   reserved "sender_agent_id", "sender_display_name", "sender_user_id";
 
   string target = 1;
+  // Open rendering/model role; use the same canonical values as
+  // CollaborationMessage.role. Defaults to user when omitted.
   string role = 2;
   string content = 3;
   string reply_to_message_id = 6;
@@ -133,7 +191,7 @@ message SendMessageRequest {
   string memory_record_id = 14;
   string idempotency_key = 15;
   RequestContext context = 16;
-  string outbound_policy = 17; // none | source_only | all_bound_endpoints | selected_endpoints
+  OutboundPolicy outbound_policy = 17;
   Actor sender = 18;
 }
 message SendMessageResponse {
@@ -214,9 +272,11 @@ message OutboundDeliveryRecord {
   string target = 2;
   string message_id = 3;
   string endpoint_id = 4;
-  string endpoint_kind = 5; // webhook | im | mcp | api | custom
+  // Open endpoint taxonomy copied from InteractionEndpoint.kind at delivery time.
+  // Canonical values include webhook, im, mcp, api, and custom.
+  string endpoint_kind = 5;
   string external_message_id = 6;
-  string status = 7; // pending | delivered | failed | retrying | canceled
+  OutboundDeliveryStatus status = 7;
   uint32 attempt_count = 8;
   int64 next_retry_time_unix = 9;
   int64 delivered_time_unix = 10;
@@ -227,7 +287,7 @@ message ListOutboundDeliveriesRequest {
   string target = 1;
   string message_id = 2;
   string endpoint_id = 3;
-  repeated string statuses = 4;
+  repeated OutboundDeliveryStatus statuses = 4;
   uint32 limit = 5;
   EventCursor cursor = 6;
 }

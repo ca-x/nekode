@@ -3,6 +3,8 @@
 package ent
 
 import (
+	"github.com/ca-x/nekode/internal/ent/collaborationevent"
+	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/schema"
@@ -15,6 +17,110 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	collaborationeventFields := schema.CollaborationEvent{}.Fields()
+	_ = collaborationeventFields
+	// collaborationeventDescServerID is the schema descriptor for server_id field.
+	collaborationeventDescServerID := collaborationeventFields[1].Descriptor()
+	// collaborationevent.ServerIDValidator is a validator for the "server_id" field. It is called by the builders before save.
+	collaborationevent.ServerIDValidator = collaborationeventDescServerID.Validators[0].(func(string) error)
+	// collaborationeventDescSequence is the schema descriptor for sequence field.
+	collaborationeventDescSequence := collaborationeventFields[2].Descriptor()
+	// collaborationevent.SequenceValidator is a validator for the "sequence" field. It is called by the builders before save.
+	collaborationevent.SequenceValidator = collaborationeventDescSequence.Validators[0].(func(int64) error)
+	// collaborationeventDescEventID is the schema descriptor for event_id field.
+	collaborationeventDescEventID := collaborationeventFields[3].Descriptor()
+	// collaborationevent.EventIDValidator is a validator for the "event_id" field. It is called by the builders before save.
+	collaborationevent.EventIDValidator = collaborationeventDescEventID.Validators[0].(func(string) error)
+	// collaborationeventDescTarget is the schema descriptor for target field.
+	collaborationeventDescTarget := collaborationeventFields[4].Descriptor()
+	// collaborationevent.DefaultTarget holds the default value on creation for the target field.
+	collaborationevent.DefaultTarget = collaborationeventDescTarget.Default.(string)
+	// collaborationeventDescAggregateID is the schema descriptor for aggregate_id field.
+	collaborationeventDescAggregateID := collaborationeventFields[5].Descriptor()
+	// collaborationevent.DefaultAggregateID holds the default value on creation for the aggregate_id field.
+	collaborationevent.DefaultAggregateID = collaborationeventDescAggregateID.Default.(string)
+	// collaborationeventDescKind is the schema descriptor for kind field.
+	collaborationeventDescKind := collaborationeventFields[6].Descriptor()
+	// collaborationevent.KindValidator is a validator for the "kind" field. It is called by the builders before save.
+	collaborationevent.KindValidator = collaborationeventDescKind.Validators[0].(func(string) error)
+	// collaborationeventDescOperation is the schema descriptor for operation field.
+	collaborationeventDescOperation := collaborationeventFields[7].Descriptor()
+	// collaborationevent.DefaultOperation holds the default value on creation for the operation field.
+	collaborationevent.DefaultOperation = collaborationeventDescOperation.Default.(string)
+	// collaborationeventDescScopeType is the schema descriptor for scope_type field.
+	collaborationeventDescScopeType := collaborationeventFields[8].Descriptor()
+	// collaborationevent.DefaultScopeType holds the default value on creation for the scope_type field.
+	collaborationevent.DefaultScopeType = collaborationeventDescScopeType.Default.(string)
+	// collaborationeventDescScopeID is the schema descriptor for scope_id field.
+	collaborationeventDescScopeID := collaborationeventFields[9].Descriptor()
+	// collaborationevent.DefaultScopeID holds the default value on creation for the scope_id field.
+	collaborationevent.DefaultScopeID = collaborationeventDescScopeID.Default.(string)
+	// collaborationeventDescWorkspaceID is the schema descriptor for workspace_id field.
+	collaborationeventDescWorkspaceID := collaborationeventFields[10].Descriptor()
+	// collaborationevent.DefaultWorkspaceID holds the default value on creation for the workspace_id field.
+	collaborationevent.DefaultWorkspaceID = collaborationeventDescWorkspaceID.Default.(string)
+	// collaborationeventDescActivityID is the schema descriptor for activity_id field.
+	collaborationeventDescActivityID := collaborationeventFields[11].Descriptor()
+	// collaborationevent.DefaultActivityID holds the default value on creation for the activity_id field.
+	collaborationevent.DefaultActivityID = collaborationeventDescActivityID.Default.(string)
+	// collaborationeventDescPayloadJSON is the schema descriptor for payload_json field.
+	collaborationeventDescPayloadJSON := collaborationeventFields[12].Descriptor()
+	// collaborationevent.DefaultPayloadJSON holds the default value on creation for the payload_json field.
+	collaborationevent.DefaultPayloadJSON = collaborationeventDescPayloadJSON.Default.(string)
+	// collaborationeventDescProtocolVersion is the schema descriptor for protocol_version field.
+	collaborationeventDescProtocolVersion := collaborationeventFields[14].Descriptor()
+	// collaborationevent.ProtocolVersionValidator is a validator for the "protocol_version" field. It is called by the builders before save.
+	collaborationevent.ProtocolVersionValidator = collaborationeventDescProtocolVersion.Validators[0].(func(int) error)
+	// collaborationeventDescID is the schema descriptor for id field.
+	collaborationeventDescID := collaborationeventFields[0].Descriptor()
+	// collaborationevent.DefaultID holds the default value on creation for the id field.
+	collaborationevent.DefaultID = collaborationeventDescID.Default.(func() string)
+	idempotencyrecordFields := schema.IdempotencyRecord{}.Fields()
+	_ = idempotencyrecordFields
+	// idempotencyrecordDescScope is the schema descriptor for scope field.
+	idempotencyrecordDescScope := idempotencyrecordFields[1].Descriptor()
+	// idempotencyrecord.ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
+	idempotencyrecord.ScopeValidator = idempotencyrecordDescScope.Validators[0].(func(string) error)
+	// idempotencyrecordDescMethod is the schema descriptor for method field.
+	idempotencyrecordDescMethod := idempotencyrecordFields[2].Descriptor()
+	// idempotencyrecord.MethodValidator is a validator for the "method" field. It is called by the builders before save.
+	idempotencyrecord.MethodValidator = idempotencyrecordDescMethod.Validators[0].(func(string) error)
+	// idempotencyrecordDescActorID is the schema descriptor for actor_id field.
+	idempotencyrecordDescActorID := idempotencyrecordFields[3].Descriptor()
+	// idempotencyrecord.DefaultActorID holds the default value on creation for the actor_id field.
+	idempotencyrecord.DefaultActorID = idempotencyrecordDescActorID.Default.(string)
+	// idempotencyrecordDescIdempotencyKey is the schema descriptor for idempotency_key field.
+	idempotencyrecordDescIdempotencyKey := idempotencyrecordFields[4].Descriptor()
+	// idempotencyrecord.IdempotencyKeyValidator is a validator for the "idempotency_key" field. It is called by the builders before save.
+	idempotencyrecord.IdempotencyKeyValidator = idempotencyrecordDescIdempotencyKey.Validators[0].(func(string) error)
+	// idempotencyrecordDescRequestHash is the schema descriptor for request_hash field.
+	idempotencyrecordDescRequestHash := idempotencyrecordFields[5].Descriptor()
+	// idempotencyrecord.DefaultRequestHash holds the default value on creation for the request_hash field.
+	idempotencyrecord.DefaultRequestHash = idempotencyrecordDescRequestHash.Default.(string)
+	// idempotencyrecordDescResponseType is the schema descriptor for response_type field.
+	idempotencyrecordDescResponseType := idempotencyrecordFields[6].Descriptor()
+	// idempotencyrecord.DefaultResponseType holds the default value on creation for the response_type field.
+	idempotencyrecord.DefaultResponseType = idempotencyrecordDescResponseType.Default.(string)
+	// idempotencyrecordDescResponseJSON is the schema descriptor for response_json field.
+	idempotencyrecordDescResponseJSON := idempotencyrecordFields[7].Descriptor()
+	// idempotencyrecord.DefaultResponseJSON holds the default value on creation for the response_json field.
+	idempotencyrecord.DefaultResponseJSON = idempotencyrecordDescResponseJSON.Default.(string)
+	// idempotencyrecordDescResourceType is the schema descriptor for resource_type field.
+	idempotencyrecordDescResourceType := idempotencyrecordFields[8].Descriptor()
+	// idempotencyrecord.DefaultResourceType holds the default value on creation for the resource_type field.
+	idempotencyrecord.DefaultResourceType = idempotencyrecordDescResourceType.Default.(string)
+	// idempotencyrecordDescResourceID is the schema descriptor for resource_id field.
+	idempotencyrecordDescResourceID := idempotencyrecordFields[9].Descriptor()
+	// idempotencyrecord.DefaultResourceID holds the default value on creation for the resource_id field.
+	idempotencyrecord.DefaultResourceID = idempotencyrecordDescResourceID.Default.(string)
+	// idempotencyrecordDescStatus is the schema descriptor for status field.
+	idempotencyrecordDescStatus := idempotencyrecordFields[10].Descriptor()
+	// idempotencyrecord.DefaultStatus holds the default value on creation for the status field.
+	idempotencyrecord.DefaultStatus = idempotencyrecordDescStatus.Default.(string)
+	// idempotencyrecordDescID is the schema descriptor for id field.
+	idempotencyrecordDescID := idempotencyrecordFields[0].Descriptor()
+	// idempotencyrecord.DefaultID holds the default value on creation for the id field.
+	idempotencyrecord.DefaultID = idempotencyrecordDescID.Default.(func() string)
 	interactionendpointFields := schema.InteractionEndpoint{}.Fields()
 	_ = interactionendpointFields
 	// interactionendpointDescKind is the schema descriptor for kind field.
@@ -143,6 +249,14 @@ func init() {
 	taskDescCreatedByUserID := taskFields[5].Descriptor()
 	// task.DefaultCreatedByUserID holds the default value on creation for the created_by_user_id field.
 	task.DefaultCreatedByUserID = taskDescCreatedByUserID.Default.(string)
+	// taskDescVersion is the schema descriptor for version field.
+	taskDescVersion := taskFields[6].Descriptor()
+	// task.DefaultVersion holds the default value on creation for the version field.
+	task.DefaultVersion = taskDescVersion.Default.(int64)
+	// taskDescClaimLeaseID is the schema descriptor for claim_lease_id field.
+	taskDescClaimLeaseID := taskFields[7].Descriptor()
+	// task.DefaultClaimLeaseID holds the default value on creation for the claim_lease_id field.
+	task.DefaultClaimLeaseID = taskDescClaimLeaseID.Default.(string)
 	// taskDescID is the schema descriptor for id field.
 	taskDescID := taskFields[0].Descriptor()
 	// task.DefaultID holds the default value on creation for the id field.

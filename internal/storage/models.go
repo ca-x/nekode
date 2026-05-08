@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrConflict     = errors.New("conflict")
+	ErrInProgress   = errors.New("in progress")
 	ErrInvalidState = errors.New("invalid state")
 	ErrNotFound     = errors.New("not found")
 )
@@ -64,6 +65,8 @@ type Task struct {
 	Target          string `json:"target"`
 	AssigneeID      string `json:"assigneeId,omitempty"`
 	CreatedByUserID string `json:"createdByUserId,omitempty"`
+	Version         int64  `json:"version"`
+	ClaimLeaseID    string `json:"claimLeaseId,omitempty"`
 	CreatedUnix     int64  `json:"createdUnix"`
 	UpdatedUnix     int64  `json:"updatedUnix"`
 }
@@ -72,4 +75,38 @@ type TaskPatch struct {
 	Summary    *string
 	State      *string
 	AssigneeID *string
+}
+
+type CollaborationEvent struct {
+	ID              string `json:"id"`
+	ServerID        string `json:"serverId"`
+	Sequence        int64  `json:"sequence"`
+	EventID         string `json:"eventId"`
+	Target          string `json:"target"`
+	AggregateID     string `json:"aggregateId"`
+	Kind            string `json:"kind"`
+	Operation       string `json:"operation,omitempty"`
+	ScopeType       string `json:"scopeType,omitempty"`
+	ScopeID         string `json:"scopeId,omitempty"`
+	WorkspaceID     string `json:"workspaceId,omitempty"`
+	ActivityID      string `json:"activityId,omitempty"`
+	PayloadJSON     string `json:"payloadJson"`
+	CreatedUnix     int64  `json:"createdUnix"`
+	ProtocolVersion int    `json:"protocolVersion"`
+}
+
+type IdempotencyRecord struct {
+	ID             string `json:"id"`
+	Scope          string `json:"scope"`
+	Method         string `json:"method"`
+	ActorID        string `json:"actorId"`
+	IdempotencyKey string `json:"idempotencyKey"`
+	RequestHash    string `json:"requestHash"`
+	ResponseType   string `json:"responseType"`
+	ResponseJSON   string `json:"responseJson"`
+	ResourceType   string `json:"resourceType"`
+	ResourceID     string `json:"resourceId"`
+	Status         string `json:"status"`
+	CreatedUnix    int64  `json:"createdUnix"`
+	ExpiresUnix    int64  `json:"expiresUnix"`
 }

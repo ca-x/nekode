@@ -87,6 +87,16 @@ func CreatedByUserID(v string) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedByUserID, v))
 }
 
+// Version applies equality check predicate on the "version" field. It's identical to VersionEQ.
+func Version(v int64) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldVersion, v))
+}
+
+// ClaimLeaseID applies equality check predicate on the "claim_lease_id" field. It's identical to ClaimLeaseIDEQ.
+func ClaimLeaseID(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldClaimLeaseID, v))
+}
+
 // CreatedUnix applies equality check predicate on the "created_unix" field. It's identical to CreatedUnixEQ.
 func CreatedUnix(v int64) predicate.Task {
 	return predicate.Task(sql.FieldEQ(FieldCreatedUnix, v))
@@ -420,6 +430,111 @@ func CreatedByUserIDEqualFold(v string) predicate.Task {
 // CreatedByUserIDContainsFold applies the ContainsFold predicate on the "created_by_user_id" field.
 func CreatedByUserIDContainsFold(v string) predicate.Task {
 	return predicate.Task(sql.FieldContainsFold(FieldCreatedByUserID, v))
+}
+
+// VersionEQ applies the EQ predicate on the "version" field.
+func VersionEQ(v int64) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldVersion, v))
+}
+
+// VersionNEQ applies the NEQ predicate on the "version" field.
+func VersionNEQ(v int64) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldVersion, v))
+}
+
+// VersionIn applies the In predicate on the "version" field.
+func VersionIn(vs ...int64) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldVersion, vs...))
+}
+
+// VersionNotIn applies the NotIn predicate on the "version" field.
+func VersionNotIn(vs ...int64) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldVersion, vs...))
+}
+
+// VersionGT applies the GT predicate on the "version" field.
+func VersionGT(v int64) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldVersion, v))
+}
+
+// VersionGTE applies the GTE predicate on the "version" field.
+func VersionGTE(v int64) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldVersion, v))
+}
+
+// VersionLT applies the LT predicate on the "version" field.
+func VersionLT(v int64) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldVersion, v))
+}
+
+// VersionLTE applies the LTE predicate on the "version" field.
+func VersionLTE(v int64) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldVersion, v))
+}
+
+// ClaimLeaseIDEQ applies the EQ predicate on the "claim_lease_id" field.
+func ClaimLeaseIDEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldEQ(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDNEQ applies the NEQ predicate on the "claim_lease_id" field.
+func ClaimLeaseIDNEQ(v string) predicate.Task {
+	return predicate.Task(sql.FieldNEQ(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDIn applies the In predicate on the "claim_lease_id" field.
+func ClaimLeaseIDIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldIn(FieldClaimLeaseID, vs...))
+}
+
+// ClaimLeaseIDNotIn applies the NotIn predicate on the "claim_lease_id" field.
+func ClaimLeaseIDNotIn(vs ...string) predicate.Task {
+	return predicate.Task(sql.FieldNotIn(FieldClaimLeaseID, vs...))
+}
+
+// ClaimLeaseIDGT applies the GT predicate on the "claim_lease_id" field.
+func ClaimLeaseIDGT(v string) predicate.Task {
+	return predicate.Task(sql.FieldGT(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDGTE applies the GTE predicate on the "claim_lease_id" field.
+func ClaimLeaseIDGTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldGTE(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDLT applies the LT predicate on the "claim_lease_id" field.
+func ClaimLeaseIDLT(v string) predicate.Task {
+	return predicate.Task(sql.FieldLT(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDLTE applies the LTE predicate on the "claim_lease_id" field.
+func ClaimLeaseIDLTE(v string) predicate.Task {
+	return predicate.Task(sql.FieldLTE(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDContains applies the Contains predicate on the "claim_lease_id" field.
+func ClaimLeaseIDContains(v string) predicate.Task {
+	return predicate.Task(sql.FieldContains(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDHasPrefix applies the HasPrefix predicate on the "claim_lease_id" field.
+func ClaimLeaseIDHasPrefix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasPrefix(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDHasSuffix applies the HasSuffix predicate on the "claim_lease_id" field.
+func ClaimLeaseIDHasSuffix(v string) predicate.Task {
+	return predicate.Task(sql.FieldHasSuffix(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDEqualFold applies the EqualFold predicate on the "claim_lease_id" field.
+func ClaimLeaseIDEqualFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldEqualFold(FieldClaimLeaseID, v))
+}
+
+// ClaimLeaseIDContainsFold applies the ContainsFold predicate on the "claim_lease_id" field.
+func ClaimLeaseIDContainsFold(v string) predicate.Task {
+	return predicate.Task(sql.FieldContainsFold(FieldClaimLeaseID, v))
 }
 
 // CreatedUnixEQ applies the EQ predicate on the "created_unix" field.

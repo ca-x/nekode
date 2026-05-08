@@ -21,19 +21,214 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// EndpointAuthMode is the closed set of transport auth modes Nekode understands.
+// Endpoint kind/provider remain strings because integrations are open-ended.
+type EndpointAuthMode int32
+
+const (
+	// Auth mode is omitted or unknown; servers should reject new endpoints unless a default is configured.
+	EndpointAuthMode_ENDPOINT_AUTH_MODE_UNSPECIFIED EndpointAuthMode = 0
+	// Browser cookie authentication.
+	EndpointAuthMode_ENDPOINT_AUTH_MODE_COOKIE EndpointAuthMode = 1
+	// Bearer token authentication.
+	EndpointAuthMode_ENDPOINT_AUTH_MODE_BEARER EndpointAuthMode = 2
+	// Signed webhook requests.
+	EndpointAuthMode_ENDPOINT_AUTH_MODE_WEBHOOK_SIGNATURE EndpointAuthMode = 3
+	// MCP token authentication.
+	EndpointAuthMode_ENDPOINT_AUTH_MODE_MCP_TOKEN EndpointAuthMode = 4
+	// No authentication; use only for local or explicitly public endpoints.
+	EndpointAuthMode_ENDPOINT_AUTH_MODE_NONE EndpointAuthMode = 5
+)
+
+// Enum value maps for EndpointAuthMode.
+var (
+	EndpointAuthMode_name = map[int32]string{
+		0: "ENDPOINT_AUTH_MODE_UNSPECIFIED",
+		1: "ENDPOINT_AUTH_MODE_COOKIE",
+		2: "ENDPOINT_AUTH_MODE_BEARER",
+		3: "ENDPOINT_AUTH_MODE_WEBHOOK_SIGNATURE",
+		4: "ENDPOINT_AUTH_MODE_MCP_TOKEN",
+		5: "ENDPOINT_AUTH_MODE_NONE",
+	}
+	EndpointAuthMode_value = map[string]int32{
+		"ENDPOINT_AUTH_MODE_UNSPECIFIED":       0,
+		"ENDPOINT_AUTH_MODE_COOKIE":            1,
+		"ENDPOINT_AUTH_MODE_BEARER":            2,
+		"ENDPOINT_AUTH_MODE_WEBHOOK_SIGNATURE": 3,
+		"ENDPOINT_AUTH_MODE_MCP_TOKEN":         4,
+		"ENDPOINT_AUTH_MODE_NONE":              5,
+	}
+)
+
+func (x EndpointAuthMode) Enum() *EndpointAuthMode {
+	p := new(EndpointAuthMode)
+	*p = x
+	return p
+}
+
+func (x EndpointAuthMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EndpointAuthMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[0].Descriptor()
+}
+
+func (EndpointAuthMode) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[0]
+}
+
+func (x EndpointAuthMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EndpointAuthMode.Descriptor instead.
+func (EndpointAuthMode) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{0}
+}
+
+// OutboundPolicy controls whether SendMessage also emits to external endpoints.
+type OutboundPolicy int32
+
+const (
+	// Use server default outbound policy, normally NONE for daemon-originated writes.
+	OutboundPolicy_OUTBOUND_POLICY_UNSPECIFIED OutboundPolicy = 0
+	// Do not emit to any external endpoint.
+	OutboundPolicy_OUTBOUND_POLICY_NONE OutboundPolicy = 1
+	// Emit only to the source endpoint if it supports outbound delivery.
+	OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY OutboundPolicy = 2
+	// Emit to all bound endpoints for the target.
+	OutboundPolicy_OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS OutboundPolicy = 3
+	// Emit to a server-selected subset supplied out of band.
+	OutboundPolicy_OUTBOUND_POLICY_SELECTED_ENDPOINTS OutboundPolicy = 4
+)
+
+// Enum value maps for OutboundPolicy.
+var (
+	OutboundPolicy_name = map[int32]string{
+		0: "OUTBOUND_POLICY_UNSPECIFIED",
+		1: "OUTBOUND_POLICY_NONE",
+		2: "OUTBOUND_POLICY_SOURCE_ONLY",
+		3: "OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS",
+		4: "OUTBOUND_POLICY_SELECTED_ENDPOINTS",
+	}
+	OutboundPolicy_value = map[string]int32{
+		"OUTBOUND_POLICY_UNSPECIFIED":         0,
+		"OUTBOUND_POLICY_NONE":                1,
+		"OUTBOUND_POLICY_SOURCE_ONLY":         2,
+		"OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS": 3,
+		"OUTBOUND_POLICY_SELECTED_ENDPOINTS":  4,
+	}
+)
+
+func (x OutboundPolicy) Enum() *OutboundPolicy {
+	p := new(OutboundPolicy)
+	*p = x
+	return p
+}
+
+func (x OutboundPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OutboundPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[1].Descriptor()
+}
+
+func (OutboundPolicy) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[1]
+}
+
+func (x OutboundPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OutboundPolicy.Descriptor instead.
+func (OutboundPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{1}
+}
+
+// OutboundDeliveryStatus is the closed lifecycle for webhook/IM delivery attempts.
+type OutboundDeliveryStatus int32
+
+const (
+	// Delivery status is omitted or unknown.
+	OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_UNSPECIFIED OutboundDeliveryStatus = 0
+	// Delivery is waiting to be attempted.
+	OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING OutboundDeliveryStatus = 1
+	// Delivery succeeded.
+	OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED OutboundDeliveryStatus = 2
+	// Delivery failed and is not currently retrying.
+	OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_FAILED OutboundDeliveryStatus = 3
+	// Delivery failed and is scheduled for retry.
+	OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_RETRYING OutboundDeliveryStatus = 4
+	// Delivery was canceled.
+	OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_CANCELED OutboundDeliveryStatus = 5
+)
+
+// Enum value maps for OutboundDeliveryStatus.
+var (
+	OutboundDeliveryStatus_name = map[int32]string{
+		0: "OUTBOUND_DELIVERY_STATUS_UNSPECIFIED",
+		1: "OUTBOUND_DELIVERY_STATUS_PENDING",
+		2: "OUTBOUND_DELIVERY_STATUS_DELIVERED",
+		3: "OUTBOUND_DELIVERY_STATUS_FAILED",
+		4: "OUTBOUND_DELIVERY_STATUS_RETRYING",
+		5: "OUTBOUND_DELIVERY_STATUS_CANCELED",
+	}
+	OutboundDeliveryStatus_value = map[string]int32{
+		"OUTBOUND_DELIVERY_STATUS_UNSPECIFIED": 0,
+		"OUTBOUND_DELIVERY_STATUS_PENDING":     1,
+		"OUTBOUND_DELIVERY_STATUS_DELIVERED":   2,
+		"OUTBOUND_DELIVERY_STATUS_FAILED":      3,
+		"OUTBOUND_DELIVERY_STATUS_RETRYING":    4,
+		"OUTBOUND_DELIVERY_STATUS_CANCELED":    5,
+	}
+)
+
+func (x OutboundDeliveryStatus) Enum() *OutboundDeliveryStatus {
+	p := new(OutboundDeliveryStatus)
+	*p = x
+	return p
+}
+
+func (x OutboundDeliveryStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OutboundDeliveryStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[2].Descriptor()
+}
+
+func (OutboundDeliveryStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[2]
+}
+
+func (x OutboundDeliveryStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OutboundDeliveryStatus.Descriptor instead.
+func (OutboundDeliveryStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{2}
+}
+
 type ChannelRecord struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Target                string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	ChannelId             string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	DisplayName           string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	ChannelType           string                 `protobuf:"bytes,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"`
-	Enabled               bool                   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	InteractionEndpointId string                 `protobuf:"bytes,6,opt,name=interaction_endpoint_id,json=interactionEndpointId,proto3" json:"interaction_endpoint_id,omitempty"`
-	SourceKind            string                 `protobuf:"bytes,7,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
-	ExternalId            string                 `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
-	Capabilities          []*Capability          `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Target      string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	ChannelId   string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	DisplayName string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Open channel taxonomy. Canonical values include channel, dm, thread,
+	// external, and custom integration-specific names.
+	ChannelType           string `protobuf:"bytes,4,opt,name=channel_type,json=channelType,proto3" json:"channel_type,omitempty"`
+	Enabled               bool   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	InteractionEndpointId string `protobuf:"bytes,6,opt,name=interaction_endpoint_id,json=interactionEndpointId,proto3" json:"interaction_endpoint_id,omitempty"`
+	// Open source taxonomy that mirrors InteractionEndpoint.kind when known.
+	SourceKind    string        `protobuf:"bytes,7,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	ExternalId    string        `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	Capabilities  []*Capability `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChannelRecord) Reset() {
@@ -130,17 +325,21 @@ func (x *ChannelRecord) GetCapabilities() []*Capability {
 }
 
 type InteractionEndpoint struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	EndpointId      string                 `protobuf:"bytes,1,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
-	Kind            string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`         // web | cli | api | webhook | mcp | im | custom
-	Provider        string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"` // browser | mobile | wechat | slack | openapi | custom
-	DisplayName     string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	TargetPrefix    string                 `protobuf:"bytes,5,opt,name=target_prefix,json=targetPrefix,proto3" json:"target_prefix,omitempty"`
-	InboundEnabled  bool                   `protobuf:"varint,6,opt,name=inbound_enabled,json=inboundEnabled,proto3" json:"inbound_enabled,omitempty"`
-	OutboundEnabled bool                   `protobuf:"varint,7,opt,name=outbound_enabled,json=outboundEnabled,proto3" json:"outbound_enabled,omitempty"`
-	AuthMode        string                 `protobuf:"bytes,8,opt,name=auth_mode,json=authMode,proto3" json:"auth_mode,omitempty"`       // cookie | bearer | webhook_signature | mcp_token | none
-	ConfigJson      string                 `protobuf:"bytes,9,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"` // non-secret endpoint configuration
-	Capabilities    []*Capability          `protobuf:"bytes,10,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	EndpointId string                 `protobuf:"bytes,1,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	// Open endpoint taxonomy. Canonical values include web, cli, api, webhook,
+	// mcp, im, and custom; providers may add new endpoint kinds.
+	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Open provider name. Canonical values include browser, mobile, wechat,
+	// slack, openapi, and custom product/provider identifiers.
+	Provider        string           `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	DisplayName     string           `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	TargetPrefix    string           `protobuf:"bytes,5,opt,name=target_prefix,json=targetPrefix,proto3" json:"target_prefix,omitempty"`
+	InboundEnabled  bool             `protobuf:"varint,6,opt,name=inbound_enabled,json=inboundEnabled,proto3" json:"inbound_enabled,omitempty"`
+	OutboundEnabled bool             `protobuf:"varint,7,opt,name=outbound_enabled,json=outboundEnabled,proto3" json:"outbound_enabled,omitempty"`
+	AuthMode        EndpointAuthMode `protobuf:"varint,8,opt,name=auth_mode,json=authMode,proto3,enum=nekode.daemon.v1.EndpointAuthMode" json:"auth_mode,omitempty"`
+	ConfigJson      string           `protobuf:"bytes,9,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"` // non-secret endpoint configuration
+	Capabilities    []*Capability    `protobuf:"bytes,10,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -224,11 +423,11 @@ func (x *InteractionEndpoint) GetOutboundEnabled() bool {
 	return false
 }
 
-func (x *InteractionEndpoint) GetAuthMode() string {
+func (x *InteractionEndpoint) GetAuthMode() EndpointAuthMode {
 	if x != nil {
 		return x.AuthMode
 	}
-	return ""
+	return EndpointAuthMode_ENDPOINT_AUTH_MODE_UNSPECIFIED
 }
 
 func (x *InteractionEndpoint) GetConfigJson() string {
@@ -762,24 +961,26 @@ func (x *GetThreadResponse) GetThread() *ThreadRecord {
 }
 
 type CollaborationMessage struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	MessageId            string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	Target               string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	ThreadId             string                 `protobuf:"bytes,3,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
-	Role                 string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
-	Content              string                 `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
-	ReplyToMessageId     string                 `protobuf:"bytes,8,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
-	CreatedTimeUnix      int64                  `protobuf:"varint,9,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	Attachments          []*AttachmentRecord    `protobuf:"bytes,11,rep,name=attachments,proto3" json:"attachments,omitempty"`
-	RequestId            string                 `protobuf:"bytes,12,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	SourceEndpointId     string                 `protobuf:"bytes,13,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
-	ExternalMessageId    string                 `protobuf:"bytes,14,opt,name=external_message_id,json=externalMessageId,proto3" json:"external_message_id,omitempty"`
-	MetadataJson         string                 `protobuf:"bytes,15,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
-	CoordinationRecordId string                 `protobuf:"bytes,16,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
-	MemoryRecordId       string                 `protobuf:"bytes,17,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
-	Sender               *Actor                 `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
-	Sequence             int64                  `protobuf:"varint,19,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	AggregateId          string                 `protobuf:"bytes,20,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MessageId string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Target    string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	ThreadId  string                 `protobuf:"bytes,3,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	// Open rendering/model role. Canonical values include user, assistant,
+	// system, tool, and custom runtime/provider roles.
+	Role                 string              `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
+	Content              string              `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	ReplyToMessageId     string              `protobuf:"bytes,8,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
+	CreatedTimeUnix      int64               `protobuf:"varint,9,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	Attachments          []*AttachmentRecord `protobuf:"bytes,11,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	RequestId            string              `protobuf:"bytes,12,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	SourceEndpointId     string              `protobuf:"bytes,13,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
+	ExternalMessageId    string              `protobuf:"bytes,14,opt,name=external_message_id,json=externalMessageId,proto3" json:"external_message_id,omitempty"`
+	MetadataJson         string              `protobuf:"bytes,15,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	CoordinationRecordId string              `protobuf:"bytes,16,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
+	MemoryRecordId       string              `protobuf:"bytes,17,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	Sender               *Actor              `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
+	Sequence             int64               `protobuf:"varint,19,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId          string              `protobuf:"bytes,20,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1046,22 +1247,24 @@ func (x *ReadMessagesResponse) GetNextCursor() *EventCursor {
 }
 
 type SendMessageRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Target               string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Role                 string                 `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
-	Content              string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	ReplyToMessageId     string                 `protobuf:"bytes,6,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
-	EmitOutbound         bool                   `protobuf:"varint,7,opt,name=emit_outbound,json=emitOutbound,proto3" json:"emit_outbound,omitempty"`
-	RequestId            string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	AttachmentIds        []string               `protobuf:"bytes,9,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
-	SourceEndpointId     string                 `protobuf:"bytes,10,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
-	MetadataJson         string                 `protobuf:"bytes,12,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
-	CoordinationRecordId string                 `protobuf:"bytes,13,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
-	MemoryRecordId       string                 `protobuf:"bytes,14,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
-	IdempotencyKey       string                 `protobuf:"bytes,15,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context              *RequestContext        `protobuf:"bytes,16,opt,name=context,proto3" json:"context,omitempty"`
-	OutboundPolicy       string                 `protobuf:"bytes,17,opt,name=outbound_policy,json=outboundPolicy,proto3" json:"outbound_policy,omitempty"` // none | source_only | all_bound_endpoints | selected_endpoints
-	Sender               *Actor                 `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Target string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	// Open rendering/model role; use the same canonical values as
+	// CollaborationMessage.role. Defaults to user when omitted.
+	Role                 string          `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
+	Content              string          `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	ReplyToMessageId     string          `protobuf:"bytes,6,opt,name=reply_to_message_id,json=replyToMessageId,proto3" json:"reply_to_message_id,omitempty"`
+	EmitOutbound         bool            `protobuf:"varint,7,opt,name=emit_outbound,json=emitOutbound,proto3" json:"emit_outbound,omitempty"`
+	RequestId            string          `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	AttachmentIds        []string        `protobuf:"bytes,9,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
+	SourceEndpointId     string          `protobuf:"bytes,10,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
+	MetadataJson         string          `protobuf:"bytes,12,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	CoordinationRecordId string          `protobuf:"bytes,13,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
+	MemoryRecordId       string          `protobuf:"bytes,14,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	IdempotencyKey       string          `protobuf:"bytes,15,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context              *RequestContext `protobuf:"bytes,16,opt,name=context,proto3" json:"context,omitempty"`
+	OutboundPolicy       OutboundPolicy  `protobuf:"varint,17,opt,name=outbound_policy,json=outboundPolicy,proto3,enum=nekode.daemon.v1.OutboundPolicy" json:"outbound_policy,omitempty"`
+	Sender               *Actor          `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1187,11 +1390,11 @@ func (x *SendMessageRequest) GetContext() *RequestContext {
 	return nil
 }
 
-func (x *SendMessageRequest) GetOutboundPolicy() string {
+func (x *SendMessageRequest) GetOutboundPolicy() OutboundPolicy {
 	if x != nil {
 		return x.OutboundPolicy
 	}
-	return ""
+	return OutboundPolicy_OUTBOUND_POLICY_UNSPECIFIED
 }
 
 func (x *SendMessageRequest) GetSender() *Actor {
@@ -2010,14 +2213,16 @@ func (x *UnfollowThreadResponse) GetAccepted() bool {
 }
 
 type OutboundDeliveryRecord struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	DeliveryId        string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
-	Target            string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	MessageId         string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	EndpointId        string                 `protobuf:"bytes,4,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
-	EndpointKind      string                 `protobuf:"bytes,5,opt,name=endpoint_kind,json=endpointKind,proto3" json:"endpoint_kind,omitempty"` // webhook | im | mcp | api | custom
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DeliveryId string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
+	Target     string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	MessageId  string                 `protobuf:"bytes,3,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	EndpointId string                 `protobuf:"bytes,4,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	// Open endpoint taxonomy copied from InteractionEndpoint.kind at delivery time.
+	// Canonical values include webhook, im, mcp, api, and custom.
+	EndpointKind      string                 `protobuf:"bytes,5,opt,name=endpoint_kind,json=endpointKind,proto3" json:"endpoint_kind,omitempty"`
 	ExternalMessageId string                 `protobuf:"bytes,6,opt,name=external_message_id,json=externalMessageId,proto3" json:"external_message_id,omitempty"`
-	Status            string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"` // pending | delivered | failed | retrying | canceled
+	Status            OutboundDeliveryStatus `protobuf:"varint,7,opt,name=status,proto3,enum=nekode.daemon.v1.OutboundDeliveryStatus" json:"status,omitempty"`
 	AttemptCount      uint32                 `protobuf:"varint,8,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
 	NextRetryTimeUnix int64                  `protobuf:"varint,9,opt,name=next_retry_time_unix,json=nextRetryTimeUnix,proto3" json:"next_retry_time_unix,omitempty"`
 	DeliveredTimeUnix int64                  `protobuf:"varint,10,opt,name=delivered_time_unix,json=deliveredTimeUnix,proto3" json:"delivered_time_unix,omitempty"`
@@ -2099,11 +2304,11 @@ func (x *OutboundDeliveryRecord) GetExternalMessageId() string {
 	return ""
 }
 
-func (x *OutboundDeliveryRecord) GetStatus() string {
+func (x *OutboundDeliveryRecord) GetStatus() OutboundDeliveryStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_UNSPECIFIED
 }
 
 func (x *OutboundDeliveryRecord) GetAttemptCount() uint32 {
@@ -2142,13 +2347,13 @@ func (x *OutboundDeliveryRecord) GetRequestId() string {
 }
 
 type ListOutboundDeliveriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	EndpointId    string                 `protobuf:"bytes,3,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
-	Statuses      []string               `protobuf:"bytes,4,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	Limit         uint32                 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        *EventCursor           `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Target        string                   `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	MessageId     string                   `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	EndpointId    string                   `protobuf:"bytes,3,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	Statuses      []OutboundDeliveryStatus `protobuf:"varint,4,rep,packed,name=statuses,proto3,enum=nekode.daemon.v1.OutboundDeliveryStatus" json:"statuses,omitempty"`
+	Limit         uint32                   `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor             `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2204,7 +2409,7 @@ func (x *ListOutboundDeliveriesRequest) GetEndpointId() string {
 	return ""
 }
 
-func (x *ListOutboundDeliveriesRequest) GetStatuses() []string {
+func (x *ListOutboundDeliveriesRequest) GetStatuses() []OutboundDeliveryStatus {
 	if x != nil {
 		return x.Statuses
 	}
@@ -2406,7 +2611,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"sourceKind\x12\x1f\n" +
 	"\vexternal_id\x18\b \x01(\tR\n" +
 	"externalId\x12@\n" +
-	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"\x8a\x03\n" +
+	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x03\n" +
 	"\x13InteractionEndpoint\x12\x1f\n" +
 	"\vendpoint_id\x18\x01 \x01(\tR\n" +
 	"endpointId\x12\x12\n" +
@@ -2415,8 +2620,8 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12#\n" +
 	"\rtarget_prefix\x18\x05 \x01(\tR\ftargetPrefix\x12'\n" +
 	"\x0finbound_enabled\x18\x06 \x01(\bR\x0einboundEnabled\x12)\n" +
-	"\x10outbound_enabled\x18\a \x01(\bR\x0foutboundEnabled\x12\x1b\n" +
-	"\tauth_mode\x18\b \x01(\tR\bauthMode\x12\x1f\n" +
+	"\x10outbound_enabled\x18\a \x01(\bR\x0foutboundEnabled\x12?\n" +
+	"\tauth_mode\x18\b \x01(\x0e2\".nekode.daemon.v1.EndpointAuthModeR\bauthMode\x12\x1f\n" +
 	"\vconfig_json\x18\t \x01(\tR\n" +
 	"configJson\x12@\n" +
 	"\fcapabilities\x18\n" +
@@ -2487,7 +2692,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x14ReadMessagesResponse\x12B\n" +
 	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xae\x05\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xd0\x05\n" +
 	"\x12SendMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
@@ -2503,8 +2708,8 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x16coordination_record_id\x18\r \x01(\tR\x14coordinationRecordId\x12(\n" +
 	"\x10memory_record_id\x18\x0e \x01(\tR\x0ememoryRecordId\x12'\n" +
 	"\x0fidempotency_key\x18\x0f \x01(\tR\x0eidempotencyKey\x12:\n" +
-	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12'\n" +
-	"\x0foutbound_policy\x18\x11 \x01(\tR\x0eoutboundPolicy\x12/\n" +
+	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12I\n" +
+	"\x0foutbound_policy\x18\x11 \x01(\x0e2 .nekode.daemon.v1.OutboundPolicyR\x0eoutboundPolicy\x12/\n" +
 	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06senderJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\v\x10\fR\x0fsender_agent_idR\x13sender_display_nameR\x0esender_user_id\"s\n" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
@@ -2572,7 +2777,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"4\n" +
 	"\x16UnfollowThreadResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xca\x03\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xf4\x03\n" +
 	"\x16OutboundDeliveryRecord\x12\x1f\n" +
 	"\vdelivery_id\x18\x01 \x01(\tR\n" +
 	"deliveryId\x12\x16\n" +
@@ -2582,8 +2787,8 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\vendpoint_id\x18\x04 \x01(\tR\n" +
 	"endpointId\x12#\n" +
 	"\rendpoint_kind\x18\x05 \x01(\tR\fendpointKind\x12.\n" +
-	"\x13external_message_id\x18\x06 \x01(\tR\x11externalMessageId\x12\x16\n" +
-	"\x06status\x18\a \x01(\tR\x06status\x12#\n" +
+	"\x13external_message_id\x18\x06 \x01(\tR\x11externalMessageId\x12@\n" +
+	"\x06status\x18\a \x01(\x0e2(.nekode.daemon.v1.OutboundDeliveryStatusR\x06status\x12#\n" +
 	"\rattempt_count\x18\b \x01(\rR\fattemptCount\x12/\n" +
 	"\x14next_retry_time_unix\x18\t \x01(\x03R\x11nextRetryTimeUnix\x12.\n" +
 	"\x13delivered_time_unix\x18\n" +
@@ -2591,14 +2796,14 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\n" +
 	"last_error\x18\v \x01(\tR\tlastError\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\f \x01(\tR\trequestIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xe0\x01\n" +
+	"request_id\x18\f \x01(\tR\trequestIdJ\x06\b\xe8\a\x10\xd0\x0f\"\x8a\x02\n" +
 	"\x1dListOutboundDeliveriesRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x1f\n" +
 	"\vendpoint_id\x18\x03 \x01(\tR\n" +
-	"endpointId\x12\x1a\n" +
-	"\bstatuses\x18\x04 \x03(\tR\bstatuses\x12\x14\n" +
+	"endpointId\x12D\n" +
+	"\bstatuses\x18\x04 \x03(\x0e2(.nekode.daemon.v1.OutboundDeliveryStatusR\bstatuses\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\rR\x05limit\x125\n" +
 	"\x06cursor\x18\x06 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\xaa\x01\n" +
 	"\x1eListOutboundDeliveriesResponse\x12H\n" +
@@ -2615,7 +2820,27 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x03 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"e\n" +
 	"\x1dRetryOutboundDeliveryResponse\x12D\n" +
-	"\bdelivery\x18\x01 \x01(\v2(.nekode.daemon.v1.OutboundDeliveryRecordR\bdeliveryB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\bdelivery\x18\x01 \x01(\v2(.nekode.daemon.v1.OutboundDeliveryRecordR\bdelivery*\xdd\x01\n" +
+	"\x10EndpointAuthMode\x12\"\n" +
+	"\x1eENDPOINT_AUTH_MODE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19ENDPOINT_AUTH_MODE_COOKIE\x10\x01\x12\x1d\n" +
+	"\x19ENDPOINT_AUTH_MODE_BEARER\x10\x02\x12(\n" +
+	"$ENDPOINT_AUTH_MODE_WEBHOOK_SIGNATURE\x10\x03\x12 \n" +
+	"\x1cENDPOINT_AUTH_MODE_MCP_TOKEN\x10\x04\x12\x1b\n" +
+	"\x17ENDPOINT_AUTH_MODE_NONE\x10\x05*\xbd\x01\n" +
+	"\x0eOutboundPolicy\x12\x1f\n" +
+	"\x1bOUTBOUND_POLICY_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14OUTBOUND_POLICY_NONE\x10\x01\x12\x1f\n" +
+	"\x1bOUTBOUND_POLICY_SOURCE_ONLY\x10\x02\x12'\n" +
+	"#OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS\x10\x03\x12&\n" +
+	"\"OUTBOUND_POLICY_SELECTED_ENDPOINTS\x10\x04*\x83\x02\n" +
+	"\x16OutboundDeliveryStatus\x12(\n" +
+	"$OUTBOUND_DELIVERY_STATUS_UNSPECIFIED\x10\x00\x12$\n" +
+	" OUTBOUND_DELIVERY_STATUS_PENDING\x10\x01\x12&\n" +
+	"\"OUTBOUND_DELIVERY_STATUS_DELIVERED\x10\x02\x12#\n" +
+	"\x1fOUTBOUND_DELIVERY_STATUS_FAILED\x10\x03\x12%\n" +
+	"!OUTBOUND_DELIVERY_STATUS_RETRYING\x10\x04\x12%\n" +
+	"!OUTBOUND_DELIVERY_STATUS_CANCELED\x10\x05B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_collaboration_proto_rawDescOnce sync.Once
@@ -2629,87 +2854,95 @@ func file_nekode_daemon_v1_collaboration_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_collaboration_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_collaboration_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_nekode_daemon_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
-	(*ChannelRecord)(nil),                    // 0: nekode.daemon.v1.ChannelRecord
-	(*InteractionEndpoint)(nil),              // 1: nekode.daemon.v1.InteractionEndpoint
-	(*ListInteractionEndpointsRequest)(nil),  // 2: nekode.daemon.v1.ListInteractionEndpointsRequest
-	(*ListInteractionEndpointsResponse)(nil), // 3: nekode.daemon.v1.ListInteractionEndpointsResponse
-	(*ListChannelsRequest)(nil),              // 4: nekode.daemon.v1.ListChannelsRequest
-	(*ListChannelsResponse)(nil),             // 5: nekode.daemon.v1.ListChannelsResponse
-	(*ThreadRecord)(nil),                     // 6: nekode.daemon.v1.ThreadRecord
-	(*ListThreadsRequest)(nil),               // 7: nekode.daemon.v1.ListThreadsRequest
-	(*ListThreadsResponse)(nil),              // 8: nekode.daemon.v1.ListThreadsResponse
-	(*GetThreadRequest)(nil),                 // 9: nekode.daemon.v1.GetThreadRequest
-	(*GetThreadResponse)(nil),                // 10: nekode.daemon.v1.GetThreadResponse
-	(*CollaborationMessage)(nil),             // 11: nekode.daemon.v1.CollaborationMessage
-	(*ReadMessagesRequest)(nil),              // 12: nekode.daemon.v1.ReadMessagesRequest
-	(*ReadMessagesResponse)(nil),             // 13: nekode.daemon.v1.ReadMessagesResponse
-	(*SendMessageRequest)(nil),               // 14: nekode.daemon.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),              // 15: nekode.daemon.v1.SendMessageResponse
-	(*SavedMessageRecord)(nil),               // 16: nekode.daemon.v1.SavedMessageRecord
-	(*SaveMessageRequest)(nil),               // 17: nekode.daemon.v1.SaveMessageRequest
-	(*SaveMessageResponse)(nil),              // 18: nekode.daemon.v1.SaveMessageResponse
-	(*UnsaveMessageRequest)(nil),             // 19: nekode.daemon.v1.UnsaveMessageRequest
-	(*UnsaveMessageResponse)(nil),            // 20: nekode.daemon.v1.UnsaveMessageResponse
-	(*ListSavedMessagesRequest)(nil),         // 21: nekode.daemon.v1.ListSavedMessagesRequest
-	(*ListSavedMessagesResponse)(nil),        // 22: nekode.daemon.v1.ListSavedMessagesResponse
-	(*FollowThreadRequest)(nil),              // 23: nekode.daemon.v1.FollowThreadRequest
-	(*FollowThreadResponse)(nil),             // 24: nekode.daemon.v1.FollowThreadResponse
-	(*UnfollowThreadRequest)(nil),            // 25: nekode.daemon.v1.UnfollowThreadRequest
-	(*UnfollowThreadResponse)(nil),           // 26: nekode.daemon.v1.UnfollowThreadResponse
-	(*OutboundDeliveryRecord)(nil),           // 27: nekode.daemon.v1.OutboundDeliveryRecord
-	(*ListOutboundDeliveriesRequest)(nil),    // 28: nekode.daemon.v1.ListOutboundDeliveriesRequest
-	(*ListOutboundDeliveriesResponse)(nil),   // 29: nekode.daemon.v1.ListOutboundDeliveriesResponse
-	(*RetryOutboundDeliveryRequest)(nil),     // 30: nekode.daemon.v1.RetryOutboundDeliveryRequest
-	(*RetryOutboundDeliveryResponse)(nil),    // 31: nekode.daemon.v1.RetryOutboundDeliveryResponse
-	(*Capability)(nil),                       // 32: nekode.daemon.v1.Capability
-	(*EventCursor)(nil),                      // 33: nekode.daemon.v1.EventCursor
-	(*AttachmentRecord)(nil),                 // 34: nekode.daemon.v1.AttachmentRecord
-	(*Actor)(nil),                            // 35: nekode.daemon.v1.Actor
-	(*RequestContext)(nil),                   // 36: nekode.daemon.v1.RequestContext
+	(EndpointAuthMode)(0),                    // 0: nekode.daemon.v1.EndpointAuthMode
+	(OutboundPolicy)(0),                      // 1: nekode.daemon.v1.OutboundPolicy
+	(OutboundDeliveryStatus)(0),              // 2: nekode.daemon.v1.OutboundDeliveryStatus
+	(*ChannelRecord)(nil),                    // 3: nekode.daemon.v1.ChannelRecord
+	(*InteractionEndpoint)(nil),              // 4: nekode.daemon.v1.InteractionEndpoint
+	(*ListInteractionEndpointsRequest)(nil),  // 5: nekode.daemon.v1.ListInteractionEndpointsRequest
+	(*ListInteractionEndpointsResponse)(nil), // 6: nekode.daemon.v1.ListInteractionEndpointsResponse
+	(*ListChannelsRequest)(nil),              // 7: nekode.daemon.v1.ListChannelsRequest
+	(*ListChannelsResponse)(nil),             // 8: nekode.daemon.v1.ListChannelsResponse
+	(*ThreadRecord)(nil),                     // 9: nekode.daemon.v1.ThreadRecord
+	(*ListThreadsRequest)(nil),               // 10: nekode.daemon.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),              // 11: nekode.daemon.v1.ListThreadsResponse
+	(*GetThreadRequest)(nil),                 // 12: nekode.daemon.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),                // 13: nekode.daemon.v1.GetThreadResponse
+	(*CollaborationMessage)(nil),             // 14: nekode.daemon.v1.CollaborationMessage
+	(*ReadMessagesRequest)(nil),              // 15: nekode.daemon.v1.ReadMessagesRequest
+	(*ReadMessagesResponse)(nil),             // 16: nekode.daemon.v1.ReadMessagesResponse
+	(*SendMessageRequest)(nil),               // 17: nekode.daemon.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),              // 18: nekode.daemon.v1.SendMessageResponse
+	(*SavedMessageRecord)(nil),               // 19: nekode.daemon.v1.SavedMessageRecord
+	(*SaveMessageRequest)(nil),               // 20: nekode.daemon.v1.SaveMessageRequest
+	(*SaveMessageResponse)(nil),              // 21: nekode.daemon.v1.SaveMessageResponse
+	(*UnsaveMessageRequest)(nil),             // 22: nekode.daemon.v1.UnsaveMessageRequest
+	(*UnsaveMessageResponse)(nil),            // 23: nekode.daemon.v1.UnsaveMessageResponse
+	(*ListSavedMessagesRequest)(nil),         // 24: nekode.daemon.v1.ListSavedMessagesRequest
+	(*ListSavedMessagesResponse)(nil),        // 25: nekode.daemon.v1.ListSavedMessagesResponse
+	(*FollowThreadRequest)(nil),              // 26: nekode.daemon.v1.FollowThreadRequest
+	(*FollowThreadResponse)(nil),             // 27: nekode.daemon.v1.FollowThreadResponse
+	(*UnfollowThreadRequest)(nil),            // 28: nekode.daemon.v1.UnfollowThreadRequest
+	(*UnfollowThreadResponse)(nil),           // 29: nekode.daemon.v1.UnfollowThreadResponse
+	(*OutboundDeliveryRecord)(nil),           // 30: nekode.daemon.v1.OutboundDeliveryRecord
+	(*ListOutboundDeliveriesRequest)(nil),    // 31: nekode.daemon.v1.ListOutboundDeliveriesRequest
+	(*ListOutboundDeliveriesResponse)(nil),   // 32: nekode.daemon.v1.ListOutboundDeliveriesResponse
+	(*RetryOutboundDeliveryRequest)(nil),     // 33: nekode.daemon.v1.RetryOutboundDeliveryRequest
+	(*RetryOutboundDeliveryResponse)(nil),    // 34: nekode.daemon.v1.RetryOutboundDeliveryResponse
+	(*Capability)(nil),                       // 35: nekode.daemon.v1.Capability
+	(*EventCursor)(nil),                      // 36: nekode.daemon.v1.EventCursor
+	(*AttachmentRecord)(nil),                 // 37: nekode.daemon.v1.AttachmentRecord
+	(*Actor)(nil),                            // 38: nekode.daemon.v1.Actor
+	(*RequestContext)(nil),                   // 39: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_collaboration_proto_depIdxs = []int32{
-	32, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
-	32, // 1: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
-	33, // 2: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	1,  // 3: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
-	33, // 4: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	33, // 5: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	0,  // 6: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
-	33, // 7: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	33, // 8: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	6,  // 9: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
-	33, // 10: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	6,  // 11: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
-	34, // 12: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
-	35, // 13: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
-	33, // 14: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	11, // 15: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	33, // 16: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 17: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	35, // 18: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
-	11, // 19: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	11, // 20: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	36, // 21: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	16, // 22: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	36, // 23: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	16, // 24: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	33, // 25: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	16, // 26: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
-	33, // 27: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 28: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	36, // 29: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	33, // 30: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	27, // 31: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	33, // 32: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 33: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	27, // 34: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	35, // [35:35] is the sub-list for method output_type
-	35, // [35:35] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	35, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
+	0,  // 1: nekode.daemon.v1.InteractionEndpoint.auth_mode:type_name -> nekode.daemon.v1.EndpointAuthMode
+	35, // 2: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
+	36, // 3: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	4,  // 4: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
+	36, // 5: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 6: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	3,  // 7: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
+	36, // 8: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	36, // 9: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	9,  // 10: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
+	36, // 11: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	9,  // 12: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
+	37, // 13: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
+	38, // 14: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
+	36, // 15: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	14, // 16: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	36, // 17: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	39, // 18: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	1,  // 19: nekode.daemon.v1.SendMessageRequest.outbound_policy:type_name -> nekode.daemon.v1.OutboundPolicy
+	38, // 20: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
+	14, // 21: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	14, // 22: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	39, // 23: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	19, // 24: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	39, // 25: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	19, // 26: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	36, // 27: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	19, // 28: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
+	36, // 29: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	39, // 30: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	39, // 31: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	2,  // 32: nekode.daemon.v1.OutboundDeliveryRecord.status:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
+	2,  // 33: nekode.daemon.v1.ListOutboundDeliveriesRequest.statuses:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
+	36, // 34: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	30, // 35: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	36, // 36: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	39, // 37: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	30, // 38: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	39, // [39:39] is the sub-list for method output_type
+	39, // [39:39] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_collaboration_proto_init() }
@@ -2724,13 +2957,14 @@ func file_nekode_daemon_v1_collaboration_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_collaboration_proto_rawDesc), len(file_nekode_daemon_v1_collaboration_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      3,
 			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_collaboration_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_collaboration_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_collaboration_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_collaboration_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_collaboration_proto = out.File

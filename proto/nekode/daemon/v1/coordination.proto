@@ -6,12 +6,205 @@ import "nekode/daemon/v1/common.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// WorkPlanItemStatus is the closed status set for a single plan item.
+enum WorkPlanItemStatus {
+  // Status is omitted or unknown.
+  WORK_PLAN_ITEM_STATUS_UNSPECIFIED = 0;
+  // Item is waiting to start.
+  WORK_PLAN_ITEM_STATUS_PENDING = 1;
+  // Item is actively being worked.
+  WORK_PLAN_ITEM_STATUS_IN_PROGRESS = 2;
+  // Item is completed.
+  WORK_PLAN_ITEM_STATUS_COMPLETED = 3;
+  // Item cannot proceed without external action.
+  WORK_PLAN_ITEM_STATUS_BLOCKED = 4;
+  // Item was intentionally skipped.
+  WORK_PLAN_ITEM_STATUS_SKIPPED = 5;
+}
+
+// WorkPlanStatus is the closed lifecycle for a collaborative work plan.
+enum WorkPlanStatus {
+  // Plan status is omitted or unknown.
+  WORK_PLAN_STATUS_UNSPECIFIED = 0;
+  // Plan is being drafted and is not authoritative.
+  WORK_PLAN_STATUS_DRAFT = 1;
+  // Plan is the active coordination plan.
+  WORK_PLAN_STATUS_ACTIVE = 2;
+  // Plan has been replaced by a newer plan.
+  WORK_PLAN_STATUS_SUPERSEDED = 3;
+  // Plan has been completed.
+  WORK_PLAN_STATUS_COMPLETED = 4;
+  // Plan was canceled.
+  WORK_PLAN_STATUS_CANCELED = 5;
+}
+
+// ProgressUpdateStatus is the closed status set for agent progress reports.
+enum ProgressUpdateStatus {
+  // Progress state is omitted or unknown.
+  PROGRESS_UPDATE_STATUS_UNSPECIFIED = 0;
+  // Work just started.
+  PROGRESS_UPDATE_STATUS_STARTED = 1;
+  // Work is ongoing.
+  PROGRESS_UPDATE_STATUS_IN_PROGRESS = 2;
+  // Work is blocked.
+  PROGRESS_UPDATE_STATUS_BLOCKED = 3;
+  // Work is in verification.
+  PROGRESS_UPDATE_STATUS_VERIFYING = 4;
+  // Work is completed.
+  PROGRESS_UPDATE_STATUS_COMPLETED = 5;
+}
+
+// VerificationKind is the closed taxonomy for built-in verification evidence.
+enum VerificationKind {
+  // Verification kind is omitted or unknown.
+  VERIFICATION_KIND_UNSPECIFIED = 0;
+  // Verification came from a command.
+  VERIFICATION_KIND_COMMAND = 1;
+  // Verification came from a test run.
+  VERIFICATION_KIND_TEST = 2;
+  // Verification came from a build.
+  VERIFICATION_KIND_BUILD = 3;
+  // Verification came from a lint/static analysis step.
+  VERIFICATION_KIND_LINT = 4;
+  // Verification came from a smoke check.
+  VERIFICATION_KIND_SMOKE = 5;
+  // Verification came from code/design review.
+  VERIFICATION_KIND_REVIEW = 6;
+  // Verification was performed manually.
+  VERIFICATION_KIND_MANUAL = 7;
+}
+
+// VerificationStatus is the closed result set for verification evidence.
+enum VerificationStatus {
+  // Verification result is omitted or unknown.
+  VERIFICATION_STATUS_UNSPECIFIED = 0;
+  // Verification passed.
+  VERIFICATION_STATUS_PASSED = 1;
+  // Verification failed.
+  VERIFICATION_STATUS_FAILED = 2;
+  // Verification was skipped.
+  VERIFICATION_STATUS_SKIPPED = 3;
+  // Verification could not run due to a blocker.
+  VERIFICATION_STATUS_BLOCKED = 4;
+}
+
+// ReleaseGateStatus is the closed lifecycle for a release gate.
+enum ReleaseGateStatus {
+  // Gate status is omitted or unknown.
+  RELEASE_GATE_STATUS_UNSPECIFIED = 0;
+  // Gate is waiting for checks.
+  RELEASE_GATE_STATUS_PENDING = 1;
+  // Gate checks are running.
+  RELEASE_GATE_STATUS_RUNNING = 2;
+  // Gate passed and release may proceed.
+  RELEASE_GATE_STATUS_PASSED = 3;
+  // Gate failed and release should not proceed.
+  RELEASE_GATE_STATUS_FAILED = 4;
+  // Gate was explicitly waived.
+  RELEASE_GATE_STATUS_WAIVED = 5;
+}
+
+// RoleHandoffRole is the closed set of built-in handoff roles.
+// Use ROLE_HANDOFF_ROLE_CUSTOM only when context_summary names the custom role.
+enum RoleHandoffRole {
+  // Role is omitted or unknown.
+  ROLE_HANDOFF_ROLE_UNSPECIFIED = 0;
+  // Design/UX ownership.
+  ROLE_HANDOFF_ROLE_DESIGNER = 1;
+  // Implementation ownership.
+  ROLE_HANDOFF_ROLE_IMPLEMENTER = 2;
+  // Review ownership.
+  ROLE_HANDOFF_ROLE_REVIEWER = 3;
+  // Verification ownership.
+  ROLE_HANDOFF_ROLE_VERIFIER = 4;
+  // Release ownership.
+  ROLE_HANDOFF_ROLE_RELEASER = 5;
+  // Overall task ownership.
+  ROLE_HANDOFF_ROLE_OWNER = 6;
+  // Custom role described outside the enum.
+  ROLE_HANDOFF_ROLE_CUSTOM = 7;
+}
+
+// RoleHandoffStatus is the closed lifecycle for a role handoff.
+enum RoleHandoffStatus {
+  // Handoff status is omitted or unknown.
+  ROLE_HANDOFF_STATUS_UNSPECIFIED = 0;
+  // Handoff has been proposed.
+  ROLE_HANDOFF_STATUS_PROPOSED = 1;
+  // Handoff has been accepted.
+  ROLE_HANDOFF_STATUS_ACCEPTED = 2;
+  // Handoff was declined.
+  ROLE_HANDOFF_STATUS_DECLINED = 3;
+  // Handoff was canceled.
+  ROLE_HANDOFF_STATUS_CANCELED = 4;
+  // Handoff work was completed.
+  ROLE_HANDOFF_STATUS_COMPLETED = 5;
+}
+
+// NegotiationStatus is the closed lifecycle shared by deadline/scope negotiation.
+enum NegotiationStatus {
+  // Negotiation status is omitted or unknown.
+  NEGOTIATION_STATUS_UNSPECIFIED = 0;
+  // Negotiation has been proposed.
+  NEGOTIATION_STATUS_PROPOSED = 1;
+  // Negotiation was accepted.
+  NEGOTIATION_STATUS_ACCEPTED = 2;
+  // Negotiation was rejected.
+  NEGOTIATION_STATUS_REJECTED = 3;
+  // Negotiation was replaced by a newer proposal.
+  NEGOTIATION_STATUS_SUPERSEDED = 4;
+}
+
+// CoordinationKind is the closed taxonomy for coordination record payloads.
+enum CoordinationKind {
+  // Coordination kind is omitted or unknown.
+  COORDINATION_KIND_UNSPECIFIED = 0;
+  // Record carries a WorkPlan.
+  COORDINATION_KIND_WORK_PLAN = 1;
+  // Record carries a ProgressUpdate.
+  COORDINATION_KIND_PROGRESS_UPDATE = 2;
+  // Record carries AcceptanceEvidence.
+  COORDINATION_KIND_ACCEPTANCE_EVIDENCE = 3;
+  // Record carries a ReleaseGate.
+  COORDINATION_KIND_RELEASE_GATE = 4;
+  // Record carries a RoleHandoff.
+  COORDINATION_KIND_ROLE_HANDOFF = 5;
+  // Record carries a DeadlineNegotiation.
+  COORDINATION_KIND_DEADLINE_NEGOTIATION = 6;
+  // Record carries a ScopeNegotiation.
+  COORDINATION_KIND_SCOPE_NEGOTIATION = 7;
+}
+
+// NegotiationKind identifies which negotiation payload a counter-proposal targets.
+enum NegotiationKind {
+  // Negotiation kind is omitted or unknown.
+  NEGOTIATION_KIND_UNSPECIFIED = 0;
+  // Counter-proposal applies to a deadline negotiation.
+  NEGOTIATION_KIND_DEADLINE = 1;
+  // Counter-proposal applies to a scope negotiation.
+  NEGOTIATION_KIND_SCOPE = 2;
+}
+
+// RoleHandoffResponseValue is the closed response set for handoff decisions.
+enum RoleHandoffResponseValue {
+  // Response is omitted or unknown.
+  ROLE_HANDOFF_RESPONSE_VALUE_UNSPECIFIED = 0;
+  // Accept the handoff.
+  ROLE_HANDOFF_RESPONSE_VALUE_ACCEPTED = 1;
+  // Decline the handoff.
+  ROLE_HANDOFF_RESPONSE_VALUE_DECLINED = 2;
+  // Mark the handoff completed.
+  ROLE_HANDOFF_RESPONSE_VALUE_COMPLETED = 3;
+  // Cancel the handoff.
+  ROLE_HANDOFF_RESPONSE_VALUE_CANCELED = 4;
+}
+
 message WorkPlanItem {
   reserved 1000 to 1999;
 
   string item_id = 1;
   string summary = 2;
-  string status = 3; // pending | in_progress | completed | blocked | skipped
+  WorkPlanItemStatus status = 3;
   string owner_agent_id = 4;
   string owner_user_id = 5;
   string task_id = 6;
@@ -28,7 +221,7 @@ message WorkPlan {
   string thread_id = 3;
   string task_id = 4;
   string owner_agent_id = 5;
-  string status = 6; // draft | active | superseded | completed | canceled
+  WorkPlanStatus status = 6;
   repeated WorkPlanItem items = 7;
   string summary = 8;
   int64 created_time_unix = 9;
@@ -43,7 +236,7 @@ message ProgressUpdate {
   string task_id = 3;
   string run_id = 4;
   string agent_id = 5;
-  string status = 6; // started | in_progress | blocked | verifying | completed
+  ProgressUpdateStatus status = 6;
   string summary = 7;
   string detail = 8;
   repeated string completed_item_ids = 9;
@@ -55,9 +248,9 @@ message VerificationResult {
   reserved 1000 to 1999;
 
   string verification_id = 1;
-  string kind = 2; // command | test | build | lint | smoke | review | manual
+  VerificationKind kind = 2;
   string command = 3;
-  string status = 4; // passed | failed | skipped | blocked
+  VerificationStatus status = 4;
   string summary = 5;
   string output_excerpt = 6;
   repeated string artifact_ids = 7;
@@ -89,7 +282,7 @@ message ReleaseGate {
   string target = 2;
   string task_id = 3;
   string name = 4;
-  string status = 5; // pending | running | passed | failed | waived
+  ReleaseGateStatus status = 5;
   repeated string required_checks = 6;
   repeated VerificationResult results = 7;
   bool passed = 8;
@@ -109,10 +302,10 @@ message RoleHandoff {
   string task_id = 3;
   string from_agent_id = 4;
   string to_agent_id = 5;
-  string role = 6; // designer | implementer | reviewer | verifier | releaser | owner | custom
+  RoleHandoffRole role = 6;
   string context_summary = 7;
   repeated string required_artifact_ids = 8;
-  string status = 9; // proposed | accepted | declined | canceled | completed
+  RoleHandoffStatus status = 9;
   int64 created_time_unix = 10;
   int64 accepted_time_unix = 11;
   repeated string context_task_ids = 12;
@@ -145,7 +338,7 @@ message DeadlineNegotiation {
   int64 requested_deadline_unix = 6;
   int64 proposed_deadline_unix = 7;
   string reason = 8;
-  string status = 9; // proposed | accepted | rejected | superseded
+  NegotiationStatus status = 9;
   int64 decided_time_unix = 10;
   repeated NegotiationCounterProposal counter_proposals = 11;
   string accepted_counter_proposal_id = 12;
@@ -164,7 +357,7 @@ message ScopeNegotiation {
   repeated string included_scope = 6;
   repeated string deferred_scope = 7;
   string reason = 8;
-  string status = 9; // proposed | accepted | rejected | superseded
+  NegotiationStatus status = 9;
   int64 decided_time_unix = 10;
   repeated NegotiationCounterProposal counter_proposals = 11;
   string accepted_counter_proposal_id = 12;
@@ -183,7 +376,7 @@ message CoordinationRecord {
   string task_id = 4;
   string actor_agent_id = 5;
   string actor_user_id = 6;
-  string kind = 7; // work_plan | progress_update | acceptance_evidence | release_gate | role_handoff | deadline_negotiation | scope_negotiation
+  CoordinationKind kind = 7;
   int64 created_time_unix = 8;
 
   oneof payload {
@@ -215,7 +408,7 @@ message ListCoordinationRecordsRequest {
 
   string target = 1;
   string task_id = 2;
-  string kind = 3;
+  CoordinationKind kind = 3;
   string actor_agent_id = 4;
   uint32 limit = 5;
   EventCursor cursor = 6;
@@ -231,7 +424,7 @@ message ListCoordinationRecordsResponse {
 
 message CounterProposeNegotiationRequest {
   string negotiation_id = 1;
-  string negotiation_kind = 2; // deadline | scope
+  NegotiationKind negotiation_kind = 2;
   NegotiationCounterProposal counter_proposal = 3;
   string request_id = 4;
   string idempotency_key = 5;
@@ -244,7 +437,7 @@ message CounterProposeNegotiationResponse {
 
 message RespondRoleHandoffRequest {
   string handoff_id = 1;
-  string response = 2; // accepted | declined | completed | canceled
+  RoleHandoffResponseValue response = 2;
   string responding_agent_id = 3;
   string response_note = 4;
   string request_id = 5;

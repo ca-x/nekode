@@ -73,6 +73,34 @@ func (_c *TaskCreate) SetNillableCreatedByUserID(v *string) *TaskCreate {
 	return _c
 }
 
+// SetVersion sets the "version" field.
+func (_c *TaskCreate) SetVersion(v int64) *TaskCreate {
+	_c.mutation.SetVersion(v)
+	return _c
+}
+
+// SetNillableVersion sets the "version" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableVersion(v *int64) *TaskCreate {
+	if v != nil {
+		_c.SetVersion(*v)
+	}
+	return _c
+}
+
+// SetClaimLeaseID sets the "claim_lease_id" field.
+func (_c *TaskCreate) SetClaimLeaseID(v string) *TaskCreate {
+	_c.mutation.SetClaimLeaseID(v)
+	return _c
+}
+
+// SetNillableClaimLeaseID sets the "claim_lease_id" field if the given value is not nil.
+func (_c *TaskCreate) SetNillableClaimLeaseID(v *string) *TaskCreate {
+	if v != nil {
+		_c.SetClaimLeaseID(*v)
+	}
+	return _c
+}
+
 // SetCreatedUnix sets the "created_unix" field.
 func (_c *TaskCreate) SetCreatedUnix(v int64) *TaskCreate {
 	_c.mutation.SetCreatedUnix(v)
@@ -146,6 +174,14 @@ func (_c *TaskCreate) defaults() {
 		v := task.DefaultCreatedByUserID
 		_c.mutation.SetCreatedByUserID(v)
 	}
+	if _, ok := _c.mutation.Version(); !ok {
+		v := task.DefaultVersion
+		_c.mutation.SetVersion(v)
+	}
+	if _, ok := _c.mutation.ClaimLeaseID(); !ok {
+		v := task.DefaultClaimLeaseID
+		_c.mutation.SetClaimLeaseID(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := task.DefaultID()
 		_c.mutation.SetID(v)
@@ -178,6 +214,12 @@ func (_c *TaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.CreatedByUserID(); !ok {
 		return &ValidationError{Name: "created_by_user_id", err: errors.New(`ent: missing required field "Task.created_by_user_id"`)}
+	}
+	if _, ok := _c.mutation.Version(); !ok {
+		return &ValidationError{Name: "version", err: errors.New(`ent: missing required field "Task.version"`)}
+	}
+	if _, ok := _c.mutation.ClaimLeaseID(); !ok {
+		return &ValidationError{Name: "claim_lease_id", err: errors.New(`ent: missing required field "Task.claim_lease_id"`)}
 	}
 	if _, ok := _c.mutation.CreatedUnix(); !ok {
 		return &ValidationError{Name: "created_unix", err: errors.New(`ent: missing required field "Task.created_unix"`)}
@@ -239,6 +281,14 @@ func (_c *TaskCreate) createSpec() (*Task, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedByUserID(); ok {
 		_spec.SetField(task.FieldCreatedByUserID, field.TypeString, value)
 		_node.CreatedByUserID = value
+	}
+	if value, ok := _c.mutation.Version(); ok {
+		_spec.SetField(task.FieldVersion, field.TypeInt64, value)
+		_node.Version = value
+	}
+	if value, ok := _c.mutation.ClaimLeaseID(); ok {
+		_spec.SetField(task.FieldClaimLeaseID, field.TypeString, value)
+		_node.ClaimLeaseID = value
 	}
 	if value, ok := _c.mutation.CreatedUnix(); ok {
 		_spec.SetField(task.FieldCreatedUnix, field.TypeInt64, value)

@@ -21,11 +21,387 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// TaskState is the closed task lifecycle used by task boards and agents.
+// UNSPECIFIED is accepted only as an omitted filter/default, not as a stored state.
+type TaskState int32
+
+const (
+	// Default value for omitted filters or legacy unset records.
+	TaskState_TASK_STATE_UNSPECIFIED TaskState = 0
+	// Work is known but not yet actively owned.
+	TaskState_TASK_STATE_TODO TaskState = 1
+	// Work has been claimed or started.
+	TaskState_TASK_STATE_IN_PROGRESS TaskState = 2
+	// Work is ready for reviewer or human validation.
+	TaskState_TASK_STATE_IN_REVIEW TaskState = 3
+	// Work is completed and no further action is expected.
+	TaskState_TASK_STATE_DONE TaskState = 4
+	// Work is blocked on an external dependency or decision.
+	TaskState_TASK_STATE_BLOCKED TaskState = 5
+	// Work was intentionally canceled before completion.
+	TaskState_TASK_STATE_CANCELED TaskState = 6
+)
+
+// Enum value maps for TaskState.
+var (
+	TaskState_name = map[int32]string{
+		0: "TASK_STATE_UNSPECIFIED",
+		1: "TASK_STATE_TODO",
+		2: "TASK_STATE_IN_PROGRESS",
+		3: "TASK_STATE_IN_REVIEW",
+		4: "TASK_STATE_DONE",
+		5: "TASK_STATE_BLOCKED",
+		6: "TASK_STATE_CANCELED",
+	}
+	TaskState_value = map[string]int32{
+		"TASK_STATE_UNSPECIFIED": 0,
+		"TASK_STATE_TODO":        1,
+		"TASK_STATE_IN_PROGRESS": 2,
+		"TASK_STATE_IN_REVIEW":   3,
+		"TASK_STATE_DONE":        4,
+		"TASK_STATE_BLOCKED":     5,
+		"TASK_STATE_CANCELED":    6,
+	}
+)
+
+func (x TaskState) Enum() *TaskState {
+	p := new(TaskState)
+	*p = x
+	return p
+}
+
+func (x TaskState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskState) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_task_proto_enumTypes[0].Descriptor()
+}
+
+func (TaskState) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_task_proto_enumTypes[0]
+}
+
+func (x TaskState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskState.Descriptor instead.
+func (TaskState) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{0}
+}
+
+// TaskClaimPolicy defines whether and how a task can be claimed.
+type TaskClaimPolicy int32
+
+const (
+	// Use server default policy, normally EXCLUSIVE.
+	TaskClaimPolicy_TASK_CLAIM_POLICY_UNSPECIFIED TaskClaimPolicy = 0
+	// Only one owner may claim the task.
+	TaskClaimPolicy_TASK_CLAIM_POLICY_EXCLUSIVE TaskClaimPolicy = 1
+	// Multiple collaborators may be associated with the task.
+	TaskClaimPolicy_TASK_CLAIM_POLICY_SHARED TaskClaimPolicy = 2
+	// Only reviewer claims are permitted.
+	TaskClaimPolicy_TASK_CLAIM_POLICY_REVIEWER_ONLY TaskClaimPolicy = 3
+	// The task cannot be claimed directly.
+	TaskClaimPolicy_TASK_CLAIM_POLICY_UNCLAIMABLE TaskClaimPolicy = 4
+)
+
+// Enum value maps for TaskClaimPolicy.
+var (
+	TaskClaimPolicy_name = map[int32]string{
+		0: "TASK_CLAIM_POLICY_UNSPECIFIED",
+		1: "TASK_CLAIM_POLICY_EXCLUSIVE",
+		2: "TASK_CLAIM_POLICY_SHARED",
+		3: "TASK_CLAIM_POLICY_REVIEWER_ONLY",
+		4: "TASK_CLAIM_POLICY_UNCLAIMABLE",
+	}
+	TaskClaimPolicy_value = map[string]int32{
+		"TASK_CLAIM_POLICY_UNSPECIFIED":   0,
+		"TASK_CLAIM_POLICY_EXCLUSIVE":     1,
+		"TASK_CLAIM_POLICY_SHARED":        2,
+		"TASK_CLAIM_POLICY_REVIEWER_ONLY": 3,
+		"TASK_CLAIM_POLICY_UNCLAIMABLE":   4,
+	}
+)
+
+func (x TaskClaimPolicy) Enum() *TaskClaimPolicy {
+	p := new(TaskClaimPolicy)
+	*p = x
+	return p
+}
+
+func (x TaskClaimPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskClaimPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_task_proto_enumTypes[1].Descriptor()
+}
+
+func (TaskClaimPolicy) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_task_proto_enumTypes[1]
+}
+
+func (x TaskClaimPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskClaimPolicy.Descriptor instead.
+func (TaskClaimPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{1}
+}
+
+// TaskClaimConflictBehavior controls how the server responds to claim conflicts.
+type TaskClaimConflictBehavior int32
+
+const (
+	// Use server default behavior, normally FAIL_WITH_REASON for API clients.
+	TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED TaskClaimConflictBehavior = 0
+	// Return accepted=false without emitting user-visible chat noise.
+	TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_SILENT TaskClaimConflictBehavior = 1
+	// Return accepted=false with a structured conflict reason.
+	TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_WITH_REASON TaskClaimConflictBehavior = 2
+	// Queue the claimant for future ownership if supported.
+	TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_QUEUE TaskClaimConflictBehavior = 3
+	// Treat the claimant as an assistant rather than primary owner.
+	TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_ASSIST TaskClaimConflictBehavior = 4
+)
+
+// Enum value maps for TaskClaimConflictBehavior.
+var (
+	TaskClaimConflictBehavior_name = map[int32]string{
+		0: "TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED",
+		1: "TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_SILENT",
+		2: "TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_WITH_REASON",
+		3: "TASK_CLAIM_CONFLICT_BEHAVIOR_QUEUE",
+		4: "TASK_CLAIM_CONFLICT_BEHAVIOR_ASSIST",
+	}
+	TaskClaimConflictBehavior_value = map[string]int32{
+		"TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED":      0,
+		"TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_SILENT":      1,
+		"TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_WITH_REASON": 2,
+		"TASK_CLAIM_CONFLICT_BEHAVIOR_QUEUE":            3,
+		"TASK_CLAIM_CONFLICT_BEHAVIOR_ASSIST":           4,
+	}
+)
+
+func (x TaskClaimConflictBehavior) Enum() *TaskClaimConflictBehavior {
+	p := new(TaskClaimConflictBehavior)
+	*p = x
+	return p
+}
+
+func (x TaskClaimConflictBehavior) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskClaimConflictBehavior) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_task_proto_enumTypes[2].Descriptor()
+}
+
+func (TaskClaimConflictBehavior) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_task_proto_enumTypes[2]
+}
+
+func (x TaskClaimConflictBehavior) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskClaimConflictBehavior.Descriptor instead.
+func (TaskClaimConflictBehavior) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{2}
+}
+
+// TaskClaimMode describes the role requested by a claim operation.
+type TaskClaimMode int32
+
+const (
+	// Use server default claim mode, normally OWNER.
+	TaskClaimMode_TASK_CLAIM_MODE_UNSPECIFIED TaskClaimMode = 0
+	// Claim primary implementation ownership.
+	TaskClaimMode_TASK_CLAIM_MODE_OWNER TaskClaimMode = 1
+	// Claim reviewer responsibility.
+	TaskClaimMode_TASK_CLAIM_MODE_REVIEWER TaskClaimMode = 2
+	// Join as a helper without replacing the owner.
+	TaskClaimMode_TASK_CLAIM_MODE_ASSISTANT TaskClaimMode = 3
+)
+
+// Enum value maps for TaskClaimMode.
+var (
+	TaskClaimMode_name = map[int32]string{
+		0: "TASK_CLAIM_MODE_UNSPECIFIED",
+		1: "TASK_CLAIM_MODE_OWNER",
+		2: "TASK_CLAIM_MODE_REVIEWER",
+		3: "TASK_CLAIM_MODE_ASSISTANT",
+	}
+	TaskClaimMode_value = map[string]int32{
+		"TASK_CLAIM_MODE_UNSPECIFIED": 0,
+		"TASK_CLAIM_MODE_OWNER":       1,
+		"TASK_CLAIM_MODE_REVIEWER":    2,
+		"TASK_CLAIM_MODE_ASSISTANT":   3,
+	}
+)
+
+func (x TaskClaimMode) Enum() *TaskClaimMode {
+	p := new(TaskClaimMode)
+	*p = x
+	return p
+}
+
+func (x TaskClaimMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskClaimMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_task_proto_enumTypes[3].Descriptor()
+}
+
+func (TaskClaimMode) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_task_proto_enumTypes[3]
+}
+
+func (x TaskClaimMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskClaimMode.Descriptor instead.
+func (TaskClaimMode) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{3}
+}
+
+// TaskEdgeKind is the closed taxonomy for task graph relationships.
+type TaskEdgeKind int32
+
+const (
+	// Unknown edge kind; should not be stored for new graph edges.
+	TaskEdgeKind_TASK_EDGE_KIND_UNSPECIFIED TaskEdgeKind = 0
+	// from_task depends on to_task.
+	TaskEdgeKind_TASK_EDGE_KIND_DEPENDS_ON TaskEdgeKind = 1
+	// from_task blocks to_task.
+	TaskEdgeKind_TASK_EDGE_KIND_BLOCKS TaskEdgeKind = 2
+	// from_task is the parent of to_task.
+	TaskEdgeKind_TASK_EDGE_KIND_PARENT_CHILD TaskEdgeKind = 3
+	// from_task duplicates to_task.
+	TaskEdgeKind_TASK_EDGE_KIND_DUPLICATE_OF TaskEdgeKind = 4
+)
+
+// Enum value maps for TaskEdgeKind.
+var (
+	TaskEdgeKind_name = map[int32]string{
+		0: "TASK_EDGE_KIND_UNSPECIFIED",
+		1: "TASK_EDGE_KIND_DEPENDS_ON",
+		2: "TASK_EDGE_KIND_BLOCKS",
+		3: "TASK_EDGE_KIND_PARENT_CHILD",
+		4: "TASK_EDGE_KIND_DUPLICATE_OF",
+	}
+	TaskEdgeKind_value = map[string]int32{
+		"TASK_EDGE_KIND_UNSPECIFIED":  0,
+		"TASK_EDGE_KIND_DEPENDS_ON":   1,
+		"TASK_EDGE_KIND_BLOCKS":       2,
+		"TASK_EDGE_KIND_PARENT_CHILD": 3,
+		"TASK_EDGE_KIND_DUPLICATE_OF": 4,
+	}
+)
+
+func (x TaskEdgeKind) Enum() *TaskEdgeKind {
+	p := new(TaskEdgeKind)
+	*p = x
+	return p
+}
+
+func (x TaskEdgeKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskEdgeKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_task_proto_enumTypes[4].Descriptor()
+}
+
+func (TaskEdgeKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_task_proto_enumTypes[4]
+}
+
+func (x TaskEdgeKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskEdgeKind.Descriptor instead.
+func (TaskEdgeKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{4}
+}
+
+// TaskSource records the closed set of built-in task creation sources.
+// External import systems remain string-identified by server_rule_id or endpoint fields.
+type TaskSource int32
+
+const (
+	// Source is not known, usually for legacy records.
+	TaskSource_TASK_SOURCE_UNSPECIFIED TaskSource = 0
+	// Created directly by a human user.
+	TaskSource_TASK_SOURCE_HUMAN TaskSource = 1
+	// Created by an agent.
+	TaskSource_TASK_SOURCE_AGENT TaskSource = 2
+	// Created by a configured server rule.
+	TaskSource_TASK_SOURCE_SERVER_RULE TaskSource = 3
+	// Created by scheduler/reminder automation.
+	TaskSource_TASK_SOURCE_SCHEDULER TaskSource = 4
+	// Created by an import/migration job.
+	TaskSource_TASK_SOURCE_IMPORT TaskSource = 5
+)
+
+// Enum value maps for TaskSource.
+var (
+	TaskSource_name = map[int32]string{
+		0: "TASK_SOURCE_UNSPECIFIED",
+		1: "TASK_SOURCE_HUMAN",
+		2: "TASK_SOURCE_AGENT",
+		3: "TASK_SOURCE_SERVER_RULE",
+		4: "TASK_SOURCE_SCHEDULER",
+		5: "TASK_SOURCE_IMPORT",
+	}
+	TaskSource_value = map[string]int32{
+		"TASK_SOURCE_UNSPECIFIED": 0,
+		"TASK_SOURCE_HUMAN":       1,
+		"TASK_SOURCE_AGENT":       2,
+		"TASK_SOURCE_SERVER_RULE": 3,
+		"TASK_SOURCE_SCHEDULER":   4,
+		"TASK_SOURCE_IMPORT":      5,
+	}
+)
+
+func (x TaskSource) Enum() *TaskSource {
+	p := new(TaskSource)
+	*p = x
+	return p
+}
+
+func (x TaskSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaskSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_task_proto_enumTypes[5].Descriptor()
+}
+
+func (TaskSource) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_task_proto_enumTypes[5]
+}
+
+func (x TaskSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaskSource.Descriptor instead.
+func (TaskSource) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_task_proto_rawDescGZIP(), []int{5}
+}
+
 type Task struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	TaskId          string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Summary         string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
-	State           string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	State           TaskState              `protobuf:"varint,3,opt,name=state,proto3,enum=nekode.daemon.v1.TaskState" json:"state,omitempty"`
 	RuntimeId       string                 `protobuf:"bytes,4,opt,name=runtime_id,json=runtimeId,proto3" json:"runtime_id,omitempty"`
 	ThreadId        string                 `protobuf:"bytes,5,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
 	WorkspaceId     string                 `protobuf:"bytes,6,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
@@ -39,27 +415,30 @@ type Task struct {
 	RootTaskId   string `protobuf:"bytes,13,opt,name=root_task_id,json=rootTaskId,proto3" json:"root_task_id,omitempty"`
 	ParentTaskId string `protobuf:"bytes,14,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
 	// --- provenance ---
-	Source           string `protobuf:"bytes,18,opt,name=source,proto3" json:"source,omitempty"` // human | agent | server_rule | scheduler | import
-	CreatedByAgentId string `protobuf:"bytes,19,opt,name=created_by_agent_id,json=createdByAgentId,proto3" json:"created_by_agent_id,omitempty"`
-	ServerRuleId     string `protobuf:"bytes,20,opt,name=server_rule_id,json=serverRuleId,proto3" json:"server_rule_id,omitempty"`
-	SplitProposalId  string `protobuf:"bytes,21,opt,name=split_proposal_id,json=splitProposalId,proto3" json:"split_proposal_id,omitempty"`
+	Source           TaskSource `protobuf:"varint,18,opt,name=source,proto3,enum=nekode.daemon.v1.TaskSource" json:"source,omitempty"`
+	CreatedByAgentId string     `protobuf:"bytes,19,opt,name=created_by_agent_id,json=createdByAgentId,proto3" json:"created_by_agent_id,omitempty"`
+	ServerRuleId     string     `protobuf:"bytes,20,opt,name=server_rule_id,json=serverRuleId,proto3" json:"server_rule_id,omitempty"`
+	SplitProposalId  string     `protobuf:"bytes,21,opt,name=split_proposal_id,json=splitProposalId,proto3" json:"split_proposal_id,omitempty"`
 	// --- graph versioning ---
 	GraphVersion int64 `protobuf:"varint,22,opt,name=graph_version,json=graphVersion,proto3" json:"graph_version,omitempty"`
 	// --- capability requirements ---
 	RequiredCapabilities []string `protobuf:"bytes,23,rep,name=required_capabilities,json=requiredCapabilities,proto3" json:"required_capabilities,omitempty"`
 	// --- board projection ---
+	// Open board column identifier. Canonical columns are todo, in_progress,
+	// blocked, in_review, done, and canceled; custom board views may add columns
+	// without changing the authoritative Task.state lifecycle.
 	BoardColumn string `protobuf:"bytes,24,opt,name=board_column,json=boardColumn,proto3" json:"board_column,omitempty"`
 	// --- collaboration ownership semantics ---
-	ClaimPolicy           string `protobuf:"bytes,25,opt,name=claim_policy,json=claimPolicy,proto3" json:"claim_policy,omitempty"`                                 // exclusive | shared | reviewer_only | unclaimable
-	ClaimConflictBehavior string `protobuf:"bytes,26,opt,name=claim_conflict_behavior,json=claimConflictBehavior,proto3" json:"claim_conflict_behavior,omitempty"` // fail_silent | fail_with_reason | queue | assist
-	ClaimedTimeUnix       int64  `protobuf:"varint,27,opt,name=claimed_time_unix,json=claimedTimeUnix,proto3" json:"claimed_time_unix,omitempty"`
-	ClaimLeaseId          string `protobuf:"bytes,28,opt,name=claim_lease_id,json=claimLeaseId,proto3" json:"claim_lease_id,omitempty"`
-	ReviewerAgentId       string `protobuf:"bytes,29,opt,name=reviewer_agent_id,json=reviewerAgentId,proto3" json:"reviewer_agent_id,omitempty"`
-	ReleaseGateId         string `protobuf:"bytes,30,opt,name=release_gate_id,json=releaseGateId,proto3" json:"release_gate_id,omitempty"`
-	AssignedTarget        string `protobuf:"bytes,31,opt,name=assigned_target,json=assignedTarget,proto3" json:"assigned_target,omitempty"`
-	DeadlineTimeUnix      int64  `protobuf:"varint,32,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3" json:"deadline_time_unix,omitempty"`
-	CreatedTimeUnix       int64  `protobuf:"varint,37,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	UpdatedTimeUnix       int64  `protobuf:"varint,38,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
+	ClaimPolicy           TaskClaimPolicy           `protobuf:"varint,25,opt,name=claim_policy,json=claimPolicy,proto3,enum=nekode.daemon.v1.TaskClaimPolicy" json:"claim_policy,omitempty"`
+	ClaimConflictBehavior TaskClaimConflictBehavior `protobuf:"varint,26,opt,name=claim_conflict_behavior,json=claimConflictBehavior,proto3,enum=nekode.daemon.v1.TaskClaimConflictBehavior" json:"claim_conflict_behavior,omitempty"`
+	ClaimedTimeUnix       int64                     `protobuf:"varint,27,opt,name=claimed_time_unix,json=claimedTimeUnix,proto3" json:"claimed_time_unix,omitempty"`
+	ClaimLeaseId          string                    `protobuf:"bytes,28,opt,name=claim_lease_id,json=claimLeaseId,proto3" json:"claim_lease_id,omitempty"`
+	ReviewerAgentId       string                    `protobuf:"bytes,29,opt,name=reviewer_agent_id,json=reviewerAgentId,proto3" json:"reviewer_agent_id,omitempty"`
+	ReleaseGateId         string                    `protobuf:"bytes,30,opt,name=release_gate_id,json=releaseGateId,proto3" json:"release_gate_id,omitempty"`
+	AssignedTarget        string                    `protobuf:"bytes,31,opt,name=assigned_target,json=assignedTarget,proto3" json:"assigned_target,omitempty"`
+	DeadlineTimeUnix      int64                     `protobuf:"varint,32,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3" json:"deadline_time_unix,omitempty"`
+	CreatedTimeUnix       int64                     `protobuf:"varint,37,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	UpdatedTimeUnix       int64                     `protobuf:"varint,38,opt,name=updated_time_unix,json=updatedTimeUnix,proto3" json:"updated_time_unix,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -108,11 +487,11 @@ func (x *Task) GetSummary() string {
 	return ""
 }
 
-func (x *Task) GetState() string {
+func (x *Task) GetState() TaskState {
 	if x != nil {
 		return x.State
 	}
-	return ""
+	return TaskState_TASK_STATE_UNSPECIFIED
 }
 
 func (x *Task) GetRuntimeId() string {
@@ -192,11 +571,11 @@ func (x *Task) GetParentTaskId() string {
 	return ""
 }
 
-func (x *Task) GetSource() string {
+func (x *Task) GetSource() TaskSource {
 	if x != nil {
 		return x.Source
 	}
-	return ""
+	return TaskSource_TASK_SOURCE_UNSPECIFIED
 }
 
 func (x *Task) GetCreatedByAgentId() string {
@@ -241,18 +620,18 @@ func (x *Task) GetBoardColumn() string {
 	return ""
 }
 
-func (x *Task) GetClaimPolicy() string {
+func (x *Task) GetClaimPolicy() TaskClaimPolicy {
 	if x != nil {
 		return x.ClaimPolicy
 	}
-	return ""
+	return TaskClaimPolicy_TASK_CLAIM_POLICY_UNSPECIFIED
 }
 
-func (x *Task) GetClaimConflictBehavior() string {
+func (x *Task) GetClaimConflictBehavior() TaskClaimConflictBehavior {
 	if x != nil {
 		return x.ClaimConflictBehavior
 	}
-	return ""
+	return TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED
 }
 
 func (x *Task) GetClaimedTimeUnix() int64 {
@@ -312,20 +691,20 @@ func (x *Task) GetUpdatedTimeUnix() int64 {
 }
 
 type CreateCollaborationTaskRequest struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Target                string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Summary               string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
-	AgentId               string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	CreatedByUserId       string                 `protobuf:"bytes,4,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
-	RequestId             string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey        string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context               *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
-	ParentTaskId          *string                `protobuf:"bytes,8,opt,name=parent_task_id,json=parentTaskId,proto3,oneof" json:"parent_task_id,omitempty"`
-	ClaimPolicy           string                 `protobuf:"bytes,9,opt,name=claim_policy,json=claimPolicy,proto3" json:"claim_policy,omitempty"`
-	RequiredCapabilities  []string               `protobuf:"bytes,10,rep,name=required_capabilities,json=requiredCapabilities,proto3" json:"required_capabilities,omitempty"`
-	DeadlineTimeUnix      int64                  `protobuf:"varint,11,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3" json:"deadline_time_unix,omitempty"`
-	AssignedTarget        string                 `protobuf:"bytes,12,opt,name=assigned_target,json=assignedTarget,proto3" json:"assigned_target,omitempty"`
-	ClaimConflictBehavior string                 `protobuf:"bytes,13,opt,name=claim_conflict_behavior,json=claimConflictBehavior,proto3" json:"claim_conflict_behavior,omitempty"`
+	state                 protoimpl.MessageState    `protogen:"open.v1"`
+	Target                string                    `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	Summary               string                    `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
+	AgentId               string                    `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	CreatedByUserId       string                    `protobuf:"bytes,4,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
+	RequestId             string                    `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey        string                    `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context               *RequestContext           `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
+	ParentTaskId          *string                   `protobuf:"bytes,8,opt,name=parent_task_id,json=parentTaskId,proto3,oneof" json:"parent_task_id,omitempty"`
+	ClaimPolicy           TaskClaimPolicy           `protobuf:"varint,9,opt,name=claim_policy,json=claimPolicy,proto3,enum=nekode.daemon.v1.TaskClaimPolicy" json:"claim_policy,omitempty"`
+	RequiredCapabilities  []string                  `protobuf:"bytes,10,rep,name=required_capabilities,json=requiredCapabilities,proto3" json:"required_capabilities,omitempty"`
+	DeadlineTimeUnix      int64                     `protobuf:"varint,11,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3" json:"deadline_time_unix,omitempty"`
+	AssignedTarget        string                    `protobuf:"bytes,12,opt,name=assigned_target,json=assignedTarget,proto3" json:"assigned_target,omitempty"`
+	ClaimConflictBehavior TaskClaimConflictBehavior `protobuf:"varint,13,opt,name=claim_conflict_behavior,json=claimConflictBehavior,proto3,enum=nekode.daemon.v1.TaskClaimConflictBehavior" json:"claim_conflict_behavior,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -416,11 +795,11 @@ func (x *CreateCollaborationTaskRequest) GetParentTaskId() string {
 	return ""
 }
 
-func (x *CreateCollaborationTaskRequest) GetClaimPolicy() string {
+func (x *CreateCollaborationTaskRequest) GetClaimPolicy() TaskClaimPolicy {
 	if x != nil {
 		return x.ClaimPolicy
 	}
-	return ""
+	return TaskClaimPolicy_TASK_CLAIM_POLICY_UNSPECIFIED
 }
 
 func (x *CreateCollaborationTaskRequest) GetRequiredCapabilities() []string {
@@ -444,11 +823,11 @@ func (x *CreateCollaborationTaskRequest) GetAssignedTarget() string {
 	return ""
 }
 
-func (x *CreateCollaborationTaskRequest) GetClaimConflictBehavior() string {
+func (x *CreateCollaborationTaskRequest) GetClaimConflictBehavior() TaskClaimConflictBehavior {
 	if x != nil {
 		return x.ClaimConflictBehavior
 	}
-	return ""
+	return TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED
 }
 
 type CreateCollaborationTaskResponse struct {
@@ -587,7 +966,7 @@ type UpdateTaskRequest struct {
 	state                   protoimpl.MessageState `protogen:"open.v1"`
 	TaskId                  string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Summary                 *string                `protobuf:"bytes,2,opt,name=summary,proto3,oneof" json:"summary,omitempty"`
-	State                   *string                `protobuf:"bytes,3,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	State                   *TaskState             `protobuf:"varint,3,opt,name=state,proto3,enum=nekode.daemon.v1.TaskState,oneof" json:"state,omitempty"`
 	DeadlineTimeUnix        *int64                 `protobuf:"varint,4,opt,name=deadline_time_unix,json=deadlineTimeUnix,proto3,oneof" json:"deadline_time_unix,omitempty"`
 	BoardColumn             *string                `protobuf:"bytes,5,opt,name=board_column,json=boardColumn,proto3,oneof" json:"board_column,omitempty"`
 	AssignedTarget          *string                `protobuf:"bytes,6,opt,name=assigned_target,json=assignedTarget,proto3,oneof" json:"assigned_target,omitempty"`
@@ -644,11 +1023,11 @@ func (x *UpdateTaskRequest) GetSummary() string {
 	return ""
 }
 
-func (x *UpdateTaskRequest) GetState() string {
+func (x *UpdateTaskRequest) GetState() TaskState {
 	if x != nil && x.State != nil {
 		return *x.State
 	}
-	return ""
+	return TaskState_TASK_STATE_UNSPECIFIED
 }
 
 func (x *UpdateTaskRequest) GetDeadlineTimeUnix() int64 {
@@ -773,7 +1152,7 @@ type ListCollaborationTasksRequest struct {
 	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Limit         uint32                 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        *EventCursor           `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	States        []string               `protobuf:"bytes,5,rep,name=states,proto3" json:"states,omitempty"`
+	States        []TaskState            `protobuf:"varint,5,rep,packed,name=states,proto3,enum=nekode.daemon.v1.TaskState" json:"states,omitempty"`
 	BoardColumn   string                 `protobuf:"bytes,6,opt,name=board_column,json=boardColumn,proto3" json:"board_column,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -837,7 +1216,7 @@ func (x *ListCollaborationTasksRequest) GetCursor() *EventCursor {
 	return nil
 }
 
-func (x *ListCollaborationTasksRequest) GetStates() []string {
+func (x *ListCollaborationTasksRequest) GetStates() []TaskState {
 	if x != nil {
 		return x.States
 	}
@@ -904,10 +1283,11 @@ func (x *ListCollaborationTasksResponse) GetNextCursor() *EventCursor {
 }
 
 type TaskBoardColumn struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Column        string                 `protobuf:"bytes,1,opt,name=column,proto3" json:"column,omitempty"`
-	Tasks         []*Task                `protobuf:"bytes,2,rep,name=tasks,proto3" json:"tasks,omitempty"`
-	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Open board column identifier; use the same canonical values as Task.board_column.
+	Column        string  `protobuf:"bytes,1,opt,name=column,proto3" json:"column,omitempty"`
+	Tasks         []*Task `protobuf:"bytes,2,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	TotalCount    int64   `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1029,12 +1409,13 @@ type ListTaskBoardRequest struct {
 	AssigneeId       string                 `protobuf:"bytes,2,opt,name=assignee_id,json=assigneeId,proto3" json:"assignee_id,omitempty"`
 	CreatedByUserId  string                 `protobuf:"bytes,3,opt,name=created_by_user_id,json=createdByUserId,proto3" json:"created_by_user_id,omitempty"`
 	CreatedByAgentId string                 `protobuf:"bytes,4,opt,name=created_by_agent_id,json=createdByAgentId,proto3" json:"created_by_agent_id,omitempty"`
-	Column           string                 `protobuf:"bytes,5,opt,name=column,proto3" json:"column,omitempty"`
-	Limit            uint32                 `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor           *EventCursor           `protobuf:"bytes,7,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	RequestId        string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Open board column filter; use the same canonical values as Task.board_column.
+	Column        string       `protobuf:"bytes,5,opt,name=column,proto3" json:"column,omitempty"`
+	Limit         uint32       `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor `protobuf:"bytes,7,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	RequestId     string       `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListTaskBoardRequest) Reset() {
@@ -1174,7 +1555,7 @@ type ClaimCollaborationTaskRequest struct {
 	RequestId          string                 `protobuf:"bytes,3,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	ExpectedAssigneeId string                 `protobuf:"bytes,4,opt,name=expected_assignee_id,json=expectedAssigneeId,proto3" json:"expected_assignee_id,omitempty"`
 	SilentOnConflict   bool                   `protobuf:"varint,5,opt,name=silent_on_conflict,json=silentOnConflict,proto3" json:"silent_on_conflict,omitempty"`
-	ClaimMode          string                 `protobuf:"bytes,6,opt,name=claim_mode,json=claimMode,proto3" json:"claim_mode,omitempty"` // owner | reviewer | assistant
+	ClaimMode          TaskClaimMode          `protobuf:"varint,6,opt,name=claim_mode,json=claimMode,proto3,enum=nekode.daemon.v1.TaskClaimMode" json:"claim_mode,omitempty"`
 	ExpectedLeaseId    string                 `protobuf:"bytes,7,opt,name=expected_lease_id,json=expectedLeaseId,proto3" json:"expected_lease_id,omitempty"`
 	IdempotencyKey     string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	Context            *RequestContext        `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
@@ -1248,11 +1629,11 @@ func (x *ClaimCollaborationTaskRequest) GetSilentOnConflict() bool {
 	return false
 }
 
-func (x *ClaimCollaborationTaskRequest) GetClaimMode() string {
+func (x *ClaimCollaborationTaskRequest) GetClaimMode() TaskClaimMode {
 	if x != nil {
 		return x.ClaimMode
 	}
-	return ""
+	return TaskClaimMode_TASK_CLAIM_MODE_UNSPECIFIED
 }
 
 func (x *ClaimCollaborationTaskRequest) GetExpectedLeaseId() string {
@@ -1284,15 +1665,15 @@ func (x *ClaimCollaborationTaskRequest) GetLeaseTtlSeconds() uint32 {
 }
 
 type ClaimCollaborationTaskResponse struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	Task                    *Task                  `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
-	Accepted                bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
-	ConflictReason          string                 `protobuf:"bytes,3,opt,name=conflict_reason,json=conflictReason,proto3" json:"conflict_reason,omitempty"`
-	CurrentAssigneeId       string                 `protobuf:"bytes,4,opt,name=current_assignee_id,json=currentAssigneeId,proto3" json:"current_assignee_id,omitempty"`
-	ConflictPolicy          string                 `protobuf:"bytes,5,opt,name=conflict_policy,json=conflictPolicy,proto3" json:"conflict_policy,omitempty"`
-	ClaimLease              *Lease                 `protobuf:"bytes,6,opt,name=claim_lease,json=claimLease,proto3" json:"claim_lease,omitempty"`
-	CurrentLeaseId          string                 `protobuf:"bytes,7,opt,name=current_lease_id,json=currentLeaseId,proto3" json:"current_lease_id,omitempty"`
-	CurrentLeaseExpiresUnix int64                  `protobuf:"varint,8,opt,name=current_lease_expires_unix,json=currentLeaseExpiresUnix,proto3" json:"current_lease_expires_unix,omitempty"`
+	state                   protoimpl.MessageState    `protogen:"open.v1"`
+	Task                    *Task                     `protobuf:"bytes,1,opt,name=task,proto3" json:"task,omitempty"`
+	Accepted                bool                      `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	ConflictReason          string                    `protobuf:"bytes,3,opt,name=conflict_reason,json=conflictReason,proto3" json:"conflict_reason,omitempty"`
+	CurrentAssigneeId       string                    `protobuf:"bytes,4,opt,name=current_assignee_id,json=currentAssigneeId,proto3" json:"current_assignee_id,omitempty"`
+	ConflictPolicy          TaskClaimConflictBehavior `protobuf:"varint,5,opt,name=conflict_policy,json=conflictPolicy,proto3,enum=nekode.daemon.v1.TaskClaimConflictBehavior" json:"conflict_policy,omitempty"`
+	ClaimLease              *Lease                    `protobuf:"bytes,6,opt,name=claim_lease,json=claimLease,proto3" json:"claim_lease,omitempty"`
+	CurrentLeaseId          string                    `protobuf:"bytes,7,opt,name=current_lease_id,json=currentLeaseId,proto3" json:"current_lease_id,omitempty"`
+	CurrentLeaseExpiresUnix int64                     `protobuf:"varint,8,opt,name=current_lease_expires_unix,json=currentLeaseExpiresUnix,proto3" json:"current_lease_expires_unix,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1355,11 +1736,11 @@ func (x *ClaimCollaborationTaskResponse) GetCurrentAssigneeId() string {
 	return ""
 }
 
-func (x *ClaimCollaborationTaskResponse) GetConflictPolicy() string {
+func (x *ClaimCollaborationTaskResponse) GetConflictPolicy() TaskClaimConflictBehavior {
 	if x != nil {
 		return x.ConflictPolicy
 	}
-	return ""
+	return TaskClaimConflictBehavior_TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED
 }
 
 func (x *ClaimCollaborationTaskResponse) GetClaimLease() *Lease {
@@ -1387,7 +1768,7 @@ type TaskEdge struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FromTaskId    string                 `protobuf:"bytes,1,opt,name=from_task_id,json=fromTaskId,proto3" json:"from_task_id,omitempty"`
 	ToTaskId      string                 `protobuf:"bytes,2,opt,name=to_task_id,json=toTaskId,proto3" json:"to_task_id,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"` // depends_on | blocks | parent_child | duplicate_of
+	Kind          TaskEdgeKind           `protobuf:"varint,3,opt,name=kind,proto3,enum=nekode.daemon.v1.TaskEdgeKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1436,11 +1817,11 @@ func (x *TaskEdge) GetToTaskId() string {
 	return ""
 }
 
-func (x *TaskEdge) GetKind() string {
+func (x *TaskEdge) GetKind() TaskEdgeKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return TaskEdgeKind_TASK_EDGE_KIND_UNSPECIFIED
 }
 
 type TaskGraphSnapshot struct {
@@ -2783,12 +3164,11 @@ var File_nekode_daemon_v1_task_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x1bnekode/daemon/v1/task.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\x1a#nekode/daemon/v1/coordination.proto\"\xa4\n" +
-	"\n" +
+	"\x1bnekode/daemon/v1/task.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\x1a#nekode/daemon/v1/coordination.proto\"\xaf\v\n" +
 	"\x04Task\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x18\n" +
-	"\asummary\x18\x02 \x01(\tR\asummary\x12\x14\n" +
-	"\x05state\x18\x03 \x01(\tR\x05state\x12\x1d\n" +
+	"\asummary\x18\x02 \x01(\tR\asummary\x121\n" +
+	"\x05state\x18\x03 \x01(\x0e2\x1b.nekode.daemon.v1.TaskStateR\x05state\x12\x1d\n" +
 	"\n" +
 	"runtime_id\x18\x04 \x01(\tR\truntimeId\x12\x1b\n" +
 	"\tthread_id\x18\x05 \x01(\tR\bthreadId\x12!\n" +
@@ -2804,16 +3184,16 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x0ecurrent_run_id\x18\f \x01(\tR\fcurrentRunId\x12 \n" +
 	"\froot_task_id\x18\r \x01(\tR\n" +
 	"rootTaskId\x12$\n" +
-	"\x0eparent_task_id\x18\x0e \x01(\tR\fparentTaskId\x12\x16\n" +
-	"\x06source\x18\x12 \x01(\tR\x06source\x12-\n" +
+	"\x0eparent_task_id\x18\x0e \x01(\tR\fparentTaskId\x124\n" +
+	"\x06source\x18\x12 \x01(\x0e2\x1c.nekode.daemon.v1.TaskSourceR\x06source\x12-\n" +
 	"\x13created_by_agent_id\x18\x13 \x01(\tR\x10createdByAgentId\x12$\n" +
 	"\x0eserver_rule_id\x18\x14 \x01(\tR\fserverRuleId\x12*\n" +
 	"\x11split_proposal_id\x18\x15 \x01(\tR\x0fsplitProposalId\x12#\n" +
 	"\rgraph_version\x18\x16 \x01(\x03R\fgraphVersion\x123\n" +
 	"\x15required_capabilities\x18\x17 \x03(\tR\x14requiredCapabilities\x12!\n" +
-	"\fboard_column\x18\x18 \x01(\tR\vboardColumn\x12!\n" +
-	"\fclaim_policy\x18\x19 \x01(\tR\vclaimPolicy\x126\n" +
-	"\x17claim_conflict_behavior\x18\x1a \x01(\tR\x15claimConflictBehavior\x12*\n" +
+	"\fboard_column\x18\x18 \x01(\tR\vboardColumn\x12D\n" +
+	"\fclaim_policy\x18\x19 \x01(\x0e2!.nekode.daemon.v1.TaskClaimPolicyR\vclaimPolicy\x12c\n" +
+	"\x17claim_conflict_behavior\x18\x1a \x01(\x0e2+.nekode.daemon.v1.TaskClaimConflictBehaviorR\x15claimConflictBehavior\x12*\n" +
 	"\x11claimed_time_unix\x18\x1b \x01(\x03R\x0fclaimedTimeUnix\x12$\n" +
 	"\x0eclaim_lease_id\x18\x1c \x01(\tR\fclaimLeaseId\x12*\n" +
 	"\x11reviewer_agent_id\x18\x1d \x01(\tR\x0freviewerAgentId\x12&\n" +
@@ -2821,7 +3201,7 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x0fassigned_target\x18\x1f \x01(\tR\x0eassignedTarget\x12,\n" +
 	"\x12deadline_time_unix\x18  \x01(\x03R\x10deadlineTimeUnix\x12*\n" +
 	"\x11created_time_unix\x18% \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
-	"\x11updated_time_unix\x18& \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x0f\x10\x12J\x04\b!\x10%R\vsubtask_idsR\x13depends_on_task_idsR\x13blocked_by_task_idsR\x12released_time_unixR\x0frelease_versionR\x13release_environmentR\rrelease_state\"\xc3\x04\n" +
+	"\x11updated_time_unix\x18& \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x0f\x10\x12J\x04\b!\x10%R\vsubtask_idsR\x13depends_on_task_idsR\x13blocked_by_task_idsR\x12released_time_unixR\x0frelease_versionR\x13release_environmentR\rrelease_state\"\x93\x05\n" +
 	"\x1eCreateCollaborationTaskRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x19\n" +
@@ -2831,24 +3211,24 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"request_id\x18\x05 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x06 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\a \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12)\n" +
-	"\x0eparent_task_id\x18\b \x01(\tH\x00R\fparentTaskId\x88\x01\x01\x12!\n" +
-	"\fclaim_policy\x18\t \x01(\tR\vclaimPolicy\x123\n" +
+	"\x0eparent_task_id\x18\b \x01(\tH\x00R\fparentTaskId\x88\x01\x01\x12D\n" +
+	"\fclaim_policy\x18\t \x01(\x0e2!.nekode.daemon.v1.TaskClaimPolicyR\vclaimPolicy\x123\n" +
 	"\x15required_capabilities\x18\n" +
 	" \x03(\tR\x14requiredCapabilities\x12,\n" +
 	"\x12deadline_time_unix\x18\v \x01(\x03R\x10deadlineTimeUnix\x12'\n" +
-	"\x0fassigned_target\x18\f \x01(\tR\x0eassignedTarget\x126\n" +
-	"\x17claim_conflict_behavior\x18\r \x01(\tR\x15claimConflictBehaviorB\x11\n" +
+	"\x0fassigned_target\x18\f \x01(\tR\x0eassignedTarget\x12c\n" +
+	"\x17claim_conflict_behavior\x18\r \x01(\x0e2+.nekode.daemon.v1.TaskClaimConflictBehaviorR\x15claimConflictBehaviorB\x11\n" +
 	"\x0f_parent_task_id\"M\n" +
 	"\x1fCreateCollaborationTaskResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\")\n" +
 	"\x0eGetTaskRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\"=\n" +
 	"\x0fGetTaskResponse\x12*\n" +
-	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\"\xb7\x04\n" +
+	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\"\xd4\x04\n" +
 	"\x11UpdateTaskRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1d\n" +
-	"\asummary\x18\x02 \x01(\tH\x00R\asummary\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\x03 \x01(\tH\x01R\x05state\x88\x01\x01\x121\n" +
+	"\asummary\x18\x02 \x01(\tH\x00R\asummary\x88\x01\x01\x126\n" +
+	"\x05state\x18\x03 \x01(\x0e2\x1b.nekode.daemon.v1.TaskStateH\x01R\x05state\x88\x01\x01\x121\n" +
 	"\x12deadline_time_unix\x18\x04 \x01(\x03H\x02R\x10deadlineTimeUnix\x88\x01\x01\x12&\n" +
 	"\fboard_column\x18\x05 \x01(\tH\x03R\vboardColumn\x88\x01\x01\x12,\n" +
 	"\x0fassigned_target\x18\x06 \x01(\tH\x04R\x0eassignedTarget\x88\x01\x01\x123\n" +
@@ -2868,13 +3248,13 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x12UpdateTaskResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12*\n" +
 	"\x04task\x18\x02 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12)\n" +
-	"\x10rejection_reason\x18\x03 \x01(\tR\x0frejectionReason\"\xda\x01\n" +
+	"\x10rejection_reason\x18\x03 \x01(\tR\x0frejectionReason\"\xf7\x01\n" +
 	"\x1dListCollaborationTasksRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\rR\x05limit\x125\n" +
-	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x16\n" +
-	"\x06states\x18\x05 \x03(\tR\x06states\x12!\n" +
+	"\x06cursor\x18\x04 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x123\n" +
+	"\x06states\x18\x05 \x03(\x0e2\x1b.nekode.daemon.v1.TaskStateR\x06states\x12!\n" +
 	"\fboard_column\x18\x06 \x01(\tR\vboardColumn\"\x8e\x01\n" +
 	"\x1eListCollaborationTasksResponse\x12,\n" +
 	"\x05tasks\x18\x01 \x03(\v2\x16.nekode.daemon.v1.TaskR\x05tasks\x12>\n" +
@@ -2907,37 +3287,37 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"R\n" +
 	"page_token\"R\n" +
 	"\x15ListTaskBoardResponse\x129\n" +
-	"\x05board\x18\x01 \x01(\v2#.nekode.daemon.v1.TaskBoardSnapshotR\x05board\"\xae\x03\n" +
+	"\x05board\x18\x01 \x01(\v2#.nekode.daemon.v1.TaskBoardSnapshotR\x05board\"\xcf\x03\n" +
 	"\x1dClaimCollaborationTaskRequest\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x03 \x01(\tR\trequestId\x120\n" +
 	"\x14expected_assignee_id\x18\x04 \x01(\tR\x12expectedAssigneeId\x12,\n" +
-	"\x12silent_on_conflict\x18\x05 \x01(\bR\x10silentOnConflict\x12\x1d\n" +
+	"\x12silent_on_conflict\x18\x05 \x01(\bR\x10silentOnConflict\x12>\n" +
 	"\n" +
-	"claim_mode\x18\x06 \x01(\tR\tclaimMode\x12*\n" +
+	"claim_mode\x18\x06 \x01(\x0e2\x1f.nekode.daemon.v1.TaskClaimModeR\tclaimMode\x12*\n" +
 	"\x11expected_lease_id\x18\a \x01(\tR\x0fexpectedLeaseId\x12'\n" +
 	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\t \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12*\n" +
 	"\x11lease_ttl_seconds\x18\n" +
-	" \x01(\rR\x0fleaseTtlSeconds\"\x8b\x03\n" +
+	" \x01(\rR\x0fleaseTtlSeconds\"\xb8\x03\n" +
 	"\x1eClaimCollaborationTaskResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12\x1a\n" +
 	"\baccepted\x18\x02 \x01(\bR\baccepted\x12'\n" +
 	"\x0fconflict_reason\x18\x03 \x01(\tR\x0econflictReason\x12.\n" +
-	"\x13current_assignee_id\x18\x04 \x01(\tR\x11currentAssigneeId\x12'\n" +
-	"\x0fconflict_policy\x18\x05 \x01(\tR\x0econflictPolicy\x128\n" +
+	"\x13current_assignee_id\x18\x04 \x01(\tR\x11currentAssigneeId\x12T\n" +
+	"\x0fconflict_policy\x18\x05 \x01(\x0e2+.nekode.daemon.v1.TaskClaimConflictBehaviorR\x0econflictPolicy\x128\n" +
 	"\vclaim_lease\x18\x06 \x01(\v2\x17.nekode.daemon.v1.LeaseR\n" +
 	"claimLease\x12(\n" +
 	"\x10current_lease_id\x18\a \x01(\tR\x0ecurrentLeaseId\x12;\n" +
-	"\x1acurrent_lease_expires_unix\x18\b \x01(\x03R\x17currentLeaseExpiresUnix\"^\n" +
+	"\x1acurrent_lease_expires_unix\x18\b \x01(\x03R\x17currentLeaseExpiresUnix\"~\n" +
 	"\bTaskEdge\x12 \n" +
 	"\ffrom_task_id\x18\x01 \x01(\tR\n" +
 	"fromTaskId\x12\x1c\n" +
 	"\n" +
-	"to_task_id\x18\x02 \x01(\tR\btoTaskId\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\"\xba\x01\n" +
+	"to_task_id\x18\x02 \x01(\tR\btoTaskId\x122\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\x1e.nekode.daemon.v1.TaskEdgeKindR\x04kind\"\xba\x01\n" +
 	"\x11TaskGraphSnapshot\x12 \n" +
 	"\froot_task_id\x18\x01 \x01(\tR\n" +
 	"rootTaskId\x12#\n" +
@@ -3058,7 +3438,46 @@ const file_nekode_daemon_v1_task_proto_rawDesc = "" +
 	"\x13ReleaseTaskResponse\x12*\n" +
 	"\x04task\x18\x01 \x01(\v2\x16.nekode.daemon.v1.TaskR\x04task\x12,\n" +
 	"\x12released_time_unix\x18\x02 \x01(\x03R\x10releasedTimeUnix\x12@\n" +
-	"\frelease_gate\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.ReleaseGateR\vreleaseGateB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\frelease_gate\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.ReleaseGateR\vreleaseGate*\xb8\x01\n" +
+	"\tTaskState\x12\x1a\n" +
+	"\x16TASK_STATE_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fTASK_STATE_TODO\x10\x01\x12\x1a\n" +
+	"\x16TASK_STATE_IN_PROGRESS\x10\x02\x12\x18\n" +
+	"\x14TASK_STATE_IN_REVIEW\x10\x03\x12\x13\n" +
+	"\x0fTASK_STATE_DONE\x10\x04\x12\x16\n" +
+	"\x12TASK_STATE_BLOCKED\x10\x05\x12\x17\n" +
+	"\x13TASK_STATE_CANCELED\x10\x06*\xbb\x01\n" +
+	"\x0fTaskClaimPolicy\x12!\n" +
+	"\x1dTASK_CLAIM_POLICY_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bTASK_CLAIM_POLICY_EXCLUSIVE\x10\x01\x12\x1c\n" +
+	"\x18TASK_CLAIM_POLICY_SHARED\x10\x02\x12#\n" +
+	"\x1fTASK_CLAIM_POLICY_REVIEWER_ONLY\x10\x03\x12!\n" +
+	"\x1dTASK_CLAIM_POLICY_UNCLAIMABLE\x10\x04*\xfb\x01\n" +
+	"\x19TaskClaimConflictBehavior\x12,\n" +
+	"(TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED\x10\x00\x12,\n" +
+	"(TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_SILENT\x10\x01\x121\n" +
+	"-TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_WITH_REASON\x10\x02\x12&\n" +
+	"\"TASK_CLAIM_CONFLICT_BEHAVIOR_QUEUE\x10\x03\x12'\n" +
+	"#TASK_CLAIM_CONFLICT_BEHAVIOR_ASSIST\x10\x04*\x88\x01\n" +
+	"\rTaskClaimMode\x12\x1f\n" +
+	"\x1bTASK_CLAIM_MODE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15TASK_CLAIM_MODE_OWNER\x10\x01\x12\x1c\n" +
+	"\x18TASK_CLAIM_MODE_REVIEWER\x10\x02\x12\x1d\n" +
+	"\x19TASK_CLAIM_MODE_ASSISTANT\x10\x03*\xaa\x01\n" +
+	"\fTaskEdgeKind\x12\x1e\n" +
+	"\x1aTASK_EDGE_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19TASK_EDGE_KIND_DEPENDS_ON\x10\x01\x12\x19\n" +
+	"\x15TASK_EDGE_KIND_BLOCKS\x10\x02\x12\x1f\n" +
+	"\x1bTASK_EDGE_KIND_PARENT_CHILD\x10\x03\x12\x1f\n" +
+	"\x1bTASK_EDGE_KIND_DUPLICATE_OF\x10\x04*\xa7\x01\n" +
+	"\n" +
+	"TaskSource\x12\x1b\n" +
+	"\x17TASK_SOURCE_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11TASK_SOURCE_HUMAN\x10\x01\x12\x15\n" +
+	"\x11TASK_SOURCE_AGENT\x10\x02\x12\x1b\n" +
+	"\x17TASK_SOURCE_SERVER_RULE\x10\x03\x12\x19\n" +
+	"\x15TASK_SOURCE_SCHEDULER\x10\x04\x12\x16\n" +
+	"\x12TASK_SOURCE_IMPORT\x10\x05B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_task_proto_rawDescOnce sync.Once
@@ -3072,97 +3491,115 @@ func file_nekode_daemon_v1_task_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_task_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_task_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
 var file_nekode_daemon_v1_task_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_nekode_daemon_v1_task_proto_goTypes = []any{
-	(*Task)(nil),                            // 0: nekode.daemon.v1.Task
-	(*CreateCollaborationTaskRequest)(nil),  // 1: nekode.daemon.v1.CreateCollaborationTaskRequest
-	(*CreateCollaborationTaskResponse)(nil), // 2: nekode.daemon.v1.CreateCollaborationTaskResponse
-	(*GetTaskRequest)(nil),                  // 3: nekode.daemon.v1.GetTaskRequest
-	(*GetTaskResponse)(nil),                 // 4: nekode.daemon.v1.GetTaskResponse
-	(*UpdateTaskRequest)(nil),               // 5: nekode.daemon.v1.UpdateTaskRequest
-	(*UpdateTaskResponse)(nil),              // 6: nekode.daemon.v1.UpdateTaskResponse
-	(*ListCollaborationTasksRequest)(nil),   // 7: nekode.daemon.v1.ListCollaborationTasksRequest
-	(*ListCollaborationTasksResponse)(nil),  // 8: nekode.daemon.v1.ListCollaborationTasksResponse
-	(*TaskBoardColumn)(nil),                 // 9: nekode.daemon.v1.TaskBoardColumn
-	(*TaskBoardSnapshot)(nil),               // 10: nekode.daemon.v1.TaskBoardSnapshot
-	(*ListTaskBoardRequest)(nil),            // 11: nekode.daemon.v1.ListTaskBoardRequest
-	(*ListTaskBoardResponse)(nil),           // 12: nekode.daemon.v1.ListTaskBoardResponse
-	(*ClaimCollaborationTaskRequest)(nil),   // 13: nekode.daemon.v1.ClaimCollaborationTaskRequest
-	(*ClaimCollaborationTaskResponse)(nil),  // 14: nekode.daemon.v1.ClaimCollaborationTaskResponse
-	(*TaskEdge)(nil),                        // 15: nekode.daemon.v1.TaskEdge
-	(*TaskGraphSnapshot)(nil),               // 16: nekode.daemon.v1.TaskGraphSnapshot
-	(*ProposedSubtask)(nil),                 // 17: nekode.daemon.v1.ProposedSubtask
-	(*ProposeTaskSplitRequest)(nil),         // 18: nekode.daemon.v1.ProposeTaskSplitRequest
-	(*ProposeTaskSplitResponse)(nil),        // 19: nekode.daemon.v1.ProposeTaskSplitResponse
-	(*ApplyTaskSplitRequest)(nil),           // 20: nekode.daemon.v1.ApplyTaskSplitRequest
-	(*ApplyTaskSplitResponse)(nil),          // 21: nekode.daemon.v1.ApplyTaskSplitResponse
-	(*CancelTaskSplitProposalRequest)(nil),  // 22: nekode.daemon.v1.CancelTaskSplitProposalRequest
-	(*CancelTaskSplitProposalResponse)(nil), // 23: nekode.daemon.v1.CancelTaskSplitProposalResponse
-	(*CreateTaskGraphRequest)(nil),          // 24: nekode.daemon.v1.CreateTaskGraphRequest
-	(*CreateTaskGraphResponse)(nil),         // 25: nekode.daemon.v1.CreateTaskGraphResponse
-	(*ListTaskGraphRequest)(nil),            // 26: nekode.daemon.v1.ListTaskGraphRequest
-	(*ListTaskGraphResponse)(nil),           // 27: nekode.daemon.v1.ListTaskGraphResponse
-	(*UpdateTaskGraphRequest)(nil),          // 28: nekode.daemon.v1.UpdateTaskGraphRequest
-	(*UpdateTaskGraphResponse)(nil),         // 29: nekode.daemon.v1.UpdateTaskGraphResponse
-	(*RenewTaskClaimLeaseRequest)(nil),      // 30: nekode.daemon.v1.RenewTaskClaimLeaseRequest
-	(*RenewTaskClaimLeaseResponse)(nil),     // 31: nekode.daemon.v1.RenewTaskClaimLeaseResponse
-	(*ReleaseTaskRequest)(nil),              // 32: nekode.daemon.v1.ReleaseTaskRequest
-	(*ReleaseTaskResponse)(nil),             // 33: nekode.daemon.v1.ReleaseTaskResponse
-	nil,                                     // 34: nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntry
-	(*RequestContext)(nil),                  // 35: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),                     // 36: nekode.daemon.v1.EventCursor
-	(*Lease)(nil),                           // 37: nekode.daemon.v1.Lease
-	(*ReleaseGate)(nil),                     // 38: nekode.daemon.v1.ReleaseGate
+	(TaskState)(0),                          // 0: nekode.daemon.v1.TaskState
+	(TaskClaimPolicy)(0),                    // 1: nekode.daemon.v1.TaskClaimPolicy
+	(TaskClaimConflictBehavior)(0),          // 2: nekode.daemon.v1.TaskClaimConflictBehavior
+	(TaskClaimMode)(0),                      // 3: nekode.daemon.v1.TaskClaimMode
+	(TaskEdgeKind)(0),                       // 4: nekode.daemon.v1.TaskEdgeKind
+	(TaskSource)(0),                         // 5: nekode.daemon.v1.TaskSource
+	(*Task)(nil),                            // 6: nekode.daemon.v1.Task
+	(*CreateCollaborationTaskRequest)(nil),  // 7: nekode.daemon.v1.CreateCollaborationTaskRequest
+	(*CreateCollaborationTaskResponse)(nil), // 8: nekode.daemon.v1.CreateCollaborationTaskResponse
+	(*GetTaskRequest)(nil),                  // 9: nekode.daemon.v1.GetTaskRequest
+	(*GetTaskResponse)(nil),                 // 10: nekode.daemon.v1.GetTaskResponse
+	(*UpdateTaskRequest)(nil),               // 11: nekode.daemon.v1.UpdateTaskRequest
+	(*UpdateTaskResponse)(nil),              // 12: nekode.daemon.v1.UpdateTaskResponse
+	(*ListCollaborationTasksRequest)(nil),   // 13: nekode.daemon.v1.ListCollaborationTasksRequest
+	(*ListCollaborationTasksResponse)(nil),  // 14: nekode.daemon.v1.ListCollaborationTasksResponse
+	(*TaskBoardColumn)(nil),                 // 15: nekode.daemon.v1.TaskBoardColumn
+	(*TaskBoardSnapshot)(nil),               // 16: nekode.daemon.v1.TaskBoardSnapshot
+	(*ListTaskBoardRequest)(nil),            // 17: nekode.daemon.v1.ListTaskBoardRequest
+	(*ListTaskBoardResponse)(nil),           // 18: nekode.daemon.v1.ListTaskBoardResponse
+	(*ClaimCollaborationTaskRequest)(nil),   // 19: nekode.daemon.v1.ClaimCollaborationTaskRequest
+	(*ClaimCollaborationTaskResponse)(nil),  // 20: nekode.daemon.v1.ClaimCollaborationTaskResponse
+	(*TaskEdge)(nil),                        // 21: nekode.daemon.v1.TaskEdge
+	(*TaskGraphSnapshot)(nil),               // 22: nekode.daemon.v1.TaskGraphSnapshot
+	(*ProposedSubtask)(nil),                 // 23: nekode.daemon.v1.ProposedSubtask
+	(*ProposeTaskSplitRequest)(nil),         // 24: nekode.daemon.v1.ProposeTaskSplitRequest
+	(*ProposeTaskSplitResponse)(nil),        // 25: nekode.daemon.v1.ProposeTaskSplitResponse
+	(*ApplyTaskSplitRequest)(nil),           // 26: nekode.daemon.v1.ApplyTaskSplitRequest
+	(*ApplyTaskSplitResponse)(nil),          // 27: nekode.daemon.v1.ApplyTaskSplitResponse
+	(*CancelTaskSplitProposalRequest)(nil),  // 28: nekode.daemon.v1.CancelTaskSplitProposalRequest
+	(*CancelTaskSplitProposalResponse)(nil), // 29: nekode.daemon.v1.CancelTaskSplitProposalResponse
+	(*CreateTaskGraphRequest)(nil),          // 30: nekode.daemon.v1.CreateTaskGraphRequest
+	(*CreateTaskGraphResponse)(nil),         // 31: nekode.daemon.v1.CreateTaskGraphResponse
+	(*ListTaskGraphRequest)(nil),            // 32: nekode.daemon.v1.ListTaskGraphRequest
+	(*ListTaskGraphResponse)(nil),           // 33: nekode.daemon.v1.ListTaskGraphResponse
+	(*UpdateTaskGraphRequest)(nil),          // 34: nekode.daemon.v1.UpdateTaskGraphRequest
+	(*UpdateTaskGraphResponse)(nil),         // 35: nekode.daemon.v1.UpdateTaskGraphResponse
+	(*RenewTaskClaimLeaseRequest)(nil),      // 36: nekode.daemon.v1.RenewTaskClaimLeaseRequest
+	(*RenewTaskClaimLeaseResponse)(nil),     // 37: nekode.daemon.v1.RenewTaskClaimLeaseResponse
+	(*ReleaseTaskRequest)(nil),              // 38: nekode.daemon.v1.ReleaseTaskRequest
+	(*ReleaseTaskResponse)(nil),             // 39: nekode.daemon.v1.ReleaseTaskResponse
+	nil,                                     // 40: nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntry
+	(*RequestContext)(nil),                  // 41: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                     // 42: nekode.daemon.v1.EventCursor
+	(*Lease)(nil),                           // 43: nekode.daemon.v1.Lease
+	(*ReleaseGate)(nil),                     // 44: nekode.daemon.v1.ReleaseGate
 }
 var file_nekode_daemon_v1_task_proto_depIdxs = []int32{
-	35, // 0: nekode.daemon.v1.CreateCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 1: nekode.daemon.v1.CreateCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	0,  // 2: nekode.daemon.v1.GetTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	35, // 3: nekode.daemon.v1.UpdateTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 4: nekode.daemon.v1.UpdateTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	36, // 5: nekode.daemon.v1.ListCollaborationTasksRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	0,  // 6: nekode.daemon.v1.ListCollaborationTasksResponse.tasks:type_name -> nekode.daemon.v1.Task
-	36, // 7: nekode.daemon.v1.ListCollaborationTasksResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	0,  // 8: nekode.daemon.v1.TaskBoardColumn.tasks:type_name -> nekode.daemon.v1.Task
-	9,  // 9: nekode.daemon.v1.TaskBoardSnapshot.columns:type_name -> nekode.daemon.v1.TaskBoardColumn
-	34, // 10: nekode.daemon.v1.TaskBoardSnapshot.column_counts:type_name -> nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntry
-	36, // 11: nekode.daemon.v1.TaskBoardSnapshot.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 12: nekode.daemon.v1.ListTaskBoardRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	10, // 13: nekode.daemon.v1.ListTaskBoardResponse.board:type_name -> nekode.daemon.v1.TaskBoardSnapshot
-	35, // 14: nekode.daemon.v1.ClaimCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 15: nekode.daemon.v1.ClaimCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	37, // 16: nekode.daemon.v1.ClaimCollaborationTaskResponse.claim_lease:type_name -> nekode.daemon.v1.Lease
-	0,  // 17: nekode.daemon.v1.TaskGraphSnapshot.nodes:type_name -> nekode.daemon.v1.Task
-	15, // 18: nekode.daemon.v1.TaskGraphSnapshot.edges:type_name -> nekode.daemon.v1.TaskEdge
-	17, // 19: nekode.daemon.v1.ProposeTaskSplitRequest.proposed_tasks:type_name -> nekode.daemon.v1.ProposedSubtask
-	35, // 20: nekode.daemon.v1.ProposeTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 21: nekode.daemon.v1.ProposeTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
-	0,  // 22: nekode.daemon.v1.ProposeTaskSplitResponse.proposed_tasks:type_name -> nekode.daemon.v1.Task
-	35, // 23: nekode.daemon.v1.ApplyTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 24: nekode.daemon.v1.ApplyTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
-	0,  // 25: nekode.daemon.v1.ApplyTaskSplitResponse.created_subtasks:type_name -> nekode.daemon.v1.Task
-	35, // 26: nekode.daemon.v1.CancelTaskSplitProposalRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 27: nekode.daemon.v1.CreateTaskGraphRequest.root_task:type_name -> nekode.daemon.v1.Task
-	0,  // 28: nekode.daemon.v1.CreateTaskGraphRequest.subtasks:type_name -> nekode.daemon.v1.Task
-	15, // 29: nekode.daemon.v1.CreateTaskGraphRequest.dependencies:type_name -> nekode.daemon.v1.TaskEdge
-	35, // 30: nekode.daemon.v1.CreateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	16, // 31: nekode.daemon.v1.CreateTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
-	16, // 32: nekode.daemon.v1.ListTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
-	15, // 33: nekode.daemon.v1.UpdateTaskGraphRequest.add_dependencies:type_name -> nekode.daemon.v1.TaskEdge
-	15, // 34: nekode.daemon.v1.UpdateTaskGraphRequest.remove_dependencies:type_name -> nekode.daemon.v1.TaskEdge
-	35, // 35: nekode.daemon.v1.UpdateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 36: nekode.daemon.v1.UpdateTaskGraphResponse.task:type_name -> nekode.daemon.v1.Task
-	35, // 37: nekode.daemon.v1.RenewTaskClaimLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 38: nekode.daemon.v1.RenewTaskClaimLeaseResponse.task:type_name -> nekode.daemon.v1.Task
-	37, // 39: nekode.daemon.v1.RenewTaskClaimLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
-	35, // 40: nekode.daemon.v1.ReleaseTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 41: nekode.daemon.v1.ReleaseTaskResponse.task:type_name -> nekode.daemon.v1.Task
-	38, // 42: nekode.daemon.v1.ReleaseTaskResponse.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
-	43, // [43:43] is the sub-list for method output_type
-	43, // [43:43] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	0,  // 0: nekode.daemon.v1.Task.state:type_name -> nekode.daemon.v1.TaskState
+	5,  // 1: nekode.daemon.v1.Task.source:type_name -> nekode.daemon.v1.TaskSource
+	1,  // 2: nekode.daemon.v1.Task.claim_policy:type_name -> nekode.daemon.v1.TaskClaimPolicy
+	2,  // 3: nekode.daemon.v1.Task.claim_conflict_behavior:type_name -> nekode.daemon.v1.TaskClaimConflictBehavior
+	41, // 4: nekode.daemon.v1.CreateCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	1,  // 5: nekode.daemon.v1.CreateCollaborationTaskRequest.claim_policy:type_name -> nekode.daemon.v1.TaskClaimPolicy
+	2,  // 6: nekode.daemon.v1.CreateCollaborationTaskRequest.claim_conflict_behavior:type_name -> nekode.daemon.v1.TaskClaimConflictBehavior
+	6,  // 7: nekode.daemon.v1.CreateCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	6,  // 8: nekode.daemon.v1.GetTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	0,  // 9: nekode.daemon.v1.UpdateTaskRequest.state:type_name -> nekode.daemon.v1.TaskState
+	41, // 10: nekode.daemon.v1.UpdateTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 11: nekode.daemon.v1.UpdateTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	42, // 12: nekode.daemon.v1.ListCollaborationTasksRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	0,  // 13: nekode.daemon.v1.ListCollaborationTasksRequest.states:type_name -> nekode.daemon.v1.TaskState
+	6,  // 14: nekode.daemon.v1.ListCollaborationTasksResponse.tasks:type_name -> nekode.daemon.v1.Task
+	42, // 15: nekode.daemon.v1.ListCollaborationTasksResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	6,  // 16: nekode.daemon.v1.TaskBoardColumn.tasks:type_name -> nekode.daemon.v1.Task
+	15, // 17: nekode.daemon.v1.TaskBoardSnapshot.columns:type_name -> nekode.daemon.v1.TaskBoardColumn
+	40, // 18: nekode.daemon.v1.TaskBoardSnapshot.column_counts:type_name -> nekode.daemon.v1.TaskBoardSnapshot.ColumnCountsEntry
+	42, // 19: nekode.daemon.v1.TaskBoardSnapshot.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	42, // 20: nekode.daemon.v1.ListTaskBoardRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	16, // 21: nekode.daemon.v1.ListTaskBoardResponse.board:type_name -> nekode.daemon.v1.TaskBoardSnapshot
+	3,  // 22: nekode.daemon.v1.ClaimCollaborationTaskRequest.claim_mode:type_name -> nekode.daemon.v1.TaskClaimMode
+	41, // 23: nekode.daemon.v1.ClaimCollaborationTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 24: nekode.daemon.v1.ClaimCollaborationTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	2,  // 25: nekode.daemon.v1.ClaimCollaborationTaskResponse.conflict_policy:type_name -> nekode.daemon.v1.TaskClaimConflictBehavior
+	43, // 26: nekode.daemon.v1.ClaimCollaborationTaskResponse.claim_lease:type_name -> nekode.daemon.v1.Lease
+	4,  // 27: nekode.daemon.v1.TaskEdge.kind:type_name -> nekode.daemon.v1.TaskEdgeKind
+	6,  // 28: nekode.daemon.v1.TaskGraphSnapshot.nodes:type_name -> nekode.daemon.v1.Task
+	21, // 29: nekode.daemon.v1.TaskGraphSnapshot.edges:type_name -> nekode.daemon.v1.TaskEdge
+	23, // 30: nekode.daemon.v1.ProposeTaskSplitRequest.proposed_tasks:type_name -> nekode.daemon.v1.ProposedSubtask
+	41, // 31: nekode.daemon.v1.ProposeTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 32: nekode.daemon.v1.ProposeTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
+	6,  // 33: nekode.daemon.v1.ProposeTaskSplitResponse.proposed_tasks:type_name -> nekode.daemon.v1.Task
+	41, // 34: nekode.daemon.v1.ApplyTaskSplitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 35: nekode.daemon.v1.ApplyTaskSplitResponse.parent_task:type_name -> nekode.daemon.v1.Task
+	6,  // 36: nekode.daemon.v1.ApplyTaskSplitResponse.created_subtasks:type_name -> nekode.daemon.v1.Task
+	41, // 37: nekode.daemon.v1.CancelTaskSplitProposalRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 38: nekode.daemon.v1.CreateTaskGraphRequest.root_task:type_name -> nekode.daemon.v1.Task
+	6,  // 39: nekode.daemon.v1.CreateTaskGraphRequest.subtasks:type_name -> nekode.daemon.v1.Task
+	21, // 40: nekode.daemon.v1.CreateTaskGraphRequest.dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	41, // 41: nekode.daemon.v1.CreateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	22, // 42: nekode.daemon.v1.CreateTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
+	22, // 43: nekode.daemon.v1.ListTaskGraphResponse.graph:type_name -> nekode.daemon.v1.TaskGraphSnapshot
+	21, // 44: nekode.daemon.v1.UpdateTaskGraphRequest.add_dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	21, // 45: nekode.daemon.v1.UpdateTaskGraphRequest.remove_dependencies:type_name -> nekode.daemon.v1.TaskEdge
+	41, // 46: nekode.daemon.v1.UpdateTaskGraphRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 47: nekode.daemon.v1.UpdateTaskGraphResponse.task:type_name -> nekode.daemon.v1.Task
+	41, // 48: nekode.daemon.v1.RenewTaskClaimLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 49: nekode.daemon.v1.RenewTaskClaimLeaseResponse.task:type_name -> nekode.daemon.v1.Task
+	43, // 50: nekode.daemon.v1.RenewTaskClaimLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
+	41, // 51: nekode.daemon.v1.ReleaseTaskRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	6,  // 52: nekode.daemon.v1.ReleaseTaskResponse.task:type_name -> nekode.daemon.v1.Task
+	44, // 53: nekode.daemon.v1.ReleaseTaskResponse.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
+	54, // [54:54] is the sub-list for method output_type
+	54, // [54:54] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_task_proto_init() }
@@ -3180,13 +3617,14 @@ func file_nekode_daemon_v1_task_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_task_proto_rawDesc), len(file_nekode_daemon_v1_task_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      6,
 			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_task_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_task_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_task_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_task_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_task_proto = out.File

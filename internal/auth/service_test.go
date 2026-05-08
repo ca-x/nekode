@@ -3,6 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/ca-x/nekode/internal/storage"
@@ -53,6 +56,46 @@ func TestBootstrapLoginAuthenticate(t *testing.T) {
 	}
 	if _, _, err := service.Authenticate(ctx, loggedIn.Token); !errors.Is(err, ErrInvalidCredential) {
 		t.Fatalf("Authenticate(after logout) error = %v, want %v", err, ErrInvalidCredential)
+	}
+}
+
+func TestBootstrapAllowsOnlyOneConcurrentAdmin(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	service := New(store)
+	var successes int64
+	var closed int64
+	errs := make(chan error, 8)
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, err := service.Bootstrap(ctx, fmt.Sprintf("admin-%d", i), "secret123", "Admin")
+			switch {
+			case err == nil:
+				atomic.AddInt64(&successes, 1)
+			case errors.Is(err, ErrBootstrapClosed):
+				atomic.AddInt64(&closed, 1)
+			default:
+				errs <- err
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Fatalf("Bootstrap() unexpected error = %v", err)
+	}
+	if successes != 1 || closed != 7 {
+		t.Fatalf("successes=%d closed=%d, want 1 and 7", successes, closed)
+	}
+	count, err := store.CountUsers(ctx)
+	if err != nil {
+		t.Fatalf("CountUsers() error = %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("CountUsers() = %d, want 1", count)
 	}
 }
 

@@ -12,12 +12,43 @@ import "nekode/daemon/v1/task.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// CollaborationEventKind is the closed routing taxonomy for replay/subscribe
+// events visible to collaboration clients. The oneof payload is authoritative;
+// kind is a routing hint and must match the payload type when set.
+enum CollaborationEventKind {
+  // Event kind is omitted or unknown.
+  COLLABORATION_EVENT_KIND_UNSPECIFIED = 0;
+  // A collaboration message changed.
+  COLLABORATION_EVENT_KIND_MESSAGE = 1;
+  // An activity record was logged.
+  COLLABORATION_EVENT_KIND_ACTIVITY = 2;
+  // A task changed.
+  COLLABORATION_EVENT_KIND_TASK = 3;
+  // A reminder changed or fired.
+  COLLABORATION_EVENT_KIND_REMINDER = 4;
+  // A coordination record changed.
+  COLLABORATION_EVENT_KIND_COORDINATION = 5;
+  // A server-visible memory record changed.
+  COLLABORATION_EVENT_KIND_MEMORY = 6;
+  // A run changed.
+  COLLABORATION_EVENT_KIND_RUN = 7;
+  // A run step changed.
+  COLLABORATION_EVENT_KIND_RUN_STEP = 8;
+  // An attachment changed; attachment_id identifies the attachment.
+  COLLABORATION_EVENT_KIND_ATTACHMENT = 9;
+  // Keepalive ping for long-lived subscriptions.
+  COLLABORATION_EVENT_KIND_PING = 10;
+}
+
 message ActivityRecord {
   reserved 1000 to 1999;
 
   string activity_id = 1;
   string target = 2;
   string agent_id = 3;
+  // Open activity taxonomy. Canonical values include message_received,
+  // task_claimed, command_run, test_run, review_completed, memory_updated, and
+  // custom integration-specific names.
   string kind = 4;
   string summary = 5;
   string detail = 6;
@@ -33,6 +64,7 @@ message ActivityRecord {
 message LogActivityRequest {
   string target = 1;
   string agent_id = 2;
+  // Open activity taxonomy; use the same canonical values as ActivityRecord.kind.
   string kind = 3;
   string summary = 4;
   string detail = 5;
@@ -67,13 +99,19 @@ message ListEventsSinceRequest {
 
   EventCursor cursor = 1;
   uint32 limit = 2;
+  // Optional scope filters. Empty means server default visibility for caller.
+  repeated EventScope scopes = 6;
+  // Optional kind filters for clients that only need a subset of the stream.
+  repeated CollaborationEventKind kinds = 7;
+  // Optional operation filters for cache/projection subscribers.
+  repeated EventOperation operations = 8;
 }
 message CollaborationEvent {
   reserved 1000 to 1999;
 
   string event_id = 1;
   string target = 2;
-  string kind = 3;
+  CollaborationEventKind kind = 3;
   string message_id = 4;
   string activity_id = 5;
   string task_id = 6;
@@ -86,6 +124,12 @@ message CollaborationEvent {
   string aggregate_id = 13;
   int32 protocol_version = 14;
   string source_endpoint_id = 15;
+  // Fine-grained change verb for cache invalidation and UI routing.
+  EventOperation operation = 16;
+  // Primary fanout/projection scope for this event.
+  EventScope scope = 17;
+  // Workspace id when the event belongs to a workspace-bound projection.
+  string workspace_id = 18;
 
   oneof payload {
     CollaborationMessage message = 20;
@@ -112,6 +156,15 @@ message SubscribeActivityRequest {
   EventCursor cursor = 1;
   repeated string targets = 4;
   string request_id = 5;
+  // Optional scope subscriptions. Empty keeps legacy target/caller-scoped behavior.
+  repeated EventScope scopes = 6;
+  // Optional event kind filters.
+  repeated CollaborationEventKind kinds = 7;
+  // Optional operation filters.
+  repeated EventOperation operations = 8;
+  // Explicitly request all visible scopes for the caller. Servers may reject
+  // this for unprivileged clients.
+  bool include_all_scopes = 9;
 }
 
 message AcknowledgeActivityEventsRequest {

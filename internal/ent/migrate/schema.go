@@ -8,6 +8,106 @@ import (
 )
 
 var (
+	// CollaborationEventsColumns holds the columns for the "collaboration_events" table.
+	CollaborationEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "server_id", Type: field.TypeString},
+		{Name: "sequence", Type: field.TypeInt64},
+		{Name: "event_id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString, Default: ""},
+		{Name: "aggregate_id", Type: field.TypeString, Default: ""},
+		{Name: "kind", Type: field.TypeString},
+		{Name: "operation", Type: field.TypeString, Default: ""},
+		{Name: "scope_type", Type: field.TypeString, Default: ""},
+		{Name: "scope_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "activity_id", Type: field.TypeString, Default: ""},
+		{Name: "payload_json", Type: field.TypeString, Default: "{}"},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "protocol_version", Type: field.TypeInt},
+	}
+	// CollaborationEventsTable holds the schema information for the "collaboration_events" table.
+	CollaborationEventsTable = &schema.Table{
+		Name:       "collaboration_events",
+		Columns:    CollaborationEventsColumns,
+		PrimaryKey: []*schema.Column{CollaborationEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "collaborationevent_server_id_sequence",
+				Unique:  true,
+				Columns: []*schema.Column{CollaborationEventsColumns[1], CollaborationEventsColumns[2]},
+			},
+			{
+				Name:    "collaborationevent_event_id",
+				Unique:  true,
+				Columns: []*schema.Column{CollaborationEventsColumns[3]},
+			},
+			{
+				Name:    "collaborationevent_target_sequence",
+				Unique:  false,
+				Columns: []*schema.Column{CollaborationEventsColumns[4], CollaborationEventsColumns[2]},
+			},
+			{
+				Name:    "collaborationevent_aggregate_id_sequence",
+				Unique:  false,
+				Columns: []*schema.Column{CollaborationEventsColumns[5], CollaborationEventsColumns[2]},
+			},
+			{
+				Name:    "collaborationevent_kind_sequence",
+				Unique:  false,
+				Columns: []*schema.Column{CollaborationEventsColumns[6], CollaborationEventsColumns[2]},
+			},
+			{
+				Name:    "collaborationevent_operation_sequence",
+				Unique:  false,
+				Columns: []*schema.Column{CollaborationEventsColumns[7], CollaborationEventsColumns[2]},
+			},
+			{
+				Name:    "collaborationevent_scope_type_scope_id_sequence",
+				Unique:  false,
+				Columns: []*schema.Column{CollaborationEventsColumns[8], CollaborationEventsColumns[9], CollaborationEventsColumns[2]},
+			},
+		},
+	}
+	// IdempotencyRecordsColumns holds the columns for the "idempotency_records" table.
+	IdempotencyRecordsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "scope", Type: field.TypeString},
+		{Name: "method", Type: field.TypeString},
+		{Name: "actor_id", Type: field.TypeString, Default: ""},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "request_hash", Type: field.TypeString, Default: ""},
+		{Name: "response_type", Type: field.TypeString, Default: ""},
+		{Name: "response_json", Type: field.TypeString, Default: "{}"},
+		{Name: "resource_type", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "completed"},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "expires_unix", Type: field.TypeInt64},
+	}
+	// IdempotencyRecordsTable holds the schema information for the "idempotency_records" table.
+	IdempotencyRecordsTable = &schema.Table{
+		Name:       "idempotency_records",
+		Columns:    IdempotencyRecordsColumns,
+		PrimaryKey: []*schema.Column{IdempotencyRecordsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "idempotencyrecord_scope_method_actor_id_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[1], IdempotencyRecordsColumns[2], IdempotencyRecordsColumns[3], IdempotencyRecordsColumns[4]},
+			},
+			{
+				Name:    "idempotencyrecord_expires_unix",
+				Unique:  false,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[12]},
+			},
+			{
+				Name:    "idempotencyrecord_resource_type_resource_id",
+				Unique:  false,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[8], IdempotencyRecordsColumns[9]},
+			},
+		},
+	}
 	// InteractionEndpointsColumns holds the columns for the "interaction_endpoints" table.
 	InteractionEndpointsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -64,9 +164,9 @@ var (
 		PrimaryKey: []*schema.Column{MessagesColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "message_target_created_unix",
+				Name:    "message_target_created_unix_id",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[13]},
+				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[13], MessagesColumns[0]},
 			},
 			{
 				Name:    "message_request_id",
@@ -114,6 +214,8 @@ var (
 		{Name: "target", Type: field.TypeString},
 		{Name: "assignee_id", Type: field.TypeString, Default: ""},
 		{Name: "created_by_user_id", Type: field.TypeString, Default: ""},
+		{Name: "version", Type: field.TypeInt64, Default: 1},
+		{Name: "claim_lease_id", Type: field.TypeString, Default: ""},
 		{Name: "created_unix", Type: field.TypeInt64},
 		{Name: "updated_unix", Type: field.TypeInt64},
 	}
@@ -126,12 +228,22 @@ var (
 			{
 				Name:    "task_state_updated_unix",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[2], TasksColumns[7]},
+				Columns: []*schema.Column{TasksColumns[2], TasksColumns[9]},
 			},
 			{
 				Name:    "task_target_updated_unix",
 				Unique:  false,
-				Columns: []*schema.Column{TasksColumns[3], TasksColumns[7]},
+				Columns: []*schema.Column{TasksColumns[3], TasksColumns[9]},
+			},
+			{
+				Name:    "task_target_state_updated_unix_id",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[3], TasksColumns[2], TasksColumns[9], TasksColumns[0]},
+			},
+			{
+				Name:    "task_assignee_id_updated_unix",
+				Unique:  false,
+				Columns: []*schema.Column{TasksColumns[4], TasksColumns[9]},
 			},
 		},
 	}
@@ -165,6 +277,8 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CollaborationEventsTable,
+		IdempotencyRecordsTable,
 		InteractionEndpointsTable,
 		MessagesTable,
 		SessionsTable,

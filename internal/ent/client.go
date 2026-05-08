@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"github.com/ca-x/nekode/internal/ent/collaborationevent"
+	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/session"
@@ -26,6 +28,10 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// CollaborationEvent is the client for interacting with the CollaborationEvent builders.
+	CollaborationEvent *CollaborationEventClient
+	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
+	IdempotencyRecord *IdempotencyRecordClient
 	// InteractionEndpoint is the client for interacting with the InteractionEndpoint builders.
 	InteractionEndpoint *InteractionEndpointClient
 	// Message is the client for interacting with the Message builders.
@@ -47,6 +53,8 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.CollaborationEvent = NewCollaborationEventClient(c.config)
+	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
 	c.InteractionEndpoint = NewInteractionEndpointClient(c.config)
 	c.Message = NewMessageClient(c.config)
 	c.Session = NewSessionClient(c.config)
@@ -144,6 +152,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:                 ctx,
 		config:              cfg,
+		CollaborationEvent:  NewCollaborationEventClient(cfg),
+		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
@@ -168,6 +178,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:                 ctx,
 		config:              cfg,
+		CollaborationEvent:  NewCollaborationEventClient(cfg),
+		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
@@ -179,7 +191,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		InteractionEndpoint.
+//		CollaborationEvent.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -201,26 +213,32 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.InteractionEndpoint.Use(hooks...)
-	c.Message.Use(hooks...)
-	c.Session.Use(hooks...)
-	c.Task.Use(hooks...)
-	c.User.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
+		c.Session, c.Task, c.User,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.InteractionEndpoint.Intercept(interceptors...)
-	c.Message.Intercept(interceptors...)
-	c.Session.Intercept(interceptors...)
-	c.Task.Intercept(interceptors...)
-	c.User.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.CollaborationEvent, c.IdempotencyRecord, c.InteractionEndpoint, c.Message,
+		c.Session, c.Task, c.User,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *CollaborationEventMutation:
+		return c.CollaborationEvent.mutate(ctx, m)
+	case *IdempotencyRecordMutation:
+		return c.IdempotencyRecord.mutate(ctx, m)
 	case *InteractionEndpointMutation:
 		return c.InteractionEndpoint.mutate(ctx, m)
 	case *MessageMutation:
@@ -233,6 +251,272 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// CollaborationEventClient is a client for the CollaborationEvent schema.
+type CollaborationEventClient struct {
+	config
+}
+
+// NewCollaborationEventClient returns a client for the CollaborationEvent from the given config.
+func NewCollaborationEventClient(c config) *CollaborationEventClient {
+	return &CollaborationEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `collaborationevent.Hooks(f(g(h())))`.
+func (c *CollaborationEventClient) Use(hooks ...Hook) {
+	c.hooks.CollaborationEvent = append(c.hooks.CollaborationEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `collaborationevent.Intercept(f(g(h())))`.
+func (c *CollaborationEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CollaborationEvent = append(c.inters.CollaborationEvent, interceptors...)
+}
+
+// Create returns a builder for creating a CollaborationEvent entity.
+func (c *CollaborationEventClient) Create() *CollaborationEventCreate {
+	mutation := newCollaborationEventMutation(c.config, OpCreate)
+	return &CollaborationEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CollaborationEvent entities.
+func (c *CollaborationEventClient) CreateBulk(builders ...*CollaborationEventCreate) *CollaborationEventCreateBulk {
+	return &CollaborationEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CollaborationEventClient) MapCreateBulk(slice any, setFunc func(*CollaborationEventCreate, int)) *CollaborationEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CollaborationEventCreateBulk{err: fmt.Errorf("calling to CollaborationEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CollaborationEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CollaborationEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CollaborationEvent.
+func (c *CollaborationEventClient) Update() *CollaborationEventUpdate {
+	mutation := newCollaborationEventMutation(c.config, OpUpdate)
+	return &CollaborationEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CollaborationEventClient) UpdateOne(_m *CollaborationEvent) *CollaborationEventUpdateOne {
+	mutation := newCollaborationEventMutation(c.config, OpUpdateOne, withCollaborationEvent(_m))
+	return &CollaborationEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CollaborationEventClient) UpdateOneID(id string) *CollaborationEventUpdateOne {
+	mutation := newCollaborationEventMutation(c.config, OpUpdateOne, withCollaborationEventID(id))
+	return &CollaborationEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CollaborationEvent.
+func (c *CollaborationEventClient) Delete() *CollaborationEventDelete {
+	mutation := newCollaborationEventMutation(c.config, OpDelete)
+	return &CollaborationEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CollaborationEventClient) DeleteOne(_m *CollaborationEvent) *CollaborationEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CollaborationEventClient) DeleteOneID(id string) *CollaborationEventDeleteOne {
+	builder := c.Delete().Where(collaborationevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CollaborationEventDeleteOne{builder}
+}
+
+// Query returns a query builder for CollaborationEvent.
+func (c *CollaborationEventClient) Query() *CollaborationEventQuery {
+	return &CollaborationEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCollaborationEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CollaborationEvent entity by its id.
+func (c *CollaborationEventClient) Get(ctx context.Context, id string) (*CollaborationEvent, error) {
+	return c.Query().Where(collaborationevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CollaborationEventClient) GetX(ctx context.Context, id string) *CollaborationEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CollaborationEventClient) Hooks() []Hook {
+	return c.hooks.CollaborationEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *CollaborationEventClient) Interceptors() []Interceptor {
+	return c.inters.CollaborationEvent
+}
+
+func (c *CollaborationEventClient) mutate(ctx context.Context, m *CollaborationEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CollaborationEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CollaborationEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CollaborationEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CollaborationEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CollaborationEvent mutation op: %q", m.Op())
+	}
+}
+
+// IdempotencyRecordClient is a client for the IdempotencyRecord schema.
+type IdempotencyRecordClient struct {
+	config
+}
+
+// NewIdempotencyRecordClient returns a client for the IdempotencyRecord from the given config.
+func NewIdempotencyRecordClient(c config) *IdempotencyRecordClient {
+	return &IdempotencyRecordClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `idempotencyrecord.Hooks(f(g(h())))`.
+func (c *IdempotencyRecordClient) Use(hooks ...Hook) {
+	c.hooks.IdempotencyRecord = append(c.hooks.IdempotencyRecord, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `idempotencyrecord.Intercept(f(g(h())))`.
+func (c *IdempotencyRecordClient) Intercept(interceptors ...Interceptor) {
+	c.inters.IdempotencyRecord = append(c.inters.IdempotencyRecord, interceptors...)
+}
+
+// Create returns a builder for creating a IdempotencyRecord entity.
+func (c *IdempotencyRecordClient) Create() *IdempotencyRecordCreate {
+	mutation := newIdempotencyRecordMutation(c.config, OpCreate)
+	return &IdempotencyRecordCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of IdempotencyRecord entities.
+func (c *IdempotencyRecordClient) CreateBulk(builders ...*IdempotencyRecordCreate) *IdempotencyRecordCreateBulk {
+	return &IdempotencyRecordCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *IdempotencyRecordClient) MapCreateBulk(slice any, setFunc func(*IdempotencyRecordCreate, int)) *IdempotencyRecordCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &IdempotencyRecordCreateBulk{err: fmt.Errorf("calling to IdempotencyRecordClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*IdempotencyRecordCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &IdempotencyRecordCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for IdempotencyRecord.
+func (c *IdempotencyRecordClient) Update() *IdempotencyRecordUpdate {
+	mutation := newIdempotencyRecordMutation(c.config, OpUpdate)
+	return &IdempotencyRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *IdempotencyRecordClient) UpdateOne(_m *IdempotencyRecord) *IdempotencyRecordUpdateOne {
+	mutation := newIdempotencyRecordMutation(c.config, OpUpdateOne, withIdempotencyRecord(_m))
+	return &IdempotencyRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *IdempotencyRecordClient) UpdateOneID(id string) *IdempotencyRecordUpdateOne {
+	mutation := newIdempotencyRecordMutation(c.config, OpUpdateOne, withIdempotencyRecordID(id))
+	return &IdempotencyRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for IdempotencyRecord.
+func (c *IdempotencyRecordClient) Delete() *IdempotencyRecordDelete {
+	mutation := newIdempotencyRecordMutation(c.config, OpDelete)
+	return &IdempotencyRecordDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *IdempotencyRecordClient) DeleteOne(_m *IdempotencyRecord) *IdempotencyRecordDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *IdempotencyRecordClient) DeleteOneID(id string) *IdempotencyRecordDeleteOne {
+	builder := c.Delete().Where(idempotencyrecord.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &IdempotencyRecordDeleteOne{builder}
+}
+
+// Query returns a query builder for IdempotencyRecord.
+func (c *IdempotencyRecordClient) Query() *IdempotencyRecordQuery {
+	return &IdempotencyRecordQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeIdempotencyRecord},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a IdempotencyRecord entity by its id.
+func (c *IdempotencyRecordClient) Get(ctx context.Context, id string) (*IdempotencyRecord, error) {
+	return c.Query().Where(idempotencyrecord.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *IdempotencyRecordClient) GetX(ctx context.Context, id string) *IdempotencyRecord {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *IdempotencyRecordClient) Hooks() []Hook {
+	return c.hooks.IdempotencyRecord
+}
+
+// Interceptors returns the client interceptors.
+func (c *IdempotencyRecordClient) Interceptors() []Interceptor {
+	return c.inters.IdempotencyRecord
+}
+
+func (c *IdempotencyRecordClient) mutate(ctx context.Context, m *IdempotencyRecordMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&IdempotencyRecordCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&IdempotencyRecordUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&IdempotencyRecordUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&IdempotencyRecordDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown IdempotencyRecord mutation op: %q", m.Op())
 	}
 }
 
@@ -904,9 +1188,11 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		InteractionEndpoint, Message, Session, Task, User []ent.Hook
+		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Session,
+		Task, User []ent.Hook
 	}
 	inters struct {
-		InteractionEndpoint, Message, Session, Task, User []ent.Interceptor
+		CollaborationEvent, IdempotencyRecord, InteractionEndpoint, Message, Session,
+		Task, User []ent.Interceptor
 	}
 )

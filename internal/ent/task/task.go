@@ -21,6 +21,10 @@ const (
 	FieldAssigneeID = "assignee_id"
 	// FieldCreatedByUserID holds the string denoting the created_by_user_id field in the database.
 	FieldCreatedByUserID = "created_by_user_id"
+	// FieldVersion holds the string denoting the version field in the database.
+	FieldVersion = "version"
+	// FieldClaimLeaseID holds the string denoting the claim_lease_id field in the database.
+	FieldClaimLeaseID = "claim_lease_id"
 	// FieldCreatedUnix holds the string denoting the created_unix field in the database.
 	FieldCreatedUnix = "created_unix"
 	// FieldUpdatedUnix holds the string denoting the updated_unix field in the database.
@@ -37,6 +41,8 @@ var Columns = []string{
 	FieldTarget,
 	FieldAssigneeID,
 	FieldCreatedByUserID,
+	FieldVersion,
+	FieldClaimLeaseID,
 	FieldCreatedUnix,
 	FieldUpdatedUnix,
 }
@@ -62,6 +68,10 @@ var (
 	DefaultAssigneeID string
 	// DefaultCreatedByUserID holds the default value on creation for the "created_by_user_id" field.
 	DefaultCreatedByUserID string
+	// DefaultVersion holds the default value on creation for the "version" field.
+	DefaultVersion int64
+	// DefaultClaimLeaseID holds the default value on creation for the "claim_lease_id" field.
+	DefaultClaimLeaseID string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -97,6 +107,16 @@ func ByAssigneeID(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedByUserID orders the results by the created_by_user_id field.
 func ByCreatedByUserID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedByUserID, opts...).ToFunc()
+}
+
+// ByVersion orders the results by the version field.
+func ByVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldVersion, opts...).ToFunc()
+}
+
+// ByClaimLeaseID orders the results by the claim_lease_id field.
+func ByClaimLeaseID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClaimLeaseID, opts...).ToFunc()
 }
 
 // ByCreatedUnix orders the results by the created_unix field.

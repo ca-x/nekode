@@ -4,9 +4,126 @@ package nekode.daemon.v1;
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// PermissionScope is the closed resource hierarchy understood by the server.
+// Permission names remain strings because product capabilities are open-ended.
+enum PermissionScope {
+  // Scope is omitted or unknown.
+  PERMISSION_SCOPE_UNSPECIFIED = 0;
+  // Permission applies globally.
+  PERMISSION_SCOPE_GLOBAL = 1;
+  // Permission applies to a channel target.
+  PERMISSION_SCOPE_CHANNEL = 2;
+  // Permission applies to a thread target.
+  PERMISSION_SCOPE_THREAD = 3;
+  // Permission applies to a task.
+  PERMISSION_SCOPE_TASK = 4;
+  // Permission applies to a message.
+  PERMISSION_SCOPE_MESSAGE = 5;
+  // Permission applies to a runtime profile/runtime.
+  PERMISSION_SCOPE_RUNTIME = 6;
+  // Permission applies to an interaction endpoint.
+  PERMISSION_SCOPE_ENDPOINT = 7;
+  // Permission or memory applies to a user.
+  PERMISSION_SCOPE_USER = 8;
+}
+
+// ActorKind is the closed set of actor identity kinds represented in protocol payloads.
+enum ActorKind {
+  // Actor kind is omitted or unknown.
+  ACTOR_KIND_UNSPECIFIED = 0;
+  // Human user.
+  ACTOR_KIND_HUMAN = 1;
+  // Agent identity.
+  ACTOR_KIND_AGENT = 2;
+  // Local daemon process.
+  ACTOR_KIND_DAEMON = 3;
+  // External interaction endpoint.
+  ACTOR_KIND_ENDPOINT = 4;
+  // Server/system actor.
+  ACTOR_KIND_SYSTEM = 5;
+}
+
+// ContentFormat is the closed set of server-visible content encodings.
+enum ContentFormat {
+  // Content format is omitted or unknown.
+  CONTENT_FORMAT_UNSPECIFIED = 0;
+  // Markdown text.
+  CONTENT_FORMAT_MARKDOWN = 1;
+  // JSON text.
+  CONTENT_FORMAT_JSON = 2;
+  // Plain text.
+  CONTENT_FORMAT_TEXT = 3;
+}
+
+// EventOperation is the cross-stream change verb used by clients to decide
+// whether an event can patch a cache entry or should invalidate and refetch.
+// The payload and kind remain authoritative for domain semantics.
+enum EventOperation {
+  // Operation is omitted or unknown.
+  EVENT_OPERATION_UNSPECIFIED = 0;
+  // A resource was created.
+  EVENT_OPERATION_CREATED = 1;
+  // A resource was updated without a lifecycle transition.
+  EVENT_OPERATION_UPDATED = 2;
+  // A resource was deleted or removed from the visible projection.
+  EVENT_OPERATION_DELETED = 3;
+  // A resource lifecycle/state changed.
+  EVENT_OPERATION_STATE_CHANGED = 4;
+  // A child record was appended to an ordered stream, such as a run step or message.
+  EVENT_OPERATION_APPENDED = 5;
+  // A task, lease, or run was claimed.
+  EVENT_OPERATION_CLAIMED = 6;
+  // A claim, lease, or release gate was released.
+  EVENT_OPERATION_RELEASED = 7;
+  // A run, task, delivery, or operation failed.
+  EVENT_OPERATION_FAILED = 8;
+  // A run, task, delivery, or operation was canceled.
+  EVENT_OPERATION_CANCELED = 9;
+  // A heartbeat or liveness signal changed.
+  EVENT_OPERATION_HEARTBEAT = 10;
+  // Cached projections for the scope should be invalidated and rebuilt.
+  EVENT_OPERATION_INVALIDATED = 11;
+  // A snapshot was replaced wholesale.
+  EVENT_OPERATION_SNAPSHOT = 12;
+}
+
+// EventScopeType is the closed routing taxonomy for realtime fanout and
+// projection invalidation. Scope ids remain strings because workspace, target,
+// task, run, and provider ids are allocated by their owning systems.
+enum EventScopeType {
+  // Scope is omitted or unknown.
+  EVENT_SCOPE_TYPE_UNSPECIFIED = 0;
+  // Server-wide events.
+  EVENT_SCOPE_TYPE_SERVER = 1;
+  // Workspace-scoped events.
+  EVENT_SCOPE_TYPE_WORKSPACE = 2;
+  // Collaboration target scoped events, for example a channel or DM target.
+  EVENT_SCOPE_TYPE_TARGET = 3;
+  // Thread-scoped events.
+  EVENT_SCOPE_TYPE_THREAD = 4;
+  // Task-scoped events.
+  EVENT_SCOPE_TYPE_TASK = 5;
+  // Run-scoped events.
+  EVENT_SCOPE_TYPE_RUN = 6;
+  // Agent-scoped events.
+  EVENT_SCOPE_TYPE_AGENT = 7;
+  // Computer/runtime host scoped events.
+  EVENT_SCOPE_TYPE_COMPUTER = 8;
+  // User-scoped events.
+  EVENT_SCOPE_TYPE_USER = 9;
+  // Interaction endpoint scoped events.
+  EVENT_SCOPE_TYPE_ENDPOINT = 10;
+  // Daemon process scoped events.
+  EVENT_SCOPE_TYPE_DAEMON = 11;
+  // Custom scope; custom_type must be set.
+  EVENT_SCOPE_TYPE_CUSTOM = 12;
+}
+
 message Capability {
   reserved 1000 to 1999;
 
+  // Open capability identifier, for example code_execution, file_write,
+  // web_search, mcp_resources, or provider-specific capabilities.
   string name = 1;
   string description = 2;
   bool enabled = 3;
@@ -14,17 +131,21 @@ message Capability {
 message Permission {
   reserved 1000 to 1999;
 
+  // Open permission identifier, for example message.write, task.claim,
+  // runtime.start, memory.write, or admin.manage.
   string name = 1;
   string target = 2;
   bool allowed = 3;
   string reason = 4;
-  string scope = 5; // global | channel | thread | task | message | runtime | endpoint
+  PermissionScope scope = 5;
 }
 message Lease {
   reserved 1000 to 1999;
 
   string lease_id = 1;
   string holder_id = 2;
+  // Open server resource type. Canonical values include computer, run,
+  // task_claim, start_permit, and agent_control.
   string resource_type = 3;
   string resource_id = 4;
   int64 expires_time_unix = 5;
@@ -43,16 +164,40 @@ message EventCursor {
   // Explicit sequence resume point used only when cursor is empty.
   int64 sequence = 8;
   string aggregate_id = 9;
+  // Stable server identity that issued the cursor. Clients should discard
+  // cached cursors when this differs from GetServerInfoResponse.server_id.
+  string server_id = 10;
 }
 message Actor {
   reserved 1000 to 1999;
 
-  string actor_kind = 1; // human | agent | daemon | endpoint | system
+  ActorKind actor_kind = 1;
   string agent_id = 2;
   string user_id = 3;
   string daemon_id = 4;
   string endpoint_id = 5;
   string display_name = 6;
+}
+message ClientInfo {
+  reserved 1000 to 1999;
+
+  // Logical client kind. Canonical values include web, desktop, cli, daemon,
+  // bridge, and custom.
+  string platform = 1;
+  // Client build or release version.
+  string version = 2;
+  // Client operating system or runtime environment.
+  string os = 3;
+}
+message EventScope {
+  reserved 1000 to 1999;
+
+  EventScopeType scope_type = 1;
+  string scope_id = 2;
+  // Optional collaboration target hint for target/thread derived scopes.
+  string target = 3;
+  // Required when scope_type is EVENT_SCOPE_TYPE_CUSTOM.
+  string custom_type = 4;
 }
 message RequestContext {
   reserved 1000 to 1999;
@@ -64,6 +209,8 @@ message RequestContext {
   // Caller hint for attribution; servers must derive authority from transport auth.
   Actor actor = 4;
   string source_endpoint_id = 5;
+  // Client metadata for logging, metrics, compatibility gates, and debugging.
+  ClientInfo client = 6;
 }
 message EnvVar {
   reserved 1000 to 1999;

@@ -7,6 +7,96 @@ import "nekode/daemon/v1/coordination.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// TaskState is the closed task lifecycle used by task boards and agents.
+// UNSPECIFIED is accepted only as an omitted filter/default, not as a stored state.
+enum TaskState {
+  // Default value for omitted filters or legacy unset records.
+  TASK_STATE_UNSPECIFIED = 0;
+  // Work is known but not yet actively owned.
+  TASK_STATE_TODO = 1;
+  // Work has been claimed or started.
+  TASK_STATE_IN_PROGRESS = 2;
+  // Work is ready for reviewer or human validation.
+  TASK_STATE_IN_REVIEW = 3;
+  // Work is completed and no further action is expected.
+  TASK_STATE_DONE = 4;
+  // Work is blocked on an external dependency or decision.
+  TASK_STATE_BLOCKED = 5;
+  // Work was intentionally canceled before completion.
+  TASK_STATE_CANCELED = 6;
+}
+
+// TaskClaimPolicy defines whether and how a task can be claimed.
+enum TaskClaimPolicy {
+  // Use server default policy, normally EXCLUSIVE.
+  TASK_CLAIM_POLICY_UNSPECIFIED = 0;
+  // Only one owner may claim the task.
+  TASK_CLAIM_POLICY_EXCLUSIVE = 1;
+  // Multiple collaborators may be associated with the task.
+  TASK_CLAIM_POLICY_SHARED = 2;
+  // Only reviewer claims are permitted.
+  TASK_CLAIM_POLICY_REVIEWER_ONLY = 3;
+  // The task cannot be claimed directly.
+  TASK_CLAIM_POLICY_UNCLAIMABLE = 4;
+}
+
+// TaskClaimConflictBehavior controls how the server responds to claim conflicts.
+enum TaskClaimConflictBehavior {
+  // Use server default behavior, normally FAIL_WITH_REASON for API clients.
+  TASK_CLAIM_CONFLICT_BEHAVIOR_UNSPECIFIED = 0;
+  // Return accepted=false without emitting user-visible chat noise.
+  TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_SILENT = 1;
+  // Return accepted=false with a structured conflict reason.
+  TASK_CLAIM_CONFLICT_BEHAVIOR_FAIL_WITH_REASON = 2;
+  // Queue the claimant for future ownership if supported.
+  TASK_CLAIM_CONFLICT_BEHAVIOR_QUEUE = 3;
+  // Treat the claimant as an assistant rather than primary owner.
+  TASK_CLAIM_CONFLICT_BEHAVIOR_ASSIST = 4;
+}
+
+// TaskClaimMode describes the role requested by a claim operation.
+enum TaskClaimMode {
+  // Use server default claim mode, normally OWNER.
+  TASK_CLAIM_MODE_UNSPECIFIED = 0;
+  // Claim primary implementation ownership.
+  TASK_CLAIM_MODE_OWNER = 1;
+  // Claim reviewer responsibility.
+  TASK_CLAIM_MODE_REVIEWER = 2;
+  // Join as a helper without replacing the owner.
+  TASK_CLAIM_MODE_ASSISTANT = 3;
+}
+
+// TaskEdgeKind is the closed taxonomy for task graph relationships.
+enum TaskEdgeKind {
+  // Unknown edge kind; should not be stored for new graph edges.
+  TASK_EDGE_KIND_UNSPECIFIED = 0;
+  // from_task depends on to_task.
+  TASK_EDGE_KIND_DEPENDS_ON = 1;
+  // from_task blocks to_task.
+  TASK_EDGE_KIND_BLOCKS = 2;
+  // from_task is the parent of to_task.
+  TASK_EDGE_KIND_PARENT_CHILD = 3;
+  // from_task duplicates to_task.
+  TASK_EDGE_KIND_DUPLICATE_OF = 4;
+}
+
+// TaskSource records the closed set of built-in task creation sources.
+// External import systems remain string-identified by server_rule_id or endpoint fields.
+enum TaskSource {
+  // Source is not known, usually for legacy records.
+  TASK_SOURCE_UNSPECIFIED = 0;
+  // Created directly by a human user.
+  TASK_SOURCE_HUMAN = 1;
+  // Created by an agent.
+  TASK_SOURCE_AGENT = 2;
+  // Created by a configured server rule.
+  TASK_SOURCE_SERVER_RULE = 3;
+  // Created by scheduler/reminder automation.
+  TASK_SOURCE_SCHEDULER = 4;
+  // Created by an import/migration job.
+  TASK_SOURCE_IMPORT = 5;
+}
+
 message Task {
   reserved 1000 to 1999;
   reserved 15 to 17;
@@ -16,7 +106,7 @@ message Task {
 
   string task_id = 1;
   string summary = 2;
-  string state = 3;
+  TaskState state = 3;
   string runtime_id = 4;
   string thread_id = 5;
   string workspace_id = 6;
@@ -32,7 +122,7 @@ message Task {
   string parent_task_id = 14;
 
   // --- provenance ---
-  string source = 18; // human | agent | server_rule | scheduler | import
+  TaskSource source = 18;
   string created_by_agent_id = 19;
   string server_rule_id = 20;
   string split_proposal_id = 21;
@@ -44,11 +134,14 @@ message Task {
   repeated string required_capabilities = 23;
 
   // --- board projection ---
+  // Open board column identifier. Canonical columns are todo, in_progress,
+  // blocked, in_review, done, and canceled; custom board views may add columns
+  // without changing the authoritative Task.state lifecycle.
   string board_column = 24;
 
   // --- collaboration ownership semantics ---
-  string claim_policy = 25; // exclusive | shared | reviewer_only | unclaimable
-  string claim_conflict_behavior = 26; // fail_silent | fail_with_reason | queue | assist
+  TaskClaimPolicy claim_policy = 25;
+  TaskClaimConflictBehavior claim_conflict_behavior = 26;
   int64 claimed_time_unix = 27;
   string claim_lease_id = 28;
   string reviewer_agent_id = 29;
@@ -67,11 +160,11 @@ message CreateCollaborationTaskRequest {
   string idempotency_key = 6;
   RequestContext context = 7;
   optional string parent_task_id = 8;
-  string claim_policy = 9;
+  TaskClaimPolicy claim_policy = 9;
   repeated string required_capabilities = 10;
   int64 deadline_time_unix = 11;
   string assigned_target = 12;
-  string claim_conflict_behavior = 13;
+  TaskClaimConflictBehavior claim_conflict_behavior = 13;
 }
 message CreateCollaborationTaskResponse {
   Task task = 1;
@@ -85,7 +178,7 @@ message GetTaskResponse {
 message UpdateTaskRequest {
   string task_id = 1;
   optional string summary = 2;
-  optional string state = 3;
+  optional TaskState state = 3;
   optional int64 deadline_time_unix = 4;
   optional string board_column = 5;
   optional string assigned_target = 6;
@@ -105,7 +198,7 @@ message ListCollaborationTasksRequest {
   string agent_id = 2;
   uint32 limit = 3;
   EventCursor cursor = 4;
-  repeated string states = 5;
+  repeated TaskState states = 5;
   string board_column = 6;
 }
 message ListCollaborationTasksResponse {
@@ -113,6 +206,7 @@ message ListCollaborationTasksResponse {
   EventCursor next_cursor = 2;
 }
 message TaskBoardColumn {
+  // Open board column identifier; use the same canonical values as Task.board_column.
   string column = 1;
   repeated Task tasks = 2;
   int64 total_count = 3;
@@ -130,6 +224,7 @@ message ListTaskBoardRequest {
   string assignee_id = 2;
   string created_by_user_id = 3;
   string created_by_agent_id = 4;
+  // Open board column filter; use the same canonical values as Task.board_column.
   string column = 5;
   uint32 limit = 6;
   EventCursor cursor = 7;
@@ -144,7 +239,7 @@ message ClaimCollaborationTaskRequest {
   string request_id = 3;
   string expected_assignee_id = 4;
   bool silent_on_conflict = 5;
-  string claim_mode = 6; // owner | reviewer | assistant
+  TaskClaimMode claim_mode = 6;
   string expected_lease_id = 7;
   string idempotency_key = 8;
   RequestContext context = 9;
@@ -155,7 +250,7 @@ message ClaimCollaborationTaskResponse {
   bool accepted = 2;
   string conflict_reason = 3;
   string current_assignee_id = 4;
-  string conflict_policy = 5;
+  TaskClaimConflictBehavior conflict_policy = 5;
   Lease claim_lease = 6;
   string current_lease_id = 7;
   int64 current_lease_expires_unix = 8;
@@ -163,7 +258,7 @@ message ClaimCollaborationTaskResponse {
 message TaskEdge {
   string from_task_id = 1;
   string to_task_id = 2;
-  string kind = 3; // depends_on | blocks | parent_child | duplicate_of
+  TaskEdgeKind kind = 3;
 }
 message TaskGraphSnapshot {
   string root_task_id = 1;

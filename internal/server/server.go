@@ -5,15 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/auth"
+	"github.com/ca-x/nekode/internal/cache"
 	"github.com/ca-x/nekode/internal/config"
+	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
+	"google.golang.org/grpc"
 )
 
 const ProtocolPath = "proto/nekode/daemon/v1/daemon.proto"
@@ -27,7 +32,9 @@ type Server struct {
 	logger *slog.Logger
 	mux    *http.ServeMux
 	store  *storage.Store
+	cache  cache.Cache
 	auth   *auth.Service
+	daemon *daemonrpc.Server
 }
 
 type Principal struct {
@@ -36,6 +43,10 @@ type Principal struct {
 }
 
 func New(cfg config.Config, logger *slog.Logger, store *storage.Store) *Server {
+	return NewWithCache(cfg, logger, store, nil)
+}
+
+func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, cacheStore cache.Cache) *Server {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -44,9 +55,15 @@ func New(cfg config.Config, logger *slog.Logger, store *storage.Store) *Server {
 		logger: logger,
 		mux:    http.NewServeMux(),
 		store:  store,
+		cache:  cacheStore,
 	}
 	if store != nil {
 		s.auth = auth.New(store)
+		serverID, err := cfg.ServerID()
+		if err != nil {
+			logger.Warn("failed to load server id; using ephemeral id", "error", err)
+		}
+		s.daemon = daemonrpc.New(store, serverID)
 	}
 	s.routes()
 	return s
@@ -61,6 +78,15 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		Addr:              s.cfg.Addr,
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	grpcServer, listener, err := s.startGRPC()
+	if err != nil {
+		return err
+	}
+	if grpcServer != nil {
+		defer grpcServer.Stop()
+		defer listener.Close()
 	}
 
 	errs := make(chan error, 1)
@@ -85,6 +111,25 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
+func (s *Server) startGRPC() (*grpc.Server, net.Listener, error) {
+	if s.daemon == nil || strings.TrimSpace(s.cfg.GRPCAddr) == "" {
+		return nil, nil, nil
+	}
+	listener, err := net.Listen("tcp", s.cfg.GRPCAddr)
+	if err != nil {
+		return nil, nil, err
+	}
+	grpcServer := grpc.NewServer()
+	daemonv1.RegisterDaemonControlServiceServer(grpcServer, s.daemon)
+	go func() {
+		s.logger.Info("nekode daemon grpc starting", "addr", s.cfg.GRPCAddr)
+		if err := grpcServer.Serve(listener); err != nil {
+			s.logger.Error("daemon grpc stopped", "error", err)
+		}
+	}()
+	return grpcServer, listener, nil
+}
+
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/version", s.handleVersion)
@@ -100,6 +145,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListTasks))
 	s.mux.HandleFunc("POST /api/tasks", s.requireAuth(s.handleCreateTask))
 	s.mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
+	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
+	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))
+	s.mux.HandleFunc("GET /api/daemon/activity", s.requireAuth(s.handleDaemonActivity))
+	s.mux.HandleFunc("GET /api/daemon/runs", s.requireAuth(s.handleDaemonRuns))
+	s.mux.HandleFunc("GET /api/daemon/events", s.requireAuth(s.handleDaemonEvents))
+	s.mux.HandleFunc("GET /api/server-events", s.requireAuthOrQueryToken(s.handleServerEvents))
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -270,12 +321,20 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "create message failed")
 		return
 	}
+	if err := s.daemon.RecordMessageMutation(r.Context(), message, daemonv1.EventOperation_EVENT_OPERATION_APPENDED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append message event failed")
+		return
+	}
 	writeJSON(w, http.StatusCreated, message)
 }
 
 func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
 	tasks, err := s.store.ListTasks(r.Context(), strings.TrimSpace(r.URL.Query().Get("state")),
 		strings.TrimSpace(r.URL.Query().Get("target")), intQuery(r, "limit", 100))
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid task state")
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list tasks failed")
 		return
@@ -310,6 +369,10 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "create task failed")
 		return
 	}
+	if err := s.daemon.RecordTaskMutation(r.Context(), task, daemonv1.EventOperation_EVENT_OPERATION_CREATED); err != nil {
+		writeError(w, http.StatusInternalServerError, "append task event failed")
+		return
+	}
 	writeJSON(w, http.StatusCreated, task)
 }
 
@@ -336,18 +399,25 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "update task failed")
 		return
 	}
+	operation := daemonv1.EventOperation_EVENT_OPERATION_UPDATED
+	if req.State != nil {
+		operation = daemonv1.EventOperation_EVENT_OPERATION_STATE_CHANGED
+	}
+	if err := s.daemon.RecordTaskMutation(r.Context(), task, operation); err != nil {
+		writeError(w, http.StatusInternalServerError, "append task event failed")
+		return
+	}
 	writeJSON(w, http.StatusOK, task)
 }
 
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		token, ok := strings.CutPrefix(header, "Bearer ")
-		if !ok || strings.TrimSpace(token) == "" {
+		token := bearerToken(r)
+		if token == "" {
 			writeError(w, http.StatusUnauthorized, "bearer token is required")
 			return
 		}
-		user, session, err := s.auth.Authenticate(r.Context(), strings.TrimSpace(token))
+		user, session, err := s.auth.Authenticate(r.Context(), token)
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "invalid bearer token")
 			return
@@ -355,6 +425,38 @@ func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		ctx := context.WithValue(r.Context(), principalKey, Principal{User: user, Session: session})
 		next(w, r.WithContext(ctx))
 	}
+}
+
+func (s *Server) requireAuthOrQueryToken(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := bearerToken(r)
+		if token == "" {
+			token = strings.TrimSpace(r.URL.Query().Get("access_token"))
+		}
+		if token == "" {
+			token = strings.TrimSpace(r.URL.Query().Get("token"))
+		}
+		if token == "" {
+			writeError(w, http.StatusUnauthorized, "bearer token is required")
+			return
+		}
+		user, session, err := s.auth.Authenticate(r.Context(), token)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid bearer token")
+			return
+		}
+		ctx := context.WithValue(r.Context(), principalKey, Principal{User: user, Session: session})
+		next(w, r.WithContext(ctx))
+	}
+}
+
+func bearerToken(r *http.Request) string {
+	header := r.Header.Get("Authorization")
+	token, ok := strings.CutPrefix(header, "Bearer ")
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(token)
 }
 
 func principalFromContext(ctx context.Context) Principal {

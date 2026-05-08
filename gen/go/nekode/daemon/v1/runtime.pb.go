@@ -21,6 +21,337 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ComputerStatus is the closed lifecycle for a registered daemon host.
+// UNSPECIFIED is for omitted heartbeat state and legacy records.
+type ComputerStatus int32
+
+const (
+	// Status was not reported.
+	ComputerStatus_COMPUTER_STATUS_UNSPECIFIED ComputerStatus = 0
+	// Computer is connected and healthy.
+	ComputerStatus_COMPUTER_STATUS_ONLINE ComputerStatus = 1
+	// Computer has missed recent heartbeats but is not fully expired.
+	ComputerStatus_COMPUTER_STATUS_STALE ComputerStatus = 2
+	// Computer is disconnected or lease-expired.
+	ComputerStatus_COMPUTER_STATUS_OFFLINE ComputerStatus = 3
+	// Computer is connected but reports degraded capabilities.
+	ComputerStatus_COMPUTER_STATUS_DEGRADED ComputerStatus = 4
+)
+
+// Enum value maps for ComputerStatus.
+var (
+	ComputerStatus_name = map[int32]string{
+		0: "COMPUTER_STATUS_UNSPECIFIED",
+		1: "COMPUTER_STATUS_ONLINE",
+		2: "COMPUTER_STATUS_STALE",
+		3: "COMPUTER_STATUS_OFFLINE",
+		4: "COMPUTER_STATUS_DEGRADED",
+	}
+	ComputerStatus_value = map[string]int32{
+		"COMPUTER_STATUS_UNSPECIFIED": 0,
+		"COMPUTER_STATUS_ONLINE":      1,
+		"COMPUTER_STATUS_STALE":       2,
+		"COMPUTER_STATUS_OFFLINE":     3,
+		"COMPUTER_STATUS_DEGRADED":    4,
+	}
+)
+
+func (x ComputerStatus) Enum() *ComputerStatus {
+	p := new(ComputerStatus)
+	*p = x
+	return p
+}
+
+func (x ComputerStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ComputerStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_runtime_proto_enumTypes[0].Descriptor()
+}
+
+func (ComputerStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_runtime_proto_enumTypes[0]
+}
+
+func (x ComputerStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ComputerStatus.Descriptor instead.
+func (ComputerStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{0}
+}
+
+// RunState is the closed lifecycle for an assigned agent run.
+type RunState int32
+
+const (
+	// Run state is unknown; should not be stored for new runs.
+	RunState_RUN_STATE_UNSPECIFIED RunState = 0
+	// Run is assigned but not yet started by a daemon.
+	RunState_RUN_STATE_QUEUED RunState = 1
+	// Run is actively executing.
+	RunState_RUN_STATE_RUNNING RunState = 2
+	// Run is waiting on an external blocker.
+	RunState_RUN_STATE_BLOCKED RunState = 3
+	// Run completed successfully.
+	RunState_RUN_STATE_COMPLETED RunState = 4
+	// Run failed.
+	RunState_RUN_STATE_FAILED RunState = 5
+	// Run was canceled before completion.
+	RunState_RUN_STATE_CANCELED RunState = 6
+)
+
+// Enum value maps for RunState.
+var (
+	RunState_name = map[int32]string{
+		0: "RUN_STATE_UNSPECIFIED",
+		1: "RUN_STATE_QUEUED",
+		2: "RUN_STATE_RUNNING",
+		3: "RUN_STATE_BLOCKED",
+		4: "RUN_STATE_COMPLETED",
+		5: "RUN_STATE_FAILED",
+		6: "RUN_STATE_CANCELED",
+	}
+	RunState_value = map[string]int32{
+		"RUN_STATE_UNSPECIFIED": 0,
+		"RUN_STATE_QUEUED":      1,
+		"RUN_STATE_RUNNING":     2,
+		"RUN_STATE_BLOCKED":     3,
+		"RUN_STATE_COMPLETED":   4,
+		"RUN_STATE_FAILED":      5,
+		"RUN_STATE_CANCELED":    6,
+	}
+)
+
+func (x RunState) Enum() *RunState {
+	p := new(RunState)
+	*p = x
+	return p
+}
+
+func (x RunState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RunState) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_runtime_proto_enumTypes[1].Descriptor()
+}
+
+func (RunState) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_runtime_proto_enumTypes[1]
+}
+
+func (x RunState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RunState.Descriptor instead.
+func (RunState) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{1}
+}
+
+// RunStepKind is the closed taxonomy for built-in run-step records.
+// Use RUN_STEP_KIND_CUSTOM when the detail field carries implementation-specific text.
+type RunStepKind int32
+
+const (
+	// Step kind is not known.
+	RunStepKind_RUN_STEP_KIND_UNSPECIFIED RunStepKind = 0
+	// Agent started or resumed a run.
+	RunStepKind_RUN_STEP_KIND_START RunStepKind = 1
+	// Agent read context or loaded memory.
+	RunStepKind_RUN_STEP_KIND_CONTEXT RunStepKind = 2
+	// Agent invoked a tool.
+	RunStepKind_RUN_STEP_KIND_TOOL RunStepKind = 3
+	// Agent executed a shell command.
+	RunStepKind_RUN_STEP_KIND_COMMAND RunStepKind = 4
+	// Agent ran tests or verification.
+	RunStepKind_RUN_STEP_KIND_TEST RunStepKind = 5
+	// Agent wrote a progress update.
+	RunStepKind_RUN_STEP_KIND_PROGRESS RunStepKind = 6
+	// Agent produced a final result.
+	RunStepKind_RUN_STEP_KIND_RESULT RunStepKind = 7
+	// Implementation-specific step.
+	RunStepKind_RUN_STEP_KIND_CUSTOM RunStepKind = 8
+)
+
+// Enum value maps for RunStepKind.
+var (
+	RunStepKind_name = map[int32]string{
+		0: "RUN_STEP_KIND_UNSPECIFIED",
+		1: "RUN_STEP_KIND_START",
+		2: "RUN_STEP_KIND_CONTEXT",
+		3: "RUN_STEP_KIND_TOOL",
+		4: "RUN_STEP_KIND_COMMAND",
+		5: "RUN_STEP_KIND_TEST",
+		6: "RUN_STEP_KIND_PROGRESS",
+		7: "RUN_STEP_KIND_RESULT",
+		8: "RUN_STEP_KIND_CUSTOM",
+	}
+	RunStepKind_value = map[string]int32{
+		"RUN_STEP_KIND_UNSPECIFIED": 0,
+		"RUN_STEP_KIND_START":       1,
+		"RUN_STEP_KIND_CONTEXT":     2,
+		"RUN_STEP_KIND_TOOL":        3,
+		"RUN_STEP_KIND_COMMAND":     4,
+		"RUN_STEP_KIND_TEST":        5,
+		"RUN_STEP_KIND_PROGRESS":    6,
+		"RUN_STEP_KIND_RESULT":      7,
+		"RUN_STEP_KIND_CUSTOM":      8,
+	}
+)
+
+func (x RunStepKind) Enum() *RunStepKind {
+	p := new(RunStepKind)
+	*p = x
+	return p
+}
+
+func (x RunStepKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RunStepKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_runtime_proto_enumTypes[2].Descriptor()
+}
+
+func (RunStepKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_runtime_proto_enumTypes[2]
+}
+
+func (x RunStepKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RunStepKind.Descriptor instead.
+func (RunStepKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{2}
+}
+
+// RunStepStatus is the closed status set for a run step.
+type RunStepStatus int32
+
+const (
+	// Status is not known.
+	RunStepStatus_RUN_STEP_STATUS_UNSPECIFIED RunStepStatus = 0
+	// Step is currently executing.
+	RunStepStatus_RUN_STEP_STATUS_RUNNING RunStepStatus = 1
+	// Step completed successfully.
+	RunStepStatus_RUN_STEP_STATUS_COMPLETED RunStepStatus = 2
+	// Step failed.
+	RunStepStatus_RUN_STEP_STATUS_FAILED RunStepStatus = 3
+	// Step was skipped.
+	RunStepStatus_RUN_STEP_STATUS_SKIPPED RunStepStatus = 4
+)
+
+// Enum value maps for RunStepStatus.
+var (
+	RunStepStatus_name = map[int32]string{
+		0: "RUN_STEP_STATUS_UNSPECIFIED",
+		1: "RUN_STEP_STATUS_RUNNING",
+		2: "RUN_STEP_STATUS_COMPLETED",
+		3: "RUN_STEP_STATUS_FAILED",
+		4: "RUN_STEP_STATUS_SKIPPED",
+	}
+	RunStepStatus_value = map[string]int32{
+		"RUN_STEP_STATUS_UNSPECIFIED": 0,
+		"RUN_STEP_STATUS_RUNNING":     1,
+		"RUN_STEP_STATUS_COMPLETED":   2,
+		"RUN_STEP_STATUS_FAILED":      3,
+		"RUN_STEP_STATUS_SKIPPED":     4,
+	}
+)
+
+func (x RunStepStatus) Enum() *RunStepStatus {
+	p := new(RunStepStatus)
+	*p = x
+	return p
+}
+
+func (x RunStepStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RunStepStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_runtime_proto_enumTypes[3].Descriptor()
+}
+
+func (RunStepStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_runtime_proto_enumTypes[3]
+}
+
+func (x RunStepStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RunStepStatus.Descriptor instead.
+func (RunStepStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{3}
+}
+
+// McpResourceSubscriptionStatus is the closed lifecycle for MCP resource watches.
+type McpResourceSubscriptionStatus int32
+
+const (
+	// Subscription status is not known.
+	McpResourceSubscriptionStatus_MCP_RESOURCE_SUBSCRIPTION_STATUS_UNSPECIFIED McpResourceSubscriptionStatus = 0
+	// Subscription is active.
+	McpResourceSubscriptionStatus_MCP_RESOURCE_SUBSCRIPTION_STATUS_ACTIVE McpResourceSubscriptionStatus = 1
+	// Subscription is paused but may resume.
+	McpResourceSubscriptionStatus_MCP_RESOURCE_SUBSCRIPTION_STATUS_PAUSED McpResourceSubscriptionStatus = 2
+	// Subscription was canceled.
+	McpResourceSubscriptionStatus_MCP_RESOURCE_SUBSCRIPTION_STATUS_CANCELED McpResourceSubscriptionStatus = 3
+	// Subscription failed.
+	McpResourceSubscriptionStatus_MCP_RESOURCE_SUBSCRIPTION_STATUS_FAILED McpResourceSubscriptionStatus = 4
+)
+
+// Enum value maps for McpResourceSubscriptionStatus.
+var (
+	McpResourceSubscriptionStatus_name = map[int32]string{
+		0: "MCP_RESOURCE_SUBSCRIPTION_STATUS_UNSPECIFIED",
+		1: "MCP_RESOURCE_SUBSCRIPTION_STATUS_ACTIVE",
+		2: "MCP_RESOURCE_SUBSCRIPTION_STATUS_PAUSED",
+		3: "MCP_RESOURCE_SUBSCRIPTION_STATUS_CANCELED",
+		4: "MCP_RESOURCE_SUBSCRIPTION_STATUS_FAILED",
+	}
+	McpResourceSubscriptionStatus_value = map[string]int32{
+		"MCP_RESOURCE_SUBSCRIPTION_STATUS_UNSPECIFIED": 0,
+		"MCP_RESOURCE_SUBSCRIPTION_STATUS_ACTIVE":      1,
+		"MCP_RESOURCE_SUBSCRIPTION_STATUS_PAUSED":      2,
+		"MCP_RESOURCE_SUBSCRIPTION_STATUS_CANCELED":    3,
+		"MCP_RESOURCE_SUBSCRIPTION_STATUS_FAILED":      4,
+	}
+)
+
+func (x McpResourceSubscriptionStatus) Enum() *McpResourceSubscriptionStatus {
+	p := new(McpResourceSubscriptionStatus)
+	*p = x
+	return p
+}
+
+func (x McpResourceSubscriptionStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (McpResourceSubscriptionStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_runtime_proto_enumTypes[4].Descriptor()
+}
+
+func (McpResourceSubscriptionStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_runtime_proto_enumTypes[4]
+}
+
+func (x McpResourceSubscriptionStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use McpResourceSubscriptionStatus.Descriptor instead.
+func (McpResourceSubscriptionStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_runtime_proto_rawDescGZIP(), []int{4}
+}
+
 type Workspace struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkspaceId   string                 `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
@@ -106,16 +437,20 @@ func (x *Workspace) GetIsDefault() bool {
 }
 
 type RuntimeProfile struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	RuntimeProfileId  string                 `protobuf:"bytes,1,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	Kind              string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	Provider          string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
-	Model             string                 `protobuf:"bytes,4,opt,name=model,proto3" json:"model,omitempty"`
-	AdapterConfigJson string                 `protobuf:"bytes,5,opt,name=adapter_config_json,json=adapterConfigJson,proto3" json:"adapter_config_json,omitempty"`
-	WorkspaceId       string                 `protobuf:"bytes,6,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
-	Env               []*EnvVar              `protobuf:"bytes,7,rep,name=env,proto3" json:"env,omitempty"`
-	Skills            []*SkillRecord         `protobuf:"bytes,8,rep,name=skills,proto3" json:"skills,omitempty"`
-	Capabilities      []*Capability          `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	RuntimeProfileId string                 `protobuf:"bytes,1,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
+	// Open runtime adapter kind. Canonical values include codex, claude,
+	// opencode, kimi, gemini, and custom runtime adapters.
+	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Open model provider name, such as openai, anthropic, google, or custom.
+	Provider string `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	// Open model identifier; do not make this a closed enum.
+	Model             string         `protobuf:"bytes,4,opt,name=model,proto3" json:"model,omitempty"`
+	AdapterConfigJson string         `protobuf:"bytes,5,opt,name=adapter_config_json,json=adapterConfigJson,proto3" json:"adapter_config_json,omitempty"`
+	WorkspaceId       string         `protobuf:"bytes,6,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	Env               []*EnvVar      `protobuf:"bytes,7,rep,name=env,proto3" json:"env,omitempty"`
+	Skills            []*SkillRecord `protobuf:"bytes,8,rep,name=skills,proto3" json:"skills,omitempty"`
+	Capabilities      []*Capability  `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -214,24 +549,25 @@ func (x *RuntimeProfile) GetCapabilities() []*Capability {
 }
 
 type Runtime struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	RuntimeId           string                 `protobuf:"bytes,1,opt,name=runtime_id,json=runtimeId,proto3" json:"runtime_id,omitempty"`
-	ComputerId          string                 `protobuf:"bytes,2,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
-	WorkspaceId         string                 `protobuf:"bytes,3,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
-	Kind                string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
-	DisplayName         string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Aliases             []string               `protobuf:"bytes,6,rep,name=aliases,proto3" json:"aliases,omitempty"`
-	Tool                string                 `protobuf:"bytes,7,opt,name=tool,proto3" json:"tool,omitempty"`
-	Command             string                 `protobuf:"bytes,8,opt,name=command,proto3" json:"command,omitempty"`
-	Installed           bool                   `protobuf:"varint,9,opt,name=installed,proto3" json:"installed,omitempty"`
-	Healthy             bool                   `protobuf:"varint,10,opt,name=healthy,proto3" json:"healthy,omitempty"`
-	SupportsAutoInstall bool                   `protobuf:"varint,11,opt,name=supports_auto_install,json=supportsAutoInstall,proto3" json:"supports_auto_install,omitempty"`
-	InstallHint         []string               `protobuf:"bytes,12,rep,name=install_hint,json=installHint,proto3" json:"install_hint,omitempty"`
-	ConfigDir           string                 `protobuf:"bytes,13,opt,name=config_dir,json=configDir,proto3" json:"config_dir,omitempty"`
-	CurrentTaskCount    uint32                 `protobuf:"varint,14,opt,name=current_task_count,json=currentTaskCount,proto3" json:"current_task_count,omitempty"`
-	PendingTaskCount    uint32                 `protobuf:"varint,15,opt,name=pending_task_count,json=pendingTaskCount,proto3" json:"pending_task_count,omitempty"`
-	Capabilities        []*Capability          `protobuf:"bytes,16,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	RuntimeProfile      *RuntimeProfile        `protobuf:"bytes,17,opt,name=runtime_profile,json=runtimeProfile,proto3" json:"runtime_profile,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	RuntimeId   string                 `protobuf:"bytes,1,opt,name=runtime_id,json=runtimeId,proto3" json:"runtime_id,omitempty"`
+	ComputerId  string                 `protobuf:"bytes,2,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
+	WorkspaceId string                 `protobuf:"bytes,3,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// Open runtime adapter kind; use the same canonical values as RuntimeProfile.kind.
+	Kind                string          `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	DisplayName         string          `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Aliases             []string        `protobuf:"bytes,6,rep,name=aliases,proto3" json:"aliases,omitempty"`
+	Tool                string          `protobuf:"bytes,7,opt,name=tool,proto3" json:"tool,omitempty"`
+	Command             string          `protobuf:"bytes,8,opt,name=command,proto3" json:"command,omitempty"`
+	Installed           bool            `protobuf:"varint,9,opt,name=installed,proto3" json:"installed,omitempty"`
+	Healthy             bool            `protobuf:"varint,10,opt,name=healthy,proto3" json:"healthy,omitempty"`
+	SupportsAutoInstall bool            `protobuf:"varint,11,opt,name=supports_auto_install,json=supportsAutoInstall,proto3" json:"supports_auto_install,omitempty"`
+	InstallHint         []string        `protobuf:"bytes,12,rep,name=install_hint,json=installHint,proto3" json:"install_hint,omitempty"`
+	ConfigDir           string          `protobuf:"bytes,13,opt,name=config_dir,json=configDir,proto3" json:"config_dir,omitempty"`
+	CurrentTaskCount    uint32          `protobuf:"varint,14,opt,name=current_task_count,json=currentTaskCount,proto3" json:"current_task_count,omitempty"`
+	PendingTaskCount    uint32          `protobuf:"varint,15,opt,name=pending_task_count,json=pendingTaskCount,proto3" json:"pending_task_count,omitempty"`
+	Capabilities        []*Capability   `protobuf:"bytes,16,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	RuntimeProfile      *RuntimeProfile `protobuf:"bytes,17,opt,name=runtime_profile,json=runtimeProfile,proto3" json:"runtime_profile,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -462,7 +798,7 @@ type ComputerInfo struct {
 	Os            string                 `protobuf:"bytes,5,opt,name=os,proto3" json:"os,omitempty"`
 	Arch          string                 `protobuf:"bytes,6,opt,name=arch,proto3" json:"arch,omitempty"`
 	Version       string                 `protobuf:"bytes,7,opt,name=version,proto3" json:"version,omitempty"`
-	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
+	Status        ComputerStatus         `protobuf:"varint,8,opt,name=status,proto3,enum=nekode.daemon.v1.ComputerStatus" json:"status,omitempty"`
 	LastSeenUnix  int64                  `protobuf:"varint,9,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
 	DaemonUrl     string                 `protobuf:"bytes,10,opt,name=daemon_url,json=daemonUrl,proto3" json:"daemon_url,omitempty"`
 	LeaseId       string                 `protobuf:"bytes,11,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
@@ -550,11 +886,11 @@ func (x *ComputerInfo) GetVersion() string {
 	return ""
 }
 
-func (x *ComputerInfo) GetStatus() string {
+func (x *ComputerInfo) GetStatus() ComputerStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return ComputerStatus_COMPUTER_STATUS_UNSPECIFIED
 }
 
 func (x *ComputerInfo) GetLastSeenUnix() int64 {
@@ -907,7 +1243,7 @@ type Run struct {
 	AgentId           string                 `protobuf:"bytes,4,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	ComputerId        string                 `protobuf:"bytes,5,opt,name=computer_id,json=computerId,proto3" json:"computer_id,omitempty"`
 	RuntimeProfileId  string                 `protobuf:"bytes,6,opt,name=runtime_profile_id,json=runtimeProfileId,proto3" json:"runtime_profile_id,omitempty"`
-	State             string                 `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"` // queued | running | blocked | completed | failed | canceled
+	State             RunState               `protobuf:"varint,7,opt,name=state,proto3,enum=nekode.daemon.v1.RunState" json:"state,omitempty"`
 	LeaseId           string                 `protobuf:"bytes,8,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
 	RequestId         string                 `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	InputMessageId    string                 `protobuf:"bytes,10,opt,name=input_message_id,json=inputMessageId,proto3" json:"input_message_id,omitempty"`
@@ -917,8 +1253,19 @@ type Run struct {
 	CompletedTimeUnix int64                  `protobuf:"varint,14,opt,name=completed_time_unix,json=completedTimeUnix,proto3" json:"completed_time_unix,omitempty"`
 	Error             string                 `protobuf:"bytes,15,opt,name=error,proto3" json:"error,omitempty"`
 	Summary           string                 `protobuf:"bytes,16,opt,name=summary,proto3" json:"summary,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// 1 for the first attempt; incremented by server retry/recovery policy.
+	Attempt uint32 `protobuf:"varint,18,opt,name=attempt,proto3" json:"attempt,omitempty"`
+	// Maximum attempts allowed by server retry/recovery policy.
+	MaxAttempts uint32 `protobuf:"varint,19,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
+	// Parent run that this attempt retries or recovers from.
+	ParentRunId string `protobuf:"bytes,20,opt,name=parent_run_id,json=parentRunId,proto3" json:"parent_run_id,omitempty"`
+	// Open failure taxonomy. Canonical values include agent_error, timeout,
+	// runtime_offline, runtime_recovery, canceled, and manual.
+	FailureReason string `protobuf:"bytes,21,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
+	// Last daemon heartbeat/progress timestamp for this run.
+	LastHeartbeatTimeUnix int64 `protobuf:"varint,22,opt,name=last_heartbeat_time_unix,json=lastHeartbeatTimeUnix,proto3" json:"last_heartbeat_time_unix,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Run) Reset() {
@@ -993,11 +1340,11 @@ func (x *Run) GetRuntimeProfileId() string {
 	return ""
 }
 
-func (x *Run) GetState() string {
+func (x *Run) GetState() RunState {
 	if x != nil {
 		return x.State
 	}
-	return ""
+	return RunState_RUN_STATE_UNSPECIFIED
 }
 
 func (x *Run) GetLeaseId() string {
@@ -1063,13 +1410,48 @@ func (x *Run) GetSummary() string {
 	return ""
 }
 
+func (x *Run) GetAttempt() uint32 {
+	if x != nil {
+		return x.Attempt
+	}
+	return 0
+}
+
+func (x *Run) GetMaxAttempts() uint32 {
+	if x != nil {
+		return x.MaxAttempts
+	}
+	return 0
+}
+
+func (x *Run) GetParentRunId() string {
+	if x != nil {
+		return x.ParentRunId
+	}
+	return ""
+}
+
+func (x *Run) GetFailureReason() string {
+	if x != nil {
+		return x.FailureReason
+	}
+	return ""
+}
+
+func (x *Run) GetLastHeartbeatTimeUnix() int64 {
+	if x != nil {
+		return x.LastHeartbeatTimeUnix
+	}
+	return 0
+}
+
 type RunStep struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	StepId            string                 `protobuf:"bytes,1,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
 	RunId             string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	Sequence          uint32                 `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	Kind              string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
-	Status            string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Kind              RunStepKind            `protobuf:"varint,4,opt,name=kind,proto3,enum=nekode.daemon.v1.RunStepKind" json:"kind,omitempty"`
+	Status            RunStepStatus          `protobuf:"varint,5,opt,name=status,proto3,enum=nekode.daemon.v1.RunStepStatus" json:"status,omitempty"`
 	Summary           string                 `protobuf:"bytes,6,opt,name=summary,proto3" json:"summary,omitempty"`
 	Detail            string                 `protobuf:"bytes,7,opt,name=detail,proto3" json:"detail,omitempty"`
 	ArtifactIds       []string               `protobuf:"bytes,8,rep,name=artifact_ids,json=artifactIds,proto3" json:"artifact_ids,omitempty"`
@@ -1130,18 +1512,18 @@ func (x *RunStep) GetSequence() uint32 {
 	return 0
 }
 
-func (x *RunStep) GetKind() string {
+func (x *RunStep) GetKind() RunStepKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return RunStepKind_RUN_STEP_KIND_UNSPECIFIED
 }
 
-func (x *RunStep) GetStatus() string {
+func (x *RunStep) GetStatus() RunStepStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return RunStepStatus_RUN_STEP_STATUS_UNSPECIFIED
 }
 
 func (x *RunStep) GetSummary() string {
@@ -1311,7 +1693,7 @@ type UpdateRunStatusRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	RunId          string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	State          string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	State          RunState               `protobuf:"varint,3,opt,name=state,proto3,enum=nekode.daemon.v1.RunState" json:"state,omitempty"`
 	Summary        string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
 	Error          string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
 	BlockedReason  string                 `protobuf:"bytes,6,opt,name=blocked_reason,json=blockedReason,proto3" json:"blocked_reason,omitempty"`
@@ -1368,11 +1750,11 @@ func (x *UpdateRunStatusRequest) GetAgentId() string {
 	return ""
 }
 
-func (x *UpdateRunStatusRequest) GetState() string {
+func (x *UpdateRunStatusRequest) GetState() RunState {
 	if x != nil {
 		return x.State
 	}
-	return ""
+	return RunState_RUN_STATE_UNSPECIFIED
 }
 
 func (x *UpdateRunStatusRequest) GetSummary() string {
@@ -2362,15 +2744,15 @@ func (x *ReadWorkspaceFileResponse) GetSizeBytes() int64 {
 }
 
 type McpResourceSubscription struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	SubscriptionId  string                 `protobuf:"bytes,1,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
-	AgentId         string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	RuntimeId       string                 `protobuf:"bytes,3,opt,name=runtime_id,json=runtimeId,proto3" json:"runtime_id,omitempty"`
-	EndpointId      string                 `protobuf:"bytes,4,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
-	ResourceUri     string                 `protobuf:"bytes,5,opt,name=resource_uri,json=resourceUri,proto3" json:"resource_uri,omitempty"`
-	Status          string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"` // active | paused | canceled | failed
-	CreatedTimeUnix int64                  `protobuf:"varint,7,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	RequestId       string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	state           protoimpl.MessageState        `protogen:"open.v1"`
+	SubscriptionId  string                        `protobuf:"bytes,1,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	AgentId         string                        `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	RuntimeId       string                        `protobuf:"bytes,3,opt,name=runtime_id,json=runtimeId,proto3" json:"runtime_id,omitempty"`
+	EndpointId      string                        `protobuf:"bytes,4,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
+	ResourceUri     string                        `protobuf:"bytes,5,opt,name=resource_uri,json=resourceUri,proto3" json:"resource_uri,omitempty"`
+	Status          McpResourceSubscriptionStatus `protobuf:"varint,6,opt,name=status,proto3,enum=nekode.daemon.v1.McpResourceSubscriptionStatus" json:"status,omitempty"`
+	CreatedTimeUnix int64                         `protobuf:"varint,7,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	RequestId       string                        `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2440,11 +2822,11 @@ func (x *McpResourceSubscription) GetResourceUri() string {
 	return ""
 }
 
-func (x *McpResourceSubscription) GetStatus() string {
+func (x *McpResourceSubscription) GetStatus() McpResourceSubscriptionStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return McpResourceSubscriptionStatus_MCP_RESOURCE_SUBSCRIPTION_STATUS_UNSPECIFIED
 }
 
 func (x *McpResourceSubscription) GetCreatedTimeUnix() int64 {
@@ -3413,7 +3795,7 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"workspaces\x125\n" +
 	"\bruntimes\x18\x02 \x03(\v2\x19.nekode.daemon.v1.RuntimeR\bruntimes\x126\n" +
 	"\x06agents\x18\x03 \x03(\v2\x1e.nekode.daemon.v1.AgentProfileR\x06agents\x12K\n" +
-	"\x10runtime_profiles\x18\x04 \x03(\v2 .nekode.daemon.v1.RuntimeProfileR\x0fruntimeProfilesJ\x06\b\xe8\a\x10\xd0\x0f\"\x8b\x03\n" +
+	"\x10runtime_profiles\x18\x04 \x03(\v2 .nekode.daemon.v1.RuntimeProfileR\x0fruntimeProfilesJ\x06\b\xe8\a\x10\xd0\x0f\"\xad\x03\n" +
 	"\fComputerInfo\x12\x1b\n" +
 	"\tdaemon_id\x18\x01 \x01(\tR\bdaemonId\x12\x1f\n" +
 	"\vcomputer_id\x18\x02 \x01(\tR\n" +
@@ -3422,8 +3804,8 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\bhostname\x18\x04 \x01(\tR\bhostname\x12\x0e\n" +
 	"\x02os\x18\x05 \x01(\tR\x02os\x12\x12\n" +
 	"\x04arch\x18\x06 \x01(\tR\x04arch\x12\x18\n" +
-	"\aversion\x18\a \x01(\tR\aversion\x12\x16\n" +
-	"\x06status\x18\b \x01(\tR\x06status\x12$\n" +
+	"\aversion\x18\a \x01(\tR\aversion\x128\n" +
+	"\x06status\x18\b \x01(\x0e2 .nekode.daemon.v1.ComputerStatusR\x06status\x12$\n" +
 	"\x0elast_seen_unix\x18\t \x01(\x03R\flastSeenUnix\x12\x1d\n" +
 	"\n" +
 	"daemon_url\x18\n" +
@@ -3456,7 +3838,7 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12(\n" +
 	"\x10server_time_unix\x18\x02 \x01(\x03R\x0eserverTimeUnix\x12?\n" +
 	"\x1cnext_heartbeat_after_seconds\x18\x03 \x01(\rR\x19nextHeartbeatAfterSeconds\x12-\n" +
-	"\x05lease\x18\x04 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\"\xac\x04\n" +
+	"\x05lease\x18\x04 \x01(\v2\x17.nekode.daemon.v1.LeaseR\x05lease\"\x89\x06\n" +
 	"\x03Run\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x16\n" +
@@ -3464,8 +3846,8 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\bagent_id\x18\x04 \x01(\tR\aagentId\x12\x1f\n" +
 	"\vcomputer_id\x18\x05 \x01(\tR\n" +
 	"computerId\x12,\n" +
-	"\x12runtime_profile_id\x18\x06 \x01(\tR\x10runtimeProfileId\x12\x14\n" +
-	"\x05state\x18\a \x01(\tR\x05state\x12\x19\n" +
+	"\x12runtime_profile_id\x18\x06 \x01(\tR\x10runtimeProfileId\x120\n" +
+	"\x05state\x18\a \x01(\x0e2\x1a.nekode.daemon.v1.RunStateR\x05state\x12\x19\n" +
 	"\blease_id\x18\b \x01(\tR\aleaseId\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\t \x01(\tR\trequestId\x12(\n" +
@@ -3476,13 +3858,18 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\x11updated_time_unix\x18\r \x01(\x03R\x0fupdatedTimeUnix\x12.\n" +
 	"\x13completed_time_unix\x18\x0e \x01(\x03R\x11completedTimeUnix\x12\x14\n" +
 	"\x05error\x18\x0f \x01(\tR\x05error\x12\x18\n" +
-	"\asummary\x18\x10 \x01(\tR\asummaryJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x11\x10\x12R\x06status\"\xcc\x02\n" +
+	"\asummary\x18\x10 \x01(\tR\asummary\x12\x18\n" +
+	"\aattempt\x18\x12 \x01(\rR\aattempt\x12!\n" +
+	"\fmax_attempts\x18\x13 \x01(\rR\vmaxAttempts\x12\"\n" +
+	"\rparent_run_id\x18\x14 \x01(\tR\vparentRunId\x12%\n" +
+	"\x0efailure_reason\x18\x15 \x01(\tR\rfailureReason\x127\n" +
+	"\x18last_heartbeat_time_unix\x18\x16 \x01(\x03R\x15lastHeartbeatTimeUnixJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x11\x10\x12R\x06status\"\x8c\x03\n" +
 	"\aRunStep\x12\x17\n" +
 	"\astep_id\x18\x01 \x01(\tR\x06stepId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x1a\n" +
-	"\bsequence\x18\x03 \x01(\rR\bsequence\x12\x12\n" +
-	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\x12\x18\n" +
+	"\bsequence\x18\x03 \x01(\rR\bsequence\x121\n" +
+	"\x04kind\x18\x04 \x01(\x0e2\x1d.nekode.daemon.v1.RunStepKindR\x04kind\x127\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x1f.nekode.daemon.v1.RunStepStatusR\x06status\x12\x18\n" +
 	"\asummary\x18\x06 \x01(\tR\asummary\x12\x16\n" +
 	"\x06detail\x18\a \x01(\tR\x06detail\x12!\n" +
 	"\fartifact_ids\x18\b \x03(\tR\vartifactIds\x12*\n" +
@@ -3501,11 +3888,11 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\x19FetchAssignedRunsResponse\x12)\n" +
 	"\x04runs\x18\x01 \x03(\v2\x15.nekode.daemon.v1.RunR\x04runs\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"\xfd\x02\n" +
+	"nextCursor\"\x99\x03\n" +
 	"\x16UpdateRunStatusRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x19\n" +
-	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
-	"\x05state\x18\x03 \x01(\tR\x05state\x12\x18\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x120\n" +
+	"\x05state\x18\x03 \x01(\x0e2\x1a.nekode.daemon.v1.RunStateR\x05state\x12\x18\n" +
 	"\asummary\x18\x04 \x01(\tR\asummary\x12\x14\n" +
 	"\x05error\x18\x05 \x01(\tR\x05error\x12%\n" +
 	"\x0eblocked_reason\x18\x06 \x01(\tR\rblockedReason\x12%\n" +
@@ -3588,7 +3975,7 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1c\n" +
 	"\ttruncated\x18\x04 \x01(\bR\ttruncated\x12\x1d\n" +
 	"\n" +
-	"size_bytes\x18\x05 \x01(\x03R\tsizeBytes\"\xab\x02\n" +
+	"size_bytes\x18\x05 \x01(\x03R\tsizeBytes\"\xdc\x02\n" +
 	"\x17McpResourceSubscription\x12'\n" +
 	"\x0fsubscription_id\x18\x01 \x01(\tR\x0esubscriptionId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1d\n" +
@@ -3596,8 +3983,8 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"runtime_id\x18\x03 \x01(\tR\truntimeId\x12\x1f\n" +
 	"\vendpoint_id\x18\x04 \x01(\tR\n" +
 	"endpointId\x12!\n" +
-	"\fresource_uri\x18\x05 \x01(\tR\vresourceUri\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12*\n" +
+	"\fresource_uri\x18\x05 \x01(\tR\vresourceUri\x12G\n" +
+	"\x06status\x18\x06 \x01(\x0e2/.nekode.daemon.v1.McpResourceSubscriptionStatusR\x06status\x12*\n" +
 	"\x11created_time_unix\x18\a \x01(\x03R\x0fcreatedTimeUnix\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\b \x01(\tR\trequestIdJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x02\n" +
@@ -3675,7 +4062,43 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x06 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"8\n" +
 	"\x1aReleaseStartPermitResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\bacceptedB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\baccepted\x18\x01 \x01(\bR\baccepted*\xa3\x01\n" +
+	"\x0eComputerStatus\x12\x1f\n" +
+	"\x1bCOMPUTER_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16COMPUTER_STATUS_ONLINE\x10\x01\x12\x19\n" +
+	"\x15COMPUTER_STATUS_STALE\x10\x02\x12\x1b\n" +
+	"\x17COMPUTER_STATUS_OFFLINE\x10\x03\x12\x1c\n" +
+	"\x18COMPUTER_STATUS_DEGRADED\x10\x04*\xb0\x01\n" +
+	"\bRunState\x12\x19\n" +
+	"\x15RUN_STATE_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10RUN_STATE_QUEUED\x10\x01\x12\x15\n" +
+	"\x11RUN_STATE_RUNNING\x10\x02\x12\x15\n" +
+	"\x11RUN_STATE_BLOCKED\x10\x03\x12\x17\n" +
+	"\x13RUN_STATE_COMPLETED\x10\x04\x12\x14\n" +
+	"\x10RUN_STATE_FAILED\x10\x05\x12\x16\n" +
+	"\x12RUN_STATE_CANCELED\x10\x06*\xfb\x01\n" +
+	"\vRunStepKind\x12\x1d\n" +
+	"\x19RUN_STEP_KIND_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13RUN_STEP_KIND_START\x10\x01\x12\x19\n" +
+	"\x15RUN_STEP_KIND_CONTEXT\x10\x02\x12\x16\n" +
+	"\x12RUN_STEP_KIND_TOOL\x10\x03\x12\x19\n" +
+	"\x15RUN_STEP_KIND_COMMAND\x10\x04\x12\x16\n" +
+	"\x12RUN_STEP_KIND_TEST\x10\x05\x12\x1a\n" +
+	"\x16RUN_STEP_KIND_PROGRESS\x10\x06\x12\x18\n" +
+	"\x14RUN_STEP_KIND_RESULT\x10\a\x12\x18\n" +
+	"\x14RUN_STEP_KIND_CUSTOM\x10\b*\xa5\x01\n" +
+	"\rRunStepStatus\x12\x1f\n" +
+	"\x1bRUN_STEP_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17RUN_STEP_STATUS_RUNNING\x10\x01\x12\x1d\n" +
+	"\x19RUN_STEP_STATUS_COMPLETED\x10\x02\x12\x1a\n" +
+	"\x16RUN_STEP_STATUS_FAILED\x10\x03\x12\x1b\n" +
+	"\x17RUN_STEP_STATUS_SKIPPED\x10\x04*\x87\x02\n" +
+	"\x1dMcpResourceSubscriptionStatus\x120\n" +
+	",MCP_RESOURCE_SUBSCRIPTION_STATUS_UNSPECIFIED\x10\x00\x12+\n" +
+	"'MCP_RESOURCE_SUBSCRIPTION_STATUS_ACTIVE\x10\x01\x12+\n" +
+	"'MCP_RESOURCE_SUBSCRIPTION_STATUS_PAUSED\x10\x02\x12-\n" +
+	")MCP_RESOURCE_SUBSCRIPTION_STATUS_CANCELED\x10\x03\x12+\n" +
+	"'MCP_RESOURCE_SUBSCRIPTION_STATUS_FAILED\x10\x04B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_runtime_proto_rawDescOnce sync.Once
@@ -3689,117 +4112,129 @@ func file_nekode_daemon_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_runtime_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_runtime_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_nekode_daemon_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_nekode_daemon_v1_runtime_proto_goTypes = []any{
-	(*Workspace)(nil),                             // 0: nekode.daemon.v1.Workspace
-	(*RuntimeProfile)(nil),                        // 1: nekode.daemon.v1.RuntimeProfile
-	(*Runtime)(nil),                               // 2: nekode.daemon.v1.Runtime
-	(*ComputerInventory)(nil),                     // 3: nekode.daemon.v1.ComputerInventory
-	(*ComputerInfo)(nil),                          // 4: nekode.daemon.v1.ComputerInfo
-	(*RegisterComputerRequest)(nil),               // 5: nekode.daemon.v1.RegisterComputerRequest
-	(*RegisterComputerResponse)(nil),              // 6: nekode.daemon.v1.RegisterComputerResponse
-	(*HeartbeatComputerRequest)(nil),              // 7: nekode.daemon.v1.HeartbeatComputerRequest
-	(*HeartbeatComputerResponse)(nil),             // 8: nekode.daemon.v1.HeartbeatComputerResponse
-	(*Run)(nil),                                   // 9: nekode.daemon.v1.Run
-	(*RunStep)(nil),                               // 10: nekode.daemon.v1.RunStep
-	(*FetchAssignedRunsRequest)(nil),              // 11: nekode.daemon.v1.FetchAssignedRunsRequest
-	(*FetchAssignedRunsResponse)(nil),             // 12: nekode.daemon.v1.FetchAssignedRunsResponse
-	(*UpdateRunStatusRequest)(nil),                // 13: nekode.daemon.v1.UpdateRunStatusRequest
-	(*UpdateRunStatusResponse)(nil),               // 14: nekode.daemon.v1.UpdateRunStatusResponse
-	(*RenewRunLeaseRequest)(nil),                  // 15: nekode.daemon.v1.RenewRunLeaseRequest
-	(*RenewRunLeaseResponse)(nil),                 // 16: nekode.daemon.v1.RenewRunLeaseResponse
-	(*AppendRunStepRequest)(nil),                  // 17: nekode.daemon.v1.AppendRunStepRequest
-	(*AppendRunStepResponse)(nil),                 // 18: nekode.daemon.v1.AppendRunStepResponse
-	(*ListRunsRequest)(nil),                       // 19: nekode.daemon.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),                      // 20: nekode.daemon.v1.ListRunsResponse
-	(*GetRunRequest)(nil),                         // 21: nekode.daemon.v1.GetRunRequest
-	(*GetRunResponse)(nil),                        // 22: nekode.daemon.v1.GetRunResponse
-	(*WorkspaceTreeEntry)(nil),                    // 23: nekode.daemon.v1.WorkspaceTreeEntry
-	(*ListWorkspaceTreeRequest)(nil),              // 24: nekode.daemon.v1.ListWorkspaceTreeRequest
-	(*ListWorkspaceTreeResponse)(nil),             // 25: nekode.daemon.v1.ListWorkspaceTreeResponse
-	(*ReadWorkspaceFileRequest)(nil),              // 26: nekode.daemon.v1.ReadWorkspaceFileRequest
-	(*ReadWorkspaceFileResponse)(nil),             // 27: nekode.daemon.v1.ReadWorkspaceFileResponse
-	(*McpResourceSubscription)(nil),               // 28: nekode.daemon.v1.McpResourceSubscription
-	(*McpResourceUpdate)(nil),                     // 29: nekode.daemon.v1.McpResourceUpdate
-	(*SubscribeMcpResourceRequest)(nil),           // 30: nekode.daemon.v1.SubscribeMcpResourceRequest
-	(*SubscribeMcpResourceResponse)(nil),          // 31: nekode.daemon.v1.SubscribeMcpResourceResponse
-	(*CancelMcpResourceSubscriptionRequest)(nil),  // 32: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
-	(*CancelMcpResourceSubscriptionResponse)(nil), // 33: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
-	(*ListMcpResourceUpdatesRequest)(nil),         // 34: nekode.daemon.v1.ListMcpResourceUpdatesRequest
-	(*ListMcpResourceUpdatesResponse)(nil),        // 35: nekode.daemon.v1.ListMcpResourceUpdatesResponse
-	(*SyncComputerInventoryRequest)(nil),          // 36: nekode.daemon.v1.SyncComputerInventoryRequest
-	(*SyncComputerInventoryResponse)(nil),         // 37: nekode.daemon.v1.SyncComputerInventoryResponse
-	(*AcquireStartPermitRequest)(nil),             // 38: nekode.daemon.v1.AcquireStartPermitRequest
-	(*AcquireStartPermitResponse)(nil),            // 39: nekode.daemon.v1.AcquireStartPermitResponse
-	(*ReleaseStartPermitRequest)(nil),             // 40: nekode.daemon.v1.ReleaseStartPermitRequest
-	(*ReleaseStartPermitResponse)(nil),            // 41: nekode.daemon.v1.ReleaseStartPermitResponse
-	(*EnvVar)(nil),                                // 42: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil),                           // 43: nekode.daemon.v1.SkillRecord
-	(*Capability)(nil),                            // 44: nekode.daemon.v1.Capability
-	(*AgentProfile)(nil),                          // 45: nekode.daemon.v1.AgentProfile
-	(*RequestContext)(nil),                        // 46: nekode.daemon.v1.RequestContext
-	(*Lease)(nil),                                 // 47: nekode.daemon.v1.Lease
-	(*AgentStatusSnapshot)(nil),                   // 48: nekode.daemon.v1.AgentStatusSnapshot
-	(*EventCursor)(nil),                           // 49: nekode.daemon.v1.EventCursor
+	(ComputerStatus)(0),                           // 0: nekode.daemon.v1.ComputerStatus
+	(RunState)(0),                                 // 1: nekode.daemon.v1.RunState
+	(RunStepKind)(0),                              // 2: nekode.daemon.v1.RunStepKind
+	(RunStepStatus)(0),                            // 3: nekode.daemon.v1.RunStepStatus
+	(McpResourceSubscriptionStatus)(0),            // 4: nekode.daemon.v1.McpResourceSubscriptionStatus
+	(*Workspace)(nil),                             // 5: nekode.daemon.v1.Workspace
+	(*RuntimeProfile)(nil),                        // 6: nekode.daemon.v1.RuntimeProfile
+	(*Runtime)(nil),                               // 7: nekode.daemon.v1.Runtime
+	(*ComputerInventory)(nil),                     // 8: nekode.daemon.v1.ComputerInventory
+	(*ComputerInfo)(nil),                          // 9: nekode.daemon.v1.ComputerInfo
+	(*RegisterComputerRequest)(nil),               // 10: nekode.daemon.v1.RegisterComputerRequest
+	(*RegisterComputerResponse)(nil),              // 11: nekode.daemon.v1.RegisterComputerResponse
+	(*HeartbeatComputerRequest)(nil),              // 12: nekode.daemon.v1.HeartbeatComputerRequest
+	(*HeartbeatComputerResponse)(nil),             // 13: nekode.daemon.v1.HeartbeatComputerResponse
+	(*Run)(nil),                                   // 14: nekode.daemon.v1.Run
+	(*RunStep)(nil),                               // 15: nekode.daemon.v1.RunStep
+	(*FetchAssignedRunsRequest)(nil),              // 16: nekode.daemon.v1.FetchAssignedRunsRequest
+	(*FetchAssignedRunsResponse)(nil),             // 17: nekode.daemon.v1.FetchAssignedRunsResponse
+	(*UpdateRunStatusRequest)(nil),                // 18: nekode.daemon.v1.UpdateRunStatusRequest
+	(*UpdateRunStatusResponse)(nil),               // 19: nekode.daemon.v1.UpdateRunStatusResponse
+	(*RenewRunLeaseRequest)(nil),                  // 20: nekode.daemon.v1.RenewRunLeaseRequest
+	(*RenewRunLeaseResponse)(nil),                 // 21: nekode.daemon.v1.RenewRunLeaseResponse
+	(*AppendRunStepRequest)(nil),                  // 22: nekode.daemon.v1.AppendRunStepRequest
+	(*AppendRunStepResponse)(nil),                 // 23: nekode.daemon.v1.AppendRunStepResponse
+	(*ListRunsRequest)(nil),                       // 24: nekode.daemon.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),                      // 25: nekode.daemon.v1.ListRunsResponse
+	(*GetRunRequest)(nil),                         // 26: nekode.daemon.v1.GetRunRequest
+	(*GetRunResponse)(nil),                        // 27: nekode.daemon.v1.GetRunResponse
+	(*WorkspaceTreeEntry)(nil),                    // 28: nekode.daemon.v1.WorkspaceTreeEntry
+	(*ListWorkspaceTreeRequest)(nil),              // 29: nekode.daemon.v1.ListWorkspaceTreeRequest
+	(*ListWorkspaceTreeResponse)(nil),             // 30: nekode.daemon.v1.ListWorkspaceTreeResponse
+	(*ReadWorkspaceFileRequest)(nil),              // 31: nekode.daemon.v1.ReadWorkspaceFileRequest
+	(*ReadWorkspaceFileResponse)(nil),             // 32: nekode.daemon.v1.ReadWorkspaceFileResponse
+	(*McpResourceSubscription)(nil),               // 33: nekode.daemon.v1.McpResourceSubscription
+	(*McpResourceUpdate)(nil),                     // 34: nekode.daemon.v1.McpResourceUpdate
+	(*SubscribeMcpResourceRequest)(nil),           // 35: nekode.daemon.v1.SubscribeMcpResourceRequest
+	(*SubscribeMcpResourceResponse)(nil),          // 36: nekode.daemon.v1.SubscribeMcpResourceResponse
+	(*CancelMcpResourceSubscriptionRequest)(nil),  // 37: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest
+	(*CancelMcpResourceSubscriptionResponse)(nil), // 38: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse
+	(*ListMcpResourceUpdatesRequest)(nil),         // 39: nekode.daemon.v1.ListMcpResourceUpdatesRequest
+	(*ListMcpResourceUpdatesResponse)(nil),        // 40: nekode.daemon.v1.ListMcpResourceUpdatesResponse
+	(*SyncComputerInventoryRequest)(nil),          // 41: nekode.daemon.v1.SyncComputerInventoryRequest
+	(*SyncComputerInventoryResponse)(nil),         // 42: nekode.daemon.v1.SyncComputerInventoryResponse
+	(*AcquireStartPermitRequest)(nil),             // 43: nekode.daemon.v1.AcquireStartPermitRequest
+	(*AcquireStartPermitResponse)(nil),            // 44: nekode.daemon.v1.AcquireStartPermitResponse
+	(*ReleaseStartPermitRequest)(nil),             // 45: nekode.daemon.v1.ReleaseStartPermitRequest
+	(*ReleaseStartPermitResponse)(nil),            // 46: nekode.daemon.v1.ReleaseStartPermitResponse
+	(*EnvVar)(nil),                                // 47: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),                           // 48: nekode.daemon.v1.SkillRecord
+	(*Capability)(nil),                            // 49: nekode.daemon.v1.Capability
+	(*AgentProfile)(nil),                          // 50: nekode.daemon.v1.AgentProfile
+	(*RequestContext)(nil),                        // 51: nekode.daemon.v1.RequestContext
+	(*Lease)(nil),                                 // 52: nekode.daemon.v1.Lease
+	(*AgentStatusSnapshot)(nil),                   // 53: nekode.daemon.v1.AgentStatusSnapshot
+	(*EventCursor)(nil),                           // 54: nekode.daemon.v1.EventCursor
 }
 var file_nekode_daemon_v1_runtime_proto_depIdxs = []int32{
-	42, // 0: nekode.daemon.v1.RuntimeProfile.env:type_name -> nekode.daemon.v1.EnvVar
-	43, // 1: nekode.daemon.v1.RuntimeProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
-	44, // 2: nekode.daemon.v1.RuntimeProfile.capabilities:type_name -> nekode.daemon.v1.Capability
-	44, // 3: nekode.daemon.v1.Runtime.capabilities:type_name -> nekode.daemon.v1.Capability
-	1,  // 4: nekode.daemon.v1.Runtime.runtime_profile:type_name -> nekode.daemon.v1.RuntimeProfile
-	0,  // 5: nekode.daemon.v1.ComputerInventory.workspaces:type_name -> nekode.daemon.v1.Workspace
-	2,  // 6: nekode.daemon.v1.ComputerInventory.runtimes:type_name -> nekode.daemon.v1.Runtime
-	45, // 7: nekode.daemon.v1.ComputerInventory.agents:type_name -> nekode.daemon.v1.AgentProfile
-	1,  // 8: nekode.daemon.v1.ComputerInventory.runtime_profiles:type_name -> nekode.daemon.v1.RuntimeProfile
-	44, // 9: nekode.daemon.v1.ComputerInfo.capabilities:type_name -> nekode.daemon.v1.Capability
-	4,  // 10: nekode.daemon.v1.RegisterComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
-	3,  // 11: nekode.daemon.v1.RegisterComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
-	46, // 12: nekode.daemon.v1.RegisterComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	47, // 13: nekode.daemon.v1.RegisterComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
-	4,  // 14: nekode.daemon.v1.HeartbeatComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
-	3,  // 15: nekode.daemon.v1.HeartbeatComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
-	48, // 16: nekode.daemon.v1.HeartbeatComputerRequest.agent_statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
-	46, // 17: nekode.daemon.v1.HeartbeatComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	47, // 18: nekode.daemon.v1.HeartbeatComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
-	49, // 19: nekode.daemon.v1.FetchAssignedRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	9,  // 20: nekode.daemon.v1.FetchAssignedRunsResponse.runs:type_name -> nekode.daemon.v1.Run
-	49, // 21: nekode.daemon.v1.FetchAssignedRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	46, // 22: nekode.daemon.v1.UpdateRunStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	9,  // 23: nekode.daemon.v1.UpdateRunStatusResponse.run:type_name -> nekode.daemon.v1.Run
-	46, // 24: nekode.daemon.v1.RenewRunLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	9,  // 25: nekode.daemon.v1.RenewRunLeaseResponse.run:type_name -> nekode.daemon.v1.Run
-	47, // 26: nekode.daemon.v1.RenewRunLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
-	10, // 27: nekode.daemon.v1.AppendRunStepRequest.step:type_name -> nekode.daemon.v1.RunStep
-	46, // 28: nekode.daemon.v1.AppendRunStepRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	10, // 29: nekode.daemon.v1.AppendRunStepResponse.step:type_name -> nekode.daemon.v1.RunStep
-	49, // 30: nekode.daemon.v1.ListRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	9,  // 31: nekode.daemon.v1.ListRunsResponse.runs:type_name -> nekode.daemon.v1.Run
-	49, // 32: nekode.daemon.v1.ListRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	9,  // 33: nekode.daemon.v1.GetRunResponse.run:type_name -> nekode.daemon.v1.Run
-	10, // 34: nekode.daemon.v1.GetRunResponse.steps:type_name -> nekode.daemon.v1.RunStep
-	49, // 35: nekode.daemon.v1.ListWorkspaceTreeRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	23, // 36: nekode.daemon.v1.ListWorkspaceTreeResponse.entries:type_name -> nekode.daemon.v1.WorkspaceTreeEntry
-	49, // 37: nekode.daemon.v1.ListWorkspaceTreeResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	28, // 38: nekode.daemon.v1.SubscribeMcpResourceRequest.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
-	46, // 39: nekode.daemon.v1.SubscribeMcpResourceRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	28, // 40: nekode.daemon.v1.SubscribeMcpResourceResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
-	46, // 41: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	28, // 42: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
-	49, // 43: nekode.daemon.v1.ListMcpResourceUpdatesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	29, // 44: nekode.daemon.v1.ListMcpResourceUpdatesResponse.updates:type_name -> nekode.daemon.v1.McpResourceUpdate
-	49, // 45: nekode.daemon.v1.ListMcpResourceUpdatesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	4,  // 46: nekode.daemon.v1.SyncComputerInventoryRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
-	3,  // 47: nekode.daemon.v1.SyncComputerInventoryRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
-	46, // 48: nekode.daemon.v1.SyncComputerInventoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	46, // 49: nekode.daemon.v1.AcquireStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	47, // 50: nekode.daemon.v1.AcquireStartPermitResponse.permit_lease:type_name -> nekode.daemon.v1.Lease
-	46, // 51: nekode.daemon.v1.ReleaseStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	52, // [52:52] is the sub-list for method output_type
-	52, // [52:52] is the sub-list for method input_type
-	52, // [52:52] is the sub-list for extension type_name
-	52, // [52:52] is the sub-list for extension extendee
-	0,  // [0:52] is the sub-list for field type_name
+	47, // 0: nekode.daemon.v1.RuntimeProfile.env:type_name -> nekode.daemon.v1.EnvVar
+	48, // 1: nekode.daemon.v1.RuntimeProfile.skills:type_name -> nekode.daemon.v1.SkillRecord
+	49, // 2: nekode.daemon.v1.RuntimeProfile.capabilities:type_name -> nekode.daemon.v1.Capability
+	49, // 3: nekode.daemon.v1.Runtime.capabilities:type_name -> nekode.daemon.v1.Capability
+	6,  // 4: nekode.daemon.v1.Runtime.runtime_profile:type_name -> nekode.daemon.v1.RuntimeProfile
+	5,  // 5: nekode.daemon.v1.ComputerInventory.workspaces:type_name -> nekode.daemon.v1.Workspace
+	7,  // 6: nekode.daemon.v1.ComputerInventory.runtimes:type_name -> nekode.daemon.v1.Runtime
+	50, // 7: nekode.daemon.v1.ComputerInventory.agents:type_name -> nekode.daemon.v1.AgentProfile
+	6,  // 8: nekode.daemon.v1.ComputerInventory.runtime_profiles:type_name -> nekode.daemon.v1.RuntimeProfile
+	0,  // 9: nekode.daemon.v1.ComputerInfo.status:type_name -> nekode.daemon.v1.ComputerStatus
+	49, // 10: nekode.daemon.v1.ComputerInfo.capabilities:type_name -> nekode.daemon.v1.Capability
+	9,  // 11: nekode.daemon.v1.RegisterComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
+	8,  // 12: nekode.daemon.v1.RegisterComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
+	51, // 13: nekode.daemon.v1.RegisterComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	52, // 14: nekode.daemon.v1.RegisterComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
+	9,  // 15: nekode.daemon.v1.HeartbeatComputerRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
+	8,  // 16: nekode.daemon.v1.HeartbeatComputerRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
+	53, // 17: nekode.daemon.v1.HeartbeatComputerRequest.agent_statuses:type_name -> nekode.daemon.v1.AgentStatusSnapshot
+	51, // 18: nekode.daemon.v1.HeartbeatComputerRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	52, // 19: nekode.daemon.v1.HeartbeatComputerResponse.lease:type_name -> nekode.daemon.v1.Lease
+	1,  // 20: nekode.daemon.v1.Run.state:type_name -> nekode.daemon.v1.RunState
+	2,  // 21: nekode.daemon.v1.RunStep.kind:type_name -> nekode.daemon.v1.RunStepKind
+	3,  // 22: nekode.daemon.v1.RunStep.status:type_name -> nekode.daemon.v1.RunStepStatus
+	54, // 23: nekode.daemon.v1.FetchAssignedRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	14, // 24: nekode.daemon.v1.FetchAssignedRunsResponse.runs:type_name -> nekode.daemon.v1.Run
+	54, // 25: nekode.daemon.v1.FetchAssignedRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	1,  // 26: nekode.daemon.v1.UpdateRunStatusRequest.state:type_name -> nekode.daemon.v1.RunState
+	51, // 27: nekode.daemon.v1.UpdateRunStatusRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	14, // 28: nekode.daemon.v1.UpdateRunStatusResponse.run:type_name -> nekode.daemon.v1.Run
+	51, // 29: nekode.daemon.v1.RenewRunLeaseRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	14, // 30: nekode.daemon.v1.RenewRunLeaseResponse.run:type_name -> nekode.daemon.v1.Run
+	52, // 31: nekode.daemon.v1.RenewRunLeaseResponse.lease:type_name -> nekode.daemon.v1.Lease
+	15, // 32: nekode.daemon.v1.AppendRunStepRequest.step:type_name -> nekode.daemon.v1.RunStep
+	51, // 33: nekode.daemon.v1.AppendRunStepRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	15, // 34: nekode.daemon.v1.AppendRunStepResponse.step:type_name -> nekode.daemon.v1.RunStep
+	54, // 35: nekode.daemon.v1.ListRunsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	14, // 36: nekode.daemon.v1.ListRunsResponse.runs:type_name -> nekode.daemon.v1.Run
+	54, // 37: nekode.daemon.v1.ListRunsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	14, // 38: nekode.daemon.v1.GetRunResponse.run:type_name -> nekode.daemon.v1.Run
+	15, // 39: nekode.daemon.v1.GetRunResponse.steps:type_name -> nekode.daemon.v1.RunStep
+	54, // 40: nekode.daemon.v1.ListWorkspaceTreeRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	28, // 41: nekode.daemon.v1.ListWorkspaceTreeResponse.entries:type_name -> nekode.daemon.v1.WorkspaceTreeEntry
+	54, // 42: nekode.daemon.v1.ListWorkspaceTreeResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	4,  // 43: nekode.daemon.v1.McpResourceSubscription.status:type_name -> nekode.daemon.v1.McpResourceSubscriptionStatus
+	33, // 44: nekode.daemon.v1.SubscribeMcpResourceRequest.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
+	51, // 45: nekode.daemon.v1.SubscribeMcpResourceRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	33, // 46: nekode.daemon.v1.SubscribeMcpResourceResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
+	51, // 47: nekode.daemon.v1.CancelMcpResourceSubscriptionRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	33, // 48: nekode.daemon.v1.CancelMcpResourceSubscriptionResponse.subscription:type_name -> nekode.daemon.v1.McpResourceSubscription
+	54, // 49: nekode.daemon.v1.ListMcpResourceUpdatesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	34, // 50: nekode.daemon.v1.ListMcpResourceUpdatesResponse.updates:type_name -> nekode.daemon.v1.McpResourceUpdate
+	54, // 51: nekode.daemon.v1.ListMcpResourceUpdatesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	9,  // 52: nekode.daemon.v1.SyncComputerInventoryRequest.info:type_name -> nekode.daemon.v1.ComputerInfo
+	8,  // 53: nekode.daemon.v1.SyncComputerInventoryRequest.inventory:type_name -> nekode.daemon.v1.ComputerInventory
+	51, // 54: nekode.daemon.v1.SyncComputerInventoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	51, // 55: nekode.daemon.v1.AcquireStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	52, // 56: nekode.daemon.v1.AcquireStartPermitResponse.permit_lease:type_name -> nekode.daemon.v1.Lease
+	51, // 57: nekode.daemon.v1.ReleaseStartPermitRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	58, // [58:58] is the sub-list for method output_type
+	58, // [58:58] is the sub-list for method input_type
+	58, // [58:58] is the sub-list for extension type_name
+	58, // [58:58] is the sub-list for extension extendee
+	0,  // [0:58] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_runtime_proto_init() }
@@ -3814,13 +4249,14 @@ func file_nekode_daemon_v1_runtime_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_runtime_proto_rawDesc), len(file_nekode_daemon_v1_runtime_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      5,
 			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_runtime_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_runtime_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_runtime_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_runtime_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_runtime_proto = out.File

@@ -21,22 +21,112 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CollaborationEventKind is the closed routing taxonomy for replay/subscribe
+// events visible to collaboration clients. The oneof payload is authoritative;
+// kind is a routing hint and must match the payload type when set.
+type CollaborationEventKind int32
+
+const (
+	// Event kind is omitted or unknown.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_UNSPECIFIED CollaborationEventKind = 0
+	// A collaboration message changed.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_MESSAGE CollaborationEventKind = 1
+	// An activity record was logged.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_ACTIVITY CollaborationEventKind = 2
+	// A task changed.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_TASK CollaborationEventKind = 3
+	// A reminder changed or fired.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_REMINDER CollaborationEventKind = 4
+	// A coordination record changed.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_COORDINATION CollaborationEventKind = 5
+	// A server-visible memory record changed.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_MEMORY CollaborationEventKind = 6
+	// A run changed.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_RUN CollaborationEventKind = 7
+	// A run step changed.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_RUN_STEP CollaborationEventKind = 8
+	// An attachment changed; attachment_id identifies the attachment.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_ATTACHMENT CollaborationEventKind = 9
+	// Keepalive ping for long-lived subscriptions.
+	CollaborationEventKind_COLLABORATION_EVENT_KIND_PING CollaborationEventKind = 10
+)
+
+// Enum value maps for CollaborationEventKind.
+var (
+	CollaborationEventKind_name = map[int32]string{
+		0:  "COLLABORATION_EVENT_KIND_UNSPECIFIED",
+		1:  "COLLABORATION_EVENT_KIND_MESSAGE",
+		2:  "COLLABORATION_EVENT_KIND_ACTIVITY",
+		3:  "COLLABORATION_EVENT_KIND_TASK",
+		4:  "COLLABORATION_EVENT_KIND_REMINDER",
+		5:  "COLLABORATION_EVENT_KIND_COORDINATION",
+		6:  "COLLABORATION_EVENT_KIND_MEMORY",
+		7:  "COLLABORATION_EVENT_KIND_RUN",
+		8:  "COLLABORATION_EVENT_KIND_RUN_STEP",
+		9:  "COLLABORATION_EVENT_KIND_ATTACHMENT",
+		10: "COLLABORATION_EVENT_KIND_PING",
+	}
+	CollaborationEventKind_value = map[string]int32{
+		"COLLABORATION_EVENT_KIND_UNSPECIFIED":  0,
+		"COLLABORATION_EVENT_KIND_MESSAGE":      1,
+		"COLLABORATION_EVENT_KIND_ACTIVITY":     2,
+		"COLLABORATION_EVENT_KIND_TASK":         3,
+		"COLLABORATION_EVENT_KIND_REMINDER":     4,
+		"COLLABORATION_EVENT_KIND_COORDINATION": 5,
+		"COLLABORATION_EVENT_KIND_MEMORY":       6,
+		"COLLABORATION_EVENT_KIND_RUN":          7,
+		"COLLABORATION_EVENT_KIND_RUN_STEP":     8,
+		"COLLABORATION_EVENT_KIND_ATTACHMENT":   9,
+		"COLLABORATION_EVENT_KIND_PING":         10,
+	}
+)
+
+func (x CollaborationEventKind) Enum() *CollaborationEventKind {
+	p := new(CollaborationEventKind)
+	*p = x
+	return p
+}
+
+func (x CollaborationEventKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CollaborationEventKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_activity_proto_enumTypes[0].Descriptor()
+}
+
+func (CollaborationEventKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_activity_proto_enumTypes[0]
+}
+
+func (x CollaborationEventKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CollaborationEventKind.Descriptor instead.
+func (CollaborationEventKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_activity_proto_rawDescGZIP(), []int{0}
+}
+
 type ActivityRecord struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	ActivityId           string                 `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
-	Target               string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	AgentId              string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Kind                 string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
-	Summary              string                 `protobuf:"bytes,5,opt,name=summary,proto3" json:"summary,omitempty"`
-	Detail               string                 `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
-	CreatedTimeUnix      int64                  `protobuf:"varint,7,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
-	RunId                string                 `protobuf:"bytes,8,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	StepId               string                 `protobuf:"bytes,9,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
-	CoordinationRecordId string                 `protobuf:"bytes,10,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
-	MemoryRecordId       string                 `protobuf:"bytes,11,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
-	Sequence             int64                  `protobuf:"varint,12,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	AggregateId          string                 `protobuf:"bytes,13,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
-	ProtocolVersion      int32                  `protobuf:"varint,14,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ActivityId string                 `protobuf:"bytes,1,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
+	Target     string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	AgentId    string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// Open activity taxonomy. Canonical values include message_received,
+	// task_claimed, command_run, test_run, review_completed, memory_updated, and
+	// custom integration-specific names.
+	Kind                 string `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	Summary              string `protobuf:"bytes,5,opt,name=summary,proto3" json:"summary,omitempty"`
+	Detail               string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
+	CreatedTimeUnix      int64  `protobuf:"varint,7,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
+	RunId                string `protobuf:"bytes,8,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	StepId               string `protobuf:"bytes,9,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
+	CoordinationRecordId string `protobuf:"bytes,10,opt,name=coordination_record_id,json=coordinationRecordId,proto3" json:"coordination_record_id,omitempty"`
+	MemoryRecordId       string `protobuf:"bytes,11,opt,name=memory_record_id,json=memoryRecordId,proto3" json:"memory_record_id,omitempty"`
+	Sequence             int64  `protobuf:"varint,12,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId          string `protobuf:"bytes,13,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	ProtocolVersion      int32  `protobuf:"varint,14,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -170,17 +260,18 @@ func (x *ActivityRecord) GetProtocolVersion() int32 {
 }
 
 type LogActivityRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Target         string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Kind           string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
-	Summary        string                 `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
-	Detail         string                 `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
-	RunId          string                 `protobuf:"bytes,6,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	StepId         string                 `protobuf:"bytes,7,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
-	RequestId      string                 `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey string                 `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context        *RequestContext        `protobuf:"bytes,10,opt,name=context,proto3" json:"context,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Target  string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	AgentId string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// Open activity taxonomy; use the same canonical values as ActivityRecord.kind.
+	Kind           string          `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Summary        string          `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
+	Detail         string          `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
+	RunId          string          `protobuf:"bytes,6,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	StepId         string          `protobuf:"bytes,7,opt,name=step_id,json=stepId,proto3" json:"step_id,omitempty"`
+	RequestId      string          `protobuf:"bytes,8,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey string          `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context        *RequestContext `protobuf:"bytes,10,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -450,9 +541,15 @@ func (x *ListActivityResponse) GetNextCursor() *EventCursor {
 }
 
 type ListEventsSinceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *EventCursor           `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Cursor *EventCursor           `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Limit  uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optional scope filters. Empty means server default visibility for caller.
+	Scopes []*EventScope `protobuf:"bytes,6,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	// Optional kind filters for clients that only need a subset of the stream.
+	Kinds []CollaborationEventKind `protobuf:"varint,7,rep,packed,name=kinds,proto3,enum=nekode.daemon.v1.CollaborationEventKind" json:"kinds,omitempty"`
+	// Optional operation filters for cache/projection subscribers.
+	Operations    []EventOperation `protobuf:"varint,8,rep,packed,name=operations,proto3,enum=nekode.daemon.v1.EventOperation" json:"operations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -501,11 +598,32 @@ func (x *ListEventsSinceRequest) GetLimit() uint32 {
 	return 0
 }
 
+func (x *ListEventsSinceRequest) GetScopes() []*EventScope {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+func (x *ListEventsSinceRequest) GetKinds() []CollaborationEventKind {
+	if x != nil {
+		return x.Kinds
+	}
+	return nil
+}
+
+func (x *ListEventsSinceRequest) GetOperations() []EventOperation {
+	if x != nil {
+		return x.Operations
+	}
+	return nil
+}
+
 type CollaborationEvent struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	EventId              string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
 	Target               string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	Kind                 string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Kind                 CollaborationEventKind `protobuf:"varint,3,opt,name=kind,proto3,enum=nekode.daemon.v1.CollaborationEventKind" json:"kind,omitempty"`
 	MessageId            string                 `protobuf:"bytes,4,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	ActivityId           string                 `protobuf:"bytes,5,opt,name=activity_id,json=activityId,proto3" json:"activity_id,omitempty"`
 	TaskId               string                 `protobuf:"bytes,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -518,6 +636,12 @@ type CollaborationEvent struct {
 	AggregateId          string                 `protobuf:"bytes,13,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
 	ProtocolVersion      int32                  `protobuf:"varint,14,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
 	SourceEndpointId     string                 `protobuf:"bytes,15,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
+	// Fine-grained change verb for cache invalidation and UI routing.
+	Operation EventOperation `protobuf:"varint,16,opt,name=operation,proto3,enum=nekode.daemon.v1.EventOperation" json:"operation,omitempty"`
+	// Primary fanout/projection scope for this event.
+	Scope *EventScope `protobuf:"bytes,17,opt,name=scope,proto3" json:"scope,omitempty"`
+	// Workspace id when the event belongs to a workspace-bound projection.
+	WorkspaceId string `protobuf:"bytes,18,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*CollaborationEvent_Message
@@ -577,11 +701,11 @@ func (x *CollaborationEvent) GetTarget() string {
 	return ""
 }
 
-func (x *CollaborationEvent) GetKind() string {
+func (x *CollaborationEvent) GetKind() CollaborationEventKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return CollaborationEventKind_COLLABORATION_EVENT_KIND_UNSPECIFIED
 }
 
 func (x *CollaborationEvent) GetMessageId() string {
@@ -664,6 +788,27 @@ func (x *CollaborationEvent) GetProtocolVersion() int32 {
 func (x *CollaborationEvent) GetSourceEndpointId() string {
 	if x != nil {
 		return x.SourceEndpointId
+	}
+	return ""
+}
+
+func (x *CollaborationEvent) GetOperation() EventOperation {
+	if x != nil {
+		return x.Operation
+	}
+	return EventOperation_EVENT_OPERATION_UNSPECIFIED
+}
+
+func (x *CollaborationEvent) GetScope() *EventScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *CollaborationEvent) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
 	}
 	return ""
 }
@@ -852,12 +997,21 @@ func (x *ListEventsSinceResponse) GetNextCursor() *EventCursor {
 }
 
 type SubscribeActivityRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cursor        *EventCursor           `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Targets       []string               `protobuf:"bytes,4,rep,name=targets,proto3" json:"targets,omitempty"`
-	RequestId     string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Cursor    *EventCursor           `protobuf:"bytes,1,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Targets   []string               `protobuf:"bytes,4,rep,name=targets,proto3" json:"targets,omitempty"`
+	RequestId string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// Optional scope subscriptions. Empty keeps legacy target/caller-scoped behavior.
+	Scopes []*EventScope `protobuf:"bytes,6,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	// Optional event kind filters.
+	Kinds []CollaborationEventKind `protobuf:"varint,7,rep,packed,name=kinds,proto3,enum=nekode.daemon.v1.CollaborationEventKind" json:"kinds,omitempty"`
+	// Optional operation filters.
+	Operations []EventOperation `protobuf:"varint,8,rep,packed,name=operations,proto3,enum=nekode.daemon.v1.EventOperation" json:"operations,omitempty"`
+	// Explicitly request all visible scopes for the caller. Servers may reject
+	// this for unprivileged clients.
+	IncludeAllScopes bool `protobuf:"varint,9,opt,name=include_all_scopes,json=includeAllScopes,proto3" json:"include_all_scopes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *SubscribeActivityRequest) Reset() {
@@ -909,6 +1063,34 @@ func (x *SubscribeActivityRequest) GetRequestId() string {
 		return x.RequestId
 	}
 	return ""
+}
+
+func (x *SubscribeActivityRequest) GetScopes() []*EventScope {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+func (x *SubscribeActivityRequest) GetKinds() []CollaborationEventKind {
+	if x != nil {
+		return x.Kinds
+	}
+	return nil
+}
+
+func (x *SubscribeActivityRequest) GetOperations() []EventOperation {
+	if x != nil {
+		return x.Operations
+	}
+	return nil
+}
+
+func (x *SubscribeActivityRequest) GetIncludeAllScopes() bool {
+	if x != nil {
+		return x.IncludeAllScopes
+	}
+	return false
 }
 
 type AcknowledgeActivityEventsRequest struct {
@@ -1087,15 +1269,20 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"activities\x18\x01 \x03(\v2 .nekode.daemon.v1.ActivityRecordR\n" +
 	"activities\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\x94\x01\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xcc\x02\n" +
 	"\x16ListEventsSinceRequest\x125\n" +
 	"\x06cursor\x18\x01 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\rR\x05limitJ\x04\b\x03\x10\x06R\rfrom_sequenceR\faggregate_idR\n" +
-	"page_token\"\x9c\b\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x124\n" +
+	"\x06scopes\x18\x06 \x03(\v2\x1c.nekode.daemon.v1.EventScopeR\x06scopes\x12>\n" +
+	"\x05kinds\x18\a \x03(\x0e2(.nekode.daemon.v1.CollaborationEventKindR\x05kinds\x12@\n" +
+	"\n" +
+	"operations\x18\b \x03(\x0e2 .nekode.daemon.v1.EventOperationR\n" +
+	"operationsJ\x04\b\x03\x10\x06R\rfrom_sequenceR\faggregate_idR\n" +
+	"page_token\"\xdd\t\n" +
 	"\x12CollaborationEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x1d\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x12<\n" +
+	"\x04kind\x18\x03 \x01(\x0e2(.nekode.daemon.v1.CollaborationEventKindR\x04kind\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x04 \x01(\tR\tmessageId\x12\x1f\n" +
 	"\vactivity_id\x18\x05 \x01(\tR\n" +
@@ -1110,7 +1297,10 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\bsequence\x18\f \x01(\x03R\bsequence\x12!\n" +
 	"\faggregate_id\x18\r \x01(\tR\vaggregateId\x12)\n" +
 	"\x10protocol_version\x18\x0e \x01(\x05R\x0fprotocolVersion\x12,\n" +
-	"\x12source_endpoint_id\x18\x0f \x01(\tR\x10sourceEndpointId\x12B\n" +
+	"\x12source_endpoint_id\x18\x0f \x01(\tR\x10sourceEndpointId\x12>\n" +
+	"\toperation\x18\x10 \x01(\x0e2 .nekode.daemon.v1.EventOperationR\toperation\x122\n" +
+	"\x05scope\x18\x11 \x01(\v2\x1c.nekode.daemon.v1.EventScopeR\x05scope\x12!\n" +
+	"\fworkspace_id\x18\x12 \x01(\tR\vworkspaceId\x12B\n" +
 	"\amessage\x18\x14 \x01(\v2&.nekode.daemon.v1.CollaborationMessageH\x00R\amessage\x12>\n" +
 	"\bactivity\x18\x15 \x01(\v2 .nekode.daemon.v1.ActivityRecordH\x00R\bactivity\x12,\n" +
 	"\x04task\x18\x16 \x01(\v2\x16.nekode.daemon.v1.TaskH\x00R\x04task\x12>\n" +
@@ -1123,12 +1313,18 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\x17ListEventsSinceResponse\x12<\n" +
 	"\x06events\x18\x01 \x03(\v2$.nekode.daemon.v1.CollaborationEventR\x06events\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xb3\x01\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\x99\x03\n" +
 	"\x18SubscribeActivityRequest\x125\n" +
 	"\x06cursor\x18\x01 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x18\n" +
 	"\atargets\x18\x04 \x03(\tR\atargets\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x05 \x01(\tR\trequestIdJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\rfrom_sequenceR\faggregate_id\"\xfa\x01\n" +
+	"request_id\x18\x05 \x01(\tR\trequestId\x124\n" +
+	"\x06scopes\x18\x06 \x03(\v2\x1c.nekode.daemon.v1.EventScopeR\x06scopes\x12>\n" +
+	"\x05kinds\x18\a \x03(\x0e2(.nekode.daemon.v1.CollaborationEventKindR\x05kinds\x12@\n" +
+	"\n" +
+	"operations\x18\b \x03(\x0e2 .nekode.daemon.v1.EventOperationR\n" +
+	"operations\x12,\n" +
+	"\x12include_all_scopes\x18\t \x01(\bR\x10includeAllScopesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\rfrom_sequenceR\faggregate_id\"\xfa\x01\n" +
 	" AcknowledgeActivityEventsRequest\x12\x1b\n" +
 	"\tevent_ids\x18\x01 \x03(\tR\beventIds\x125\n" +
 	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12\x1d\n" +
@@ -1138,7 +1334,20 @@ const file_nekode_daemon_v1_activity_proto_rawDesc = "" +
 	"\acontext\x18\x05 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"v\n" +
 	"!AcknowledgeActivityEventsResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x125\n" +
-	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursorB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor*\xbe\x03\n" +
+	"\x16CollaborationEventKind\x12(\n" +
+	"$COLLABORATION_EVENT_KIND_UNSPECIFIED\x10\x00\x12$\n" +
+	" COLLABORATION_EVENT_KIND_MESSAGE\x10\x01\x12%\n" +
+	"!COLLABORATION_EVENT_KIND_ACTIVITY\x10\x02\x12!\n" +
+	"\x1dCOLLABORATION_EVENT_KIND_TASK\x10\x03\x12%\n" +
+	"!COLLABORATION_EVENT_KIND_REMINDER\x10\x04\x12)\n" +
+	"%COLLABORATION_EVENT_KIND_COORDINATION\x10\x05\x12#\n" +
+	"\x1fCOLLABORATION_EVENT_KIND_MEMORY\x10\x06\x12 \n" +
+	"\x1cCOLLABORATION_EVENT_KIND_RUN\x10\a\x12%\n" +
+	"!COLLABORATION_EVENT_KIND_RUN_STEP\x10\b\x12'\n" +
+	"#COLLABORATION_EVENT_KIND_ATTACHMENT\x10\t\x12!\n" +
+	"\x1dCOLLABORATION_EVENT_KIND_PING\x10\n" +
+	"B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_activity_proto_rawDescOnce sync.Once
@@ -1152,55 +1361,68 @@ func file_nekode_daemon_v1_activity_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_activity_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_activity_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_nekode_daemon_v1_activity_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_nekode_daemon_v1_activity_proto_goTypes = []any{
-	(*ActivityRecord)(nil),                    // 0: nekode.daemon.v1.ActivityRecord
-	(*LogActivityRequest)(nil),                // 1: nekode.daemon.v1.LogActivityRequest
-	(*LogActivityResponse)(nil),               // 2: nekode.daemon.v1.LogActivityResponse
-	(*ListActivityRequest)(nil),               // 3: nekode.daemon.v1.ListActivityRequest
-	(*ListActivityResponse)(nil),              // 4: nekode.daemon.v1.ListActivityResponse
-	(*ListEventsSinceRequest)(nil),            // 5: nekode.daemon.v1.ListEventsSinceRequest
-	(*CollaborationEvent)(nil),                // 6: nekode.daemon.v1.CollaborationEvent
-	(*ListEventsSinceResponse)(nil),           // 7: nekode.daemon.v1.ListEventsSinceResponse
-	(*SubscribeActivityRequest)(nil),          // 8: nekode.daemon.v1.SubscribeActivityRequest
-	(*AcknowledgeActivityEventsRequest)(nil),  // 9: nekode.daemon.v1.AcknowledgeActivityEventsRequest
-	(*AcknowledgeActivityEventsResponse)(nil), // 10: nekode.daemon.v1.AcknowledgeActivityEventsResponse
-	(*RequestContext)(nil),                    // 11: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),                       // 12: nekode.daemon.v1.EventCursor
-	(*CollaborationMessage)(nil),              // 13: nekode.daemon.v1.CollaborationMessage
-	(*Task)(nil),                              // 14: nekode.daemon.v1.Task
-	(*ReminderRecord)(nil),                    // 15: nekode.daemon.v1.ReminderRecord
-	(*CoordinationRecord)(nil),                // 16: nekode.daemon.v1.CoordinationRecord
-	(*MemoryRecord)(nil),                      // 17: nekode.daemon.v1.MemoryRecord
-	(*Run)(nil),                               // 18: nekode.daemon.v1.Run
-	(*RunStep)(nil),                           // 19: nekode.daemon.v1.RunStep
+	(CollaborationEventKind)(0),               // 0: nekode.daemon.v1.CollaborationEventKind
+	(*ActivityRecord)(nil),                    // 1: nekode.daemon.v1.ActivityRecord
+	(*LogActivityRequest)(nil),                // 2: nekode.daemon.v1.LogActivityRequest
+	(*LogActivityResponse)(nil),               // 3: nekode.daemon.v1.LogActivityResponse
+	(*ListActivityRequest)(nil),               // 4: nekode.daemon.v1.ListActivityRequest
+	(*ListActivityResponse)(nil),              // 5: nekode.daemon.v1.ListActivityResponse
+	(*ListEventsSinceRequest)(nil),            // 6: nekode.daemon.v1.ListEventsSinceRequest
+	(*CollaborationEvent)(nil),                // 7: nekode.daemon.v1.CollaborationEvent
+	(*ListEventsSinceResponse)(nil),           // 8: nekode.daemon.v1.ListEventsSinceResponse
+	(*SubscribeActivityRequest)(nil),          // 9: nekode.daemon.v1.SubscribeActivityRequest
+	(*AcknowledgeActivityEventsRequest)(nil),  // 10: nekode.daemon.v1.AcknowledgeActivityEventsRequest
+	(*AcknowledgeActivityEventsResponse)(nil), // 11: nekode.daemon.v1.AcknowledgeActivityEventsResponse
+	(*RequestContext)(nil),                    // 12: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                       // 13: nekode.daemon.v1.EventCursor
+	(*EventScope)(nil),                        // 14: nekode.daemon.v1.EventScope
+	(EventOperation)(0),                       // 15: nekode.daemon.v1.EventOperation
+	(*CollaborationMessage)(nil),              // 16: nekode.daemon.v1.CollaborationMessage
+	(*Task)(nil),                              // 17: nekode.daemon.v1.Task
+	(*ReminderRecord)(nil),                    // 18: nekode.daemon.v1.ReminderRecord
+	(*CoordinationRecord)(nil),                // 19: nekode.daemon.v1.CoordinationRecord
+	(*MemoryRecord)(nil),                      // 20: nekode.daemon.v1.MemoryRecord
+	(*Run)(nil),                               // 21: nekode.daemon.v1.Run
+	(*RunStep)(nil),                           // 22: nekode.daemon.v1.RunStep
 }
 var file_nekode_daemon_v1_activity_proto_depIdxs = []int32{
-	11, // 0: nekode.daemon.v1.LogActivityRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 1: nekode.daemon.v1.LogActivityResponse.activity:type_name -> nekode.daemon.v1.ActivityRecord
-	12, // 2: nekode.daemon.v1.ListActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	0,  // 3: nekode.daemon.v1.ListActivityResponse.activities:type_name -> nekode.daemon.v1.ActivityRecord
-	12, // 4: nekode.daemon.v1.ListActivityResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	12, // 5: nekode.daemon.v1.ListEventsSinceRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	13, // 6: nekode.daemon.v1.CollaborationEvent.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	0,  // 7: nekode.daemon.v1.CollaborationEvent.activity:type_name -> nekode.daemon.v1.ActivityRecord
-	14, // 8: nekode.daemon.v1.CollaborationEvent.task:type_name -> nekode.daemon.v1.Task
-	15, // 9: nekode.daemon.v1.CollaborationEvent.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	16, // 10: nekode.daemon.v1.CollaborationEvent.coordination_record:type_name -> nekode.daemon.v1.CoordinationRecord
-	17, // 11: nekode.daemon.v1.CollaborationEvent.memory_record:type_name -> nekode.daemon.v1.MemoryRecord
-	18, // 12: nekode.daemon.v1.CollaborationEvent.run:type_name -> nekode.daemon.v1.Run
-	19, // 13: nekode.daemon.v1.CollaborationEvent.run_step:type_name -> nekode.daemon.v1.RunStep
-	6,  // 14: nekode.daemon.v1.ListEventsSinceResponse.events:type_name -> nekode.daemon.v1.CollaborationEvent
-	12, // 15: nekode.daemon.v1.ListEventsSinceResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	12, // 16: nekode.daemon.v1.SubscribeActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	12, // 17: nekode.daemon.v1.AcknowledgeActivityEventsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	11, // 18: nekode.daemon.v1.AcknowledgeActivityEventsRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	12, // 19: nekode.daemon.v1.AcknowledgeActivityEventsResponse.cursor:type_name -> nekode.daemon.v1.EventCursor
-	20, // [20:20] is the sub-list for method output_type
-	20, // [20:20] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	12, // 0: nekode.daemon.v1.LogActivityRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	1,  // 1: nekode.daemon.v1.LogActivityResponse.activity:type_name -> nekode.daemon.v1.ActivityRecord
+	13, // 2: nekode.daemon.v1.ListActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	1,  // 3: nekode.daemon.v1.ListActivityResponse.activities:type_name -> nekode.daemon.v1.ActivityRecord
+	13, // 4: nekode.daemon.v1.ListActivityResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	13, // 5: nekode.daemon.v1.ListEventsSinceRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	14, // 6: nekode.daemon.v1.ListEventsSinceRequest.scopes:type_name -> nekode.daemon.v1.EventScope
+	0,  // 7: nekode.daemon.v1.ListEventsSinceRequest.kinds:type_name -> nekode.daemon.v1.CollaborationEventKind
+	15, // 8: nekode.daemon.v1.ListEventsSinceRequest.operations:type_name -> nekode.daemon.v1.EventOperation
+	0,  // 9: nekode.daemon.v1.CollaborationEvent.kind:type_name -> nekode.daemon.v1.CollaborationEventKind
+	15, // 10: nekode.daemon.v1.CollaborationEvent.operation:type_name -> nekode.daemon.v1.EventOperation
+	14, // 11: nekode.daemon.v1.CollaborationEvent.scope:type_name -> nekode.daemon.v1.EventScope
+	16, // 12: nekode.daemon.v1.CollaborationEvent.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	1,  // 13: nekode.daemon.v1.CollaborationEvent.activity:type_name -> nekode.daemon.v1.ActivityRecord
+	17, // 14: nekode.daemon.v1.CollaborationEvent.task:type_name -> nekode.daemon.v1.Task
+	18, // 15: nekode.daemon.v1.CollaborationEvent.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	19, // 16: nekode.daemon.v1.CollaborationEvent.coordination_record:type_name -> nekode.daemon.v1.CoordinationRecord
+	20, // 17: nekode.daemon.v1.CollaborationEvent.memory_record:type_name -> nekode.daemon.v1.MemoryRecord
+	21, // 18: nekode.daemon.v1.CollaborationEvent.run:type_name -> nekode.daemon.v1.Run
+	22, // 19: nekode.daemon.v1.CollaborationEvent.run_step:type_name -> nekode.daemon.v1.RunStep
+	7,  // 20: nekode.daemon.v1.ListEventsSinceResponse.events:type_name -> nekode.daemon.v1.CollaborationEvent
+	13, // 21: nekode.daemon.v1.ListEventsSinceResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	13, // 22: nekode.daemon.v1.SubscribeActivityRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	14, // 23: nekode.daemon.v1.SubscribeActivityRequest.scopes:type_name -> nekode.daemon.v1.EventScope
+	0,  // 24: nekode.daemon.v1.SubscribeActivityRequest.kinds:type_name -> nekode.daemon.v1.CollaborationEventKind
+	15, // 25: nekode.daemon.v1.SubscribeActivityRequest.operations:type_name -> nekode.daemon.v1.EventOperation
+	13, // 26: nekode.daemon.v1.AcknowledgeActivityEventsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	12, // 27: nekode.daemon.v1.AcknowledgeActivityEventsRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	13, // 28: nekode.daemon.v1.AcknowledgeActivityEventsResponse.cursor:type_name -> nekode.daemon.v1.EventCursor
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_activity_proto_init() }
@@ -1230,13 +1452,14 @@ func file_nekode_daemon_v1_activity_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_activity_proto_rawDesc), len(file_nekode_daemon_v1_activity_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_activity_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_activity_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_activity_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_activity_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_activity_proto = out.File

@@ -26,11 +26,11 @@ type MemoryRecord struct {
 	MemoryId         string                 `protobuf:"bytes,1,opt,name=memory_id,json=memoryId,proto3" json:"memory_id,omitempty"`
 	AgentId          string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Target           string                 `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
-	Scope            string                 `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"` // global | channel | thread | task | user | runtime
-	Path             string                 `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`   // MEMORY.md, notes/channels.md, or server logical path
+	Scope            PermissionScope        `protobuf:"varint,4,opt,name=scope,proto3,enum=nekode.daemon.v1.PermissionScope" json:"scope,omitempty"`
+	Path             string                 `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"` // MEMORY.md, notes/channels.md, or server logical path
 	Title            string                 `protobuf:"bytes,6,opt,name=title,proto3" json:"title,omitempty"`
 	Content          string                 `protobuf:"bytes,7,opt,name=content,proto3" json:"content,omitempty"`
-	ContentFormat    string                 `protobuf:"bytes,8,opt,name=content_format,json=contentFormat,proto3" json:"content_format,omitempty"` // markdown | json | text
+	ContentFormat    ContentFormat          `protobuf:"varint,8,opt,name=content_format,json=contentFormat,proto3,enum=nekode.daemon.v1.ContentFormat" json:"content_format,omitempty"`
 	Version          int64                  `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
 	Tags             []string               `protobuf:"bytes,10,rep,name=tags,proto3" json:"tags,omitempty"`
 	SourceMessageIds []string               `protobuf:"bytes,11,rep,name=source_message_ids,json=sourceMessageIds,proto3" json:"source_message_ids,omitempty"`
@@ -95,11 +95,11 @@ func (x *MemoryRecord) GetTarget() string {
 	return ""
 }
 
-func (x *MemoryRecord) GetScope() string {
+func (x *MemoryRecord) GetScope() PermissionScope {
 	if x != nil {
 		return x.Scope
 	}
-	return ""
+	return PermissionScope_PERMISSION_SCOPE_UNSPECIFIED
 }
 
 func (x *MemoryRecord) GetPath() string {
@@ -123,11 +123,11 @@ func (x *MemoryRecord) GetContent() string {
 	return ""
 }
 
-func (x *MemoryRecord) GetContentFormat() string {
+func (x *MemoryRecord) GetContentFormat() ContentFormat {
 	if x != nil {
 		return x.ContentFormat
 	}
-	return ""
+	return ContentFormat_CONTENT_FORMAT_UNSPECIFIED
 }
 
 func (x *MemoryRecord) GetVersion() int64 {
@@ -190,7 +190,7 @@ type ListAgentMemoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	Scope         string                 `protobuf:"bytes,3,opt,name=scope,proto3" json:"scope,omitempty"`
+	Scope         PermissionScope        `protobuf:"varint,3,opt,name=scope,proto3,enum=nekode.daemon.v1.PermissionScope" json:"scope,omitempty"`
 	Limit         uint32                 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        *EventCursor           `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -241,11 +241,11 @@ func (x *ListAgentMemoryRequest) GetTarget() string {
 	return ""
 }
 
-func (x *ListAgentMemoryRequest) GetScope() string {
+func (x *ListAgentMemoryRequest) GetScope() PermissionScope {
 	if x != nil {
 		return x.Scope
 	}
-	return ""
+	return PermissionScope_PERMISSION_SCOPE_UNSPECIFIED
 }
 
 func (x *ListAgentMemoryRequest) GetLimit() uint32 {
@@ -454,16 +454,16 @@ var File_nekode_daemon_v1_memory_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\n" +
-	"\x1dnekode/daemon/v1/memory.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\x84\x04\n" +
+	"\x1dnekode/daemon/v1/memory.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xc8\x04\n" +
 	"\fMemoryRecord\x12\x1b\n" +
 	"\tmemory_id\x18\x01 \x01(\tR\bmemoryId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x16\n" +
-	"\x06target\x18\x03 \x01(\tR\x06target\x12\x14\n" +
-	"\x05scope\x18\x04 \x01(\tR\x05scope\x12\x12\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\x127\n" +
+	"\x05scope\x18\x04 \x01(\x0e2!.nekode.daemon.v1.PermissionScopeR\x05scope\x12\x12\n" +
 	"\x04path\x18\x05 \x01(\tR\x04path\x12\x14\n" +
 	"\x05title\x18\x06 \x01(\tR\x05title\x12\x18\n" +
-	"\acontent\x18\a \x01(\tR\acontent\x12%\n" +
-	"\x0econtent_format\x18\b \x01(\tR\rcontentFormat\x12\x18\n" +
+	"\acontent\x18\a \x01(\tR\acontent\x12F\n" +
+	"\x0econtent_format\x18\b \x01(\x0e2\x1f.nekode.daemon.v1.ContentFormatR\rcontentFormat\x12\x18\n" +
 	"\aversion\x18\t \x01(\x03R\aversion\x12\x12\n" +
 	"\x04tags\x18\n" +
 	" \x03(\tR\x04tags\x12,\n" +
@@ -473,11 +473,11 @@ const file_nekode_daemon_v1_memory_proto_rawDesc = "" +
 	"\bchecksum\x18\x0e \x01(\tR\bchecksum\x12\x1d\n" +
 	"\n" +
 	"local_only\x18\x0f \x01(\bR\tlocalOnly\x12,\n" +
-	"\x12content_size_bytes\x18\x10 \x01(\rR\x10contentSizeBytesJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x01\n" +
+	"\x12content_size_bytes\x18\x10 \x01(\rR\x10contentSizeBytesJ\x06\b\xe8\a\x10\xd0\x0f\"\xd1\x01\n" +
 	"\x16ListAgentMemoryRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target\x12\x14\n" +
-	"\x05scope\x18\x03 \x01(\tR\x05scope\x12\x14\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x127\n" +
+	"\x05scope\x18\x03 \x01(\x0e2!.nekode.daemon.v1.PermissionScopeR\x05scope\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\rR\x05limit\x125\n" +
 	"\x06cursor\x18\x05 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x93\x01\n" +
 	"\x17ListAgentMemoryResponse\x128\n" +
@@ -515,21 +515,26 @@ var file_nekode_daemon_v1_memory_proto_goTypes = []any{
 	(*ListAgentMemoryResponse)(nil),   // 2: nekode.daemon.v1.ListAgentMemoryResponse
 	(*UpsertAgentMemoryRequest)(nil),  // 3: nekode.daemon.v1.UpsertAgentMemoryRequest
 	(*UpsertAgentMemoryResponse)(nil), // 4: nekode.daemon.v1.UpsertAgentMemoryResponse
-	(*EventCursor)(nil),               // 5: nekode.daemon.v1.EventCursor
-	(*RequestContext)(nil),            // 6: nekode.daemon.v1.RequestContext
+	(PermissionScope)(0),              // 5: nekode.daemon.v1.PermissionScope
+	(ContentFormat)(0),                // 6: nekode.daemon.v1.ContentFormat
+	(*EventCursor)(nil),               // 7: nekode.daemon.v1.EventCursor
+	(*RequestContext)(nil),            // 8: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_memory_proto_depIdxs = []int32{
-	5, // 0: nekode.daemon.v1.ListAgentMemoryRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	0, // 1: nekode.daemon.v1.ListAgentMemoryResponse.records:type_name -> nekode.daemon.v1.MemoryRecord
-	5, // 2: nekode.daemon.v1.ListAgentMemoryResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	0, // 3: nekode.daemon.v1.UpsertAgentMemoryRequest.record:type_name -> nekode.daemon.v1.MemoryRecord
-	6, // 4: nekode.daemon.v1.UpsertAgentMemoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0, // 5: nekode.daemon.v1.UpsertAgentMemoryResponse.record:type_name -> nekode.daemon.v1.MemoryRecord
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	5, // 0: nekode.daemon.v1.MemoryRecord.scope:type_name -> nekode.daemon.v1.PermissionScope
+	6, // 1: nekode.daemon.v1.MemoryRecord.content_format:type_name -> nekode.daemon.v1.ContentFormat
+	5, // 2: nekode.daemon.v1.ListAgentMemoryRequest.scope:type_name -> nekode.daemon.v1.PermissionScope
+	7, // 3: nekode.daemon.v1.ListAgentMemoryRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	0, // 4: nekode.daemon.v1.ListAgentMemoryResponse.records:type_name -> nekode.daemon.v1.MemoryRecord
+	7, // 5: nekode.daemon.v1.ListAgentMemoryResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	0, // 6: nekode.daemon.v1.UpsertAgentMemoryRequest.record:type_name -> nekode.daemon.v1.MemoryRecord
+	8, // 7: nekode.daemon.v1.UpsertAgentMemoryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	0, // 8: nekode.daemon.v1.UpsertAgentMemoryResponse.record:type_name -> nekode.daemon.v1.MemoryRecord
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_memory_proto_init() }

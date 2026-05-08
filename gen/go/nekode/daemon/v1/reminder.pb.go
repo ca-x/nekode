@@ -21,11 +21,267 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ReminderStatus is the closed lifecycle for a reminder.
+type ReminderStatus int32
+
+const (
+	// Status is omitted or unknown.
+	ReminderStatus_REMINDER_STATUS_UNSPECIFIED ReminderStatus = 0
+	// Reminder is scheduled and can fire.
+	ReminderStatus_REMINDER_STATUS_ACTIVE ReminderStatus = 1
+	// Reminder has fired and is complete.
+	ReminderStatus_REMINDER_STATUS_DONE ReminderStatus = 2
+	// Reminder was canceled.
+	ReminderStatus_REMINDER_STATUS_CANCELED ReminderStatus = 3
+	// Reminder is temporarily paused.
+	ReminderStatus_REMINDER_STATUS_PAUSED ReminderStatus = 4
+	// Reminder failed while firing.
+	ReminderStatus_REMINDER_STATUS_FAILED ReminderStatus = 5
+)
+
+// Enum value maps for ReminderStatus.
+var (
+	ReminderStatus_name = map[int32]string{
+		0: "REMINDER_STATUS_UNSPECIFIED",
+		1: "REMINDER_STATUS_ACTIVE",
+		2: "REMINDER_STATUS_DONE",
+		3: "REMINDER_STATUS_CANCELED",
+		4: "REMINDER_STATUS_PAUSED",
+		5: "REMINDER_STATUS_FAILED",
+	}
+	ReminderStatus_value = map[string]int32{
+		"REMINDER_STATUS_UNSPECIFIED": 0,
+		"REMINDER_STATUS_ACTIVE":      1,
+		"REMINDER_STATUS_DONE":        2,
+		"REMINDER_STATUS_CANCELED":    3,
+		"REMINDER_STATUS_PAUSED":      4,
+		"REMINDER_STATUS_FAILED":      5,
+	}
+)
+
+func (x ReminderStatus) Enum() *ReminderStatus {
+	p := new(ReminderStatus)
+	*p = x
+	return p
+}
+
+func (x ReminderStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReminderStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_reminder_proto_enumTypes[0].Descriptor()
+}
+
+func (ReminderStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_reminder_proto_enumTypes[0]
+}
+
+func (x ReminderStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReminderStatus.Descriptor instead.
+func (ReminderStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_reminder_proto_rawDescGZIP(), []int{0}
+}
+
+// ReminderScheduleKind is the closed set of schedule expression types.
+type ReminderScheduleKind int32
+
+const (
+	// Schedule kind is omitted or unknown.
+	ReminderScheduleKind_REMINDER_SCHEDULE_KIND_UNSPECIFIED ReminderScheduleKind = 0
+	// Cron expression.
+	ReminderScheduleKind_REMINDER_SCHEDULE_KIND_CRON ReminderScheduleKind = 1
+	// Relative interval expression.
+	ReminderScheduleKind_REMINDER_SCHEDULE_KIND_EVERY ReminderScheduleKind = 2
+	// Absolute timestamp expression.
+	ReminderScheduleKind_REMINDER_SCHEDULE_KIND_AT ReminderScheduleKind = 3
+	// RFC 5545 recurrence rule.
+	ReminderScheduleKind_REMINDER_SCHEDULE_KIND_RRULE ReminderScheduleKind = 4
+	// Natural-language schedule captured for later parsing.
+	ReminderScheduleKind_REMINDER_SCHEDULE_KIND_NATURAL ReminderScheduleKind = 5
+)
+
+// Enum value maps for ReminderScheduleKind.
+var (
+	ReminderScheduleKind_name = map[int32]string{
+		0: "REMINDER_SCHEDULE_KIND_UNSPECIFIED",
+		1: "REMINDER_SCHEDULE_KIND_CRON",
+		2: "REMINDER_SCHEDULE_KIND_EVERY",
+		3: "REMINDER_SCHEDULE_KIND_AT",
+		4: "REMINDER_SCHEDULE_KIND_RRULE",
+		5: "REMINDER_SCHEDULE_KIND_NATURAL",
+	}
+	ReminderScheduleKind_value = map[string]int32{
+		"REMINDER_SCHEDULE_KIND_UNSPECIFIED": 0,
+		"REMINDER_SCHEDULE_KIND_CRON":        1,
+		"REMINDER_SCHEDULE_KIND_EVERY":       2,
+		"REMINDER_SCHEDULE_KIND_AT":          3,
+		"REMINDER_SCHEDULE_KIND_RRULE":       4,
+		"REMINDER_SCHEDULE_KIND_NATURAL":     5,
+	}
+)
+
+func (x ReminderScheduleKind) Enum() *ReminderScheduleKind {
+	p := new(ReminderScheduleKind)
+	*p = x
+	return p
+}
+
+func (x ReminderScheduleKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReminderScheduleKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_reminder_proto_enumTypes[1].Descriptor()
+}
+
+func (ReminderScheduleKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_reminder_proto_enumTypes[1]
+}
+
+func (x ReminderScheduleKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReminderScheduleKind.Descriptor instead.
+func (ReminderScheduleKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_reminder_proto_rawDescGZIP(), []int{1}
+}
+
+// ReminderEventType is the closed event taxonomy for reminder lifecycle logs.
+type ReminderEventType int32
+
+const (
+	// Event type is omitted or unknown.
+	ReminderEventType_REMINDER_EVENT_TYPE_UNSPECIFIED ReminderEventType = 0
+	// Reminder was created.
+	ReminderEventType_REMINDER_EVENT_TYPE_CREATED ReminderEventType = 1
+	// Reminder fired.
+	ReminderEventType_REMINDER_EVENT_TYPE_FIRED ReminderEventType = 2
+	// Reminder was snoozed.
+	ReminderEventType_REMINDER_EVENT_TYPE_SNOOZED ReminderEventType = 3
+	// Reminder was updated.
+	ReminderEventType_REMINDER_EVENT_TYPE_UPDATED ReminderEventType = 4
+	// Reminder was canceled.
+	ReminderEventType_REMINDER_EVENT_TYPE_CANCELED ReminderEventType = 5
+	// Reminder firing failed.
+	ReminderEventType_REMINDER_EVENT_TYPE_FAILED ReminderEventType = 6
+)
+
+// Enum value maps for ReminderEventType.
+var (
+	ReminderEventType_name = map[int32]string{
+		0: "REMINDER_EVENT_TYPE_UNSPECIFIED",
+		1: "REMINDER_EVENT_TYPE_CREATED",
+		2: "REMINDER_EVENT_TYPE_FIRED",
+		3: "REMINDER_EVENT_TYPE_SNOOZED",
+		4: "REMINDER_EVENT_TYPE_UPDATED",
+		5: "REMINDER_EVENT_TYPE_CANCELED",
+		6: "REMINDER_EVENT_TYPE_FAILED",
+	}
+	ReminderEventType_value = map[string]int32{
+		"REMINDER_EVENT_TYPE_UNSPECIFIED": 0,
+		"REMINDER_EVENT_TYPE_CREATED":     1,
+		"REMINDER_EVENT_TYPE_FIRED":       2,
+		"REMINDER_EVENT_TYPE_SNOOZED":     3,
+		"REMINDER_EVENT_TYPE_UPDATED":     4,
+		"REMINDER_EVENT_TYPE_CANCELED":    5,
+		"REMINDER_EVENT_TYPE_FAILED":      6,
+	}
+)
+
+func (x ReminderEventType) Enum() *ReminderEventType {
+	p := new(ReminderEventType)
+	*p = x
+	return p
+}
+
+func (x ReminderEventType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReminderEventType) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_reminder_proto_enumTypes[2].Descriptor()
+}
+
+func (ReminderEventType) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_reminder_proto_enumTypes[2]
+}
+
+func (x ReminderEventType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReminderEventType.Descriptor instead.
+func (ReminderEventType) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_reminder_proto_rawDescGZIP(), []int{2}
+}
+
+// ReminderActorType is the closed set of actors that can mutate reminder state.
+type ReminderActorType int32
+
+const (
+	// Actor type is omitted or unknown.
+	ReminderActorType_REMINDER_ACTOR_TYPE_UNSPECIFIED ReminderActorType = 0
+	// Human user.
+	ReminderActorType_REMINDER_ACTOR_TYPE_HUMAN ReminderActorType = 1
+	// Agent.
+	ReminderActorType_REMINDER_ACTOR_TYPE_AGENT ReminderActorType = 2
+	// Server scheduler.
+	ReminderActorType_REMINDER_ACTOR_TYPE_SYSTEM ReminderActorType = 3
+)
+
+// Enum value maps for ReminderActorType.
+var (
+	ReminderActorType_name = map[int32]string{
+		0: "REMINDER_ACTOR_TYPE_UNSPECIFIED",
+		1: "REMINDER_ACTOR_TYPE_HUMAN",
+		2: "REMINDER_ACTOR_TYPE_AGENT",
+		3: "REMINDER_ACTOR_TYPE_SYSTEM",
+	}
+	ReminderActorType_value = map[string]int32{
+		"REMINDER_ACTOR_TYPE_UNSPECIFIED": 0,
+		"REMINDER_ACTOR_TYPE_HUMAN":       1,
+		"REMINDER_ACTOR_TYPE_AGENT":       2,
+		"REMINDER_ACTOR_TYPE_SYSTEM":      3,
+	}
+)
+
+func (x ReminderActorType) Enum() *ReminderActorType {
+	p := new(ReminderActorType)
+	*p = x
+	return p
+}
+
+func (x ReminderActorType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReminderActorType) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_reminder_proto_enumTypes[3].Descriptor()
+}
+
+func (ReminderActorType) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_reminder_proto_enumTypes[3]
+}
+
+func (x ReminderActorType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReminderActorType.Descriptor instead.
+func (ReminderActorType) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_reminder_proto_rawDescGZIP(), []int{3}
+}
+
 type ReminderRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ReminderId    string                 `protobuf:"bytes,1,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
 	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	ScheduleKind  string                 `protobuf:"bytes,3,opt,name=schedule_kind,json=scheduleKind,proto3" json:"schedule_kind,omitempty"`
+	ScheduleKind  ReminderScheduleKind   `protobuf:"varint,3,opt,name=schedule_kind,json=scheduleKind,proto3,enum=nekode.daemon.v1.ReminderScheduleKind" json:"schedule_kind,omitempty"`
 	Schedule      string                 `protobuf:"bytes,4,opt,name=schedule,proto3" json:"schedule,omitempty"`
 	Prompt        string                 `protobuf:"bytes,5,opt,name=prompt,proto3" json:"prompt,omitempty"`
 	Enabled       bool                   `protobuf:"varint,6,opt,name=enabled,proto3" json:"enabled,omitempty"`
@@ -34,7 +290,7 @@ type ReminderRecord struct {
 	RunCount      uint32                 `protobuf:"varint,9,opt,name=run_count,json=runCount,proto3" json:"run_count,omitempty"`
 	LastError     string                 `protobuf:"bytes,10,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
 	Title         string                 `protobuf:"bytes,11,opt,name=title,proto3" json:"title,omitempty"`
-	Status        string                 `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
+	Status        ReminderStatus         `protobuf:"varint,12,opt,name=status,proto3,enum=nekode.daemon.v1.ReminderStatus" json:"status,omitempty"`
 	MsgRef        string                 `protobuf:"bytes,15,opt,name=msg_ref,json=msgRef,proto3" json:"msg_ref,omitempty"`
 	Recurrence    *ReminderRecurrence    `protobuf:"bytes,16,opt,name=recurrence,proto3" json:"recurrence,omitempty"`
 	CancelToken   string                 `protobuf:"bytes,17,opt,name=cancel_token,json=cancelToken,proto3" json:"cancel_token,omitempty"`
@@ -86,11 +342,11 @@ func (x *ReminderRecord) GetTarget() string {
 	return ""
 }
 
-func (x *ReminderRecord) GetScheduleKind() string {
+func (x *ReminderRecord) GetScheduleKind() ReminderScheduleKind {
 	if x != nil {
 		return x.ScheduleKind
 	}
-	return ""
+	return ReminderScheduleKind_REMINDER_SCHEDULE_KIND_UNSPECIFIED
 }
 
 func (x *ReminderRecord) GetSchedule() string {
@@ -149,11 +405,11 @@ func (x *ReminderRecord) GetTitle() string {
 	return ""
 }
 
-func (x *ReminderRecord) GetStatus() string {
+func (x *ReminderRecord) GetStatus() ReminderStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return ReminderStatus_REMINDER_STATUS_UNSPECIFIED
 }
 
 func (x *ReminderRecord) GetMsgRef() string {
@@ -239,7 +495,7 @@ func (x *ReminderRecurrence) GetTimezone() string {
 
 type ReminderSchedule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // cron | every | at | rrule | natural
+	Kind          ReminderScheduleKind   `protobuf:"varint,1,opt,name=kind,proto3,enum=nekode.daemon.v1.ReminderScheduleKind" json:"kind,omitempty"`
 	Expression    string                 `protobuf:"bytes,2,opt,name=expression,proto3" json:"expression,omitempty"`
 	Timezone      string                 `protobuf:"bytes,3,opt,name=timezone,proto3" json:"timezone,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -276,11 +532,11 @@ func (*ReminderSchedule) Descriptor() ([]byte, []int) {
 	return file_nekode_daemon_v1_reminder_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ReminderSchedule) GetKind() string {
+func (x *ReminderSchedule) GetKind() ReminderScheduleKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return ReminderScheduleKind_REMINDER_SCHEDULE_KIND_UNSPECIFIED
 }
 
 func (x *ReminderSchedule) GetExpression() string {
@@ -301,8 +557,8 @@ type ReminderEvent struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	EventId          string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
 	ReminderId       string                 `protobuf:"bytes,2,opt,name=reminder_id,json=reminderId,proto3" json:"reminder_id,omitempty"`
-	EventType        string                 `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
-	ActorType        string                 `protobuf:"bytes,4,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
+	EventType        ReminderEventType      `protobuf:"varint,3,opt,name=event_type,json=eventType,proto3,enum=nekode.daemon.v1.ReminderEventType" json:"event_type,omitempty"`
+	ActorType        ReminderActorType      `protobuf:"varint,4,opt,name=actor_type,json=actorType,proto3,enum=nekode.daemon.v1.ReminderActorType" json:"actor_type,omitempty"`
 	ActorId          string                 `protobuf:"bytes,5,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
 	OccurredTimeUnix int64                  `protobuf:"varint,6,opt,name=occurred_time_unix,json=occurredTimeUnix,proto3" json:"occurred_time_unix,omitempty"`
 	NextFireTimeUnix int64                  `protobuf:"varint,7,opt,name=next_fire_time_unix,json=nextFireTimeUnix,proto3" json:"next_fire_time_unix,omitempty"`
@@ -355,18 +611,18 @@ func (x *ReminderEvent) GetReminderId() string {
 	return ""
 }
 
-func (x *ReminderEvent) GetEventType() string {
+func (x *ReminderEvent) GetEventType() ReminderEventType {
 	if x != nil {
 		return x.EventType
 	}
-	return ""
+	return ReminderEventType_REMINDER_EVENT_TYPE_UNSPECIFIED
 }
 
-func (x *ReminderEvent) GetActorType() string {
+func (x *ReminderEvent) GetActorType() ReminderActorType {
 	if x != nil {
 		return x.ActorType
 	}
-	return ""
+	return ReminderActorType_REMINDER_ACTOR_TYPE_UNSPECIFIED
 }
 
 func (x *ReminderEvent) GetActorId() string {
@@ -631,7 +887,7 @@ type ListRemindersRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Target          string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	Limit           uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Statuses        []string               `protobuf:"bytes,3,rep,name=statuses,proto3" json:"statuses,omitempty"`
+	Statuses        []ReminderStatus       `protobuf:"varint,3,rep,packed,name=statuses,proto3,enum=nekode.daemon.v1.ReminderStatus" json:"statuses,omitempty"`
 	IncludeCanceled bool                   `protobuf:"varint,4,opt,name=include_canceled,json=includeCanceled,proto3" json:"include_canceled,omitempty"`
 	Cursor          *EventCursor           `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -682,7 +938,7 @@ func (x *ListRemindersRequest) GetLimit() uint32 {
 	return 0
 }
 
-func (x *ListRemindersRequest) GetStatuses() []string {
+func (x *ListRemindersRequest) GetStatuses() []ReminderStatus {
 	if x != nil {
 		return x.Statuses
 	}
@@ -1285,12 +1541,12 @@ var File_nekode_daemon_v1_reminder_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\n" +
-	"\x1fnekode/daemon/v1/reminder.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xa5\x04\n" +
+	"\x1fnekode/daemon/v1/reminder.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xef\x04\n" +
 	"\x0eReminderRecord\x12\x1f\n" +
 	"\vreminder_id\x18\x01 \x01(\tR\n" +
 	"reminderId\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target\x12#\n" +
-	"\rschedule_kind\x18\x03 \x01(\tR\fscheduleKind\x12\x1a\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x12K\n" +
+	"\rschedule_kind\x18\x03 \x01(\x0e2&.nekode.daemon.v1.ReminderScheduleKindR\fscheduleKind\x12\x1a\n" +
 	"\bschedule\x18\x04 \x01(\tR\bschedule\x12\x16\n" +
 	"\x06prompt\x18\x05 \x01(\tR\x06prompt\x12\x18\n" +
 	"\aenabled\x18\x06 \x01(\bR\aenabled\x12\"\n" +
@@ -1300,8 +1556,8 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\n" +
 	"last_error\x18\n" +
 	" \x01(\tR\tlastError\x12\x14\n" +
-	"\x05title\x18\v \x01(\tR\x05title\x12\x16\n" +
-	"\x06status\x18\f \x01(\tR\x06status\x12\x17\n" +
+	"\x05title\x18\v \x01(\tR\x05title\x128\n" +
+	"\x06status\x18\f \x01(\x0e2 .nekode.daemon.v1.ReminderStatusR\x06status\x12\x17\n" +
 	"\amsg_ref\x18\x0f \x01(\tR\x06msgRef\x12D\n" +
 	"\n" +
 	"recurrence\x18\x10 \x01(\v2$.nekode.daemon.v1.ReminderRecurrenceR\n" +
@@ -1310,21 +1566,21 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\x12ReminderRecurrence\x12\x12\n" +
 	"\x04rule\x18\x01 \x01(\tR\x04rule\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1a\n" +
-	"\btimezone\x18\x03 \x01(\tR\btimezoneJ\x06\b\xe8\a\x10\xd0\x0f\"j\n" +
-	"\x10ReminderSchedule\x12\x12\n" +
-	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1e\n" +
+	"\btimezone\x18\x03 \x01(\tR\btimezoneJ\x06\b\xe8\a\x10\xd0\x0f\"\x92\x01\n" +
+	"\x10ReminderSchedule\x12:\n" +
+	"\x04kind\x18\x01 \x01(\x0e2&.nekode.daemon.v1.ReminderScheduleKindR\x04kind\x12\x1e\n" +
 	"\n" +
 	"expression\x18\x02 \x01(\tR\n" +
 	"expression\x12\x1a\n" +
-	"\btimezone\x18\x03 \x01(\tR\btimezoneJ\x06\b\xe8\a\x10\xd0\x0f\"\xa1\x02\n" +
+	"\btimezone\x18\x03 \x01(\tR\btimezoneJ\x06\b\xe8\a\x10\xd0\x0f\"\xeb\x02\n" +
 	"\rReminderEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +
 	"\vreminder_id\x18\x02 \x01(\tR\n" +
-	"reminderId\x12\x1d\n" +
+	"reminderId\x12B\n" +
 	"\n" +
-	"event_type\x18\x03 \x01(\tR\teventType\x12\x1d\n" +
+	"event_type\x18\x03 \x01(\x0e2#.nekode.daemon.v1.ReminderEventTypeR\teventType\x12B\n" +
 	"\n" +
-	"actor_type\x18\x04 \x01(\tR\tactorType\x12\x19\n" +
+	"actor_type\x18\x04 \x01(\x0e2#.nekode.daemon.v1.ReminderActorTypeR\tactorType\x12\x19\n" +
 	"\bactor_id\x18\x05 \x01(\tR\aactorId\x12,\n" +
 	"\x12occurred_time_unix\x18\x06 \x01(\x03R\x10occurredTimeUnix\x12-\n" +
 	"\x13next_fire_time_unix\x18\a \x01(\x03R\x10nextFireTimeUnix\x12\x16\n" +
@@ -1348,11 +1604,11 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontextB\x0f\n" +
 	"\rschedule_specJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\v\x10\fR\rschedule_kindR\bscheduleR\x06repeat\"X\n" +
 	"\x18ScheduleReminderResponse\x12<\n" +
-	"\breminder\x18\x01 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"\xc2\x01\n" +
+	"\breminder\x18\x01 \x01(\v2 .nekode.daemon.v1.ReminderRecordR\breminder\"\xe4\x01\n" +
 	"\x14ListRemindersRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\rR\x05limit\x12\x1a\n" +
-	"\bstatuses\x18\x03 \x03(\tR\bstatuses\x12)\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x12<\n" +
+	"\bstatuses\x18\x03 \x03(\x0e2 .nekode.daemon.v1.ReminderStatusR\bstatuses\x12)\n" +
 	"\x10include_canceled\x18\x04 \x01(\bR\x0fincludeCanceled\x125\n" +
 	"\x06cursor\x18\x05 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x97\x01\n" +
 	"\x15ListRemindersResponse\x12>\n" +
@@ -1403,7 +1659,34 @@ const file_nekode_daemon_v1_reminder_proto_rawDesc = "" +
 	"reminderIdJ\x04\b\x02\x10\x03R\n" +
 	"request_id\"Q\n" +
 	"\x16GetReminderLogResponse\x127\n" +
-	"\x06events\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ReminderEventR\x06eventsB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x06events\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ReminderEventR\x06events*\xbd\x01\n" +
+	"\x0eReminderStatus\x12\x1f\n" +
+	"\x1bREMINDER_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16REMINDER_STATUS_ACTIVE\x10\x01\x12\x18\n" +
+	"\x14REMINDER_STATUS_DONE\x10\x02\x12\x1c\n" +
+	"\x18REMINDER_STATUS_CANCELED\x10\x03\x12\x1a\n" +
+	"\x16REMINDER_STATUS_PAUSED\x10\x04\x12\x1a\n" +
+	"\x16REMINDER_STATUS_FAILED\x10\x05*\xe6\x01\n" +
+	"\x14ReminderScheduleKind\x12&\n" +
+	"\"REMINDER_SCHEDULE_KIND_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bREMINDER_SCHEDULE_KIND_CRON\x10\x01\x12 \n" +
+	"\x1cREMINDER_SCHEDULE_KIND_EVERY\x10\x02\x12\x1d\n" +
+	"\x19REMINDER_SCHEDULE_KIND_AT\x10\x03\x12 \n" +
+	"\x1cREMINDER_SCHEDULE_KIND_RRULE\x10\x04\x12\"\n" +
+	"\x1eREMINDER_SCHEDULE_KIND_NATURAL\x10\x05*\xfc\x01\n" +
+	"\x11ReminderEventType\x12#\n" +
+	"\x1fREMINDER_EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bREMINDER_EVENT_TYPE_CREATED\x10\x01\x12\x1d\n" +
+	"\x19REMINDER_EVENT_TYPE_FIRED\x10\x02\x12\x1f\n" +
+	"\x1bREMINDER_EVENT_TYPE_SNOOZED\x10\x03\x12\x1f\n" +
+	"\x1bREMINDER_EVENT_TYPE_UPDATED\x10\x04\x12 \n" +
+	"\x1cREMINDER_EVENT_TYPE_CANCELED\x10\x05\x12\x1e\n" +
+	"\x1aREMINDER_EVENT_TYPE_FAILED\x10\x06*\x96\x01\n" +
+	"\x11ReminderActorType\x12#\n" +
+	"\x1fREMINDER_ACTOR_TYPE_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19REMINDER_ACTOR_TYPE_HUMAN\x10\x01\x12\x1d\n" +
+	"\x19REMINDER_ACTOR_TYPE_AGENT\x10\x02\x12\x1e\n" +
+	"\x1aREMINDER_ACTOR_TYPE_SYSTEM\x10\x03B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_reminder_proto_rawDescOnce sync.Once
@@ -1417,48 +1700,59 @@ func file_nekode_daemon_v1_reminder_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_reminder_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_reminder_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_nekode_daemon_v1_reminder_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_nekode_daemon_v1_reminder_proto_goTypes = []any{
-	(*ReminderRecord)(nil),           // 0: nekode.daemon.v1.ReminderRecord
-	(*ReminderRecurrence)(nil),       // 1: nekode.daemon.v1.ReminderRecurrence
-	(*ReminderSchedule)(nil),         // 2: nekode.daemon.v1.ReminderSchedule
-	(*ReminderEvent)(nil),            // 3: nekode.daemon.v1.ReminderEvent
-	(*ScheduleReminderRequest)(nil),  // 4: nekode.daemon.v1.ScheduleReminderRequest
-	(*ScheduleReminderResponse)(nil), // 5: nekode.daemon.v1.ScheduleReminderResponse
-	(*ListRemindersRequest)(nil),     // 6: nekode.daemon.v1.ListRemindersRequest
-	(*ListRemindersResponse)(nil),    // 7: nekode.daemon.v1.ListRemindersResponse
-	(*CancelReminderRequest)(nil),    // 8: nekode.daemon.v1.CancelReminderRequest
-	(*CancelReminderResponse)(nil),   // 9: nekode.daemon.v1.CancelReminderResponse
-	(*SnoozeReminderRequest)(nil),    // 10: nekode.daemon.v1.SnoozeReminderRequest
-	(*SnoozeReminderResponse)(nil),   // 11: nekode.daemon.v1.SnoozeReminderResponse
-	(*UpdateReminderRequest)(nil),    // 12: nekode.daemon.v1.UpdateReminderRequest
-	(*UpdateReminderResponse)(nil),   // 13: nekode.daemon.v1.UpdateReminderResponse
-	(*GetReminderLogRequest)(nil),    // 14: nekode.daemon.v1.GetReminderLogRequest
-	(*GetReminderLogResponse)(nil),   // 15: nekode.daemon.v1.GetReminderLogResponse
-	(*RequestContext)(nil),           // 16: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),              // 17: nekode.daemon.v1.EventCursor
+	(ReminderStatus)(0),              // 0: nekode.daemon.v1.ReminderStatus
+	(ReminderScheduleKind)(0),        // 1: nekode.daemon.v1.ReminderScheduleKind
+	(ReminderEventType)(0),           // 2: nekode.daemon.v1.ReminderEventType
+	(ReminderActorType)(0),           // 3: nekode.daemon.v1.ReminderActorType
+	(*ReminderRecord)(nil),           // 4: nekode.daemon.v1.ReminderRecord
+	(*ReminderRecurrence)(nil),       // 5: nekode.daemon.v1.ReminderRecurrence
+	(*ReminderSchedule)(nil),         // 6: nekode.daemon.v1.ReminderSchedule
+	(*ReminderEvent)(nil),            // 7: nekode.daemon.v1.ReminderEvent
+	(*ScheduleReminderRequest)(nil),  // 8: nekode.daemon.v1.ScheduleReminderRequest
+	(*ScheduleReminderResponse)(nil), // 9: nekode.daemon.v1.ScheduleReminderResponse
+	(*ListRemindersRequest)(nil),     // 10: nekode.daemon.v1.ListRemindersRequest
+	(*ListRemindersResponse)(nil),    // 11: nekode.daemon.v1.ListRemindersResponse
+	(*CancelReminderRequest)(nil),    // 12: nekode.daemon.v1.CancelReminderRequest
+	(*CancelReminderResponse)(nil),   // 13: nekode.daemon.v1.CancelReminderResponse
+	(*SnoozeReminderRequest)(nil),    // 14: nekode.daemon.v1.SnoozeReminderRequest
+	(*SnoozeReminderResponse)(nil),   // 15: nekode.daemon.v1.SnoozeReminderResponse
+	(*UpdateReminderRequest)(nil),    // 16: nekode.daemon.v1.UpdateReminderRequest
+	(*UpdateReminderResponse)(nil),   // 17: nekode.daemon.v1.UpdateReminderResponse
+	(*GetReminderLogRequest)(nil),    // 18: nekode.daemon.v1.GetReminderLogRequest
+	(*GetReminderLogResponse)(nil),   // 19: nekode.daemon.v1.GetReminderLogResponse
+	(*RequestContext)(nil),           // 20: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),              // 21: nekode.daemon.v1.EventCursor
 }
 var file_nekode_daemon_v1_reminder_proto_depIdxs = []int32{
-	1,  // 0: nekode.daemon.v1.ReminderRecord.recurrence:type_name -> nekode.daemon.v1.ReminderRecurrence
-	2,  // 1: nekode.daemon.v1.ScheduleReminderRequest.recurring:type_name -> nekode.daemon.v1.ReminderSchedule
-	16, // 2: nekode.daemon.v1.ScheduleReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 3: nekode.daemon.v1.ScheduleReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	17, // 4: nekode.daemon.v1.ListRemindersRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	0,  // 5: nekode.daemon.v1.ListRemindersResponse.reminders:type_name -> nekode.daemon.v1.ReminderRecord
-	17, // 6: nekode.daemon.v1.ListRemindersResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	16, // 7: nekode.daemon.v1.CancelReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 8: nekode.daemon.v1.CancelReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	16, // 9: nekode.daemon.v1.SnoozeReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 10: nekode.daemon.v1.SnoozeReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	2,  // 11: nekode.daemon.v1.UpdateReminderRequest.recurring:type_name -> nekode.daemon.v1.ReminderSchedule
-	16, // 12: nekode.daemon.v1.UpdateReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	0,  // 13: nekode.daemon.v1.UpdateReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
-	3,  // 14: nekode.daemon.v1.GetReminderLogResponse.events:type_name -> nekode.daemon.v1.ReminderEvent
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	1,  // 0: nekode.daemon.v1.ReminderRecord.schedule_kind:type_name -> nekode.daemon.v1.ReminderScheduleKind
+	0,  // 1: nekode.daemon.v1.ReminderRecord.status:type_name -> nekode.daemon.v1.ReminderStatus
+	5,  // 2: nekode.daemon.v1.ReminderRecord.recurrence:type_name -> nekode.daemon.v1.ReminderRecurrence
+	1,  // 3: nekode.daemon.v1.ReminderSchedule.kind:type_name -> nekode.daemon.v1.ReminderScheduleKind
+	2,  // 4: nekode.daemon.v1.ReminderEvent.event_type:type_name -> nekode.daemon.v1.ReminderEventType
+	3,  // 5: nekode.daemon.v1.ReminderEvent.actor_type:type_name -> nekode.daemon.v1.ReminderActorType
+	6,  // 6: nekode.daemon.v1.ScheduleReminderRequest.recurring:type_name -> nekode.daemon.v1.ReminderSchedule
+	20, // 7: nekode.daemon.v1.ScheduleReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	4,  // 8: nekode.daemon.v1.ScheduleReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	0,  // 9: nekode.daemon.v1.ListRemindersRequest.statuses:type_name -> nekode.daemon.v1.ReminderStatus
+	21, // 10: nekode.daemon.v1.ListRemindersRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	4,  // 11: nekode.daemon.v1.ListRemindersResponse.reminders:type_name -> nekode.daemon.v1.ReminderRecord
+	21, // 12: nekode.daemon.v1.ListRemindersResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	20, // 13: nekode.daemon.v1.CancelReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	4,  // 14: nekode.daemon.v1.CancelReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	20, // 15: nekode.daemon.v1.SnoozeReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	4,  // 16: nekode.daemon.v1.SnoozeReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	6,  // 17: nekode.daemon.v1.UpdateReminderRequest.recurring:type_name -> nekode.daemon.v1.ReminderSchedule
+	20, // 18: nekode.daemon.v1.UpdateReminderRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	4,  // 19: nekode.daemon.v1.UpdateReminderResponse.reminder:type_name -> nekode.daemon.v1.ReminderRecord
+	7,  // 20: nekode.daemon.v1.GetReminderLogResponse.events:type_name -> nekode.daemon.v1.ReminderEvent
+	21, // [21:21] is the sub-list for method output_type
+	21, // [21:21] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_reminder_proto_init() }
@@ -1482,13 +1776,14 @@ func file_nekode_daemon_v1_reminder_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_reminder_proto_rawDesc), len(file_nekode_daemon_v1_reminder_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      4,
 			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_reminder_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_reminder_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_reminder_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_reminder_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_reminder_proto = out.File

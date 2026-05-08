@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/ca-x/nekode/internal/ent/collaborationevent"
+	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/session"
@@ -77,6 +79,8 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			collaborationevent.Table:  collaborationevent.ValidColumn,
+			idempotencyrecord.Table:   idempotencyrecord.ValidColumn,
 			interactionendpoint.Table: interactionendpoint.ValidColumn,
 			message.Table:             message.ValidColumn,
 			session.Table:             session.ValidColumn,

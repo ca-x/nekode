@@ -97,6 +97,129 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	if updated.State != "in_progress" {
 		t.Fatalf("updated.State = %q, want in_progress", updated.State)
 	}
+	blockedState := "blocked"
+	updated, err = store.UpdateTask(ctx, task.ID, TaskPatch{State: &blockedState})
+	if err != nil {
+		t.Fatalf("UpdateTask(blocked) error = %v", err)
+	}
+	if updated.State != "blocked" {
+		t.Fatalf("updated.State = %q, want blocked", updated.State)
+	}
+	blockedTasks, err := store.ListTasks(ctx, "blocked", "#general", 10)
+	if err != nil {
+		t.Fatalf("ListTasks(blocked) error = %v", err)
+	}
+	if len(blockedTasks) != 1 || blockedTasks[0].ID != task.ID {
+		t.Fatalf("blocked tasks = %+v, want task %s", blockedTasks, task.ID)
+	}
+	cancelledState := "cancelled"
+	updated, err = store.UpdateTask(ctx, task.ID, TaskPatch{State: &cancelledState})
+	if err != nil {
+		t.Fatalf("UpdateTask(cancelled alias) error = %v", err)
+	}
+	if updated.State != "canceled" {
+		t.Fatalf("updated.State = %q, want canceled", updated.State)
+	}
+	canceledTasks, err := store.ListTasks(ctx, "canceled", "#general", 10)
+	if err != nil {
+		t.Fatalf("ListTasks(canceled) error = %v", err)
+	}
+	if len(canceledTasks) != 1 || canceledTasks[0].ID != task.ID {
+		t.Fatalf("canceled tasks = %+v, want task %s", canceledTasks, task.ID)
+	}
+	claimed, accepted, err := store.ClaimTaskCAS(ctx, task.ID, "agent-1", "lease-1")
+	if err != nil {
+		t.Fatalf("ClaimTaskCAS() error = %v", err)
+	}
+	if !accepted || claimed.AssigneeID != "agent-1" || claimed.ClaimLeaseID != "lease-1" {
+		t.Fatalf("ClaimTaskCAS() = %+v accepted=%v, want agent-1 lease", claimed, accepted)
+	}
+	conflict, accepted, err := store.ClaimTaskCAS(ctx, task.ID, "agent-2", "lease-2")
+	if err != nil {
+		t.Fatalf("ClaimTaskCAS(conflict) error = %v", err)
+	}
+	if accepted || conflict.AssigneeID != "agent-1" {
+		t.Fatalf("ClaimTaskCAS(conflict) = %+v accepted=%v, want existing agent-1", conflict, accepted)
+	}
+
+	event1, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		ServerID:        "srv-test",
+		Target:          "#general",
+		AggregateID:     "#general",
+		Kind:            "activity",
+		Operation:       "created",
+		ScopeType:       "target",
+		ScopeID:         "#general",
+		ActivityID:      "act-1",
+		PayloadJSON:     "{}",
+		ProtocolVersion: 1,
+	})
+	if err != nil {
+		t.Fatalf("AppendCollaborationEvent() error = %v", err)
+	}
+	event2, err := store.AppendCollaborationEvent(ctx, CollaborationEvent{
+		ServerID:        "srv-test",
+		Target:          "#general",
+		AggregateID:     "#general",
+		Kind:            "activity",
+		Operation:       "created",
+		ScopeType:       "target",
+		ScopeID:         "#general",
+		ActivityID:      "act-2",
+		PayloadJSON:     "{}",
+		ProtocolVersion: 1,
+	})
+	if err != nil {
+		t.Fatalf("AppendCollaborationEvent(second) error = %v", err)
+	}
+	if event1.Sequence != 1 || event2.Sequence != 2 {
+		t.Fatalf("event sequences = %d,%d want 1,2", event1.Sequence, event2.Sequence)
+	}
+	if event1.Operation != "created" || event1.ScopeType != "target" || event1.ScopeID != "#general" {
+		t.Fatalf("event envelope = %+v, want operation/scope persisted", event1)
+	}
+	events, err := store.ListCollaborationEvents(ctx, "srv-test", "#general", "", 1, 10)
+	if err != nil {
+		t.Fatalf("ListCollaborationEvents() error = %v", err)
+	}
+	if len(events) != 1 || events[0].ActivityID != "act-2" {
+		t.Fatalf("events = %+v, want second event", events)
+	}
+	recent, err := store.ListRecentCollaborationEvents(ctx, "srv-test", "#general", "activity", 10)
+	if err != nil {
+		t.Fatalf("ListRecentCollaborationEvents() error = %v", err)
+	}
+	if len(recent) != 2 || recent[0].ActivityID != "act-2" || recent[1].ActivityID != "act-1" {
+		t.Fatalf("recent events = %+v, want newest first", recent)
+	}
+
+	reserved, created, err := store.ReserveIdempotencyRecord(ctx, IdempotencyRecord{
+		Scope:          "daemonrpc",
+		Method:         "Test",
+		IdempotencyKey: "idem-1",
+	})
+	if err != nil {
+		t.Fatalf("ReserveIdempotencyRecord() error = %v", err)
+	}
+	if !created || reserved.Status != "pending" {
+		t.Fatalf("ReserveIdempotencyRecord() = %+v created=%v, want pending create", reserved, created)
+	}
+	if err := store.CompleteIdempotencyRecord(ctx, IdempotencyRecord{
+		Scope:          "daemonrpc",
+		Method:         "Test",
+		IdempotencyKey: "idem-1",
+		ResponseType:   "test.Response",
+		ResponseJSON:   `{"ok":true}`,
+	}); err != nil {
+		t.Fatalf("CompleteIdempotencyRecord() error = %v", err)
+	}
+	loaded, err := store.GetIdempotencyRecord(ctx, "daemonrpc", "Test", "", "idem-1")
+	if err != nil {
+		t.Fatalf("GetIdempotencyRecord() error = %v", err)
+	}
+	if loaded.Status != "completed" || loaded.ResponseJSON == "" {
+		t.Fatalf("idempotency record = %+v, want completed response", loaded)
+	}
 }
 
 func TestStoreRejectsInvalidTaskState(t *testing.T) {
@@ -106,6 +229,9 @@ func TestStoreRejectsInvalidTaskState(t *testing.T) {
 	_, err := store.CreateTask(ctx, Task{Summary: "bad", State: "reviewing", Target: "#general"})
 	if !errors.Is(err, ErrInvalidState) {
 		t.Fatalf("CreateTask() error = %v, want %v", err, ErrInvalidState)
+	}
+	if _, err := store.ListTasks(ctx, "reviewing", "#general", 10); !errors.Is(err, ErrInvalidState) {
+		t.Fatalf("ListTasks() error = %v, want %v", err, ErrInvalidState)
 	}
 }
 

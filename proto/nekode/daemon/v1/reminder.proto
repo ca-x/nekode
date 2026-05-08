@@ -6,6 +6,68 @@ import "nekode/daemon/v1/common.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// ReminderStatus is the closed lifecycle for a reminder.
+enum ReminderStatus {
+  // Status is omitted or unknown.
+  REMINDER_STATUS_UNSPECIFIED = 0;
+  // Reminder is scheduled and can fire.
+  REMINDER_STATUS_ACTIVE = 1;
+  // Reminder has fired and is complete.
+  REMINDER_STATUS_DONE = 2;
+  // Reminder was canceled.
+  REMINDER_STATUS_CANCELED = 3;
+  // Reminder is temporarily paused.
+  REMINDER_STATUS_PAUSED = 4;
+  // Reminder failed while firing.
+  REMINDER_STATUS_FAILED = 5;
+}
+
+// ReminderScheduleKind is the closed set of schedule expression types.
+enum ReminderScheduleKind {
+  // Schedule kind is omitted or unknown.
+  REMINDER_SCHEDULE_KIND_UNSPECIFIED = 0;
+  // Cron expression.
+  REMINDER_SCHEDULE_KIND_CRON = 1;
+  // Relative interval expression.
+  REMINDER_SCHEDULE_KIND_EVERY = 2;
+  // Absolute timestamp expression.
+  REMINDER_SCHEDULE_KIND_AT = 3;
+  // RFC 5545 recurrence rule.
+  REMINDER_SCHEDULE_KIND_RRULE = 4;
+  // Natural-language schedule captured for later parsing.
+  REMINDER_SCHEDULE_KIND_NATURAL = 5;
+}
+
+// ReminderEventType is the closed event taxonomy for reminder lifecycle logs.
+enum ReminderEventType {
+  // Event type is omitted or unknown.
+  REMINDER_EVENT_TYPE_UNSPECIFIED = 0;
+  // Reminder was created.
+  REMINDER_EVENT_TYPE_CREATED = 1;
+  // Reminder fired.
+  REMINDER_EVENT_TYPE_FIRED = 2;
+  // Reminder was snoozed.
+  REMINDER_EVENT_TYPE_SNOOZED = 3;
+  // Reminder was updated.
+  REMINDER_EVENT_TYPE_UPDATED = 4;
+  // Reminder was canceled.
+  REMINDER_EVENT_TYPE_CANCELED = 5;
+  // Reminder firing failed.
+  REMINDER_EVENT_TYPE_FAILED = 6;
+}
+
+// ReminderActorType is the closed set of actors that can mutate reminder state.
+enum ReminderActorType {
+  // Actor type is omitted or unknown.
+  REMINDER_ACTOR_TYPE_UNSPECIFIED = 0;
+  // Human user.
+  REMINDER_ACTOR_TYPE_HUMAN = 1;
+  // Agent.
+  REMINDER_ACTOR_TYPE_AGENT = 2;
+  // Server scheduler.
+  REMINDER_ACTOR_TYPE_SYSTEM = 3;
+}
+
 message ReminderRecord {
   reserved 1000 to 1999;
   reserved 13, 14;
@@ -13,7 +75,7 @@ message ReminderRecord {
 
   string reminder_id = 1;
   string target = 2;
-  string schedule_kind = 3;
+  ReminderScheduleKind schedule_kind = 3;
   string schedule = 4;
   string prompt = 5;
   bool enabled = 6;
@@ -22,7 +84,7 @@ message ReminderRecord {
   uint32 run_count = 9;
   string last_error = 10;
   string title = 11;
-  string status = 12;
+  ReminderStatus status = 12;
   string msg_ref = 15;
   ReminderRecurrence recurrence = 16;
   string cancel_token = 17;
@@ -37,7 +99,7 @@ message ReminderRecurrence {
 message ReminderSchedule {
   reserved 1000 to 1999;
 
-  string kind = 1; // cron | every | at | rrule | natural
+  ReminderScheduleKind kind = 1;
   string expression = 2;
   string timezone = 3;
 }
@@ -46,8 +108,8 @@ message ReminderEvent {
 
   string event_id = 1;
   string reminder_id = 2;
-  string event_type = 3;
-  string actor_type = 4;
+  ReminderEventType event_type = 3;
+  ReminderActorType actor_type = 4;
   string actor_id = 5;
   int64 occurred_time_unix = 6;
   int64 next_fire_time_unix = 7;
@@ -80,7 +142,7 @@ message ScheduleReminderResponse {
 message ListRemindersRequest {
   string target = 1;
   uint32 limit = 2;
-  repeated string statuses = 3;
+  repeated ReminderStatus statuses = 3;
   bool include_canceled = 4;
   EventCursor cursor = 5;
 }

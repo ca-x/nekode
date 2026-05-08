@@ -31,7 +31,7 @@ func (Message) Fields() []ent.Field {
 
 func (Message) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("target", "created_unix"),
+		index.Fields("target", "created_unix", "id"),
 		index.Fields("request_id"),
 	}
 }

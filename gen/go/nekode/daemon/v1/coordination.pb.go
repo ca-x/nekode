@@ -21,11 +21,792 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// WorkPlanItemStatus is the closed status set for a single plan item.
+type WorkPlanItemStatus int32
+
+const (
+	// Status is omitted or unknown.
+	WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_UNSPECIFIED WorkPlanItemStatus = 0
+	// Item is waiting to start.
+	WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_PENDING WorkPlanItemStatus = 1
+	// Item is actively being worked.
+	WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_IN_PROGRESS WorkPlanItemStatus = 2
+	// Item is completed.
+	WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_COMPLETED WorkPlanItemStatus = 3
+	// Item cannot proceed without external action.
+	WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_BLOCKED WorkPlanItemStatus = 4
+	// Item was intentionally skipped.
+	WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_SKIPPED WorkPlanItemStatus = 5
+)
+
+// Enum value maps for WorkPlanItemStatus.
+var (
+	WorkPlanItemStatus_name = map[int32]string{
+		0: "WORK_PLAN_ITEM_STATUS_UNSPECIFIED",
+		1: "WORK_PLAN_ITEM_STATUS_PENDING",
+		2: "WORK_PLAN_ITEM_STATUS_IN_PROGRESS",
+		3: "WORK_PLAN_ITEM_STATUS_COMPLETED",
+		4: "WORK_PLAN_ITEM_STATUS_BLOCKED",
+		5: "WORK_PLAN_ITEM_STATUS_SKIPPED",
+	}
+	WorkPlanItemStatus_value = map[string]int32{
+		"WORK_PLAN_ITEM_STATUS_UNSPECIFIED": 0,
+		"WORK_PLAN_ITEM_STATUS_PENDING":     1,
+		"WORK_PLAN_ITEM_STATUS_IN_PROGRESS": 2,
+		"WORK_PLAN_ITEM_STATUS_COMPLETED":   3,
+		"WORK_PLAN_ITEM_STATUS_BLOCKED":     4,
+		"WORK_PLAN_ITEM_STATUS_SKIPPED":     5,
+	}
+)
+
+func (x WorkPlanItemStatus) Enum() *WorkPlanItemStatus {
+	p := new(WorkPlanItemStatus)
+	*p = x
+	return p
+}
+
+func (x WorkPlanItemStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkPlanItemStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[0].Descriptor()
+}
+
+func (WorkPlanItemStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[0]
+}
+
+func (x WorkPlanItemStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkPlanItemStatus.Descriptor instead.
+func (WorkPlanItemStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{0}
+}
+
+// WorkPlanStatus is the closed lifecycle for a collaborative work plan.
+type WorkPlanStatus int32
+
+const (
+	// Plan status is omitted or unknown.
+	WorkPlanStatus_WORK_PLAN_STATUS_UNSPECIFIED WorkPlanStatus = 0
+	// Plan is being drafted and is not authoritative.
+	WorkPlanStatus_WORK_PLAN_STATUS_DRAFT WorkPlanStatus = 1
+	// Plan is the active coordination plan.
+	WorkPlanStatus_WORK_PLAN_STATUS_ACTIVE WorkPlanStatus = 2
+	// Plan has been replaced by a newer plan.
+	WorkPlanStatus_WORK_PLAN_STATUS_SUPERSEDED WorkPlanStatus = 3
+	// Plan has been completed.
+	WorkPlanStatus_WORK_PLAN_STATUS_COMPLETED WorkPlanStatus = 4
+	// Plan was canceled.
+	WorkPlanStatus_WORK_PLAN_STATUS_CANCELED WorkPlanStatus = 5
+)
+
+// Enum value maps for WorkPlanStatus.
+var (
+	WorkPlanStatus_name = map[int32]string{
+		0: "WORK_PLAN_STATUS_UNSPECIFIED",
+		1: "WORK_PLAN_STATUS_DRAFT",
+		2: "WORK_PLAN_STATUS_ACTIVE",
+		3: "WORK_PLAN_STATUS_SUPERSEDED",
+		4: "WORK_PLAN_STATUS_COMPLETED",
+		5: "WORK_PLAN_STATUS_CANCELED",
+	}
+	WorkPlanStatus_value = map[string]int32{
+		"WORK_PLAN_STATUS_UNSPECIFIED": 0,
+		"WORK_PLAN_STATUS_DRAFT":       1,
+		"WORK_PLAN_STATUS_ACTIVE":      2,
+		"WORK_PLAN_STATUS_SUPERSEDED":  3,
+		"WORK_PLAN_STATUS_COMPLETED":   4,
+		"WORK_PLAN_STATUS_CANCELED":    5,
+	}
+)
+
+func (x WorkPlanStatus) Enum() *WorkPlanStatus {
+	p := new(WorkPlanStatus)
+	*p = x
+	return p
+}
+
+func (x WorkPlanStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WorkPlanStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[1].Descriptor()
+}
+
+func (WorkPlanStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[1]
+}
+
+func (x WorkPlanStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WorkPlanStatus.Descriptor instead.
+func (WorkPlanStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{1}
+}
+
+// ProgressUpdateStatus is the closed status set for agent progress reports.
+type ProgressUpdateStatus int32
+
+const (
+	// Progress state is omitted or unknown.
+	ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_UNSPECIFIED ProgressUpdateStatus = 0
+	// Work just started.
+	ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_STARTED ProgressUpdateStatus = 1
+	// Work is ongoing.
+	ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_IN_PROGRESS ProgressUpdateStatus = 2
+	// Work is blocked.
+	ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_BLOCKED ProgressUpdateStatus = 3
+	// Work is in verification.
+	ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_VERIFYING ProgressUpdateStatus = 4
+	// Work is completed.
+	ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_COMPLETED ProgressUpdateStatus = 5
+)
+
+// Enum value maps for ProgressUpdateStatus.
+var (
+	ProgressUpdateStatus_name = map[int32]string{
+		0: "PROGRESS_UPDATE_STATUS_UNSPECIFIED",
+		1: "PROGRESS_UPDATE_STATUS_STARTED",
+		2: "PROGRESS_UPDATE_STATUS_IN_PROGRESS",
+		3: "PROGRESS_UPDATE_STATUS_BLOCKED",
+		4: "PROGRESS_UPDATE_STATUS_VERIFYING",
+		5: "PROGRESS_UPDATE_STATUS_COMPLETED",
+	}
+	ProgressUpdateStatus_value = map[string]int32{
+		"PROGRESS_UPDATE_STATUS_UNSPECIFIED": 0,
+		"PROGRESS_UPDATE_STATUS_STARTED":     1,
+		"PROGRESS_UPDATE_STATUS_IN_PROGRESS": 2,
+		"PROGRESS_UPDATE_STATUS_BLOCKED":     3,
+		"PROGRESS_UPDATE_STATUS_VERIFYING":   4,
+		"PROGRESS_UPDATE_STATUS_COMPLETED":   5,
+	}
+)
+
+func (x ProgressUpdateStatus) Enum() *ProgressUpdateStatus {
+	p := new(ProgressUpdateStatus)
+	*p = x
+	return p
+}
+
+func (x ProgressUpdateStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ProgressUpdateStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[2].Descriptor()
+}
+
+func (ProgressUpdateStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[2]
+}
+
+func (x ProgressUpdateStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ProgressUpdateStatus.Descriptor instead.
+func (ProgressUpdateStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{2}
+}
+
+// VerificationKind is the closed taxonomy for built-in verification evidence.
+type VerificationKind int32
+
+const (
+	// Verification kind is omitted or unknown.
+	VerificationKind_VERIFICATION_KIND_UNSPECIFIED VerificationKind = 0
+	// Verification came from a command.
+	VerificationKind_VERIFICATION_KIND_COMMAND VerificationKind = 1
+	// Verification came from a test run.
+	VerificationKind_VERIFICATION_KIND_TEST VerificationKind = 2
+	// Verification came from a build.
+	VerificationKind_VERIFICATION_KIND_BUILD VerificationKind = 3
+	// Verification came from a lint/static analysis step.
+	VerificationKind_VERIFICATION_KIND_LINT VerificationKind = 4
+	// Verification came from a smoke check.
+	VerificationKind_VERIFICATION_KIND_SMOKE VerificationKind = 5
+	// Verification came from code/design review.
+	VerificationKind_VERIFICATION_KIND_REVIEW VerificationKind = 6
+	// Verification was performed manually.
+	VerificationKind_VERIFICATION_KIND_MANUAL VerificationKind = 7
+)
+
+// Enum value maps for VerificationKind.
+var (
+	VerificationKind_name = map[int32]string{
+		0: "VERIFICATION_KIND_UNSPECIFIED",
+		1: "VERIFICATION_KIND_COMMAND",
+		2: "VERIFICATION_KIND_TEST",
+		3: "VERIFICATION_KIND_BUILD",
+		4: "VERIFICATION_KIND_LINT",
+		5: "VERIFICATION_KIND_SMOKE",
+		6: "VERIFICATION_KIND_REVIEW",
+		7: "VERIFICATION_KIND_MANUAL",
+	}
+	VerificationKind_value = map[string]int32{
+		"VERIFICATION_KIND_UNSPECIFIED": 0,
+		"VERIFICATION_KIND_COMMAND":     1,
+		"VERIFICATION_KIND_TEST":        2,
+		"VERIFICATION_KIND_BUILD":       3,
+		"VERIFICATION_KIND_LINT":        4,
+		"VERIFICATION_KIND_SMOKE":       5,
+		"VERIFICATION_KIND_REVIEW":      6,
+		"VERIFICATION_KIND_MANUAL":      7,
+	}
+)
+
+func (x VerificationKind) Enum() *VerificationKind {
+	p := new(VerificationKind)
+	*p = x
+	return p
+}
+
+func (x VerificationKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VerificationKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[3].Descriptor()
+}
+
+func (VerificationKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[3]
+}
+
+func (x VerificationKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VerificationKind.Descriptor instead.
+func (VerificationKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{3}
+}
+
+// VerificationStatus is the closed result set for verification evidence.
+type VerificationStatus int32
+
+const (
+	// Verification result is omitted or unknown.
+	VerificationStatus_VERIFICATION_STATUS_UNSPECIFIED VerificationStatus = 0
+	// Verification passed.
+	VerificationStatus_VERIFICATION_STATUS_PASSED VerificationStatus = 1
+	// Verification failed.
+	VerificationStatus_VERIFICATION_STATUS_FAILED VerificationStatus = 2
+	// Verification was skipped.
+	VerificationStatus_VERIFICATION_STATUS_SKIPPED VerificationStatus = 3
+	// Verification could not run due to a blocker.
+	VerificationStatus_VERIFICATION_STATUS_BLOCKED VerificationStatus = 4
+)
+
+// Enum value maps for VerificationStatus.
+var (
+	VerificationStatus_name = map[int32]string{
+		0: "VERIFICATION_STATUS_UNSPECIFIED",
+		1: "VERIFICATION_STATUS_PASSED",
+		2: "VERIFICATION_STATUS_FAILED",
+		3: "VERIFICATION_STATUS_SKIPPED",
+		4: "VERIFICATION_STATUS_BLOCKED",
+	}
+	VerificationStatus_value = map[string]int32{
+		"VERIFICATION_STATUS_UNSPECIFIED": 0,
+		"VERIFICATION_STATUS_PASSED":      1,
+		"VERIFICATION_STATUS_FAILED":      2,
+		"VERIFICATION_STATUS_SKIPPED":     3,
+		"VERIFICATION_STATUS_BLOCKED":     4,
+	}
+)
+
+func (x VerificationStatus) Enum() *VerificationStatus {
+	p := new(VerificationStatus)
+	*p = x
+	return p
+}
+
+func (x VerificationStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VerificationStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[4].Descriptor()
+}
+
+func (VerificationStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[4]
+}
+
+func (x VerificationStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VerificationStatus.Descriptor instead.
+func (VerificationStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{4}
+}
+
+// ReleaseGateStatus is the closed lifecycle for a release gate.
+type ReleaseGateStatus int32
+
+const (
+	// Gate status is omitted or unknown.
+	ReleaseGateStatus_RELEASE_GATE_STATUS_UNSPECIFIED ReleaseGateStatus = 0
+	// Gate is waiting for checks.
+	ReleaseGateStatus_RELEASE_GATE_STATUS_PENDING ReleaseGateStatus = 1
+	// Gate checks are running.
+	ReleaseGateStatus_RELEASE_GATE_STATUS_RUNNING ReleaseGateStatus = 2
+	// Gate passed and release may proceed.
+	ReleaseGateStatus_RELEASE_GATE_STATUS_PASSED ReleaseGateStatus = 3
+	// Gate failed and release should not proceed.
+	ReleaseGateStatus_RELEASE_GATE_STATUS_FAILED ReleaseGateStatus = 4
+	// Gate was explicitly waived.
+	ReleaseGateStatus_RELEASE_GATE_STATUS_WAIVED ReleaseGateStatus = 5
+)
+
+// Enum value maps for ReleaseGateStatus.
+var (
+	ReleaseGateStatus_name = map[int32]string{
+		0: "RELEASE_GATE_STATUS_UNSPECIFIED",
+		1: "RELEASE_GATE_STATUS_PENDING",
+		2: "RELEASE_GATE_STATUS_RUNNING",
+		3: "RELEASE_GATE_STATUS_PASSED",
+		4: "RELEASE_GATE_STATUS_FAILED",
+		5: "RELEASE_GATE_STATUS_WAIVED",
+	}
+	ReleaseGateStatus_value = map[string]int32{
+		"RELEASE_GATE_STATUS_UNSPECIFIED": 0,
+		"RELEASE_GATE_STATUS_PENDING":     1,
+		"RELEASE_GATE_STATUS_RUNNING":     2,
+		"RELEASE_GATE_STATUS_PASSED":      3,
+		"RELEASE_GATE_STATUS_FAILED":      4,
+		"RELEASE_GATE_STATUS_WAIVED":      5,
+	}
+)
+
+func (x ReleaseGateStatus) Enum() *ReleaseGateStatus {
+	p := new(ReleaseGateStatus)
+	*p = x
+	return p
+}
+
+func (x ReleaseGateStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReleaseGateStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[5].Descriptor()
+}
+
+func (ReleaseGateStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[5]
+}
+
+func (x ReleaseGateStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReleaseGateStatus.Descriptor instead.
+func (ReleaseGateStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{5}
+}
+
+// RoleHandoffRole is the closed set of built-in handoff roles.
+// Use ROLE_HANDOFF_ROLE_CUSTOM only when context_summary names the custom role.
+type RoleHandoffRole int32
+
+const (
+	// Role is omitted or unknown.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_UNSPECIFIED RoleHandoffRole = 0
+	// Design/UX ownership.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_DESIGNER RoleHandoffRole = 1
+	// Implementation ownership.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_IMPLEMENTER RoleHandoffRole = 2
+	// Review ownership.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_REVIEWER RoleHandoffRole = 3
+	// Verification ownership.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_VERIFIER RoleHandoffRole = 4
+	// Release ownership.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_RELEASER RoleHandoffRole = 5
+	// Overall task ownership.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_OWNER RoleHandoffRole = 6
+	// Custom role described outside the enum.
+	RoleHandoffRole_ROLE_HANDOFF_ROLE_CUSTOM RoleHandoffRole = 7
+)
+
+// Enum value maps for RoleHandoffRole.
+var (
+	RoleHandoffRole_name = map[int32]string{
+		0: "ROLE_HANDOFF_ROLE_UNSPECIFIED",
+		1: "ROLE_HANDOFF_ROLE_DESIGNER",
+		2: "ROLE_HANDOFF_ROLE_IMPLEMENTER",
+		3: "ROLE_HANDOFF_ROLE_REVIEWER",
+		4: "ROLE_HANDOFF_ROLE_VERIFIER",
+		5: "ROLE_HANDOFF_ROLE_RELEASER",
+		6: "ROLE_HANDOFF_ROLE_OWNER",
+		7: "ROLE_HANDOFF_ROLE_CUSTOM",
+	}
+	RoleHandoffRole_value = map[string]int32{
+		"ROLE_HANDOFF_ROLE_UNSPECIFIED": 0,
+		"ROLE_HANDOFF_ROLE_DESIGNER":    1,
+		"ROLE_HANDOFF_ROLE_IMPLEMENTER": 2,
+		"ROLE_HANDOFF_ROLE_REVIEWER":    3,
+		"ROLE_HANDOFF_ROLE_VERIFIER":    4,
+		"ROLE_HANDOFF_ROLE_RELEASER":    5,
+		"ROLE_HANDOFF_ROLE_OWNER":       6,
+		"ROLE_HANDOFF_ROLE_CUSTOM":      7,
+	}
+)
+
+func (x RoleHandoffRole) Enum() *RoleHandoffRole {
+	p := new(RoleHandoffRole)
+	*p = x
+	return p
+}
+
+func (x RoleHandoffRole) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RoleHandoffRole) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[6].Descriptor()
+}
+
+func (RoleHandoffRole) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[6]
+}
+
+func (x RoleHandoffRole) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RoleHandoffRole.Descriptor instead.
+func (RoleHandoffRole) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{6}
+}
+
+// RoleHandoffStatus is the closed lifecycle for a role handoff.
+type RoleHandoffStatus int32
+
+const (
+	// Handoff status is omitted or unknown.
+	RoleHandoffStatus_ROLE_HANDOFF_STATUS_UNSPECIFIED RoleHandoffStatus = 0
+	// Handoff has been proposed.
+	RoleHandoffStatus_ROLE_HANDOFF_STATUS_PROPOSED RoleHandoffStatus = 1
+	// Handoff has been accepted.
+	RoleHandoffStatus_ROLE_HANDOFF_STATUS_ACCEPTED RoleHandoffStatus = 2
+	// Handoff was declined.
+	RoleHandoffStatus_ROLE_HANDOFF_STATUS_DECLINED RoleHandoffStatus = 3
+	// Handoff was canceled.
+	RoleHandoffStatus_ROLE_HANDOFF_STATUS_CANCELED RoleHandoffStatus = 4
+	// Handoff work was completed.
+	RoleHandoffStatus_ROLE_HANDOFF_STATUS_COMPLETED RoleHandoffStatus = 5
+)
+
+// Enum value maps for RoleHandoffStatus.
+var (
+	RoleHandoffStatus_name = map[int32]string{
+		0: "ROLE_HANDOFF_STATUS_UNSPECIFIED",
+		1: "ROLE_HANDOFF_STATUS_PROPOSED",
+		2: "ROLE_HANDOFF_STATUS_ACCEPTED",
+		3: "ROLE_HANDOFF_STATUS_DECLINED",
+		4: "ROLE_HANDOFF_STATUS_CANCELED",
+		5: "ROLE_HANDOFF_STATUS_COMPLETED",
+	}
+	RoleHandoffStatus_value = map[string]int32{
+		"ROLE_HANDOFF_STATUS_UNSPECIFIED": 0,
+		"ROLE_HANDOFF_STATUS_PROPOSED":    1,
+		"ROLE_HANDOFF_STATUS_ACCEPTED":    2,
+		"ROLE_HANDOFF_STATUS_DECLINED":    3,
+		"ROLE_HANDOFF_STATUS_CANCELED":    4,
+		"ROLE_HANDOFF_STATUS_COMPLETED":   5,
+	}
+)
+
+func (x RoleHandoffStatus) Enum() *RoleHandoffStatus {
+	p := new(RoleHandoffStatus)
+	*p = x
+	return p
+}
+
+func (x RoleHandoffStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RoleHandoffStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[7].Descriptor()
+}
+
+func (RoleHandoffStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[7]
+}
+
+func (x RoleHandoffStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RoleHandoffStatus.Descriptor instead.
+func (RoleHandoffStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{7}
+}
+
+// NegotiationStatus is the closed lifecycle shared by deadline/scope negotiation.
+type NegotiationStatus int32
+
+const (
+	// Negotiation status is omitted or unknown.
+	NegotiationStatus_NEGOTIATION_STATUS_UNSPECIFIED NegotiationStatus = 0
+	// Negotiation has been proposed.
+	NegotiationStatus_NEGOTIATION_STATUS_PROPOSED NegotiationStatus = 1
+	// Negotiation was accepted.
+	NegotiationStatus_NEGOTIATION_STATUS_ACCEPTED NegotiationStatus = 2
+	// Negotiation was rejected.
+	NegotiationStatus_NEGOTIATION_STATUS_REJECTED NegotiationStatus = 3
+	// Negotiation was replaced by a newer proposal.
+	NegotiationStatus_NEGOTIATION_STATUS_SUPERSEDED NegotiationStatus = 4
+)
+
+// Enum value maps for NegotiationStatus.
+var (
+	NegotiationStatus_name = map[int32]string{
+		0: "NEGOTIATION_STATUS_UNSPECIFIED",
+		1: "NEGOTIATION_STATUS_PROPOSED",
+		2: "NEGOTIATION_STATUS_ACCEPTED",
+		3: "NEGOTIATION_STATUS_REJECTED",
+		4: "NEGOTIATION_STATUS_SUPERSEDED",
+	}
+	NegotiationStatus_value = map[string]int32{
+		"NEGOTIATION_STATUS_UNSPECIFIED": 0,
+		"NEGOTIATION_STATUS_PROPOSED":    1,
+		"NEGOTIATION_STATUS_ACCEPTED":    2,
+		"NEGOTIATION_STATUS_REJECTED":    3,
+		"NEGOTIATION_STATUS_SUPERSEDED":  4,
+	}
+)
+
+func (x NegotiationStatus) Enum() *NegotiationStatus {
+	p := new(NegotiationStatus)
+	*p = x
+	return p
+}
+
+func (x NegotiationStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NegotiationStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[8].Descriptor()
+}
+
+func (NegotiationStatus) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[8]
+}
+
+func (x NegotiationStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NegotiationStatus.Descriptor instead.
+func (NegotiationStatus) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{8}
+}
+
+// CoordinationKind is the closed taxonomy for coordination record payloads.
+type CoordinationKind int32
+
+const (
+	// Coordination kind is omitted or unknown.
+	CoordinationKind_COORDINATION_KIND_UNSPECIFIED CoordinationKind = 0
+	// Record carries a WorkPlan.
+	CoordinationKind_COORDINATION_KIND_WORK_PLAN CoordinationKind = 1
+	// Record carries a ProgressUpdate.
+	CoordinationKind_COORDINATION_KIND_PROGRESS_UPDATE CoordinationKind = 2
+	// Record carries AcceptanceEvidence.
+	CoordinationKind_COORDINATION_KIND_ACCEPTANCE_EVIDENCE CoordinationKind = 3
+	// Record carries a ReleaseGate.
+	CoordinationKind_COORDINATION_KIND_RELEASE_GATE CoordinationKind = 4
+	// Record carries a RoleHandoff.
+	CoordinationKind_COORDINATION_KIND_ROLE_HANDOFF CoordinationKind = 5
+	// Record carries a DeadlineNegotiation.
+	CoordinationKind_COORDINATION_KIND_DEADLINE_NEGOTIATION CoordinationKind = 6
+	// Record carries a ScopeNegotiation.
+	CoordinationKind_COORDINATION_KIND_SCOPE_NEGOTIATION CoordinationKind = 7
+)
+
+// Enum value maps for CoordinationKind.
+var (
+	CoordinationKind_name = map[int32]string{
+		0: "COORDINATION_KIND_UNSPECIFIED",
+		1: "COORDINATION_KIND_WORK_PLAN",
+		2: "COORDINATION_KIND_PROGRESS_UPDATE",
+		3: "COORDINATION_KIND_ACCEPTANCE_EVIDENCE",
+		4: "COORDINATION_KIND_RELEASE_GATE",
+		5: "COORDINATION_KIND_ROLE_HANDOFF",
+		6: "COORDINATION_KIND_DEADLINE_NEGOTIATION",
+		7: "COORDINATION_KIND_SCOPE_NEGOTIATION",
+	}
+	CoordinationKind_value = map[string]int32{
+		"COORDINATION_KIND_UNSPECIFIED":          0,
+		"COORDINATION_KIND_WORK_PLAN":            1,
+		"COORDINATION_KIND_PROGRESS_UPDATE":      2,
+		"COORDINATION_KIND_ACCEPTANCE_EVIDENCE":  3,
+		"COORDINATION_KIND_RELEASE_GATE":         4,
+		"COORDINATION_KIND_ROLE_HANDOFF":         5,
+		"COORDINATION_KIND_DEADLINE_NEGOTIATION": 6,
+		"COORDINATION_KIND_SCOPE_NEGOTIATION":    7,
+	}
+)
+
+func (x CoordinationKind) Enum() *CoordinationKind {
+	p := new(CoordinationKind)
+	*p = x
+	return p
+}
+
+func (x CoordinationKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CoordinationKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[9].Descriptor()
+}
+
+func (CoordinationKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[9]
+}
+
+func (x CoordinationKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CoordinationKind.Descriptor instead.
+func (CoordinationKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{9}
+}
+
+// NegotiationKind identifies which negotiation payload a counter-proposal targets.
+type NegotiationKind int32
+
+const (
+	// Negotiation kind is omitted or unknown.
+	NegotiationKind_NEGOTIATION_KIND_UNSPECIFIED NegotiationKind = 0
+	// Counter-proposal applies to a deadline negotiation.
+	NegotiationKind_NEGOTIATION_KIND_DEADLINE NegotiationKind = 1
+	// Counter-proposal applies to a scope negotiation.
+	NegotiationKind_NEGOTIATION_KIND_SCOPE NegotiationKind = 2
+)
+
+// Enum value maps for NegotiationKind.
+var (
+	NegotiationKind_name = map[int32]string{
+		0: "NEGOTIATION_KIND_UNSPECIFIED",
+		1: "NEGOTIATION_KIND_DEADLINE",
+		2: "NEGOTIATION_KIND_SCOPE",
+	}
+	NegotiationKind_value = map[string]int32{
+		"NEGOTIATION_KIND_UNSPECIFIED": 0,
+		"NEGOTIATION_KIND_DEADLINE":    1,
+		"NEGOTIATION_KIND_SCOPE":       2,
+	}
+)
+
+func (x NegotiationKind) Enum() *NegotiationKind {
+	p := new(NegotiationKind)
+	*p = x
+	return p
+}
+
+func (x NegotiationKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NegotiationKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[10].Descriptor()
+}
+
+func (NegotiationKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[10]
+}
+
+func (x NegotiationKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NegotiationKind.Descriptor instead.
+func (NegotiationKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{10}
+}
+
+// RoleHandoffResponseValue is the closed response set for handoff decisions.
+type RoleHandoffResponseValue int32
+
+const (
+	// Response is omitted or unknown.
+	RoleHandoffResponseValue_ROLE_HANDOFF_RESPONSE_VALUE_UNSPECIFIED RoleHandoffResponseValue = 0
+	// Accept the handoff.
+	RoleHandoffResponseValue_ROLE_HANDOFF_RESPONSE_VALUE_ACCEPTED RoleHandoffResponseValue = 1
+	// Decline the handoff.
+	RoleHandoffResponseValue_ROLE_HANDOFF_RESPONSE_VALUE_DECLINED RoleHandoffResponseValue = 2
+	// Mark the handoff completed.
+	RoleHandoffResponseValue_ROLE_HANDOFF_RESPONSE_VALUE_COMPLETED RoleHandoffResponseValue = 3
+	// Cancel the handoff.
+	RoleHandoffResponseValue_ROLE_HANDOFF_RESPONSE_VALUE_CANCELED RoleHandoffResponseValue = 4
+)
+
+// Enum value maps for RoleHandoffResponseValue.
+var (
+	RoleHandoffResponseValue_name = map[int32]string{
+		0: "ROLE_HANDOFF_RESPONSE_VALUE_UNSPECIFIED",
+		1: "ROLE_HANDOFF_RESPONSE_VALUE_ACCEPTED",
+		2: "ROLE_HANDOFF_RESPONSE_VALUE_DECLINED",
+		3: "ROLE_HANDOFF_RESPONSE_VALUE_COMPLETED",
+		4: "ROLE_HANDOFF_RESPONSE_VALUE_CANCELED",
+	}
+	RoleHandoffResponseValue_value = map[string]int32{
+		"ROLE_HANDOFF_RESPONSE_VALUE_UNSPECIFIED": 0,
+		"ROLE_HANDOFF_RESPONSE_VALUE_ACCEPTED":    1,
+		"ROLE_HANDOFF_RESPONSE_VALUE_DECLINED":    2,
+		"ROLE_HANDOFF_RESPONSE_VALUE_COMPLETED":   3,
+		"ROLE_HANDOFF_RESPONSE_VALUE_CANCELED":    4,
+	}
+)
+
+func (x RoleHandoffResponseValue) Enum() *RoleHandoffResponseValue {
+	p := new(RoleHandoffResponseValue)
+	*p = x
+	return p
+}
+
+func (x RoleHandoffResponseValue) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RoleHandoffResponseValue) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_coordination_proto_enumTypes[11].Descriptor()
+}
+
+func (RoleHandoffResponseValue) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_coordination_proto_enumTypes[11]
+}
+
+func (x RoleHandoffResponseValue) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RoleHandoffResponseValue.Descriptor instead.
+func (RoleHandoffResponseValue) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_coordination_proto_rawDescGZIP(), []int{11}
+}
+
 type WorkPlanItem struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	ItemId             string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
 	Summary            string                 `protobuf:"bytes,2,opt,name=summary,proto3" json:"summary,omitempty"`
-	Status             string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"` // pending | in_progress | completed | blocked | skipped
+	Status             WorkPlanItemStatus     `protobuf:"varint,3,opt,name=status,proto3,enum=nekode.daemon.v1.WorkPlanItemStatus" json:"status,omitempty"`
 	OwnerAgentId       string                 `protobuf:"bytes,4,opt,name=owner_agent_id,json=ownerAgentId,proto3" json:"owner_agent_id,omitempty"`
 	OwnerUserId        string                 `protobuf:"bytes,5,opt,name=owner_user_id,json=ownerUserId,proto3" json:"owner_user_id,omitempty"`
 	TaskId             string                 `protobuf:"bytes,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
@@ -80,11 +861,11 @@ func (x *WorkPlanItem) GetSummary() string {
 	return ""
 }
 
-func (x *WorkPlanItem) GetStatus() string {
+func (x *WorkPlanItem) GetStatus() WorkPlanItemStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return WorkPlanItemStatus_WORK_PLAN_ITEM_STATUS_UNSPECIFIED
 }
 
 func (x *WorkPlanItem) GetOwnerAgentId() string {
@@ -136,7 +917,7 @@ type WorkPlan struct {
 	ThreadId        string                 `protobuf:"bytes,3,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
 	TaskId          string                 `protobuf:"bytes,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	OwnerAgentId    string                 `protobuf:"bytes,5,opt,name=owner_agent_id,json=ownerAgentId,proto3" json:"owner_agent_id,omitempty"`
-	Status          string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"` // draft | active | superseded | completed | canceled
+	Status          WorkPlanStatus         `protobuf:"varint,6,opt,name=status,proto3,enum=nekode.daemon.v1.WorkPlanStatus" json:"status,omitempty"`
 	Items           []*WorkPlanItem        `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty"`
 	Summary         string                 `protobuf:"bytes,8,opt,name=summary,proto3" json:"summary,omitempty"`
 	CreatedTimeUnix int64                  `protobuf:"varint,9,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
@@ -210,11 +991,11 @@ func (x *WorkPlan) GetOwnerAgentId() string {
 	return ""
 }
 
-func (x *WorkPlan) GetStatus() string {
+func (x *WorkPlan) GetStatus() WorkPlanStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return WorkPlanStatus_WORK_PLAN_STATUS_UNSPECIFIED
 }
 
 func (x *WorkPlan) GetItems() []*WorkPlanItem {
@@ -252,7 +1033,7 @@ type ProgressUpdate struct {
 	TaskId           string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	RunId            string                 `protobuf:"bytes,4,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	AgentId          string                 `protobuf:"bytes,5,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	Status           string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"` // started | in_progress | blocked | verifying | completed
+	Status           ProgressUpdateStatus   `protobuf:"varint,6,opt,name=status,proto3,enum=nekode.daemon.v1.ProgressUpdateStatus" json:"status,omitempty"`
 	Summary          string                 `protobuf:"bytes,7,opt,name=summary,proto3" json:"summary,omitempty"`
 	Detail           string                 `protobuf:"bytes,8,opt,name=detail,proto3" json:"detail,omitempty"`
 	CompletedItemIds []string               `protobuf:"bytes,9,rep,name=completed_item_ids,json=completedItemIds,proto3" json:"completed_item_ids,omitempty"`
@@ -327,11 +1108,11 @@ func (x *ProgressUpdate) GetAgentId() string {
 	return ""
 }
 
-func (x *ProgressUpdate) GetStatus() string {
+func (x *ProgressUpdate) GetStatus() ProgressUpdateStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return ProgressUpdateStatus_PROGRESS_UPDATE_STATUS_UNSPECIFIED
 }
 
 func (x *ProgressUpdate) GetSummary() string {
@@ -372,9 +1153,9 @@ func (x *ProgressUpdate) GetCreatedTimeUnix() int64 {
 type VerificationResult struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	VerificationId    string                 `protobuf:"bytes,1,opt,name=verification_id,json=verificationId,proto3" json:"verification_id,omitempty"`
-	Kind              string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"` // command | test | build | lint | smoke | review | manual
+	Kind              VerificationKind       `protobuf:"varint,2,opt,name=kind,proto3,enum=nekode.daemon.v1.VerificationKind" json:"kind,omitempty"`
 	Command           string                 `protobuf:"bytes,3,opt,name=command,proto3" json:"command,omitempty"`
-	Status            string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"` // passed | failed | skipped | blocked
+	Status            VerificationStatus     `protobuf:"varint,4,opt,name=status,proto3,enum=nekode.daemon.v1.VerificationStatus" json:"status,omitempty"`
 	Summary           string                 `protobuf:"bytes,5,opt,name=summary,proto3" json:"summary,omitempty"`
 	OutputExcerpt     string                 `protobuf:"bytes,6,opt,name=output_excerpt,json=outputExcerpt,proto3" json:"output_excerpt,omitempty"`
 	ArtifactIds       []string               `protobuf:"bytes,7,rep,name=artifact_ids,json=artifactIds,proto3" json:"artifact_ids,omitempty"`
@@ -421,11 +1202,11 @@ func (x *VerificationResult) GetVerificationId() string {
 	return ""
 }
 
-func (x *VerificationResult) GetKind() string {
+func (x *VerificationResult) GetKind() VerificationKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return VerificationKind_VERIFICATION_KIND_UNSPECIFIED
 }
 
 func (x *VerificationResult) GetCommand() string {
@@ -435,11 +1216,11 @@ func (x *VerificationResult) GetCommand() string {
 	return ""
 }
 
-func (x *VerificationResult) GetStatus() string {
+func (x *VerificationResult) GetStatus() VerificationStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return VerificationStatus_VERIFICATION_STATUS_UNSPECIFIED
 }
 
 func (x *VerificationResult) GetSummary() string {
@@ -615,7 +1396,7 @@ type ReleaseGate struct {
 	Target             string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
 	TaskId             string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Name               string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Status             string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // pending | running | passed | failed | waived
+	Status             ReleaseGateStatus      `protobuf:"varint,5,opt,name=status,proto3,enum=nekode.daemon.v1.ReleaseGateStatus" json:"status,omitempty"`
 	RequiredChecks     []string               `protobuf:"bytes,6,rep,name=required_checks,json=requiredChecks,proto3" json:"required_checks,omitempty"`
 	Results            []*VerificationResult  `protobuf:"bytes,7,rep,name=results,proto3" json:"results,omitempty"`
 	Passed             bool                   `protobuf:"varint,8,opt,name=passed,proto3" json:"passed,omitempty"`
@@ -687,11 +1468,11 @@ func (x *ReleaseGate) GetName() string {
 	return ""
 }
 
-func (x *ReleaseGate) GetStatus() string {
+func (x *ReleaseGate) GetStatus() ReleaseGateStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return ReleaseGateStatus_RELEASE_GATE_STATUS_UNSPECIFIED
 }
 
 func (x *ReleaseGate) GetRequiredChecks() []string {
@@ -764,10 +1545,10 @@ type RoleHandoff struct {
 	TaskId              string                 `protobuf:"bytes,3,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	FromAgentId         string                 `protobuf:"bytes,4,opt,name=from_agent_id,json=fromAgentId,proto3" json:"from_agent_id,omitempty"`
 	ToAgentId           string                 `protobuf:"bytes,5,opt,name=to_agent_id,json=toAgentId,proto3" json:"to_agent_id,omitempty"`
-	Role                string                 `protobuf:"bytes,6,opt,name=role,proto3" json:"role,omitempty"` // designer | implementer | reviewer | verifier | releaser | owner | custom
+	Role                RoleHandoffRole        `protobuf:"varint,6,opt,name=role,proto3,enum=nekode.daemon.v1.RoleHandoffRole" json:"role,omitempty"`
 	ContextSummary      string                 `protobuf:"bytes,7,opt,name=context_summary,json=contextSummary,proto3" json:"context_summary,omitempty"`
 	RequiredArtifactIds []string               `protobuf:"bytes,8,rep,name=required_artifact_ids,json=requiredArtifactIds,proto3" json:"required_artifact_ids,omitempty"`
-	Status              string                 `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"` // proposed | accepted | declined | canceled | completed
+	Status              RoleHandoffStatus      `protobuf:"varint,9,opt,name=status,proto3,enum=nekode.daemon.v1.RoleHandoffStatus" json:"status,omitempty"`
 	CreatedTimeUnix     int64                  `protobuf:"varint,10,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
 	AcceptedTimeUnix    int64                  `protobuf:"varint,11,opt,name=accepted_time_unix,json=acceptedTimeUnix,proto3" json:"accepted_time_unix,omitempty"`
 	ContextTaskIds      []string               `protobuf:"bytes,12,rep,name=context_task_ids,json=contextTaskIds,proto3" json:"context_task_ids,omitempty"`
@@ -843,11 +1624,11 @@ func (x *RoleHandoff) GetToAgentId() string {
 	return ""
 }
 
-func (x *RoleHandoff) GetRole() string {
+func (x *RoleHandoff) GetRole() RoleHandoffRole {
 	if x != nil {
 		return x.Role
 	}
-	return ""
+	return RoleHandoffRole_ROLE_HANDOFF_ROLE_UNSPECIFIED
 }
 
 func (x *RoleHandoff) GetContextSummary() string {
@@ -864,11 +1645,11 @@ func (x *RoleHandoff) GetRequiredArtifactIds() []string {
 	return nil
 }
 
-func (x *RoleHandoff) GetStatus() string {
+func (x *RoleHandoff) GetStatus() RoleHandoffStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return RoleHandoffStatus_ROLE_HANDOFF_STATUS_UNSPECIFIED
 }
 
 func (x *RoleHandoff) GetCreatedTimeUnix() int64 {
@@ -1023,7 +1804,7 @@ type DeadlineNegotiation struct {
 	RequestedDeadlineUnix     int64                         `protobuf:"varint,6,opt,name=requested_deadline_unix,json=requestedDeadlineUnix,proto3" json:"requested_deadline_unix,omitempty"`
 	ProposedDeadlineUnix      int64                         `protobuf:"varint,7,opt,name=proposed_deadline_unix,json=proposedDeadlineUnix,proto3" json:"proposed_deadline_unix,omitempty"`
 	Reason                    string                        `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
-	Status                    string                        `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"` // proposed | accepted | rejected | superseded
+	Status                    NegotiationStatus             `protobuf:"varint,9,opt,name=status,proto3,enum=nekode.daemon.v1.NegotiationStatus" json:"status,omitempty"`
 	DecidedTimeUnix           int64                         `protobuf:"varint,10,opt,name=decided_time_unix,json=decidedTimeUnix,proto3" json:"decided_time_unix,omitempty"`
 	CounterProposals          []*NegotiationCounterProposal `protobuf:"bytes,11,rep,name=counter_proposals,json=counterProposals,proto3" json:"counter_proposals,omitempty"`
 	AcceptedCounterProposalId string                        `protobuf:"bytes,12,opt,name=accepted_counter_proposal_id,json=acceptedCounterProposalId,proto3" json:"accepted_counter_proposal_id,omitempty"`
@@ -1119,11 +1900,11 @@ func (x *DeadlineNegotiation) GetReason() string {
 	return ""
 }
 
-func (x *DeadlineNegotiation) GetStatus() string {
+func (x *DeadlineNegotiation) GetStatus() NegotiationStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return NegotiationStatus_NEGOTIATION_STATUS_UNSPECIFIED
 }
 
 func (x *DeadlineNegotiation) GetDecidedTimeUnix() int64 {
@@ -1171,7 +1952,7 @@ type ScopeNegotiation struct {
 	IncludedScope             []string                      `protobuf:"bytes,6,rep,name=included_scope,json=includedScope,proto3" json:"included_scope,omitempty"`
 	DeferredScope             []string                      `protobuf:"bytes,7,rep,name=deferred_scope,json=deferredScope,proto3" json:"deferred_scope,omitempty"`
 	Reason                    string                        `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
-	Status                    string                        `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"` // proposed | accepted | rejected | superseded
+	Status                    NegotiationStatus             `protobuf:"varint,9,opt,name=status,proto3,enum=nekode.daemon.v1.NegotiationStatus" json:"status,omitempty"`
 	DecidedTimeUnix           int64                         `protobuf:"varint,10,opt,name=decided_time_unix,json=decidedTimeUnix,proto3" json:"decided_time_unix,omitempty"`
 	CounterProposals          []*NegotiationCounterProposal `protobuf:"bytes,11,rep,name=counter_proposals,json=counterProposals,proto3" json:"counter_proposals,omitempty"`
 	AcceptedCounterProposalId string                        `protobuf:"bytes,12,opt,name=accepted_counter_proposal_id,json=acceptedCounterProposalId,proto3" json:"accepted_counter_proposal_id,omitempty"`
@@ -1267,11 +2048,11 @@ func (x *ScopeNegotiation) GetReason() string {
 	return ""
 }
 
-func (x *ScopeNegotiation) GetStatus() string {
+func (x *ScopeNegotiation) GetStatus() NegotiationStatus {
 	if x != nil {
 		return x.Status
 	}
-	return ""
+	return NegotiationStatus_NEGOTIATION_STATUS_UNSPECIFIED
 }
 
 func (x *ScopeNegotiation) GetDecidedTimeUnix() int64 {
@@ -1317,7 +2098,7 @@ type CoordinationRecord struct {
 	TaskId          string                 `protobuf:"bytes,4,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	ActorAgentId    string                 `protobuf:"bytes,5,opt,name=actor_agent_id,json=actorAgentId,proto3" json:"actor_agent_id,omitempty"`
 	ActorUserId     string                 `protobuf:"bytes,6,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
-	Kind            string                 `protobuf:"bytes,7,opt,name=kind,proto3" json:"kind,omitempty"` // work_plan | progress_update | acceptance_evidence | release_gate | role_handoff | deadline_negotiation | scope_negotiation
+	Kind            CoordinationKind       `protobuf:"varint,7,opt,name=kind,proto3,enum=nekode.daemon.v1.CoordinationKind" json:"kind,omitempty"`
 	CreatedTimeUnix int64                  `protobuf:"varint,8,opt,name=created_time_unix,json=createdTimeUnix,proto3" json:"created_time_unix,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
@@ -1405,11 +2186,11 @@ func (x *CoordinationRecord) GetActorUserId() string {
 	return ""
 }
 
-func (x *CoordinationRecord) GetKind() string {
+func (x *CoordinationRecord) GetKind() CoordinationKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return CoordinationKind_COORDINATION_KIND_UNSPECIFIED
 }
 
 func (x *CoordinationRecord) GetCreatedTimeUnix() int64 {
@@ -1659,7 +2440,7 @@ type ListCoordinationRecordsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
 	TaskId        string                 `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	Kind          CoordinationKind       `protobuf:"varint,3,opt,name=kind,proto3,enum=nekode.daemon.v1.CoordinationKind" json:"kind,omitempty"`
 	ActorAgentId  string                 `protobuf:"bytes,4,opt,name=actor_agent_id,json=actorAgentId,proto3" json:"actor_agent_id,omitempty"`
 	Limit         uint32                 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        *EventCursor           `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
@@ -1711,11 +2492,11 @@ func (x *ListCoordinationRecordsRequest) GetTaskId() string {
 	return ""
 }
 
-func (x *ListCoordinationRecordsRequest) GetKind() string {
+func (x *ListCoordinationRecordsRequest) GetKind() CoordinationKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ""
+	return CoordinationKind_COORDINATION_KIND_UNSPECIFIED
 }
 
 func (x *ListCoordinationRecordsRequest) GetActorAgentId() string {
@@ -1794,7 +2575,7 @@ func (x *ListCoordinationRecordsResponse) GetNextCursor() *EventCursor {
 type CounterProposeNegotiationRequest struct {
 	state           protoimpl.MessageState      `protogen:"open.v1"`
 	NegotiationId   string                      `protobuf:"bytes,1,opt,name=negotiation_id,json=negotiationId,proto3" json:"negotiation_id,omitempty"`
-	NegotiationKind string                      `protobuf:"bytes,2,opt,name=negotiation_kind,json=negotiationKind,proto3" json:"negotiation_kind,omitempty"` // deadline | scope
+	NegotiationKind NegotiationKind             `protobuf:"varint,2,opt,name=negotiation_kind,json=negotiationKind,proto3,enum=nekode.daemon.v1.NegotiationKind" json:"negotiation_kind,omitempty"`
 	CounterProposal *NegotiationCounterProposal `protobuf:"bytes,3,opt,name=counter_proposal,json=counterProposal,proto3" json:"counter_proposal,omitempty"`
 	RequestId       string                      `protobuf:"bytes,4,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	IdempotencyKey  string                      `protobuf:"bytes,5,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
@@ -1840,11 +2621,11 @@ func (x *CounterProposeNegotiationRequest) GetNegotiationId() string {
 	return ""
 }
 
-func (x *CounterProposeNegotiationRequest) GetNegotiationKind() string {
+func (x *CounterProposeNegotiationRequest) GetNegotiationKind() NegotiationKind {
 	if x != nil {
 		return x.NegotiationKind
 	}
-	return ""
+	return NegotiationKind_NEGOTIATION_KIND_UNSPECIFIED
 }
 
 func (x *CounterProposeNegotiationRequest) GetCounterProposal() *NegotiationCounterProposal {
@@ -1920,14 +2701,14 @@ func (x *CounterProposeNegotiationResponse) GetRecord() *CoordinationRecord {
 }
 
 type RespondRoleHandoffRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	HandoffId         string                 `protobuf:"bytes,1,opt,name=handoff_id,json=handoffId,proto3" json:"handoff_id,omitempty"`
-	Response          string                 `protobuf:"bytes,2,opt,name=response,proto3" json:"response,omitempty"` // accepted | declined | completed | canceled
-	RespondingAgentId string                 `protobuf:"bytes,3,opt,name=responding_agent_id,json=respondingAgentId,proto3" json:"responding_agent_id,omitempty"`
-	ResponseNote      string                 `protobuf:"bytes,4,opt,name=response_note,json=responseNote,proto3" json:"response_note,omitempty"`
-	RequestId         string                 `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
-	IdempotencyKey    string                 `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	Context           *RequestContext        `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
+	state             protoimpl.MessageState   `protogen:"open.v1"`
+	HandoffId         string                   `protobuf:"bytes,1,opt,name=handoff_id,json=handoffId,proto3" json:"handoff_id,omitempty"`
+	Response          RoleHandoffResponseValue `protobuf:"varint,2,opt,name=response,proto3,enum=nekode.daemon.v1.RoleHandoffResponseValue" json:"response,omitempty"`
+	RespondingAgentId string                   `protobuf:"bytes,3,opt,name=responding_agent_id,json=respondingAgentId,proto3" json:"responding_agent_id,omitempty"`
+	ResponseNote      string                   `protobuf:"bytes,4,opt,name=response_note,json=responseNote,proto3" json:"response_note,omitempty"`
+	RequestId         string                   `protobuf:"bytes,5,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	IdempotencyKey    string                   `protobuf:"bytes,6,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	Context           *RequestContext          `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1969,11 +2750,11 @@ func (x *RespondRoleHandoffRequest) GetHandoffId() string {
 	return ""
 }
 
-func (x *RespondRoleHandoffRequest) GetResponse() string {
+func (x *RespondRoleHandoffRequest) GetResponse() RoleHandoffResponseValue {
 	if x != nil {
 		return x.Response
 	}
-	return ""
+	return RoleHandoffResponseValue_ROLE_HANDOFF_RESPONSE_VALUE_UNSPECIFIED
 }
 
 func (x *RespondRoleHandoffRequest) GetRespondingAgentId() string {
@@ -2171,48 +2952,48 @@ var File_nekode_daemon_v1_coordination_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\n" +
-	"#nekode/daemon/v1/coordination.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xc3\x02\n" +
+	"#nekode/daemon/v1/coordination.proto\x12\x10nekode.daemon.v1\x1a\x1dnekode/daemon/v1/common.proto\"\xe9\x02\n" +
 	"\fWorkPlanItem\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x18\n" +
-	"\asummary\x18\x02 \x01(\tR\asummary\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\x12$\n" +
+	"\asummary\x18\x02 \x01(\tR\asummary\x12<\n" +
+	"\x06status\x18\x03 \x01(\x0e2$.nekode.daemon.v1.WorkPlanItemStatusR\x06status\x12$\n" +
 	"\x0eowner_agent_id\x18\x04 \x01(\tR\fownerAgentId\x12\"\n" +
 	"\rowner_user_id\x18\x05 \x01(\tR\vownerUserId\x12\x17\n" +
 	"\atask_id\x18\x06 \x01(\tR\x06taskId\x12-\n" +
 	"\x13depends_on_item_ids\x18\a \x03(\tR\x10dependsOnItemIds\x12\x1d\n" +
 	"\n" +
 	"file_paths\x18\b \x03(\tR\tfilePaths\x12/\n" +
-	"\x13acceptance_criteria\x18\t \x03(\tR\x12acceptanceCriteriaJ\x06\b\xe8\a\x10\xd0\x0f\"\xdf\x02\n" +
+	"\x13acceptance_criteria\x18\t \x03(\tR\x12acceptanceCriteriaJ\x06\b\xe8\a\x10\xd0\x0f\"\x81\x03\n" +
 	"\bWorkPlan\x12\x17\n" +
 	"\aplan_id\x18\x01 \x01(\tR\x06planId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x1b\n" +
 	"\tthread_id\x18\x03 \x01(\tR\bthreadId\x12\x17\n" +
 	"\atask_id\x18\x04 \x01(\tR\x06taskId\x12$\n" +
-	"\x0eowner_agent_id\x18\x05 \x01(\tR\fownerAgentId\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x124\n" +
+	"\x0eowner_agent_id\x18\x05 \x01(\tR\fownerAgentId\x128\n" +
+	"\x06status\x18\x06 \x01(\x0e2 .nekode.daemon.v1.WorkPlanStatusR\x06status\x124\n" +
 	"\x05items\x18\a \x03(\v2\x1e.nekode.daemon.v1.WorkPlanItemR\x05items\x12\x18\n" +
 	"\asummary\x18\b \x01(\tR\asummary\x12*\n" +
 	"\x11created_time_unix\x18\t \x01(\x03R\x0fcreatedTimeUnix\x12*\n" +
 	"\x11updated_time_unix\x18\n" +
-	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xe6\x02\n" +
+	" \x01(\x03R\x0fupdatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\x8e\x03\n" +
 	"\x0eProgressUpdate\x12\x1b\n" +
 	"\tupdate_id\x18\x01 \x01(\tR\bupdateId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
 	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12\x15\n" +
 	"\x06run_id\x18\x04 \x01(\tR\x05runId\x12\x19\n" +
-	"\bagent_id\x18\x05 \x01(\tR\aagentId\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\x12\x18\n" +
+	"\bagent_id\x18\x05 \x01(\tR\aagentId\x12>\n" +
+	"\x06status\x18\x06 \x01(\x0e2&.nekode.daemon.v1.ProgressUpdateStatusR\x06status\x12\x18\n" +
 	"\asummary\x18\a \x01(\tR\asummary\x12\x16\n" +
 	"\x06detail\x18\b \x01(\tR\x06detail\x12,\n" +
 	"\x12completed_item_ids\x18\t \x03(\tR\x10completedItemIds\x12(\n" +
 	"\x10blocked_item_ids\x18\n" +
 	" \x03(\tR\x0eblockedItemIds\x12*\n" +
-	"\x11created_time_unix\x18\v \x01(\x03R\x0fcreatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xcb\x02\n" +
+	"\x11created_time_unix\x18\v \x01(\x03R\x0fcreatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\x95\x03\n" +
 	"\x12VerificationResult\x12'\n" +
-	"\x0fverification_id\x18\x01 \x01(\tR\x0everificationId\x12\x12\n" +
-	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x18\n" +
-	"\acommand\x18\x03 \x01(\tR\acommand\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\tR\x06status\x12\x18\n" +
+	"\x0fverification_id\x18\x01 \x01(\tR\x0everificationId\x126\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\".nekode.daemon.v1.VerificationKindR\x04kind\x12\x18\n" +
+	"\acommand\x18\x03 \x01(\tR\acommand\x12<\n" +
+	"\x06status\x18\x04 \x01(\x0e2$.nekode.daemon.v1.VerificationStatusR\x06status\x12\x18\n" +
 	"\asummary\x18\x05 \x01(\tR\asummary\x12%\n" +
 	"\x0eoutput_excerpt\x18\x06 \x01(\tR\routputExcerpt\x12!\n" +
 	"\fartifact_ids\x18\a \x03(\tR\vartifactIds\x12*\n" +
@@ -2233,13 +3014,13 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\ttag_names\x18\n" +
 	" \x03(\tR\btagNames\x12!\n" +
 	"\fartifact_ids\x18\v \x03(\tR\vartifactIds\x12.\n" +
-	"\x13submitted_time_unix\x18\f \x01(\x03R\x11submittedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\x97\x04\n" +
+	"\x13submitted_time_unix\x18\f \x01(\x03R\x11submittedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xbc\x04\n" +
 	"\vReleaseGate\x12&\n" +
 	"\x0frelease_gate_id\x18\x01 \x01(\tR\rreleaseGateId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
 	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\x12'\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12;\n" +
+	"\x06status\x18\x05 \x01(\x0e2#.nekode.daemon.v1.ReleaseGateStatusR\x06status\x12'\n" +
 	"\x0frequired_checks\x18\x06 \x03(\tR\x0erequiredChecks\x12>\n" +
 	"\aresults\x18\a \x03(\v2$.nekode.daemon.v1.VerificationResultR\aresults\x12\x16\n" +
 	"\x06passed\x18\b \x01(\bR\x06passed\x12#\n" +
@@ -2249,18 +3030,18 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x0frelease_version\x18\v \x01(\tR\x0ereleaseVersion\x12/\n" +
 	"\x13release_environment\x18\f \x01(\tR\x12releaseEnvironment\x12,\n" +
 	"\x12released_time_unix\x18\r \x01(\x03R\x10releasedTimeUnix\x12!\n" +
-	"\frelease_note\x18\x0e \x01(\tR\vreleaseNoteJ\x06\b\xe8\a\x10\xd0\x0f\"\xa7\x04\n" +
+	"\frelease_note\x18\x0e \x01(\tR\vreleaseNoteJ\x06\b\xe8\a\x10\xd0\x0f\"\xef\x04\n" +
 	"\vRoleHandoff\x12\x1d\n" +
 	"\n" +
 	"handoff_id\x18\x01 \x01(\tR\thandoffId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
 	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12\"\n" +
 	"\rfrom_agent_id\x18\x04 \x01(\tR\vfromAgentId\x12\x1e\n" +
-	"\vto_agent_id\x18\x05 \x01(\tR\ttoAgentId\x12\x12\n" +
-	"\x04role\x18\x06 \x01(\tR\x04role\x12'\n" +
+	"\vto_agent_id\x18\x05 \x01(\tR\ttoAgentId\x125\n" +
+	"\x04role\x18\x06 \x01(\x0e2!.nekode.daemon.v1.RoleHandoffRoleR\x04role\x12'\n" +
 	"\x0fcontext_summary\x18\a \x01(\tR\x0econtextSummary\x122\n" +
-	"\x15required_artifact_ids\x18\b \x03(\tR\x13requiredArtifactIds\x12\x16\n" +
-	"\x06status\x18\t \x01(\tR\x06status\x12*\n" +
+	"\x15required_artifact_ids\x18\b \x03(\tR\x13requiredArtifactIds\x12;\n" +
+	"\x06status\x18\t \x01(\x0e2#.nekode.daemon.v1.RoleHandoffStatusR\x06status\x12*\n" +
 	"\x11created_time_unix\x18\n" +
 	" \x01(\x03R\x0fcreatedTimeUnix\x12,\n" +
 	"\x12accepted_time_unix\x18\v \x01(\x03R\x10acceptedTimeUnix\x12(\n" +
@@ -2277,7 +3058,7 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x16proposed_deadline_unix\x18\x05 \x01(\x03R\x14proposedDeadlineUnix\x12%\n" +
 	"\x0eincluded_scope\x18\x06 \x03(\tR\rincludedScope\x12%\n" +
 	"\x0edeferred_scope\x18\a \x03(\tR\rdeferredScope\x12*\n" +
-	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\x86\x05\n" +
+	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xab\x05\n" +
 	"\x13DeadlineNegotiation\x12%\n" +
 	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
@@ -2286,15 +3067,15 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x13proposed_by_user_id\x18\x05 \x01(\tR\x10proposedByUserId\x126\n" +
 	"\x17requested_deadline_unix\x18\x06 \x01(\x03R\x15requestedDeadlineUnix\x124\n" +
 	"\x16proposed_deadline_unix\x18\a \x01(\x03R\x14proposedDeadlineUnix\x12\x16\n" +
-	"\x06reason\x18\b \x01(\tR\x06reason\x12\x16\n" +
-	"\x06status\x18\t \x01(\tR\x06status\x12*\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\x12;\n" +
+	"\x06status\x18\t \x01(\x0e2#.nekode.daemon.v1.NegotiationStatusR\x06status\x12*\n" +
 	"\x11decided_time_unix\x18\n" +
 	" \x01(\x03R\x0fdecidedTimeUnix\x12Y\n" +
 	"\x11counter_proposals\x18\v \x03(\v2,.nekode.daemon.v1.NegotiationCounterProposalR\x10counterProposals\x12?\n" +
 	"\x1caccepted_counter_proposal_id\x18\f \x01(\tR\x19acceptedCounterProposalId\x12*\n" +
 	"\x11expires_time_unix\x18\r \x01(\x03R\x0fexpiresTimeUnix\x12\x1d\n" +
 	"\n" +
-	"max_rounds\x18\x0e \x01(\rR\tmaxRoundsJ\x06\b\xe8\a\x10\xd0\x0f\"\xe3\x04\n" +
+	"max_rounds\x18\x0e \x01(\rR\tmaxRoundsJ\x06\b\xe8\a\x10\xd0\x0f\"\x88\x05\n" +
 	"\x10ScopeNegotiation\x12%\n" +
 	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x17\n" +
@@ -2303,23 +3084,23 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x13proposed_by_user_id\x18\x05 \x01(\tR\x10proposedByUserId\x12%\n" +
 	"\x0eincluded_scope\x18\x06 \x03(\tR\rincludedScope\x12%\n" +
 	"\x0edeferred_scope\x18\a \x03(\tR\rdeferredScope\x12\x16\n" +
-	"\x06reason\x18\b \x01(\tR\x06reason\x12\x16\n" +
-	"\x06status\x18\t \x01(\tR\x06status\x12*\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\x12;\n" +
+	"\x06status\x18\t \x01(\x0e2#.nekode.daemon.v1.NegotiationStatusR\x06status\x12*\n" +
 	"\x11decided_time_unix\x18\n" +
 	" \x01(\x03R\x0fdecidedTimeUnix\x12Y\n" +
 	"\x11counter_proposals\x18\v \x03(\v2,.nekode.daemon.v1.NegotiationCounterProposalR\x10counterProposals\x12?\n" +
 	"\x1caccepted_counter_proposal_id\x18\f \x01(\tR\x19acceptedCounterProposalId\x12*\n" +
 	"\x11expires_time_unix\x18\r \x01(\x03R\x0fexpiresTimeUnix\x12\x1d\n" +
 	"\n" +
-	"max_rounds\x18\x0e \x01(\rR\tmaxRoundsJ\x06\b\xe8\a\x10\xd0\x0f\"\xec\x06\n" +
+	"max_rounds\x18\x0e \x01(\rR\tmaxRoundsJ\x06\b\xe8\a\x10\xd0\x0f\"\x90\a\n" +
 	"\x12CoordinationRecord\x12'\n" +
 	"\x0fcoordination_id\x18\x01 \x01(\tR\x0ecoordinationId\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x1b\n" +
 	"\tthread_id\x18\x03 \x01(\tR\bthreadId\x12\x17\n" +
 	"\atask_id\x18\x04 \x01(\tR\x06taskId\x12$\n" +
 	"\x0eactor_agent_id\x18\x05 \x01(\tR\factorAgentId\x12\"\n" +
-	"\ractor_user_id\x18\x06 \x01(\tR\vactorUserId\x12\x12\n" +
-	"\x04kind\x18\a \x01(\tR\x04kind\x12*\n" +
+	"\ractor_user_id\x18\x06 \x01(\tR\vactorUserId\x126\n" +
+	"\x04kind\x18\a \x01(\x0e2\".nekode.daemon.v1.CoordinationKindR\x04kind\x12*\n" +
 	"\x11created_time_unix\x18\b \x01(\x03R\x0fcreatedTimeUnix\x129\n" +
 	"\twork_plan\x18\x14 \x01(\v2\x1a.nekode.daemon.v1.WorkPlanH\x00R\bworkPlan\x12K\n" +
 	"\x0fprogress_update\x18\x15 \x01(\v2 .nekode.daemon.v1.ProgressUpdateH\x00R\x0eprogressUpdate\x12W\n" +
@@ -2338,11 +3119,11 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\acontext\x18\x04 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"}\n" +
 	"!PublishCoordinationRecordResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12<\n" +
-	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\xea\x01\n" +
+	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\x8e\x02\n" +
 	"\x1eListCoordinationRecordsRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x17\n" +
-	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x12\n" +
-	"\x04kind\x18\x03 \x01(\tR\x04kind\x12$\n" +
+	"\atask_id\x18\x02 \x01(\tR\x06taskId\x126\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\".nekode.daemon.v1.CoordinationKindR\x04kind\x12$\n" +
 	"\x0eactor_agent_id\x18\x04 \x01(\tR\factorAgentId\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\rR\x05limit\x125\n" +
 	"\x06cursor\x18\x06 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursorJ\x04\b\a\x10\bR\n" +
@@ -2350,21 +3131,21 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x1fListCoordinationRecordsResponse\x12>\n" +
 	"\arecords\x18\x01 \x03(\v2$.nekode.daemon.v1.CoordinationRecordR\arecords\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xd1\x02\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xf4\x02\n" +
 	" CounterProposeNegotiationRequest\x12%\n" +
-	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12)\n" +
-	"\x10negotiation_kind\x18\x02 \x01(\tR\x0fnegotiationKind\x12W\n" +
+	"\x0enegotiation_id\x18\x01 \x01(\tR\rnegotiationId\x12L\n" +
+	"\x10negotiation_kind\x18\x02 \x01(\x0e2!.nekode.daemon.v1.NegotiationKindR\x0fnegotiationKind\x12W\n" +
 	"\x10counter_proposal\x18\x03 \x01(\v2,.nekode.daemon.v1.NegotiationCounterProposalR\x0fcounterProposal\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x04 \x01(\tR\trequestId\x12'\n" +
 	"\x0fidempotency_key\x18\x05 \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x06 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\"a\n" +
 	"!CounterProposeNegotiationResponse\x12<\n" +
-	"\x06record\x18\x01 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\xaf\x02\n" +
+	"\x06record\x18\x01 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record\"\xdb\x02\n" +
 	"\x19RespondRoleHandoffRequest\x12\x1d\n" +
 	"\n" +
-	"handoff_id\x18\x01 \x01(\tR\thandoffId\x12\x1a\n" +
-	"\bresponse\x18\x02 \x01(\tR\bresponse\x12.\n" +
+	"handoff_id\x18\x01 \x01(\tR\thandoffId\x12F\n" +
+	"\bresponse\x18\x02 \x01(\x0e2*.nekode.daemon.v1.RoleHandoffResponseValueR\bresponse\x12.\n" +
 	"\x13responding_agent_id\x18\x03 \x01(\tR\x11respondingAgentId\x12#\n" +
 	"\rresponse_note\x18\x04 \x01(\tR\fresponseNote\x12\x1d\n" +
 	"\n" +
@@ -2379,7 +3160,91 @@ const file_nekode_daemon_v1_coordination_proto_rawDesc = "" +
 	"\x0frelease_gate_id\x18\x01 \x01(\tR\rreleaseGateIdJ\x04\b\x02\x10\x03R\atask_id\"\x98\x01\n" +
 	"\x16GetReleaseGateResponse\x12@\n" +
 	"\frelease_gate\x18\x01 \x01(\v2\x1d.nekode.daemon.v1.ReleaseGateR\vreleaseGate\x12<\n" +
-	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06recordB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x06record\x18\x02 \x01(\v2$.nekode.daemon.v1.CoordinationRecordR\x06record*\xf0\x01\n" +
+	"\x12WorkPlanItemStatus\x12%\n" +
+	"!WORK_PLAN_ITEM_STATUS_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dWORK_PLAN_ITEM_STATUS_PENDING\x10\x01\x12%\n" +
+	"!WORK_PLAN_ITEM_STATUS_IN_PROGRESS\x10\x02\x12#\n" +
+	"\x1fWORK_PLAN_ITEM_STATUS_COMPLETED\x10\x03\x12!\n" +
+	"\x1dWORK_PLAN_ITEM_STATUS_BLOCKED\x10\x04\x12!\n" +
+	"\x1dWORK_PLAN_ITEM_STATUS_SKIPPED\x10\x05*\xcb\x01\n" +
+	"\x0eWorkPlanStatus\x12 \n" +
+	"\x1cWORK_PLAN_STATUS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16WORK_PLAN_STATUS_DRAFT\x10\x01\x12\x1b\n" +
+	"\x17WORK_PLAN_STATUS_ACTIVE\x10\x02\x12\x1f\n" +
+	"\x1bWORK_PLAN_STATUS_SUPERSEDED\x10\x03\x12\x1e\n" +
+	"\x1aWORK_PLAN_STATUS_COMPLETED\x10\x04\x12\x1d\n" +
+	"\x19WORK_PLAN_STATUS_CANCELED\x10\x05*\xfa\x01\n" +
+	"\x14ProgressUpdateStatus\x12&\n" +
+	"\"PROGRESS_UPDATE_STATUS_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1ePROGRESS_UPDATE_STATUS_STARTED\x10\x01\x12&\n" +
+	"\"PROGRESS_UPDATE_STATUS_IN_PROGRESS\x10\x02\x12\"\n" +
+	"\x1ePROGRESS_UPDATE_STATUS_BLOCKED\x10\x03\x12$\n" +
+	" PROGRESS_UPDATE_STATUS_VERIFYING\x10\x04\x12$\n" +
+	" PROGRESS_UPDATE_STATUS_COMPLETED\x10\x05*\x82\x02\n" +
+	"\x10VerificationKind\x12!\n" +
+	"\x1dVERIFICATION_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19VERIFICATION_KIND_COMMAND\x10\x01\x12\x1a\n" +
+	"\x16VERIFICATION_KIND_TEST\x10\x02\x12\x1b\n" +
+	"\x17VERIFICATION_KIND_BUILD\x10\x03\x12\x1a\n" +
+	"\x16VERIFICATION_KIND_LINT\x10\x04\x12\x1b\n" +
+	"\x17VERIFICATION_KIND_SMOKE\x10\x05\x12\x1c\n" +
+	"\x18VERIFICATION_KIND_REVIEW\x10\x06\x12\x1c\n" +
+	"\x18VERIFICATION_KIND_MANUAL\x10\a*\xbb\x01\n" +
+	"\x12VerificationStatus\x12#\n" +
+	"\x1fVERIFICATION_STATUS_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aVERIFICATION_STATUS_PASSED\x10\x01\x12\x1e\n" +
+	"\x1aVERIFICATION_STATUS_FAILED\x10\x02\x12\x1f\n" +
+	"\x1bVERIFICATION_STATUS_SKIPPED\x10\x03\x12\x1f\n" +
+	"\x1bVERIFICATION_STATUS_BLOCKED\x10\x04*\xda\x01\n" +
+	"\x11ReleaseGateStatus\x12#\n" +
+	"\x1fRELEASE_GATE_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bRELEASE_GATE_STATUS_PENDING\x10\x01\x12\x1f\n" +
+	"\x1bRELEASE_GATE_STATUS_RUNNING\x10\x02\x12\x1e\n" +
+	"\x1aRELEASE_GATE_STATUS_PASSED\x10\x03\x12\x1e\n" +
+	"\x1aRELEASE_GATE_STATUS_FAILED\x10\x04\x12\x1e\n" +
+	"\x1aRELEASE_GATE_STATUS_WAIVED\x10\x05*\x92\x02\n" +
+	"\x0fRoleHandoffRole\x12!\n" +
+	"\x1dROLE_HANDOFF_ROLE_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aROLE_HANDOFF_ROLE_DESIGNER\x10\x01\x12!\n" +
+	"\x1dROLE_HANDOFF_ROLE_IMPLEMENTER\x10\x02\x12\x1e\n" +
+	"\x1aROLE_HANDOFF_ROLE_REVIEWER\x10\x03\x12\x1e\n" +
+	"\x1aROLE_HANDOFF_ROLE_VERIFIER\x10\x04\x12\x1e\n" +
+	"\x1aROLE_HANDOFF_ROLE_RELEASER\x10\x05\x12\x1b\n" +
+	"\x17ROLE_HANDOFF_ROLE_OWNER\x10\x06\x12\x1c\n" +
+	"\x18ROLE_HANDOFF_ROLE_CUSTOM\x10\a*\xe3\x01\n" +
+	"\x11RoleHandoffStatus\x12#\n" +
+	"\x1fROLE_HANDOFF_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cROLE_HANDOFF_STATUS_PROPOSED\x10\x01\x12 \n" +
+	"\x1cROLE_HANDOFF_STATUS_ACCEPTED\x10\x02\x12 \n" +
+	"\x1cROLE_HANDOFF_STATUS_DECLINED\x10\x03\x12 \n" +
+	"\x1cROLE_HANDOFF_STATUS_CANCELED\x10\x04\x12!\n" +
+	"\x1dROLE_HANDOFF_STATUS_COMPLETED\x10\x05*\xbd\x01\n" +
+	"\x11NegotiationStatus\x12\"\n" +
+	"\x1eNEGOTIATION_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bNEGOTIATION_STATUS_PROPOSED\x10\x01\x12\x1f\n" +
+	"\x1bNEGOTIATION_STATUS_ACCEPTED\x10\x02\x12\x1f\n" +
+	"\x1bNEGOTIATION_STATUS_REJECTED\x10\x03\x12!\n" +
+	"\x1dNEGOTIATION_STATUS_SUPERSEDED\x10\x04*\xc5\x02\n" +
+	"\x10CoordinationKind\x12!\n" +
+	"\x1dCOORDINATION_KIND_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bCOORDINATION_KIND_WORK_PLAN\x10\x01\x12%\n" +
+	"!COORDINATION_KIND_PROGRESS_UPDATE\x10\x02\x12)\n" +
+	"%COORDINATION_KIND_ACCEPTANCE_EVIDENCE\x10\x03\x12\"\n" +
+	"\x1eCOORDINATION_KIND_RELEASE_GATE\x10\x04\x12\"\n" +
+	"\x1eCOORDINATION_KIND_ROLE_HANDOFF\x10\x05\x12*\n" +
+	"&COORDINATION_KIND_DEADLINE_NEGOTIATION\x10\x06\x12'\n" +
+	"#COORDINATION_KIND_SCOPE_NEGOTIATION\x10\a*n\n" +
+	"\x0fNegotiationKind\x12 \n" +
+	"\x1cNEGOTIATION_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19NEGOTIATION_KIND_DEADLINE\x10\x01\x12\x1a\n" +
+	"\x16NEGOTIATION_KIND_SCOPE\x10\x02*\xf0\x01\n" +
+	"\x18RoleHandoffResponseValue\x12+\n" +
+	"'ROLE_HANDOFF_RESPONSE_VALUE_UNSPECIFIED\x10\x00\x12(\n" +
+	"$ROLE_HANDOFF_RESPONSE_VALUE_ACCEPTED\x10\x01\x12(\n" +
+	"$ROLE_HANDOFF_RESPONSE_VALUE_DECLINED\x10\x02\x12)\n" +
+	"%ROLE_HANDOFF_RESPONSE_VALUE_COMPLETED\x10\x03\x12(\n" +
+	"$ROLE_HANDOFF_RESPONSE_VALUE_CANCELED\x10\x04B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_coordination_proto_rawDescOnce sync.Once
@@ -2393,63 +3258,90 @@ func file_nekode_daemon_v1_coordination_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_coordination_proto_rawDescData
 }
 
+var file_nekode_daemon_v1_coordination_proto_enumTypes = make([]protoimpl.EnumInfo, 12)
 var file_nekode_daemon_v1_coordination_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_nekode_daemon_v1_coordination_proto_goTypes = []any{
-	(*WorkPlanItem)(nil),                      // 0: nekode.daemon.v1.WorkPlanItem
-	(*WorkPlan)(nil),                          // 1: nekode.daemon.v1.WorkPlan
-	(*ProgressUpdate)(nil),                    // 2: nekode.daemon.v1.ProgressUpdate
-	(*VerificationResult)(nil),                // 3: nekode.daemon.v1.VerificationResult
-	(*AcceptanceEvidence)(nil),                // 4: nekode.daemon.v1.AcceptanceEvidence
-	(*ReleaseGate)(nil),                       // 5: nekode.daemon.v1.ReleaseGate
-	(*RoleHandoff)(nil),                       // 6: nekode.daemon.v1.RoleHandoff
-	(*NegotiationCounterProposal)(nil),        // 7: nekode.daemon.v1.NegotiationCounterProposal
-	(*DeadlineNegotiation)(nil),               // 8: nekode.daemon.v1.DeadlineNegotiation
-	(*ScopeNegotiation)(nil),                  // 9: nekode.daemon.v1.ScopeNegotiation
-	(*CoordinationRecord)(nil),                // 10: nekode.daemon.v1.CoordinationRecord
-	(*PublishCoordinationRecordRequest)(nil),  // 11: nekode.daemon.v1.PublishCoordinationRecordRequest
-	(*PublishCoordinationRecordResponse)(nil), // 12: nekode.daemon.v1.PublishCoordinationRecordResponse
-	(*ListCoordinationRecordsRequest)(nil),    // 13: nekode.daemon.v1.ListCoordinationRecordsRequest
-	(*ListCoordinationRecordsResponse)(nil),   // 14: nekode.daemon.v1.ListCoordinationRecordsResponse
-	(*CounterProposeNegotiationRequest)(nil),  // 15: nekode.daemon.v1.CounterProposeNegotiationRequest
-	(*CounterProposeNegotiationResponse)(nil), // 16: nekode.daemon.v1.CounterProposeNegotiationResponse
-	(*RespondRoleHandoffRequest)(nil),         // 17: nekode.daemon.v1.RespondRoleHandoffRequest
-	(*RespondRoleHandoffResponse)(nil),        // 18: nekode.daemon.v1.RespondRoleHandoffResponse
-	(*GetReleaseGateRequest)(nil),             // 19: nekode.daemon.v1.GetReleaseGateRequest
-	(*GetReleaseGateResponse)(nil),            // 20: nekode.daemon.v1.GetReleaseGateResponse
-	(*RequestContext)(nil),                    // 21: nekode.daemon.v1.RequestContext
-	(*EventCursor)(nil),                       // 22: nekode.daemon.v1.EventCursor
+	(WorkPlanItemStatus)(0),                   // 0: nekode.daemon.v1.WorkPlanItemStatus
+	(WorkPlanStatus)(0),                       // 1: nekode.daemon.v1.WorkPlanStatus
+	(ProgressUpdateStatus)(0),                 // 2: nekode.daemon.v1.ProgressUpdateStatus
+	(VerificationKind)(0),                     // 3: nekode.daemon.v1.VerificationKind
+	(VerificationStatus)(0),                   // 4: nekode.daemon.v1.VerificationStatus
+	(ReleaseGateStatus)(0),                    // 5: nekode.daemon.v1.ReleaseGateStatus
+	(RoleHandoffRole)(0),                      // 6: nekode.daemon.v1.RoleHandoffRole
+	(RoleHandoffStatus)(0),                    // 7: nekode.daemon.v1.RoleHandoffStatus
+	(NegotiationStatus)(0),                    // 8: nekode.daemon.v1.NegotiationStatus
+	(CoordinationKind)(0),                     // 9: nekode.daemon.v1.CoordinationKind
+	(NegotiationKind)(0),                      // 10: nekode.daemon.v1.NegotiationKind
+	(RoleHandoffResponseValue)(0),             // 11: nekode.daemon.v1.RoleHandoffResponseValue
+	(*WorkPlanItem)(nil),                      // 12: nekode.daemon.v1.WorkPlanItem
+	(*WorkPlan)(nil),                          // 13: nekode.daemon.v1.WorkPlan
+	(*ProgressUpdate)(nil),                    // 14: nekode.daemon.v1.ProgressUpdate
+	(*VerificationResult)(nil),                // 15: nekode.daemon.v1.VerificationResult
+	(*AcceptanceEvidence)(nil),                // 16: nekode.daemon.v1.AcceptanceEvidence
+	(*ReleaseGate)(nil),                       // 17: nekode.daemon.v1.ReleaseGate
+	(*RoleHandoff)(nil),                       // 18: nekode.daemon.v1.RoleHandoff
+	(*NegotiationCounterProposal)(nil),        // 19: nekode.daemon.v1.NegotiationCounterProposal
+	(*DeadlineNegotiation)(nil),               // 20: nekode.daemon.v1.DeadlineNegotiation
+	(*ScopeNegotiation)(nil),                  // 21: nekode.daemon.v1.ScopeNegotiation
+	(*CoordinationRecord)(nil),                // 22: nekode.daemon.v1.CoordinationRecord
+	(*PublishCoordinationRecordRequest)(nil),  // 23: nekode.daemon.v1.PublishCoordinationRecordRequest
+	(*PublishCoordinationRecordResponse)(nil), // 24: nekode.daemon.v1.PublishCoordinationRecordResponse
+	(*ListCoordinationRecordsRequest)(nil),    // 25: nekode.daemon.v1.ListCoordinationRecordsRequest
+	(*ListCoordinationRecordsResponse)(nil),   // 26: nekode.daemon.v1.ListCoordinationRecordsResponse
+	(*CounterProposeNegotiationRequest)(nil),  // 27: nekode.daemon.v1.CounterProposeNegotiationRequest
+	(*CounterProposeNegotiationResponse)(nil), // 28: nekode.daemon.v1.CounterProposeNegotiationResponse
+	(*RespondRoleHandoffRequest)(nil),         // 29: nekode.daemon.v1.RespondRoleHandoffRequest
+	(*RespondRoleHandoffResponse)(nil),        // 30: nekode.daemon.v1.RespondRoleHandoffResponse
+	(*GetReleaseGateRequest)(nil),             // 31: nekode.daemon.v1.GetReleaseGateRequest
+	(*GetReleaseGateResponse)(nil),            // 32: nekode.daemon.v1.GetReleaseGateResponse
+	(*RequestContext)(nil),                    // 33: nekode.daemon.v1.RequestContext
+	(*EventCursor)(nil),                       // 34: nekode.daemon.v1.EventCursor
 }
 var file_nekode_daemon_v1_coordination_proto_depIdxs = []int32{
-	0,  // 0: nekode.daemon.v1.WorkPlan.items:type_name -> nekode.daemon.v1.WorkPlanItem
-	3,  // 1: nekode.daemon.v1.AcceptanceEvidence.verification_results:type_name -> nekode.daemon.v1.VerificationResult
-	3,  // 2: nekode.daemon.v1.ReleaseGate.results:type_name -> nekode.daemon.v1.VerificationResult
-	7,  // 3: nekode.daemon.v1.DeadlineNegotiation.counter_proposals:type_name -> nekode.daemon.v1.NegotiationCounterProposal
-	7,  // 4: nekode.daemon.v1.ScopeNegotiation.counter_proposals:type_name -> nekode.daemon.v1.NegotiationCounterProposal
-	1,  // 5: nekode.daemon.v1.CoordinationRecord.work_plan:type_name -> nekode.daemon.v1.WorkPlan
-	2,  // 6: nekode.daemon.v1.CoordinationRecord.progress_update:type_name -> nekode.daemon.v1.ProgressUpdate
-	4,  // 7: nekode.daemon.v1.CoordinationRecord.acceptance_evidence:type_name -> nekode.daemon.v1.AcceptanceEvidence
-	5,  // 8: nekode.daemon.v1.CoordinationRecord.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
-	6,  // 9: nekode.daemon.v1.CoordinationRecord.role_handoff:type_name -> nekode.daemon.v1.RoleHandoff
-	8,  // 10: nekode.daemon.v1.CoordinationRecord.deadline_negotiation:type_name -> nekode.daemon.v1.DeadlineNegotiation
-	9,  // 11: nekode.daemon.v1.CoordinationRecord.scope_negotiation:type_name -> nekode.daemon.v1.ScopeNegotiation
-	10, // 12: nekode.daemon.v1.PublishCoordinationRecordRequest.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	21, // 13: nekode.daemon.v1.PublishCoordinationRecordRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	10, // 14: nekode.daemon.v1.PublishCoordinationRecordResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	22, // 15: nekode.daemon.v1.ListCoordinationRecordsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	10, // 16: nekode.daemon.v1.ListCoordinationRecordsResponse.records:type_name -> nekode.daemon.v1.CoordinationRecord
-	22, // 17: nekode.daemon.v1.ListCoordinationRecordsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	7,  // 18: nekode.daemon.v1.CounterProposeNegotiationRequest.counter_proposal:type_name -> nekode.daemon.v1.NegotiationCounterProposal
-	21, // 19: nekode.daemon.v1.CounterProposeNegotiationRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	10, // 20: nekode.daemon.v1.CounterProposeNegotiationResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	21, // 21: nekode.daemon.v1.RespondRoleHandoffRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	10, // 22: nekode.daemon.v1.RespondRoleHandoffResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	5,  // 23: nekode.daemon.v1.GetReleaseGateResponse.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
-	10, // 24: nekode.daemon.v1.GetReleaseGateResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	0,  // 0: nekode.daemon.v1.WorkPlanItem.status:type_name -> nekode.daemon.v1.WorkPlanItemStatus
+	1,  // 1: nekode.daemon.v1.WorkPlan.status:type_name -> nekode.daemon.v1.WorkPlanStatus
+	12, // 2: nekode.daemon.v1.WorkPlan.items:type_name -> nekode.daemon.v1.WorkPlanItem
+	2,  // 3: nekode.daemon.v1.ProgressUpdate.status:type_name -> nekode.daemon.v1.ProgressUpdateStatus
+	3,  // 4: nekode.daemon.v1.VerificationResult.kind:type_name -> nekode.daemon.v1.VerificationKind
+	4,  // 5: nekode.daemon.v1.VerificationResult.status:type_name -> nekode.daemon.v1.VerificationStatus
+	15, // 6: nekode.daemon.v1.AcceptanceEvidence.verification_results:type_name -> nekode.daemon.v1.VerificationResult
+	5,  // 7: nekode.daemon.v1.ReleaseGate.status:type_name -> nekode.daemon.v1.ReleaseGateStatus
+	15, // 8: nekode.daemon.v1.ReleaseGate.results:type_name -> nekode.daemon.v1.VerificationResult
+	6,  // 9: nekode.daemon.v1.RoleHandoff.role:type_name -> nekode.daemon.v1.RoleHandoffRole
+	7,  // 10: nekode.daemon.v1.RoleHandoff.status:type_name -> nekode.daemon.v1.RoleHandoffStatus
+	8,  // 11: nekode.daemon.v1.DeadlineNegotiation.status:type_name -> nekode.daemon.v1.NegotiationStatus
+	19, // 12: nekode.daemon.v1.DeadlineNegotiation.counter_proposals:type_name -> nekode.daemon.v1.NegotiationCounterProposal
+	8,  // 13: nekode.daemon.v1.ScopeNegotiation.status:type_name -> nekode.daemon.v1.NegotiationStatus
+	19, // 14: nekode.daemon.v1.ScopeNegotiation.counter_proposals:type_name -> nekode.daemon.v1.NegotiationCounterProposal
+	9,  // 15: nekode.daemon.v1.CoordinationRecord.kind:type_name -> nekode.daemon.v1.CoordinationKind
+	13, // 16: nekode.daemon.v1.CoordinationRecord.work_plan:type_name -> nekode.daemon.v1.WorkPlan
+	14, // 17: nekode.daemon.v1.CoordinationRecord.progress_update:type_name -> nekode.daemon.v1.ProgressUpdate
+	16, // 18: nekode.daemon.v1.CoordinationRecord.acceptance_evidence:type_name -> nekode.daemon.v1.AcceptanceEvidence
+	17, // 19: nekode.daemon.v1.CoordinationRecord.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
+	18, // 20: nekode.daemon.v1.CoordinationRecord.role_handoff:type_name -> nekode.daemon.v1.RoleHandoff
+	20, // 21: nekode.daemon.v1.CoordinationRecord.deadline_negotiation:type_name -> nekode.daemon.v1.DeadlineNegotiation
+	21, // 22: nekode.daemon.v1.CoordinationRecord.scope_negotiation:type_name -> nekode.daemon.v1.ScopeNegotiation
+	22, // 23: nekode.daemon.v1.PublishCoordinationRecordRequest.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	33, // 24: nekode.daemon.v1.PublishCoordinationRecordRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	22, // 25: nekode.daemon.v1.PublishCoordinationRecordResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	9,  // 26: nekode.daemon.v1.ListCoordinationRecordsRequest.kind:type_name -> nekode.daemon.v1.CoordinationKind
+	34, // 27: nekode.daemon.v1.ListCoordinationRecordsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	22, // 28: nekode.daemon.v1.ListCoordinationRecordsResponse.records:type_name -> nekode.daemon.v1.CoordinationRecord
+	34, // 29: nekode.daemon.v1.ListCoordinationRecordsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	10, // 30: nekode.daemon.v1.CounterProposeNegotiationRequest.negotiation_kind:type_name -> nekode.daemon.v1.NegotiationKind
+	19, // 31: nekode.daemon.v1.CounterProposeNegotiationRequest.counter_proposal:type_name -> nekode.daemon.v1.NegotiationCounterProposal
+	33, // 32: nekode.daemon.v1.CounterProposeNegotiationRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	22, // 33: nekode.daemon.v1.CounterProposeNegotiationResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	11, // 34: nekode.daemon.v1.RespondRoleHandoffRequest.response:type_name -> nekode.daemon.v1.RoleHandoffResponseValue
+	33, // 35: nekode.daemon.v1.RespondRoleHandoffRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	22, // 36: nekode.daemon.v1.RespondRoleHandoffResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	17, // 37: nekode.daemon.v1.GetReleaseGateResponse.release_gate:type_name -> nekode.daemon.v1.ReleaseGate
+	22, // 38: nekode.daemon.v1.GetReleaseGateResponse.record:type_name -> nekode.daemon.v1.CoordinationRecord
+	39, // [39:39] is the sub-list for method output_type
+	39, // [39:39] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_coordination_proto_init() }
@@ -2472,13 +3364,14 @@ func file_nekode_daemon_v1_coordination_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_coordination_proto_rawDesc), len(file_nekode_daemon_v1_coordination_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      12,
 			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_coordination_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_coordination_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_coordination_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_coordination_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_coordination_proto = out.File

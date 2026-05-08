@@ -31,6 +31,11 @@ For a new implementation:
 2. Treat this document as the behavioral contract.
 3. Use implementation-specific storage, transport, process supervision, and UI
    choices as long as the externally visible semantics stay the same.
+4. Keep the server/daemon transport replaceable. The current implementation can
+   use gRPC over HTTP/2, but daemon RPC semantics, durable event envelopes,
+   cursors, acknowledgements, idempotency keys, and leases must not depend on a
+   specific transport. QUIC/WebTransport is a future transport lane for weak
+   networks, connection migration, multiplexing, and larger payload flows.
 
 ## Goals
 
@@ -209,8 +214,8 @@ Required endpoint fields:
   private integration name;
 - target prefix or routing scope;
 - inbound/outbound capability flags;
-- auth mode, such as cookie, bearer token, webhook signature, MCP token, or
-  none for trusted local development;
+- auth mode enum value, such as cookie, bearer token, webhook signature, MCP
+  token, or none for trusted local development;
 - non-secret endpoint config JSON.
 
 Messages should carry `source_endpoint_id`, optional external message id, and
@@ -357,6 +362,8 @@ Inventory changes should use `SyncComputerInventory`.
 `GetServerInfoResponse.server_id` is the stable identity for cursor validity.
 If it changes between connections, the daemon must treat cached cursors as
 invalid and perform a fresh replay/sync from the server.
+`EventCursor.server_id` repeats that identity on server-issued cursors so
+bridges and browser clients can reject stale cursors without another lookup.
 
 ### Event Types
 
@@ -376,6 +383,10 @@ Event payloads should include:
 
 - event id;
 - event type;
+- event operation, such as created, updated, appended, state changed, heartbeat,
+  or invalidated;
+- event scope, such as workspace, target, task, run, agent, computer, user,
+  endpoint, or daemon;
 - protocol version;
 - monotonic sequence;
 - aggregate id, such as channel target, task id, or daemon id;
@@ -393,6 +404,13 @@ event id, sequence, and request id.
 Activity subscriptions follow the same rule through `AcknowledgeActivityEvents`.
 List and subscribe APIs use `EventCursor` as the single resume shape; callers
 should not maintain parallel page tokens or top-level sequence fields.
+
+Nekode follows the same realtime-cache boundary as the multica reference:
+server events are cache invalidation and projection hints. Clients may patch
+small append-only caches when an event carries the complete ordered item, but
+TanStack Query-style server-state caches remain the source of truth for
+messages, tasks, runs, runtimes, and agent status. Local UI stores should only
+hold view state, drafts, selection, panel size, and similar user preferences.
 
 ### Idempotency
 
@@ -428,19 +446,30 @@ transport reconnects or request reconstruction.
 
 ### Open String Values
 
-Several fields intentionally use strings instead of closed enums. Server-side
-validation must document and accept these initial values while preserving an
-unknown-value path for later integrations:
+Fixed lifecycle and routing fields use protobuf enums with an `UNSPECIFIED = 0`
+default. Server-side validation must reject invalid closed-set transitions
+before storage or event emission.
+
+Several fields intentionally remain strings instead of closed enums. Server-side
+validation may document canonical values, but it must preserve an unknown-value
+path for later integrations:
 
 | Field | Initial values |
 | --- | --- |
 | `Runtime.kind` / `RuntimeProfile.kind` | `codex`, `claude`, `opencode`, `kimi`, `gemini`, `custom` |
 | `InteractionEndpoint.kind` | `web`, `cli`, `api`, `webhook`, `mcp`, `im`, `mobile`, `ide`, `custom` |
-| `Task.state` | `todo`, `in_progress`, `in_review`, `done`, `blocked`, `canceled` |
-| `Task.claim_policy` | `exclusive`, `shared`, `reviewer_only`, `unclaimable` |
-| `Task.claim_conflict_behavior` | `fail_silent`, `fail_with_reason`, `queue`, `assist` |
-| `AgentRoleAssignment.name` | `designer`, `implementer`, `reviewer`, `verifier`, `releaser`, `observer`, `custom` |
-| `CoordinationRecord.kind` | `work_plan`, `progress_update`, `acceptance_evidence`, `release_gate`, `role_handoff`, `deadline_negotiation`, `scope_negotiation` |
+| `RuntimeProfile.provider` / `AgentProfile.provider` | `openai`, `anthropic`, `google`, `custom` |
+| `RuntimeProfile.model` / `AgentProfile.model` | provider-specific model names |
+| `CollaborationMessage.role` / `SendMessageRequest.role` | `user`, `assistant`, `system`, `tool`, provider-specific roles |
+| `Task.board_column` / task board column filters | `todo`, `in_progress`, `blocked`, `in_review`, `done`, `canceled`, custom board columns |
+| `ActivityRecord.kind` / `LogActivityRequest.kind` | `message_received`, `task_claimed`, `command_run`, `test_run`, `review_completed`, `memory_updated`, custom activity names |
+| `Capability.name` / `Permission.name` | product-specific capability and permission names |
+
+Closed enum examples include `TaskState`, `TaskClaimPolicy`,
+`TaskClaimConflictBehavior`, `RunState`, `RunStepStatus`, `AgentPresence`,
+`AgentActivityState`, `AgentHealth`, `CoordinationKind`, `ReleaseGateStatus`,
+`ReminderStatus`, `EndpointAuthMode`, `OutboundDeliveryStatus`, `ActorKind`,
+`PermissionScope`, `ServerEventKind`, and `CollaborationEventKind`.
 
 ## Authentication and Token Injection
 
@@ -650,12 +679,16 @@ Required state flow:
 
 ```text
 todo -> in_progress -> in_review -> done
+                  \-> blocked
+in_progress/in_review -> canceled
 ```
 
 Assignee and status are separate:
 
 - a task can be unassigned;
 - a task can be in review but still assigned;
+- a blocked task remains visible as an explicit dependency/decision wait state;
+- a canceled task records intentional abandonment instead of disappearing from history;
 - a done task should not be claimed again.
 
 ### Task Board
@@ -665,10 +698,13 @@ A task board is a projection grouped by status:
 - All;
 - TODO;
 - IN PROCESS;
+- BLOCKED;
 - IN REVIEW;
-- Done.
+- DONE;
+- CANCELED.
 
-The exact labels can vary, but the canonical statuses should remain stable.
+The exact labels can vary, but the canonical status order should remain stable:
+`todo`, `in_progress`, `blocked`, `in_review`, `done`, `canceled`.
 
 Release is a separate transition from review acceptance. `ReleaseGate` records
 required checks and their results, while `ReleaseTask` records the explicit

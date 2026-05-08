@@ -7,12 +7,95 @@ import "nekode/daemon/v1/common.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// AgentRoleName is the closed set of built-in collaboration roles.
+// Use AGENT_ROLE_NAME_CUSTOM only when AgentRoleAssignment.name is extended later
+// through an explicit custom-role field.
+enum AgentRoleName {
+  // Role name is omitted or unknown.
+  AGENT_ROLE_NAME_UNSPECIFIED = 0;
+  // Agent owns implementation work.
+  AGENT_ROLE_NAME_IMPLEMENTER = 1;
+  // Agent owns review work.
+  AGENT_ROLE_NAME_REVIEWER = 2;
+  // Agent owns design work.
+  AGENT_ROLE_NAME_DESIGNER = 3;
+  // Agent owns release work.
+  AGENT_ROLE_NAME_RELEASER = 4;
+  // Agent observes without owning work.
+  AGENT_ROLE_NAME_OBSERVER = 5;
+  // Custom role outside the built-in set.
+  AGENT_ROLE_NAME_CUSTOM = 6;
+}
+
+// AgentRoleScope is the closed set of scopes a role assignment can target.
+enum AgentRoleScope {
+  // Scope is omitted or unknown.
+  AGENT_ROLE_SCOPE_UNSPECIFIED = 0;
+  // Role applies to the whole server.
+  AGENT_ROLE_SCOPE_SERVER = 1;
+  // Role applies to a channel.
+  AGENT_ROLE_SCOPE_CHANNEL = 2;
+  // Role applies to a thread.
+  AGENT_ROLE_SCOPE_THREAD = 3;
+  // Role applies to a task.
+  AGENT_ROLE_SCOPE_TASK = 4;
+  // Role applies to a run.
+  AGENT_ROLE_SCOPE_RUN = 5;
+}
+
+// AgentControlAction is the closed set of built-in agent control operations.
+// Custom control should use AGENT_CONTROL_ACTION_CUSTOM with reason/details.
+enum AgentControlAction {
+  // Action is omitted or unknown.
+  AGENT_CONTROL_ACTION_UNSPECIFIED = 0;
+  // Terminate the agent process.
+  AGENT_CONTROL_ACTION_TERMINATE = 1;
+  // Restart without clearing session state.
+  AGENT_CONTROL_ACTION_RESTART = 2;
+  // Restart and reset active session state.
+  AGENT_CONTROL_ACTION_RESTART_RESET_SESSION = 3;
+  // Restart and clear all runtime-local state that is safe to reset.
+  AGENT_CONTROL_ACTION_RESTART_FULL_RESET = 4;
+  // Custom action outside the built-in control set.
+  AGENT_CONTROL_ACTION_CUSTOM = 5;
+}
+
+// AgentControlState is the closed lifecycle for an agent control operation.
+enum AgentControlState {
+  // State is omitted or unknown.
+  AGENT_CONTROL_STATE_UNSPECIFIED = 0;
+  // Operation was requested.
+  AGENT_CONTROL_STATE_REQUESTED = 1;
+  // Operation is queued for a daemon.
+  AGENT_CONTROL_STATE_QUEUED = 2;
+  // Operation is running.
+  AGENT_CONTROL_STATE_RUNNING = 3;
+  // Operation completed successfully.
+  AGENT_CONTROL_STATE_COMPLETED = 4;
+  // Operation failed.
+  AGENT_CONTROL_STATE_FAILED = 5;
+  // Operation is unsupported by the runtime/daemon.
+  AGENT_CONTROL_STATE_UNSUPPORTED = 6;
+}
+
+// AgentStatusSeverity is the closed severity set for status snapshots.
+enum AgentStatusSeverity {
+  // Severity is omitted or unknown.
+  AGENT_STATUS_SEVERITY_UNSPECIFIED = 0;
+  // Informational status.
+  AGENT_STATUS_SEVERITY_INFO = 1;
+  // Warning status that may need attention.
+  AGENT_STATUS_SEVERITY_WARNING = 2;
+  // Error status that needs attention.
+  AGENT_STATUS_SEVERITY_ERROR = 3;
+}
+
 message AgentRoleAssignment {
   reserved 1000 to 1999;
 
   string role_id = 1;
-  string name = 2; // implementer | reviewer | designer | releaser | observer | custom
-  string scope = 3; // server | channel | thread | task | run
+  AgentRoleName name = 2;
+  AgentRoleScope scope = 3;
   string target = 4;
   string task_id = 5;
   bool active = 6;
@@ -28,21 +111,29 @@ message AgentProfile {
   string display_name = 3;
   string description = 4;
   bool enabled = 5;
+  // Open model provider name, such as openai, anthropic, google, or custom.
   string provider = 6;
+  // Open model identifier; do not make this a closed enum.
   string model = 7;
   repeated EnvVar env = 8;
   repeated SkillRecord skills = 9;
   repeated string dm_targets = 10;
   string computer_id = 11;
   string runtime_profile_id = 12;
-  string status = 13;
+  AgentPresence status = 13;
   int64 last_activity_time_unix = 14;
   repeated Capability capabilities = 15;
   repeated Permission permissions = 16;
   AgentStatusSnapshot status_snapshot = 17;
   string avatar_url = 18;
+  // Open runtime adapter kind. Canonical values include codex, claude,
+  // opencode, kimi, gemini, and custom runtime adapters.
   string runtime_kind = 19;
+  // Open runtime/provider effort hint, such as low, medium, high, xhigh, or
+  // provider-specific values.
   string reasoning_effort = 20;
+  // Open execution-mode hint, such as interactive, autonomous, review, or
+  // runtime-specific modes.
   string execution_mode = 21;
   string daemon_version = 22;
   repeated AgentRoleAssignment roles = 23;
@@ -103,8 +194,8 @@ message AgentControlOperation {
   string agent_id = 2;
   string computer_id = 3;
   string runtime_profile_id = 4;
-  string action = 5; // terminate | restart | restart_reset_session | restart_full_reset | custom
-  string state = 6; // requested | queued | running | completed | failed | unsupported
+  AgentControlAction action = 5;
+  AgentControlState state = 6;
   string reason = 7;
   string requested_by_agent_id = 8;
   int64 created_time_unix = 9;
@@ -114,7 +205,7 @@ message ControlAgentRequest {
   string agent_id = 1;
   string computer_id = 2;
   string runtime_profile_id = 3;
-  string action = 4; // terminate | restart | restart_reset_session | restart_full_reset | custom
+  AgentControlAction action = 4;
   string reason = 5;
   string requested_by_agent_id = 6;
   string request_id = 7;
@@ -148,39 +239,77 @@ message SendAgentDirectMessageResponse {
   bool accepted = 1;
   CollaborationMessage message = 2;
 }
+
+// AgentPresence is the closed presence set derived from daemon heartbeat and
+// runtime status. UNSPECIFIED is for omitted/legacy values only.
 enum AgentPresence {
+  // Presence is omitted or unknown.
   AGENT_PRESENCE_UNSPECIFIED = 0;
+  // Agent is connected and available.
   AGENT_PRESENCE_ONLINE = 1;
+  // Agent is online but idle.
   AGENT_PRESENCE_IDLE = 2;
+  // Agent is online and actively working.
   AGENT_PRESENCE_BUSY = 3;
+  // Agent is intentionally sleeping/suspended.
   AGENT_PRESENCE_SLEEPING = 4;
+  // Agent has missed recent updates but is not fully offline.
   AGENT_PRESENCE_STALE = 5;
+  // Agent is disconnected or lease-expired.
   AGENT_PRESENCE_OFFLINE = 6;
+  // Agent is online but reports degraded capability.
   AGENT_PRESENCE_DEGRADED = 7;
 }
+
+// AgentActivityState is the closed set of fine-grained activity hints that UI
+// and peers can display while an agent is online.
 enum AgentActivityState {
+  // Activity state is omitted or unknown.
   AGENT_ACTIVITY_STATE_UNSPECIFIED = 0;
+  // Agent received a message.
   AGENT_ACTIVITY_STATE_RECEIVING_MESSAGE = 1;
+  // Agent is reading files, messages, memory, or task context.
   AGENT_ACTIVITY_STATE_READING_CONTEXT = 2;
+  // Agent is compacting or summarizing context.
   AGENT_ACTIVITY_STATE_COMPACTING_CONTEXT = 3;
+  // Agent is reasoning before acting.
   AGENT_ACTIVITY_STATE_THINKING = 4;
+  // Agent is editing code or artifacts.
   AGENT_ACTIVITY_STATE_CODING = 5;
+  // Agent is running a command.
   AGENT_ACTIVITY_STATE_RUNNING_COMMAND = 6;
+  // Agent is running tests or verification.
   AGENT_ACTIVITY_STATE_RUNNING_TEST = 7;
+  // Agent is reviewing code, design, or output.
   AGENT_ACTIVITY_STATE_REVIEWING = 8;
+  // Agent is waiting for an external event.
   AGENT_ACTIVITY_STATE_WAITING = 9;
+  // Agent cannot proceed without intervention.
   AGENT_ACTIVITY_STATE_BLOCKED = 10;
+  // Agent runtime is restarting.
   AGENT_ACTIVITY_STATE_RESTARTING = 11;
+  // Agent is restoring local/server memory.
   AGENT_ACTIVITY_STATE_RESTORING_MEMORY = 12;
 }
+
+// AgentHealth is the closed set of health causes surfaced by daemon/runtime
+// monitoring. It complements presence; it does not replace activity state.
 enum AgentHealth {
+  // Health is omitted or unknown.
   AGENT_HEALTH_UNSPECIFIED = 0;
+  // Agent reports healthy operation.
   AGENT_HEALTH_OK = 1;
+  // Provider quota/rate limit is blocking or degrading work.
   AGENT_HEALTH_PROVIDER_QUOTA = 2;
+  // Last command failed.
   AGENT_HEALTH_COMMAND_FAILED = 3;
+  // Last test/verification failed.
   AGENT_HEALTH_TEST_FAILED = 4;
+  // Runtime/provider authentication is required.
   AGENT_HEALTH_AUTH_REQUIRED = 5;
+  // Runtime reported an internal error.
   AGENT_HEALTH_RUNTIME_ERROR = 6;
+  // Daemon/runtime reports the agent offline.
   AGENT_HEALTH_OFFLINE = 7;
 }
 message AgentStatusSnapshot {
@@ -200,7 +329,7 @@ message AgentStatusSnapshot {
   string task_id = 12;
   string run_id = 13;
   string operation_id = 14;
-  string severity = 15;
+  AgentStatusSeverity severity = 15;
   int64 started_time_unix = 16;
   int64 updated_time_unix = 17;
   int64 expires_time_unix = 18;

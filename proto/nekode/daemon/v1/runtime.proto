@@ -7,6 +7,90 @@ import "nekode/daemon/v1/common.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
+// ComputerStatus is the closed lifecycle for a registered daemon host.
+// UNSPECIFIED is for omitted heartbeat state and legacy records.
+enum ComputerStatus {
+  // Status was not reported.
+  COMPUTER_STATUS_UNSPECIFIED = 0;
+  // Computer is connected and healthy.
+  COMPUTER_STATUS_ONLINE = 1;
+  // Computer has missed recent heartbeats but is not fully expired.
+  COMPUTER_STATUS_STALE = 2;
+  // Computer is disconnected or lease-expired.
+  COMPUTER_STATUS_OFFLINE = 3;
+  // Computer is connected but reports degraded capabilities.
+  COMPUTER_STATUS_DEGRADED = 4;
+}
+
+// RunState is the closed lifecycle for an assigned agent run.
+enum RunState {
+  // Run state is unknown; should not be stored for new runs.
+  RUN_STATE_UNSPECIFIED = 0;
+  // Run is assigned but not yet started by a daemon.
+  RUN_STATE_QUEUED = 1;
+  // Run is actively executing.
+  RUN_STATE_RUNNING = 2;
+  // Run is waiting on an external blocker.
+  RUN_STATE_BLOCKED = 3;
+  // Run completed successfully.
+  RUN_STATE_COMPLETED = 4;
+  // Run failed.
+  RUN_STATE_FAILED = 5;
+  // Run was canceled before completion.
+  RUN_STATE_CANCELED = 6;
+}
+
+// RunStepKind is the closed taxonomy for built-in run-step records.
+// Use RUN_STEP_KIND_CUSTOM when the detail field carries implementation-specific text.
+enum RunStepKind {
+  // Step kind is not known.
+  RUN_STEP_KIND_UNSPECIFIED = 0;
+  // Agent started or resumed a run.
+  RUN_STEP_KIND_START = 1;
+  // Agent read context or loaded memory.
+  RUN_STEP_KIND_CONTEXT = 2;
+  // Agent invoked a tool.
+  RUN_STEP_KIND_TOOL = 3;
+  // Agent executed a shell command.
+  RUN_STEP_KIND_COMMAND = 4;
+  // Agent ran tests or verification.
+  RUN_STEP_KIND_TEST = 5;
+  // Agent wrote a progress update.
+  RUN_STEP_KIND_PROGRESS = 6;
+  // Agent produced a final result.
+  RUN_STEP_KIND_RESULT = 7;
+  // Implementation-specific step.
+  RUN_STEP_KIND_CUSTOM = 8;
+}
+
+// RunStepStatus is the closed status set for a run step.
+enum RunStepStatus {
+  // Status is not known.
+  RUN_STEP_STATUS_UNSPECIFIED = 0;
+  // Step is currently executing.
+  RUN_STEP_STATUS_RUNNING = 1;
+  // Step completed successfully.
+  RUN_STEP_STATUS_COMPLETED = 2;
+  // Step failed.
+  RUN_STEP_STATUS_FAILED = 3;
+  // Step was skipped.
+  RUN_STEP_STATUS_SKIPPED = 4;
+}
+
+// McpResourceSubscriptionStatus is the closed lifecycle for MCP resource watches.
+enum McpResourceSubscriptionStatus {
+  // Subscription status is not known.
+  MCP_RESOURCE_SUBSCRIPTION_STATUS_UNSPECIFIED = 0;
+  // Subscription is active.
+  MCP_RESOURCE_SUBSCRIPTION_STATUS_ACTIVE = 1;
+  // Subscription is paused but may resume.
+  MCP_RESOURCE_SUBSCRIPTION_STATUS_PAUSED = 2;
+  // Subscription was canceled.
+  MCP_RESOURCE_SUBSCRIPTION_STATUS_CANCELED = 3;
+  // Subscription failed.
+  MCP_RESOURCE_SUBSCRIPTION_STATUS_FAILED = 4;
+}
+
 message Workspace {
   reserved 1000 to 1999;
 
@@ -21,8 +105,12 @@ message RuntimeProfile {
   reserved 1000 to 1999;
 
   string runtime_profile_id = 1;
+  // Open runtime adapter kind. Canonical values include codex, claude,
+  // opencode, kimi, gemini, and custom runtime adapters.
   string kind = 2;
+  // Open model provider name, such as openai, anthropic, google, or custom.
   string provider = 3;
+  // Open model identifier; do not make this a closed enum.
   string model = 4;
   string adapter_config_json = 5;
   string workspace_id = 6;
@@ -36,6 +124,7 @@ message Runtime {
   string runtime_id = 1;
   string computer_id = 2;
   string workspace_id = 3;
+  // Open runtime adapter kind; use the same canonical values as RuntimeProfile.kind.
   string kind = 4;
   string display_name = 5;
   repeated string aliases = 6;
@@ -69,7 +158,7 @@ message ComputerInfo {
   string os = 5;
   string arch = 6;
   string version = 7;
-  string status = 8;
+  ComputerStatus status = 8;
   int64 last_seen_unix = 9;
   string daemon_url = 10;
   string lease_id = 11;
@@ -117,7 +206,7 @@ message Run {
   string agent_id = 4;
   string computer_id = 5;
   string runtime_profile_id = 6;
-  string state = 7; // queued | running | blocked | completed | failed | canceled
+  RunState state = 7;
   string lease_id = 8;
   string request_id = 9;
   string input_message_id = 10;
@@ -127,6 +216,17 @@ message Run {
   int64 completed_time_unix = 14;
   string error = 15;
   string summary = 16;
+  // 1 for the first attempt; incremented by server retry/recovery policy.
+  uint32 attempt = 18;
+  // Maximum attempts allowed by server retry/recovery policy.
+  uint32 max_attempts = 19;
+  // Parent run that this attempt retries or recovers from.
+  string parent_run_id = 20;
+  // Open failure taxonomy. Canonical values include agent_error, timeout,
+  // runtime_offline, runtime_recovery, canceled, and manual.
+  string failure_reason = 21;
+  // Last daemon heartbeat/progress timestamp for this run.
+  int64 last_heartbeat_time_unix = 22;
 }
 message RunStep {
   reserved 1000 to 1999;
@@ -136,8 +236,8 @@ message RunStep {
   string step_id = 1;
   string run_id = 2;
   uint32 sequence = 3;
-  string kind = 4;
-  string status = 5;
+  RunStepKind kind = 4;
+  RunStepStatus status = 5;
   string summary = 6;
   string detail = 7;
   repeated string artifact_ids = 8;
@@ -158,7 +258,7 @@ message FetchAssignedRunsResponse {
 message UpdateRunStatusRequest {
   string run_id = 1;
   string agent_id = 2;
-  string state = 3;
+  RunState state = 3;
   string summary = 4;
   string error = 5;
   string blocked_reason = 6;
@@ -261,7 +361,7 @@ message McpResourceSubscription {
   string runtime_id = 3;
   string endpoint_id = 4;
   string resource_uri = 5;
-  string status = 6; // active | paused | canceled | failed
+  McpResourceSubscriptionStatus status = 6;
   int64 created_time_unix = 7;
   string request_id = 8;
 }

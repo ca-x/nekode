@@ -73,6 +73,19 @@ timezone), but the following real gaps were fixed additively:
 | Claim lease needs renewal | Added `RenewTaskClaimLease`. |
 | Permission needs scope | Added `Permission.scope`. |
 | Handoff needs richer context | Added context task ids, file paths, and task graph references to `RoleHandoff`. |
+
+## Multica Reference Follow-up
+
+The mature multica reference reinforced three protocol gaps that matter before
+Nekode leans on browser SSE and projection caches:
+
+| Reference concern | Nekode protocol resolution |
+| --- | --- |
+| Realtime fanout needs explicit rooms/scopes, not only broad target strings | Added `EventScopeType` and `EventScope`; server and collaboration event streams can carry scope metadata and accept scope filters. |
+| Frontend server-state caches need stable invalidation verbs | Added `EventOperation` to `ServerEvent` and `CollaborationEvent`; clients can invalidate by operation/scope while still treating payload + sequence as authoritative. |
+| Cursor/projection validity should include server identity | Added `EventCursor.server_id` so clients can discard stale cursors and cache keys across server migrations. |
+| Runtime recovery/retry needs protocol-visible metadata | Added run attempt, max attempts, parent run, failure reason, and last heartbeat fields to `Run`. |
+| Board task lifecycle needs blocked/canceled states without overloading columns | Added `TASK_STATE_BLOCKED` and `TASK_STATE_CANCELED`; `board_column` remains the open UI projection. |
 | Large attachments need URL flow | Added presigned upload/download URL fields while keeping bytes for small payloads. |
 | Future field reuse needs visible guardrails | Added `reserved 1000 to 1999` ranges to long-lived messages for extension discipline. |
 
@@ -110,6 +123,35 @@ implementation:
 | Reminder records had duplicate time fields | `next_run_unix`/`last_run_unix` are canonical; duplicate fire/fired fields are reserved. |
 | Final gate residuals | Added `UpdateTask`, task list state/column filters, server stream `idempotency_key`, `duplicate_of` task edge kind, run/run-step activity payloads, and `ReleaseTaskResponse.release_gate`. |
 
+## Pre-Freeze Enum Normalization
+
+Before daemon/bridge implementation, fixed lifecycle and status strings were
+converted to protobuf enums. This intentionally breaks the pre-release wire
+shape for those fields because `string` and enum values use different protobuf
+wire types; no released daemon contract depended on the older shape.
+
+Closed sets now use `*_UNSPECIFIED = 0` and comments on every enum value. The
+major normalized groups are:
+
+- task lifecycle, claim policy, claim mode, conflict behavior, edge kind, and
+  task source;
+- run lifecycle, run-step kind/status, computer status, and MCP subscription
+  status;
+- agent presence, activity state, health, status severity, role assignment, and
+  control operation state/action;
+- coordination record kind, work-plan/progress/verification/release/handoff and
+  negotiation states;
+- reminder lifecycle, schedule kind, event type, and actor type;
+- endpoint auth mode, outbound message policy, outbound delivery status;
+- actor kind, permission scope, memory content format;
+- server and collaboration event routing hints.
+
+Open integration points remain strings and carry canonical-value comments in
+the proto files. Runtime kind/model/provider, endpoint kind/provider, message
+role, capability/permission names, board column projection, and activity
+taxonomy are intentionally open so new runtimes, providers, transports, and
+activity names do not require another enum migration.
+
 ## Collaboration Semantics Check
 
 The current team behavior is not only chat. It includes structured planning,
@@ -131,18 +173,18 @@ those concepts:
 
 ## Remaining Design Boundaries
 
-The protocol intentionally leaves these values string-based so the system can
-evolve without a breaking enum migration:
+The protocol intentionally leaves only extensibility points string-based so the
+system can evolve without a breaking enum migration:
 
-- runtime kind and provider;
-- interaction endpoint kind/provider/auth mode;
-- task state, board column, claim policy, and conflict behavior;
-- agent role names;
-- coordination record kind and status;
-- memory scope and content format.
+- runtime kind, provider, and model;
+- interaction endpoint kind and provider;
+- message role for runtime/provider-specific conversation roles;
+- board column projection, which is a view concern distinct from `Task.state`;
+- activity taxonomy, capability names, and permission names.
 
-Implementation must validate allowed values at the server boundary, but the
-wire contract should remain open-ended.
+Implementation must validate closed enum transitions at the server boundary and
+must preserve unknown/open string values where the proto comments mark them as
+extension points.
 
 ## Review Checklist
 

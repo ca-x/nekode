@@ -12,11 +12,11 @@ message MemoryRecord {
   string memory_id = 1;
   string agent_id = 2;
   string target = 3;
-  string scope = 4; // global | channel | thread | task | user | runtime
+  PermissionScope scope = 4;
   string path = 5; // MEMORY.md, notes/channels.md, or server logical path
   string title = 6;
   string content = 7;
-  string content_format = 8; // markdown | json | text
+  ContentFormat content_format = 8;
   int64 version = 9;
   repeated string tags = 10;
   repeated string source_message_ids = 11;
@@ -31,7 +31,7 @@ message MemoryRecord {
 message ListAgentMemoryRequest {
   string agent_id = 1;
   string target = 2;
-  string scope = 3;
+  PermissionScope scope = 3;
   uint32 limit = 4;
   EventCursor cursor = 5;
 }

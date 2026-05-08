@@ -21,11 +21,403 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PermissionScope is the closed resource hierarchy understood by the server.
+// Permission names remain strings because product capabilities are open-ended.
+type PermissionScope int32
+
+const (
+	// Scope is omitted or unknown.
+	PermissionScope_PERMISSION_SCOPE_UNSPECIFIED PermissionScope = 0
+	// Permission applies globally.
+	PermissionScope_PERMISSION_SCOPE_GLOBAL PermissionScope = 1
+	// Permission applies to a channel target.
+	PermissionScope_PERMISSION_SCOPE_CHANNEL PermissionScope = 2
+	// Permission applies to a thread target.
+	PermissionScope_PERMISSION_SCOPE_THREAD PermissionScope = 3
+	// Permission applies to a task.
+	PermissionScope_PERMISSION_SCOPE_TASK PermissionScope = 4
+	// Permission applies to a message.
+	PermissionScope_PERMISSION_SCOPE_MESSAGE PermissionScope = 5
+	// Permission applies to a runtime profile/runtime.
+	PermissionScope_PERMISSION_SCOPE_RUNTIME PermissionScope = 6
+	// Permission applies to an interaction endpoint.
+	PermissionScope_PERMISSION_SCOPE_ENDPOINT PermissionScope = 7
+	// Permission or memory applies to a user.
+	PermissionScope_PERMISSION_SCOPE_USER PermissionScope = 8
+)
+
+// Enum value maps for PermissionScope.
+var (
+	PermissionScope_name = map[int32]string{
+		0: "PERMISSION_SCOPE_UNSPECIFIED",
+		1: "PERMISSION_SCOPE_GLOBAL",
+		2: "PERMISSION_SCOPE_CHANNEL",
+		3: "PERMISSION_SCOPE_THREAD",
+		4: "PERMISSION_SCOPE_TASK",
+		5: "PERMISSION_SCOPE_MESSAGE",
+		6: "PERMISSION_SCOPE_RUNTIME",
+		7: "PERMISSION_SCOPE_ENDPOINT",
+		8: "PERMISSION_SCOPE_USER",
+	}
+	PermissionScope_value = map[string]int32{
+		"PERMISSION_SCOPE_UNSPECIFIED": 0,
+		"PERMISSION_SCOPE_GLOBAL":      1,
+		"PERMISSION_SCOPE_CHANNEL":     2,
+		"PERMISSION_SCOPE_THREAD":      3,
+		"PERMISSION_SCOPE_TASK":        4,
+		"PERMISSION_SCOPE_MESSAGE":     5,
+		"PERMISSION_SCOPE_RUNTIME":     6,
+		"PERMISSION_SCOPE_ENDPOINT":    7,
+		"PERMISSION_SCOPE_USER":        8,
+	}
+)
+
+func (x PermissionScope) Enum() *PermissionScope {
+	p := new(PermissionScope)
+	*p = x
+	return p
+}
+
+func (x PermissionScope) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PermissionScope) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_common_proto_enumTypes[0].Descriptor()
+}
+
+func (PermissionScope) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_common_proto_enumTypes[0]
+}
+
+func (x PermissionScope) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PermissionScope.Descriptor instead.
+func (PermissionScope) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{0}
+}
+
+// ActorKind is the closed set of actor identity kinds represented in protocol payloads.
+type ActorKind int32
+
+const (
+	// Actor kind is omitted or unknown.
+	ActorKind_ACTOR_KIND_UNSPECIFIED ActorKind = 0
+	// Human user.
+	ActorKind_ACTOR_KIND_HUMAN ActorKind = 1
+	// Agent identity.
+	ActorKind_ACTOR_KIND_AGENT ActorKind = 2
+	// Local daemon process.
+	ActorKind_ACTOR_KIND_DAEMON ActorKind = 3
+	// External interaction endpoint.
+	ActorKind_ACTOR_KIND_ENDPOINT ActorKind = 4
+	// Server/system actor.
+	ActorKind_ACTOR_KIND_SYSTEM ActorKind = 5
+)
+
+// Enum value maps for ActorKind.
+var (
+	ActorKind_name = map[int32]string{
+		0: "ACTOR_KIND_UNSPECIFIED",
+		1: "ACTOR_KIND_HUMAN",
+		2: "ACTOR_KIND_AGENT",
+		3: "ACTOR_KIND_DAEMON",
+		4: "ACTOR_KIND_ENDPOINT",
+		5: "ACTOR_KIND_SYSTEM",
+	}
+	ActorKind_value = map[string]int32{
+		"ACTOR_KIND_UNSPECIFIED": 0,
+		"ACTOR_KIND_HUMAN":       1,
+		"ACTOR_KIND_AGENT":       2,
+		"ACTOR_KIND_DAEMON":      3,
+		"ACTOR_KIND_ENDPOINT":    4,
+		"ACTOR_KIND_SYSTEM":      5,
+	}
+)
+
+func (x ActorKind) Enum() *ActorKind {
+	p := new(ActorKind)
+	*p = x
+	return p
+}
+
+func (x ActorKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ActorKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_common_proto_enumTypes[1].Descriptor()
+}
+
+func (ActorKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_common_proto_enumTypes[1]
+}
+
+func (x ActorKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ActorKind.Descriptor instead.
+func (ActorKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{1}
+}
+
+// ContentFormat is the closed set of server-visible content encodings.
+type ContentFormat int32
+
+const (
+	// Content format is omitted or unknown.
+	ContentFormat_CONTENT_FORMAT_UNSPECIFIED ContentFormat = 0
+	// Markdown text.
+	ContentFormat_CONTENT_FORMAT_MARKDOWN ContentFormat = 1
+	// JSON text.
+	ContentFormat_CONTENT_FORMAT_JSON ContentFormat = 2
+	// Plain text.
+	ContentFormat_CONTENT_FORMAT_TEXT ContentFormat = 3
+)
+
+// Enum value maps for ContentFormat.
+var (
+	ContentFormat_name = map[int32]string{
+		0: "CONTENT_FORMAT_UNSPECIFIED",
+		1: "CONTENT_FORMAT_MARKDOWN",
+		2: "CONTENT_FORMAT_JSON",
+		3: "CONTENT_FORMAT_TEXT",
+	}
+	ContentFormat_value = map[string]int32{
+		"CONTENT_FORMAT_UNSPECIFIED": 0,
+		"CONTENT_FORMAT_MARKDOWN":    1,
+		"CONTENT_FORMAT_JSON":        2,
+		"CONTENT_FORMAT_TEXT":        3,
+	}
+)
+
+func (x ContentFormat) Enum() *ContentFormat {
+	p := new(ContentFormat)
+	*p = x
+	return p
+}
+
+func (x ContentFormat) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ContentFormat) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_common_proto_enumTypes[2].Descriptor()
+}
+
+func (ContentFormat) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_common_proto_enumTypes[2]
+}
+
+func (x ContentFormat) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ContentFormat.Descriptor instead.
+func (ContentFormat) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{2}
+}
+
+// EventOperation is the cross-stream change verb used by clients to decide
+// whether an event can patch a cache entry or should invalidate and refetch.
+// The payload and kind remain authoritative for domain semantics.
+type EventOperation int32
+
+const (
+	// Operation is omitted or unknown.
+	EventOperation_EVENT_OPERATION_UNSPECIFIED EventOperation = 0
+	// A resource was created.
+	EventOperation_EVENT_OPERATION_CREATED EventOperation = 1
+	// A resource was updated without a lifecycle transition.
+	EventOperation_EVENT_OPERATION_UPDATED EventOperation = 2
+	// A resource was deleted or removed from the visible projection.
+	EventOperation_EVENT_OPERATION_DELETED EventOperation = 3
+	// A resource lifecycle/state changed.
+	EventOperation_EVENT_OPERATION_STATE_CHANGED EventOperation = 4
+	// A child record was appended to an ordered stream, such as a run step or message.
+	EventOperation_EVENT_OPERATION_APPENDED EventOperation = 5
+	// A task, lease, or run was claimed.
+	EventOperation_EVENT_OPERATION_CLAIMED EventOperation = 6
+	// A claim, lease, or release gate was released.
+	EventOperation_EVENT_OPERATION_RELEASED EventOperation = 7
+	// A run, task, delivery, or operation failed.
+	EventOperation_EVENT_OPERATION_FAILED EventOperation = 8
+	// A run, task, delivery, or operation was canceled.
+	EventOperation_EVENT_OPERATION_CANCELED EventOperation = 9
+	// A heartbeat or liveness signal changed.
+	EventOperation_EVENT_OPERATION_HEARTBEAT EventOperation = 10
+	// Cached projections for the scope should be invalidated and rebuilt.
+	EventOperation_EVENT_OPERATION_INVALIDATED EventOperation = 11
+	// A snapshot was replaced wholesale.
+	EventOperation_EVENT_OPERATION_SNAPSHOT EventOperation = 12
+)
+
+// Enum value maps for EventOperation.
+var (
+	EventOperation_name = map[int32]string{
+		0:  "EVENT_OPERATION_UNSPECIFIED",
+		1:  "EVENT_OPERATION_CREATED",
+		2:  "EVENT_OPERATION_UPDATED",
+		3:  "EVENT_OPERATION_DELETED",
+		4:  "EVENT_OPERATION_STATE_CHANGED",
+		5:  "EVENT_OPERATION_APPENDED",
+		6:  "EVENT_OPERATION_CLAIMED",
+		7:  "EVENT_OPERATION_RELEASED",
+		8:  "EVENT_OPERATION_FAILED",
+		9:  "EVENT_OPERATION_CANCELED",
+		10: "EVENT_OPERATION_HEARTBEAT",
+		11: "EVENT_OPERATION_INVALIDATED",
+		12: "EVENT_OPERATION_SNAPSHOT",
+	}
+	EventOperation_value = map[string]int32{
+		"EVENT_OPERATION_UNSPECIFIED":   0,
+		"EVENT_OPERATION_CREATED":       1,
+		"EVENT_OPERATION_UPDATED":       2,
+		"EVENT_OPERATION_DELETED":       3,
+		"EVENT_OPERATION_STATE_CHANGED": 4,
+		"EVENT_OPERATION_APPENDED":      5,
+		"EVENT_OPERATION_CLAIMED":       6,
+		"EVENT_OPERATION_RELEASED":      7,
+		"EVENT_OPERATION_FAILED":        8,
+		"EVENT_OPERATION_CANCELED":      9,
+		"EVENT_OPERATION_HEARTBEAT":     10,
+		"EVENT_OPERATION_INVALIDATED":   11,
+		"EVENT_OPERATION_SNAPSHOT":      12,
+	}
+)
+
+func (x EventOperation) Enum() *EventOperation {
+	p := new(EventOperation)
+	*p = x
+	return p
+}
+
+func (x EventOperation) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventOperation) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_common_proto_enumTypes[3].Descriptor()
+}
+
+func (EventOperation) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_common_proto_enumTypes[3]
+}
+
+func (x EventOperation) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventOperation.Descriptor instead.
+func (EventOperation) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{3}
+}
+
+// EventScopeType is the closed routing taxonomy for realtime fanout and
+// projection invalidation. Scope ids remain strings because workspace, target,
+// task, run, and provider ids are allocated by their owning systems.
+type EventScopeType int32
+
+const (
+	// Scope is omitted or unknown.
+	EventScopeType_EVENT_SCOPE_TYPE_UNSPECIFIED EventScopeType = 0
+	// Server-wide events.
+	EventScopeType_EVENT_SCOPE_TYPE_SERVER EventScopeType = 1
+	// Workspace-scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_WORKSPACE EventScopeType = 2
+	// Collaboration target scoped events, for example a channel or DM target.
+	EventScopeType_EVENT_SCOPE_TYPE_TARGET EventScopeType = 3
+	// Thread-scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_THREAD EventScopeType = 4
+	// Task-scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_TASK EventScopeType = 5
+	// Run-scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_RUN EventScopeType = 6
+	// Agent-scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_AGENT EventScopeType = 7
+	// Computer/runtime host scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_COMPUTER EventScopeType = 8
+	// User-scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_USER EventScopeType = 9
+	// Interaction endpoint scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_ENDPOINT EventScopeType = 10
+	// Daemon process scoped events.
+	EventScopeType_EVENT_SCOPE_TYPE_DAEMON EventScopeType = 11
+	// Custom scope; custom_type must be set.
+	EventScopeType_EVENT_SCOPE_TYPE_CUSTOM EventScopeType = 12
+)
+
+// Enum value maps for EventScopeType.
+var (
+	EventScopeType_name = map[int32]string{
+		0:  "EVENT_SCOPE_TYPE_UNSPECIFIED",
+		1:  "EVENT_SCOPE_TYPE_SERVER",
+		2:  "EVENT_SCOPE_TYPE_WORKSPACE",
+		3:  "EVENT_SCOPE_TYPE_TARGET",
+		4:  "EVENT_SCOPE_TYPE_THREAD",
+		5:  "EVENT_SCOPE_TYPE_TASK",
+		6:  "EVENT_SCOPE_TYPE_RUN",
+		7:  "EVENT_SCOPE_TYPE_AGENT",
+		8:  "EVENT_SCOPE_TYPE_COMPUTER",
+		9:  "EVENT_SCOPE_TYPE_USER",
+		10: "EVENT_SCOPE_TYPE_ENDPOINT",
+		11: "EVENT_SCOPE_TYPE_DAEMON",
+		12: "EVENT_SCOPE_TYPE_CUSTOM",
+	}
+	EventScopeType_value = map[string]int32{
+		"EVENT_SCOPE_TYPE_UNSPECIFIED": 0,
+		"EVENT_SCOPE_TYPE_SERVER":      1,
+		"EVENT_SCOPE_TYPE_WORKSPACE":   2,
+		"EVENT_SCOPE_TYPE_TARGET":      3,
+		"EVENT_SCOPE_TYPE_THREAD":      4,
+		"EVENT_SCOPE_TYPE_TASK":        5,
+		"EVENT_SCOPE_TYPE_RUN":         6,
+		"EVENT_SCOPE_TYPE_AGENT":       7,
+		"EVENT_SCOPE_TYPE_COMPUTER":    8,
+		"EVENT_SCOPE_TYPE_USER":        9,
+		"EVENT_SCOPE_TYPE_ENDPOINT":    10,
+		"EVENT_SCOPE_TYPE_DAEMON":      11,
+		"EVENT_SCOPE_TYPE_CUSTOM":      12,
+	}
+)
+
+func (x EventScopeType) Enum() *EventScopeType {
+	p := new(EventScopeType)
+	*p = x
+	return p
+}
+
+func (x EventScopeType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EventScopeType) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_common_proto_enumTypes[4].Descriptor()
+}
+
+func (EventScopeType) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_common_proto_enumTypes[4]
+}
+
+func (x EventScopeType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EventScopeType.Descriptor instead.
+func (EventScopeType) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{4}
+}
+
 type Capability struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Enabled       bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Open capability identifier, for example code_execution, file_write,
+	// web_search, mcp_resources, or provider-specific capabilities.
+	Name          string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Enabled       bool   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -82,12 +474,14 @@ func (x *Capability) GetEnabled() bool {
 }
 
 type Permission struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Target        string                 `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
-	Allowed       bool                   `protobuf:"varint,3,opt,name=allowed,proto3" json:"allowed,omitempty"`
-	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	Scope         string                 `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"` // global | channel | thread | task | message | runtime | endpoint
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Open permission identifier, for example message.write, task.claim,
+	// runtime.start, memory.write, or admin.manage.
+	Name          string          `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Target        string          `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	Allowed       bool            `protobuf:"varint,3,opt,name=allowed,proto3" json:"allowed,omitempty"`
+	Reason        string          `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Scope         PermissionScope `protobuf:"varint,5,opt,name=scope,proto3,enum=nekode.daemon.v1.PermissionScope" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -150,21 +544,23 @@ func (x *Permission) GetReason() string {
 	return ""
 }
 
-func (x *Permission) GetScope() string {
+func (x *Permission) GetScope() PermissionScope {
 	if x != nil {
 		return x.Scope
 	}
-	return ""
+	return PermissionScope_PERMISSION_SCOPE_UNSPECIFIED
 }
 
 type Lease struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	LeaseId               string                 `protobuf:"bytes,1,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
-	HolderId              string                 `protobuf:"bytes,2,opt,name=holder_id,json=holderId,proto3" json:"holder_id,omitempty"`
-	ResourceType          string                 `protobuf:"bytes,3,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
-	ResourceId            string                 `protobuf:"bytes,4,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
-	ExpiresTimeUnix       int64                  `protobuf:"varint,5,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
-	HeartbeatAfterSeconds uint32                 `protobuf:"varint,6,opt,name=heartbeat_after_seconds,json=heartbeatAfterSeconds,proto3" json:"heartbeat_after_seconds,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	LeaseId  string                 `protobuf:"bytes,1,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
+	HolderId string                 `protobuf:"bytes,2,opt,name=holder_id,json=holderId,proto3" json:"holder_id,omitempty"`
+	// Open server resource type. Canonical values include computer, run,
+	// task_claim, start_permit, and agent_control.
+	ResourceType          string `protobuf:"bytes,3,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	ResourceId            string `protobuf:"bytes,4,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	ExpiresTimeUnix       int64  `protobuf:"varint,5,opt,name=expires_time_unix,json=expiresTimeUnix,proto3" json:"expires_time_unix,omitempty"`
+	HeartbeatAfterSeconds uint32 `protobuf:"varint,6,opt,name=heartbeat_after_seconds,json=heartbeatAfterSeconds,proto3" json:"heartbeat_after_seconds,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -249,8 +645,11 @@ type EventCursor struct {
 	ProtocolVersion int32  `protobuf:"varint,6,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
 	SnapshotId      string `protobuf:"bytes,7,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
 	// Explicit sequence resume point used only when cursor is empty.
-	Sequence      int64  `protobuf:"varint,8,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	AggregateId   string `protobuf:"bytes,9,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	Sequence    int64  `protobuf:"varint,8,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	AggregateId string `protobuf:"bytes,9,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	// Stable server identity that issued the cursor. Clients should discard
+	// cached cursors when this differs from GetServerInfoResponse.server_id.
+	ServerId      string `protobuf:"bytes,10,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -327,9 +726,16 @@ func (x *EventCursor) GetAggregateId() string {
 	return ""
 }
 
+func (x *EventCursor) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
 type Actor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ActorKind     string                 `protobuf:"bytes,1,opt,name=actor_kind,json=actorKind,proto3" json:"actor_kind,omitempty"` // human | agent | daemon | endpoint | system
+	ActorKind     ActorKind              `protobuf:"varint,1,opt,name=actor_kind,json=actorKind,proto3,enum=nekode.daemon.v1.ActorKind" json:"actor_kind,omitempty"`
 	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	DaemonId      string                 `protobuf:"bytes,4,opt,name=daemon_id,json=daemonId,proto3" json:"daemon_id,omitempty"`
@@ -369,11 +775,11 @@ func (*Actor) Descriptor() ([]byte, []int) {
 	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *Actor) GetActorKind() string {
+func (x *Actor) GetActorKind() ActorKind {
 	if x != nil {
 		return x.ActorKind
 	}
-	return ""
+	return ActorKind_ACTOR_KIND_UNSPECIFIED
 }
 
 func (x *Actor) GetAgentId() string {
@@ -411,6 +817,140 @@ func (x *Actor) GetDisplayName() string {
 	return ""
 }
 
+type ClientInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Logical client kind. Canonical values include web, desktop, cli, daemon,
+	// bridge, and custom.
+	Platform string `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"`
+	// Client build or release version.
+	Version string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	// Client operating system or runtime environment.
+	Os            string `protobuf:"bytes,3,opt,name=os,proto3" json:"os,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClientInfo) Reset() {
+	*x = ClientInfo{}
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClientInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientInfo) ProtoMessage() {}
+
+func (x *ClientInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientInfo.ProtoReflect.Descriptor instead.
+func (*ClientInfo) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ClientInfo) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+func (x *ClientInfo) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *ClientInfo) GetOs() string {
+	if x != nil {
+		return x.Os
+	}
+	return ""
+}
+
+type EventScope struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ScopeType EventScopeType         `protobuf:"varint,1,opt,name=scope_type,json=scopeType,proto3,enum=nekode.daemon.v1.EventScopeType" json:"scope_type,omitempty"`
+	ScopeId   string                 `protobuf:"bytes,2,opt,name=scope_id,json=scopeId,proto3" json:"scope_id,omitempty"`
+	// Optional collaboration target hint for target/thread derived scopes.
+	Target string `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	// Required when scope_type is EVENT_SCOPE_TYPE_CUSTOM.
+	CustomType    string `protobuf:"bytes,4,opt,name=custom_type,json=customType,proto3" json:"custom_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventScope) Reset() {
+	*x = EventScope{}
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventScope) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventScope) ProtoMessage() {}
+
+func (x *EventScope) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventScope.ProtoReflect.Descriptor instead.
+func (*EventScope) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *EventScope) GetScopeType() EventScopeType {
+	if x != nil {
+		return x.ScopeType
+	}
+	return EventScopeType_EVENT_SCOPE_TYPE_UNSPECIFIED
+}
+
+func (x *EventScope) GetScopeId() string {
+	if x != nil {
+		return x.ScopeId
+	}
+	return ""
+}
+
+func (x *EventScope) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *EventScope) GetCustomType() string {
+	if x != nil {
+		return x.CustomType
+	}
+	return ""
+}
+
 type RequestContext struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Request-scoped trace metadata only. Idempotency keys live on RPC requests.
@@ -418,13 +958,15 @@ type RequestContext struct {
 	// Caller hint for attribution; servers must derive authority from transport auth.
 	Actor            *Actor `protobuf:"bytes,4,opt,name=actor,proto3" json:"actor,omitempty"`
 	SourceEndpointId string `protobuf:"bytes,5,opt,name=source_endpoint_id,json=sourceEndpointId,proto3" json:"source_endpoint_id,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Client metadata for logging, metrics, compatibility gates, and debugging.
+	Client        *ClientInfo `protobuf:"bytes,6,opt,name=client,proto3" json:"client,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RequestContext) Reset() {
 	*x = RequestContext{}
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -436,7 +978,7 @@ func (x *RequestContext) String() string {
 func (*RequestContext) ProtoMessage() {}
 
 func (x *RequestContext) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -449,7 +991,7 @@ func (x *RequestContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestContext.ProtoReflect.Descriptor instead.
 func (*RequestContext) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{5}
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RequestContext) GetTraceId() string {
@@ -473,6 +1015,13 @@ func (x *RequestContext) GetSourceEndpointId() string {
 	return ""
 }
 
+func (x *RequestContext) GetClient() *ClientInfo {
+	if x != nil {
+		return x.Client
+	}
+	return nil
+}
+
 type EnvVar struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -487,7 +1036,7 @@ type EnvVar struct {
 
 func (x *EnvVar) Reset() {
 	*x = EnvVar{}
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -499,7 +1048,7 @@ func (x *EnvVar) String() string {
 func (*EnvVar) ProtoMessage() {}
 
 func (x *EnvVar) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -512,7 +1061,7 @@ func (x *EnvVar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvVar.ProtoReflect.Descriptor instead.
 func (*EnvVar) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{6}
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EnvVar) GetName() string {
@@ -566,7 +1115,7 @@ type SkillRecord struct {
 
 func (x *SkillRecord) Reset() {
 	*x = SkillRecord{}
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -578,7 +1127,7 @@ func (x *SkillRecord) String() string {
 func (*SkillRecord) ProtoMessage() {}
 
 func (x *SkillRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_common_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_common_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -591,7 +1140,7 @@ func (x *SkillRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillRecord.ProtoReflect.Descriptor instead.
 func (*SkillRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{7}
+	return file_nekode_daemon_v1_common_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SkillRecord) GetId() string {
@@ -659,14 +1208,14 @@ const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"Capability\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
-	"\aenabled\x18\x03 \x01(\bR\aenabledJ\x06\b\xe8\a\x10\xd0\x0f\"\x88\x01\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabledJ\x06\b\xe8\a\x10\xd0\x0f\"\xab\x01\n" +
 	"\n" +
 	"Permission\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12\x18\n" +
 	"\aallowed\x18\x03 \x01(\bR\aallowed\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x14\n" +
-	"\x05scope\x18\x05 \x01(\tR\x05scopeJ\x06\b\xe8\a\x10\xd0\x0f\"\xf1\x01\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x127\n" +
+	"\x05scope\x18\x05 \x01(\x0e2!.nekode.daemon.v1.PermissionScopeR\x05scopeJ\x06\b\xe8\a\x10\xd0\x0f\"\xf1\x01\n" +
 	"\x05Lease\x12\x19\n" +
 	"\blease_id\x18\x01 \x01(\tR\aleaseId\x12\x1b\n" +
 	"\tholder_id\x18\x02 \x01(\tR\bholderId\x12#\n" +
@@ -674,7 +1223,7 @@ const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"\vresource_id\x18\x04 \x01(\tR\n" +
 	"resourceId\x12*\n" +
 	"\x11expires_time_unix\x18\x05 \x01(\x03R\x0fexpiresTimeUnix\x126\n" +
-	"\x17heartbeat_after_seconds\x18\x06 \x01(\rR\x15heartbeatAfterSecondsJ\x06\b\xe8\a\x10\xd0\x0f\"\x88\x02\n" +
+	"\x17heartbeat_after_seconds\x18\x06 \x01(\rR\x15heartbeatAfterSecondsJ\x06\b\xe8\a\x10\xd0\x0f\"\xa5\x02\n" +
 	"\vEventCursor\x12\x16\n" +
 	"\x06cursor\x18\x01 \x01(\tR\x06cursor\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\x12)\n" +
@@ -682,20 +1231,36 @@ const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"\vsnapshot_id\x18\a \x01(\tR\n" +
 	"snapshotId\x12\x1a\n" +
 	"\bsequence\x18\b \x01(\x03R\bsequence\x12!\n" +
-	"\faggregate_id\x18\t \x01(\tR\vaggregateIdJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x03\x10\x06R\rlast_event_idR\x0flast_message_idR\x10last_activity_id\"\xc3\x01\n" +
-	"\x05Actor\x12\x1d\n" +
+	"\faggregate_id\x18\t \x01(\tR\vaggregateId\x12\x1b\n" +
+	"\tserver_id\x18\n" +
+	" \x01(\tR\bserverIdJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x03\x10\x06R\rlast_event_idR\x0flast_message_idR\x10last_activity_id\"\xe0\x01\n" +
+	"\x05Actor\x12:\n" +
 	"\n" +
-	"actor_kind\x18\x01 \x01(\tR\tactorKind\x12\x19\n" +
+	"actor_kind\x18\x01 \x01(\x0e2\x1b.nekode.daemon.v1.ActorKindR\tactorKind\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tdaemon_id\x18\x04 \x01(\tR\bdaemonId\x12\x1f\n" +
 	"\vendpoint_id\x18\x05 \x01(\tR\n" +
 	"endpointId\x12!\n" +
-	"\fdisplay_name\x18\x06 \x01(\tR\vdisplayNameJ\x06\b\xe8\a\x10\xd0\x0f\"\xb9\x01\n" +
+	"\fdisplay_name\x18\x06 \x01(\tR\vdisplayNameJ\x06\b\xe8\a\x10\xd0\x0f\"Z\n" +
+	"\n" +
+	"ClientInfo\x12\x1a\n" +
+	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\x0e\n" +
+	"\x02os\x18\x03 \x01(\tR\x02osJ\x06\b\xe8\a\x10\xd0\x0f\"\xa9\x01\n" +
+	"\n" +
+	"EventScope\x12?\n" +
+	"\n" +
+	"scope_type\x18\x01 \x01(\x0e2 .nekode.daemon.v1.EventScopeTypeR\tscopeType\x12\x19\n" +
+	"\bscope_id\x18\x02 \x01(\tR\ascopeId\x12\x16\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\x12\x1f\n" +
+	"\vcustom_type\x18\x04 \x01(\tR\n" +
+	"customTypeJ\x06\b\xe8\a\x10\xd0\x0f\"\xef\x01\n" +
 	"\x0eRequestContext\x12\x19\n" +
 	"\btrace_id\x18\x03 \x01(\tR\atraceId\x12-\n" +
 	"\x05actor\x18\x04 \x01(\v2\x17.nekode.daemon.v1.ActorR\x05actor\x12,\n" +
-	"\x12source_endpoint_id\x18\x05 \x01(\tR\x10sourceEndpointIdJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\n" +
+	"\x12source_endpoint_id\x18\x05 \x01(\tR\x10sourceEndpointId\x124\n" +
+	"\x06client\x18\x06 \x01(\v2\x1c.nekode.daemon.v1.ClientInfoR\x06clientJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\n" +
 	"request_idR\x0fidempotency_key\"\x8d\x01\n" +
 	"\x06EnvVar\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
@@ -712,7 +1277,59 @@ const file_nekode_daemon_v1_common_proto_rawDesc = "" +
 	"\aenabled\x18\x05 \x01(\bR\aenabled\x12\x16\n" +
 	"\x06always\x18\x06 \x01(\bR\x06always\x12\x1a\n" +
 	"\beligible\x18\a \x01(\bR\beligible\x12\x1b\n" +
-	"\tfile_path\x18\b \x01(\tR\bfilePathJ\x06\b\xe8\a\x10\xd0\x0fB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\tfile_path\x18\b \x01(\tR\bfilePathJ\x06\b\xe8\a\x10\xd0\x0f*\x9c\x02\n" +
+	"\x0fPermissionScope\x12 \n" +
+	"\x1cPERMISSION_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17PERMISSION_SCOPE_GLOBAL\x10\x01\x12\x1c\n" +
+	"\x18PERMISSION_SCOPE_CHANNEL\x10\x02\x12\x1b\n" +
+	"\x17PERMISSION_SCOPE_THREAD\x10\x03\x12\x19\n" +
+	"\x15PERMISSION_SCOPE_TASK\x10\x04\x12\x1c\n" +
+	"\x18PERMISSION_SCOPE_MESSAGE\x10\x05\x12\x1c\n" +
+	"\x18PERMISSION_SCOPE_RUNTIME\x10\x06\x12\x1d\n" +
+	"\x19PERMISSION_SCOPE_ENDPOINT\x10\a\x12\x19\n" +
+	"\x15PERMISSION_SCOPE_USER\x10\b*\x9a\x01\n" +
+	"\tActorKind\x12\x1a\n" +
+	"\x16ACTOR_KIND_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10ACTOR_KIND_HUMAN\x10\x01\x12\x14\n" +
+	"\x10ACTOR_KIND_AGENT\x10\x02\x12\x15\n" +
+	"\x11ACTOR_KIND_DAEMON\x10\x03\x12\x17\n" +
+	"\x13ACTOR_KIND_ENDPOINT\x10\x04\x12\x15\n" +
+	"\x11ACTOR_KIND_SYSTEM\x10\x05*~\n" +
+	"\rContentFormat\x12\x1e\n" +
+	"\x1aCONTENT_FORMAT_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17CONTENT_FORMAT_MARKDOWN\x10\x01\x12\x17\n" +
+	"\x13CONTENT_FORMAT_JSON\x10\x02\x12\x17\n" +
+	"\x13CONTENT_FORMAT_TEXT\x10\x03*\x9c\x03\n" +
+	"\x0eEventOperation\x12\x1f\n" +
+	"\x1bEVENT_OPERATION_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17EVENT_OPERATION_CREATED\x10\x01\x12\x1b\n" +
+	"\x17EVENT_OPERATION_UPDATED\x10\x02\x12\x1b\n" +
+	"\x17EVENT_OPERATION_DELETED\x10\x03\x12!\n" +
+	"\x1dEVENT_OPERATION_STATE_CHANGED\x10\x04\x12\x1c\n" +
+	"\x18EVENT_OPERATION_APPENDED\x10\x05\x12\x1b\n" +
+	"\x17EVENT_OPERATION_CLAIMED\x10\x06\x12\x1c\n" +
+	"\x18EVENT_OPERATION_RELEASED\x10\a\x12\x1a\n" +
+	"\x16EVENT_OPERATION_FAILED\x10\b\x12\x1c\n" +
+	"\x18EVENT_OPERATION_CANCELED\x10\t\x12\x1d\n" +
+	"\x19EVENT_OPERATION_HEARTBEAT\x10\n" +
+	"\x12\x1f\n" +
+	"\x1bEVENT_OPERATION_INVALIDATED\x10\v\x12\x1c\n" +
+	"\x18EVENT_OPERATION_SNAPSHOT\x10\f*\x8d\x03\n" +
+	"\x0eEventScopeType\x12 \n" +
+	"\x1cEVENT_SCOPE_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17EVENT_SCOPE_TYPE_SERVER\x10\x01\x12\x1e\n" +
+	"\x1aEVENT_SCOPE_TYPE_WORKSPACE\x10\x02\x12\x1b\n" +
+	"\x17EVENT_SCOPE_TYPE_TARGET\x10\x03\x12\x1b\n" +
+	"\x17EVENT_SCOPE_TYPE_THREAD\x10\x04\x12\x19\n" +
+	"\x15EVENT_SCOPE_TYPE_TASK\x10\x05\x12\x18\n" +
+	"\x14EVENT_SCOPE_TYPE_RUN\x10\x06\x12\x1a\n" +
+	"\x16EVENT_SCOPE_TYPE_AGENT\x10\a\x12\x1d\n" +
+	"\x19EVENT_SCOPE_TYPE_COMPUTER\x10\b\x12\x19\n" +
+	"\x15EVENT_SCOPE_TYPE_USER\x10\t\x12\x1d\n" +
+	"\x19EVENT_SCOPE_TYPE_ENDPOINT\x10\n" +
+	"\x12\x1b\n" +
+	"\x17EVENT_SCOPE_TYPE_DAEMON\x10\v\x12\x1b\n" +
+	"\x17EVENT_SCOPE_TYPE_CUSTOM\x10\fB9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_common_proto_rawDescOnce sync.Once
@@ -726,24 +1343,36 @@ func file_nekode_daemon_v1_common_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_common_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_nekode_daemon_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_nekode_daemon_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_nekode_daemon_v1_common_proto_goTypes = []any{
-	(*Capability)(nil),     // 0: nekode.daemon.v1.Capability
-	(*Permission)(nil),     // 1: nekode.daemon.v1.Permission
-	(*Lease)(nil),          // 2: nekode.daemon.v1.Lease
-	(*EventCursor)(nil),    // 3: nekode.daemon.v1.EventCursor
-	(*Actor)(nil),          // 4: nekode.daemon.v1.Actor
-	(*RequestContext)(nil), // 5: nekode.daemon.v1.RequestContext
-	(*EnvVar)(nil),         // 6: nekode.daemon.v1.EnvVar
-	(*SkillRecord)(nil),    // 7: nekode.daemon.v1.SkillRecord
+	(PermissionScope)(0),   // 0: nekode.daemon.v1.PermissionScope
+	(ActorKind)(0),         // 1: nekode.daemon.v1.ActorKind
+	(ContentFormat)(0),     // 2: nekode.daemon.v1.ContentFormat
+	(EventOperation)(0),    // 3: nekode.daemon.v1.EventOperation
+	(EventScopeType)(0),    // 4: nekode.daemon.v1.EventScopeType
+	(*Capability)(nil),     // 5: nekode.daemon.v1.Capability
+	(*Permission)(nil),     // 6: nekode.daemon.v1.Permission
+	(*Lease)(nil),          // 7: nekode.daemon.v1.Lease
+	(*EventCursor)(nil),    // 8: nekode.daemon.v1.EventCursor
+	(*Actor)(nil),          // 9: nekode.daemon.v1.Actor
+	(*ClientInfo)(nil),     // 10: nekode.daemon.v1.ClientInfo
+	(*EventScope)(nil),     // 11: nekode.daemon.v1.EventScope
+	(*RequestContext)(nil), // 12: nekode.daemon.v1.RequestContext
+	(*EnvVar)(nil),         // 13: nekode.daemon.v1.EnvVar
+	(*SkillRecord)(nil),    // 14: nekode.daemon.v1.SkillRecord
 }
 var file_nekode_daemon_v1_common_proto_depIdxs = []int32{
-	4, // 0: nekode.daemon.v1.RequestContext.actor:type_name -> nekode.daemon.v1.Actor
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0,  // 0: nekode.daemon.v1.Permission.scope:type_name -> nekode.daemon.v1.PermissionScope
+	1,  // 1: nekode.daemon.v1.Actor.actor_kind:type_name -> nekode.daemon.v1.ActorKind
+	4,  // 2: nekode.daemon.v1.EventScope.scope_type:type_name -> nekode.daemon.v1.EventScopeType
+	9,  // 3: nekode.daemon.v1.RequestContext.actor:type_name -> nekode.daemon.v1.Actor
+	10, // 4: nekode.daemon.v1.RequestContext.client:type_name -> nekode.daemon.v1.ClientInfo
+	5,  // [5:5] is the sub-list for method output_type
+	5,  // [5:5] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_common_proto_init() }
@@ -756,13 +1385,14 @@ func file_nekode_daemon_v1_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_common_proto_rawDesc), len(file_nekode_daemon_v1_common_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   8,
+			NumEnums:      5,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_nekode_daemon_v1_common_proto_goTypes,
 		DependencyIndexes: file_nekode_daemon_v1_common_proto_depIdxs,
+		EnumInfos:         file_nekode_daemon_v1_common_proto_enumTypes,
 		MessageInfos:      file_nekode_daemon_v1_common_proto_msgTypes,
 	}.Build()
 	File_nekode_daemon_v1_common_proto = out.File
