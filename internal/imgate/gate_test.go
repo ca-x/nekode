@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
 	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/immedia"
@@ -119,6 +121,117 @@ func TestInboundCoordinatorStorageGate(t *testing.T) {
 			}
 			if !containsMessage(messages, message.ID) {
 				t.Fatalf("stored messages = %+v, missing %q", messages, message.ID)
+			}
+		})
+	}
+}
+
+func TestOutboundDeliveryStatusGate(t *testing.T) {
+	ctx := context.Background()
+	dataDir := t.TempDir()
+	store := newTestStore(t)
+	rpc := daemonrpc.New(store, "srv-imgate")
+	coord := imcoord.New(store, func(_ context.Context, target string, ids []string) ([]storage.Attachment, error) {
+		attachments := make([]storage.Attachment, 0, len(ids))
+		for _, id := range ids {
+			attachment, err := immedia.ReadMetadata(dataDir, id)
+			if err != nil {
+				return nil, err
+			}
+			attachments = append(attachments, attachment)
+		}
+		return attachments, nil
+	})
+
+	for _, fixture := range ProviderFixtures() {
+		t.Run(fixture.Provider, func(t *testing.T) {
+			endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+				ID:              fixture.EndpointID,
+				Kind:            "im",
+				Provider:        fixture.Provider,
+				DisplayName:     fixture.EndpointName,
+				TargetPrefix:    "#",
+				InboundEnabled:  true,
+				OutboundEnabled: true,
+				AuthMode:        "signature",
+				ConfigJSON:      `{"group_mode":"mention"}`,
+			})
+			if err != nil {
+				t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+			}
+
+			inbound := fixture.Message(storeFixtureMedia(t, dataDir, fixture)...)
+			draft, err := inbound.Draft()
+			if err != nil {
+				t.Fatalf("Draft() error = %v", err)
+			}
+			created, err := coord.Handle(ctx, draft)
+			if err != nil {
+				t.Fatalf("Handle() error = %v", err)
+			}
+
+			reply, err := rpc.SendMessage(ctx, &daemonv1.SendMessageRequest{
+				Target:           created.Message.Target,
+				Content:          "acknowledged via " + fixture.Provider,
+				ReplyToMessageId: created.Message.ID,
+				OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+				RequestId:        "reply-" + fixture.Provider,
+				IdempotencyKey:   "reply-" + fixture.Provider,
+				Sender: &daemonv1.Actor{
+					ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+					AgentId:     "agent-imgate",
+					DisplayName: "Gate Agent",
+				},
+			})
+			if err != nil {
+				t.Fatalf("SendMessage() error = %v", err)
+			}
+			if !reply.GetAccepted() || reply.GetMessage().GetSourceEndpointId() != "" {
+				t.Fatalf("reply = %+v, want Web-visible agent reply without copied IM source", reply.GetMessage())
+			}
+			if strings.HasPrefix(reply.GetMessage().GetTarget(), "dm:agent/") {
+				t.Fatalf("reply target %q must remain IM-origin thread/inbox, not Web-native agent DM", reply.GetMessage().GetTarget())
+			}
+
+			listed, err := rpc.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+				Target:    created.Message.Target,
+				MessageId: reply.GetMessage().GetMessageId(),
+				Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+				Limit:     10,
+			})
+			if err != nil {
+				t.Fatalf("ListOutboundDeliveries() error = %v", err)
+			}
+			if len(listed.GetDeliveries()) != 1 {
+				t.Fatalf("deliveries = %+v, want one pending delivery", listed.GetDeliveries())
+			}
+			delivery := listed.GetDeliveries()[0]
+			if delivery.GetEndpointId() != endpoint.ID ||
+				delivery.GetEndpointKind() != "im" ||
+				delivery.GetExternalMessageId() != fixture.ExternalMessageID ||
+				delivery.GetStatus() != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING {
+				t.Fatalf("delivery = %+v, want pending source-only IM delivery", delivery)
+			}
+
+			retry, err := rpc.RetryOutboundDelivery(ctx, &daemonv1.RetryOutboundDeliveryRequest{
+				DeliveryId:     delivery.GetDeliveryId(),
+				RequestId:      "retry-" + fixture.Provider,
+				IdempotencyKey: "retry-" + fixture.Provider,
+			})
+			if err != nil {
+				t.Fatalf("RetryOutboundDelivery() error = %v", err)
+			}
+			if retry.GetDelivery().GetStatus() != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_RETRYING ||
+				retry.GetDelivery().GetAttemptCount() != 1 {
+				t.Fatalf("retry delivery = %+v, want retrying attempt 1", retry.GetDelivery())
+			}
+
+			delivered, err := rpc.RecordOutboundDeliveryStatus(ctx, delivery.GetDeliveryId(), daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_DELIVERED, "", 0, 0)
+			if err != nil {
+				t.Fatalf("RecordOutboundDeliveryStatus() error = %v", err)
+			}
+			if delivered.Status != "delivered" || delivered.DeliveredTimeUnix == 0 || delivered.NextRetryTimeUnix != 0 {
+				t.Fatalf("delivered storage record = %+v, want delivered without retry time", delivered)
 			}
 		})
 	}
