@@ -53,6 +53,7 @@ import type {
   Channel,
   ChannelMember,
   CollaborationEvent,
+  CreateDaemonAgentResult,
   DaemonActivityRecord,
   DaemonEnrollment,
   DaemonInfo,
@@ -63,6 +64,8 @@ import type {
   ProtocolInfo,
   Reminder,
   ReminderEvent,
+  RuntimeInstanceTemplate,
+  RuntimeOptionSchema,
   RuntimePreset,
   SavedMessage,
   SetupStatus,
@@ -444,6 +447,18 @@ function runtimeTemplateCount(inventory: DaemonInventoryComputer[]) {
     (total, computer) => total + computer.runtimes.reduce((sum, runtime) => sum + runtime.templates.length, 0),
     0
   );
+}
+
+function defaultOptionValues(template: RuntimeInstanceTemplate | null) {
+  const values: Record<string, string> = {};
+  for (const option of template?.options ?? []) {
+    if (option.default !== undefined) values[option.name] = option.default;
+  }
+  return values;
+}
+
+function optionInputValue(values: Record<string, string>, option: RuntimeOptionSchema) {
+  return values[option.name] ?? option.default ?? "";
 }
 
 function messagePermalink(message: Message) {
@@ -976,6 +991,7 @@ function App() {
             daemonRuns={daemonRuns}
             daemonActivity={daemonActivity}
             runtimePresets={runtimePresets}
+            onAgentCreated={() => void loadData({ background: true })}
           />
         ) : null}
       </main>
@@ -3504,7 +3520,8 @@ function DaemonPanel({
   daemonInventory,
   daemonRuns,
   daemonActivity,
-  runtimePresets
+  runtimePresets,
+  onAgentCreated
 }: {
   protocol: ProtocolInfo | null;
   daemonInfo: DaemonInfo | null;
@@ -3515,6 +3532,7 @@ function DaemonPanel({
   daemonRuns: DaemonRun[];
   daemonActivity: DaemonActivityRecord[];
   runtimePresets: RuntimePreset[];
+  onAgentCreated: () => void;
 }) {
   const [displayName, setDisplayName] = useState("");
   const [computerId, setComputerId] = useState("");
@@ -3531,6 +3549,38 @@ function DaemonPanel({
   const platformCommands = platformInstallCommands(enrollment);
   const selectedCommand =
     platformCommands.find((entry) => entry.platform === selectedPlatform) ?? platformCommands[0] ?? null;
+  const [agentComputerId, setAgentComputerId] = useState("");
+  const [agentRuntimeId, setAgentRuntimeId] = useState("");
+  const [agentTemplateId, setAgentTemplateId] = useState("");
+  const [agentDisplayName, setAgentDisplayName] = useState("");
+  const [agentName, setAgentName] = useState("");
+  const [agentTarget, setAgentTarget] = useState(DEFAULT_TARGET);
+  const [agentOptions, setAgentOptions] = useState<Record<string, string>>({});
+  const [agentCreateState, setAgentCreateState] = useState<"idle" | "creating" | "created" | "error">("idle");
+  const [agentError, setAgentError] = useState("");
+  const [createdAgent, setCreatedAgent] = useState<CreateDaemonAgentResult | null>(null);
+  const agentComputers = useMemo(
+    () => daemonInventory.filter((computer) =>
+      computer.runtimes.some((runtime) =>
+        runtime.installed && runtime.healthy && runtime.templates.some((template) => template.multiInstance)
+      )
+    ),
+    [daemonInventory]
+  );
+  const selectedAgentComputer = agentComputers.find((computer) => computer.computerId === agentComputerId) ?? agentComputers[0] ?? null;
+  const agentRuntimes = selectedAgentComputer?.runtimes.filter((runtime) =>
+    runtime.installed && runtime.healthy && runtime.templates.some((template) => template.multiInstance)
+  ) ?? [];
+  const selectedAgentRuntime = agentRuntimes.find((runtime) => runtime.runtimeId === agentRuntimeId) ?? agentRuntimes[0] ?? null;
+  const agentTemplates = selectedAgentRuntime?.templates.filter((template) => template.multiInstance) ?? [];
+  const selectedAgentTemplate = agentTemplates.find((template) => template.templateId === agentTemplateId) ?? agentTemplates[0] ?? null;
+  const canCreateAgent = Boolean(
+    selectedAgentComputer?.computerId &&
+    selectedAgentRuntime?.runtimeId &&
+    selectedAgentTemplate?.templateId &&
+    agentDisplayName.trim() &&
+    agentCreateState !== "creating"
+  );
 
   useEffect(() => {
     if (!enrollment?.id || canFinishEnrollment || currentEnrollmentStatus !== "pending") {
@@ -3551,6 +3601,34 @@ function DaemonPanel({
     }, 3000);
     return () => window.clearInterval(timer);
   }, [canFinishEnrollment, currentEnrollmentStatus, enrollment?.id]);
+
+  useEffect(() => {
+    if (selectedAgentComputer && selectedAgentComputer.computerId !== agentComputerId) {
+      setAgentComputerId(selectedAgentComputer.computerId);
+    }
+  }, [agentComputerId, selectedAgentComputer]);
+
+  useEffect(() => {
+    if (selectedAgentRuntime && selectedAgentRuntime.runtimeId !== agentRuntimeId) {
+      setAgentRuntimeId(selectedAgentRuntime.runtimeId);
+    }
+  }, [agentRuntimeId, selectedAgentRuntime]);
+
+  useEffect(() => {
+    if (selectedAgentTemplate && selectedAgentTemplate.templateId !== agentTemplateId) {
+      setAgentTemplateId(selectedAgentTemplate.templateId);
+    }
+  }, [agentTemplateId, selectedAgentTemplate]);
+
+  useEffect(() => {
+    setAgentOptions(defaultOptionValues(selectedAgentTemplate));
+    setCreatedAgent(null);
+    setAgentError("");
+    setAgentCreateState("idle");
+    if (!agentDisplayName.trim() && selectedAgentTemplate?.displayName) {
+      setAgentDisplayName(selectedAgentTemplate.displayName);
+    }
+  }, [selectedAgentTemplate?.templateId]);
 
   const createEnrollment = async () => {
     setWizardState("creating");
@@ -3603,6 +3681,37 @@ function DaemonPanel({
       setCopyState("idle");
     } catch (err) {
       setWizardError(err instanceof Error ? err.message : "Unable to revoke enrollment");
+    }
+  };
+
+  const setAgentOption = (name: string, value: string) => {
+    setAgentOptions((current) => ({ ...current, [name]: value }));
+  };
+
+  const createAgent = async () => {
+    if (!selectedAgentComputer || !selectedAgentRuntime || !selectedAgentTemplate) return;
+    setAgentCreateState("creating");
+    setAgentError("");
+    setCreatedAgent(null);
+    try {
+      const result = await api.createDaemonAgent({
+        computerId: selectedAgentComputer.computerId,
+        runtimeId: selectedAgentRuntime.runtimeId,
+        templateId: selectedAgentTemplate.templateId,
+        displayName: agentDisplayName.trim(),
+        name: agentName.trim() || undefined,
+        target: agentTarget.trim() || undefined,
+        options: {
+          ...agentOptions,
+          display_name: agentDisplayName.trim()
+        }
+      });
+      setCreatedAgent(result);
+      setAgentCreateState("created");
+      onAgentCreated();
+    } catch (err) {
+      setAgentCreateState("error");
+      setAgentError(err instanceof Error ? err.message : "Unable to create agent");
     }
   };
 
@@ -3738,6 +3847,154 @@ function DaemonPanel({
             ) : null}
           </div>
         </div>
+      </section>
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Add Agent</p>
+            <h2>Create an agent instance</h2>
+          </div>
+          <span className={`diagnostic-badge ${healthClass(agentCreateState)}`}>
+            {agentCreateState}
+          </span>
+        </div>
+        {agentComputers.length ? (
+          <form className="agent-create-form" onSubmit={(event) => {
+            event.preventDefault();
+            void createAgent();
+          }}>
+            <div className="agent-create-grid">
+              <label>
+                Computer
+                <select
+                  value={selectedAgentComputer?.computerId ?? ""}
+                  onChange={(event) => {
+                    setAgentComputerId(event.target.value);
+                    setAgentRuntimeId("");
+                    setAgentTemplateId("");
+                  }}
+                >
+                  {agentComputers.map((computer) => (
+                    <option key={computer.computerId} value={computer.computerId}>
+                      {computer.displayName || computer.hostname || computer.computerId}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Runtime
+                <select
+                  value={selectedAgentRuntime?.runtimeId ?? ""}
+                  onChange={(event) => {
+                    setAgentRuntimeId(event.target.value);
+                    setAgentTemplateId("");
+                  }}
+                >
+                  {agentRuntimes.map((runtime) => (
+                    <option key={runtime.runtimeId} value={runtime.runtimeId}>
+                      {runtime.displayName || runtime.kind}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Template
+                <select
+                  value={selectedAgentTemplate?.templateId ?? ""}
+                  onChange={(event) => setAgentTemplateId(event.target.value)}
+                >
+                  {agentTemplates.map((template) => (
+                    <option key={template.templateId} value={template.templateId}>
+                      {template.displayName || template.templateId}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Display name
+                <input
+                  value={agentDisplayName}
+                  onChange={(event) => setAgentDisplayName(event.target.value)}
+                  placeholder="Review Agent"
+                  required
+                />
+              </label>
+              <label>
+                Agent name
+                <input
+                  value={agentName}
+                  onChange={(event) => setAgentName(event.target.value)}
+                  placeholder="review-agent"
+                />
+              </label>
+              <label>
+                Target
+                <input
+                  value={agentTarget}
+                  onChange={(event) => setAgentTarget(event.target.value)}
+                  placeholder={DEFAULT_TARGET}
+                />
+              </label>
+            </div>
+            {selectedAgentTemplate?.options.length ? (
+              <div className="agent-options-grid">
+                {selectedAgentTemplate.options.map((option) => (
+                  <label key={option.name} className={option.type === "free_text" ? "span-2" : undefined}>
+                    {option.label || option.name}{option.required ? " *" : ""}
+                    {option.type === "enum" ? (
+                      <select
+                        value={optionInputValue(agentOptions, option)}
+                        onChange={(event) => setAgentOption(option.name, event.target.value)}
+                        required={option.required}
+                      >
+                        {!option.required ? <option value="">Default</option> : null}
+                        {option.enum.map((item) => (
+                          <option key={item} value={item}>{item}</option>
+                        ))}
+                      </select>
+                    ) : option.type === "boolean" ? (
+                      <select
+                        value={optionInputValue(agentOptions, option) || "false"}
+                        onChange={(event) => setAgentOption(option.name, event.target.value)}
+                      >
+                        <option value="true">true</option>
+                        <option value="false">false</option>
+                      </select>
+                    ) : option.type === "free_text" ? (
+                      <textarea
+                        value={optionInputValue(agentOptions, option)}
+                        onChange={(event) => setAgentOption(option.name, event.target.value)}
+                        rows={3}
+                        required={option.required}
+                      />
+                    ) : (
+                      <input
+                        type={option.sensitive ? "password" : option.type === "number" ? "number" : "text"}
+                        value={optionInputValue(agentOptions, option)}
+                        onChange={(event) => setAgentOption(option.name, event.target.value)}
+                        required={option.required}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            ) : null}
+            <div className="enrollment-actions">
+              <button className="primary-button" type="submit" disabled={!canCreateAgent}>
+                <Plus size={16} aria-hidden="true" />
+                {agentCreateState === "creating" ? "Creating" : "Create agent"}
+              </button>
+              {createdAgent ? (
+                <span className="inline-success">
+                  Created {createdAgent.agent.displayName || createdAgent.agent.agentId}
+                </span>
+              ) : null}
+              {agentError ? <p className="inline-error" role="alert">{agentError}</p> : null}
+            </div>
+          </form>
+        ) : (
+          <EmptyState icon={Bot} title="No available runtime templates" />
+        )}
       </section>
       <section className="panel wide">
         <div className="panel-heading">

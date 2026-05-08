@@ -324,7 +324,36 @@ export type DaemonInventoryComputer = {
   inventoryVersion?: string;
   lastHeartbeatUnix?: number;
   runtimes: DaemonInventoryRuntime[];
-  agents: { agentId: string; runtimeKind?: string; runtimeProfileId?: string; displayName?: string }[];
+  agents: DaemonAgentInstance[];
+};
+
+export type DaemonAgentInstance = {
+  agentId: string;
+  name?: string;
+  displayName?: string;
+  description?: string;
+  provider?: string;
+  model?: string;
+  computerId?: string;
+  runtimeProfileId?: string;
+  runtimeKind?: string;
+  reasoningEffort?: string;
+  status?: string;
+};
+
+export type CreateDaemonAgentInput = {
+  computerId: string;
+  runtimeId: string;
+  templateId: string;
+  displayName: string;
+  name?: string;
+  target?: string;
+  options: Record<string, string>;
+};
+
+export type CreateDaemonAgentResult = {
+  agent: DaemonAgentInstance;
+  runtimeProfileId: string;
 };
 
 export type RuntimePreset = {

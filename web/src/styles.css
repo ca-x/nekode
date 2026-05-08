@@ -1936,6 +1936,37 @@ textarea {
   margin-left: auto;
 }
 
+.agent-create-form {
+  display: grid;
+  gap: 14px;
+}
+
+.agent-create-grid,
+.agent-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.agent-create-grid label,
+.agent-options-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.agent-options-grid .span-2 {
+  grid-column: span 2;
+}
+
+.inline-success {
+  align-self: center;
+  color: var(--success);
+  font-weight: 800;
+}
+
 .runtime-preset {
   display: grid;
   gap: 10px;
@@ -2393,11 +2424,17 @@ textarea {
 
 @media (max-width: 980px) {
   .app-shell,
+  .agent-create-grid,
+  .agent-options-grid,
   .auth-panel,
   .enrollment-layout,
   .task-workspace,
   .two-column {
     grid-template-columns: 1fr;
+  }
+
+  .agent-options-grid .span-2 {
+    grid-column: span 1;
   }
 
   .sidebar {
@@ -2475,6 +2512,8 @@ textarea {
   }
 
   .content-grid,
+  .agent-create-grid,
+  .agent-options-grid,
   .contract-grid,
   .enrollment-status-grid,
   .inline-form,
@@ -2483,6 +2522,10 @@ textarea {
   .skill-tools,
   .skill-row {
     grid-template-columns: 1fr;
+  }
+
+  .agent-options-grid .span-2 {
+    grid-column: span 1;
   }
 
   .sidebar {

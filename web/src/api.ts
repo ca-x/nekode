@@ -8,6 +8,9 @@ import type {
   ChannelVisibility,
   CollaborationEvent,
   CollaborationEventKind,
+  CreateDaemonAgentInput,
+  CreateDaemonAgentResult,
+  DaemonAgentInstance,
   DaemonEnrollment,
   DaemonActivityRecord,
   DaemonInfo,
@@ -792,6 +795,32 @@ function normalizeDaemonActivity(raw: unknown): DaemonActivityRecord {
   };
 }
 
+function normalizeDaemonAgentInstance(raw: unknown): DaemonAgentInstance {
+  const row = asRecord(raw);
+  return {
+    agentId: asString(row.agentId ?? row.agent_id),
+    name: asOptionalString(row.name),
+    displayName: asOptionalString(row.displayName ?? row.display_name),
+    description: asOptionalString(row.description),
+    provider: asOptionalString(row.provider),
+    model: asOptionalString(row.model),
+    computerId: asOptionalString(row.computerId ?? row.computer_id),
+    runtimeProfileId: asOptionalString(row.runtimeProfileId ?? row.runtime_profile_id),
+    runtimeKind: asOptionalString(row.runtimeKind ?? row.runtime_kind),
+    reasoningEffort: asOptionalString(row.reasoningEffort ?? row.reasoning_effort),
+    status: knownEnumLabel(row.status, agentPresenceByNumber, "agent_presence")
+  };
+}
+
+function normalizeCreateDaemonAgentResult(raw: unknown): CreateDaemonAgentResult {
+  const row = asRecord(raw);
+  const runtimeProfile = asRecord(row.runtimeProfile ?? row.runtime_profile);
+  return {
+    agent: normalizeDaemonAgentInstance(row.agent),
+    runtimeProfileId: asString(runtimeProfile.runtimeProfileId ?? runtimeProfile.runtime_profile_id)
+  };
+}
+
 function normalizeDaemonInventoryComputer(raw: unknown): DaemonInventoryComputer {
   const row = asRecord(raw);
   const info = asRecord(row.info);
@@ -806,7 +835,7 @@ function normalizeDaemonInventoryComputer(raw: unknown): DaemonInventoryComputer
   for (const profile of profiles) {
     const adapter = parseAdapterConfig(asOptionalString(asRecord(profile).adapter_config_json ?? asRecord(profile).adapterConfigJson));
     const template = normalizeRuntimeInstanceTemplate(profile);
-    if (!template.runtimeKind) continue;
+    if (!template.runtimeKind || template.inventoryRole !== "agent_instance_template") continue;
     const current = templatesByKind.get(template.runtimeKind) ?? [];
     current.push(template);
     templatesByKind.set(template.runtimeKind, current);
@@ -818,15 +847,9 @@ function normalizeDaemonInventoryComputer(raw: unknown): DaemonInventoryComputer
   const runtimes = (
     Array.isArray(inventory.runtimes) ? inventory.runtimes : []
   ).map((runtime) => normalizeDaemonInventoryRuntime(runtime, templatesByKind, runtimeTypesByKind));
-  const agents = (Array.isArray(inventory.agents) ? inventory.agents : []).map((agent) => {
-    const item = asRecord(agent);
-    return {
-      agentId: asString(item.agent_id ?? item.agentId),
-      runtimeKind: asOptionalString(item.runtime_kind ?? item.runtimeKind),
-      runtimeProfileId: asOptionalString(item.runtime_profile_id ?? item.runtimeProfileId),
-      displayName: asOptionalString(item.display_name ?? item.displayName)
-    };
-  }).filter((agent) => agent.agentId);
+  const agents = (Array.isArray(inventory.agents) ? inventory.agents : [])
+    .map(normalizeDaemonAgentInstance)
+    .filter((agent) => agent.agentId);
   return {
     computerId: asString(info.computer_id ?? info.computerId),
     displayName: asOptionalString(info.display_name ?? info.displayName),
@@ -1068,6 +1091,13 @@ export class ApiClient {
       await this.request<RawListResponse<unknown>>(`/api/daemon/inventory?limit=${limit}`),
       normalizeDaemonInventoryComputer
     );
+  }
+
+  async createDaemonAgent(input: CreateDaemonAgentInput) {
+    return normalizeCreateDaemonAgentResult(await this.request<unknown>("/api/daemon/agents", {
+      method: "POST",
+      body: JSON.stringify(input)
+    }));
   }
 
   async listAgentStatuses(filters: { target?: string; agentId?: string; limit?: number } = {}) {

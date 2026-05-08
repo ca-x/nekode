@@ -2,6 +2,7 @@ package daemonrpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
@@ -54,6 +56,21 @@ type ComputerInventorySnapshot struct {
 	Inventory         *daemonv1.ComputerInventory `json:"inventory,omitempty"`
 	InventoryVersion  string                      `json:"inventoryVersion,omitempty"`
 	LastHeartbeatUnix int64                       `json:"lastHeartbeatUnix,omitempty"`
+}
+
+type CreateAgentInstanceInput struct {
+	ComputerID  string            `json:"computerId"`
+	RuntimeID   string            `json:"runtimeId"`
+	TemplateID  string            `json:"templateId"`
+	DisplayName string            `json:"displayName"`
+	Name        string            `json:"name"`
+	Target      string            `json:"target"`
+	Options     map[string]string `json:"options"`
+}
+
+type CreateAgentInstanceResult struct {
+	Agent          *daemonv1.AgentProfile   `json:"agent"`
+	RuntimeProfile *daemonv1.RuntimeProfile `json:"runtimeProfile"`
 }
 
 func New(store *storage.Store, serverID string) *Server {
@@ -937,6 +954,241 @@ func (s *Server) ListComputerInventories(limit int) []ComputerInventorySnapshot 
 		}
 	}
 	return out
+}
+
+func (s *Server) CreateAgentInstance(input CreateAgentInstanceInput) (CreateAgentInstanceResult, error) {
+	input.ComputerID = strings.TrimSpace(input.ComputerID)
+	input.RuntimeID = strings.TrimSpace(input.RuntimeID)
+	input.TemplateID = strings.TrimSpace(input.TemplateID)
+	input.DisplayName = strings.TrimSpace(input.DisplayName)
+	input.Name = strings.TrimSpace(input.Name)
+	input.Target = strings.TrimSpace(input.Target)
+	if input.ComputerID == "" || input.RuntimeID == "" || input.TemplateID == "" {
+		return CreateAgentInstanceResult{}, status.Error(codes.InvalidArgument, "computerId, runtimeId, and templateId are required")
+	}
+	if input.DisplayName == "" {
+		return CreateAgentInstanceResult{}, status.Error(codes.InvalidArgument, "displayName is required")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	computer := s.computers[input.ComputerID]
+	if computer == nil || computer.inventory == nil {
+		return CreateAgentInstanceResult{}, status.Error(codes.NotFound, "computer inventory not found")
+	}
+	runtimeEntry := findRuntime(computer.inventory, input.RuntimeID)
+	if runtimeEntry == nil {
+		return CreateAgentInstanceResult{}, status.Error(codes.NotFound, "runtime not found")
+	}
+	if !runtimeEntry.GetInstalled() || !runtimeEntry.GetHealthy() {
+		return CreateAgentInstanceResult{}, status.Error(codes.FailedPrecondition, "runtime is not available")
+	}
+	templateProfile := findRuntimeProfile(computer.inventory, input.TemplateID)
+	if templateProfile == nil {
+		return CreateAgentInstanceResult{}, status.Error(codes.NotFound, "runtime template not found")
+	}
+	adapter, err := parseAdapterConfig(templateProfile.GetAdapterConfigJson())
+	if err != nil {
+		return CreateAgentInstanceResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	template := adapter.Template
+	if template.RuntimeKind == "" {
+		template.RuntimeKind = templateProfile.GetKind()
+	}
+	if template.RuntimeKind != "" && runtimeEntry.GetKind() != "" && template.RuntimeKind != runtimeEntry.GetKind() {
+		return CreateAgentInstanceResult{}, status.Error(codes.InvalidArgument, "runtime/template kind mismatch")
+	}
+	if !template.MultiInstance {
+		return CreateAgentInstanceResult{}, status.Error(codes.FailedPrecondition, "runtime template does not allow multiple instances")
+	}
+	optionValues := normalizedAgentOptions(template, input.DisplayName, input.Options)
+	wrap, err := runtimeadapter.BuildWrapCommand(template, optionValues)
+	if err != nil {
+		return CreateAgentInstanceResult{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	randomID := storage.NewID("agent")
+	agentID := randomID
+	slug := sanitizeAgentSlug(firstNonEmpty(input.Name, input.DisplayName))
+	if slug != "" {
+		agentID = "agent_" + slug + "_" + strings.TrimPrefix(randomID, "agent_")
+	}
+	instanceProfileID := "profile_" + strings.TrimPrefix(agentID, "agent_")
+	adapterJSON, err := instanceAdapterConfig(adapter, optionValues, wrap, agentID, input.Target)
+	if err != nil {
+		return CreateAgentInstanceResult{}, status.Errorf(codes.Internal, "build agent adapter config: %v", err)
+	}
+	profile := proto.Clone(templateProfile).(*daemonv1.RuntimeProfile)
+	profile.RuntimeProfileId = instanceProfileID
+	profile.AdapterConfigJson = adapterJSON
+	profile.Model = firstNonEmpty(optionValue(template.Options, optionValues, "model"), templateProfile.GetModel())
+	agent := &daemonv1.AgentProfile{
+		AgentId:          agentID,
+		Name:             firstNonEmpty(input.Name, agentID),
+		DisplayName:      input.DisplayName,
+		Description:      template.Description,
+		Enabled:          true,
+		Provider:         templateProfile.GetProvider(),
+		Model:            profile.GetModel(),
+		ComputerId:       input.ComputerID,
+		RuntimeProfileId: instanceProfileID,
+		RuntimeKind:      runtimeEntry.GetKind(),
+		ReasoningEffort:  optionValue(template.Options, optionValues, "reasoning_effort"),
+		Status:           daemonv1.AgentPresence_AGENT_PRESENCE_IDLE,
+		Capabilities:     cloneCapabilities(templateProfile.GetCapabilities()),
+	}
+	computer.inventory.RuntimeProfiles = append(computer.inventory.RuntimeProfiles, profile)
+	computer.inventory.Agents = append(computer.inventory.Agents, agent)
+	computer.inventoryVersion = strconv.FormatInt(unixNow(), 10)
+	return CreateAgentInstanceResult{
+		Agent:          proto.Clone(agent).(*daemonv1.AgentProfile),
+		RuntimeProfile: proto.Clone(profile).(*daemonv1.RuntimeProfile),
+	}, nil
+}
+
+func findRuntime(inventory *daemonv1.ComputerInventory, runtimeID string) *daemonv1.Runtime {
+	for _, runtimeEntry := range inventory.GetRuntimes() {
+		if runtimeEntry.GetRuntimeId() == runtimeID {
+			return runtimeEntry
+		}
+	}
+	return nil
+}
+
+func findRuntimeProfile(inventory *daemonv1.ComputerInventory, profileID string) *daemonv1.RuntimeProfile {
+	for _, profile := range inventory.GetRuntimeProfiles() {
+		if profile.GetRuntimeProfileId() == profileID {
+			return profile
+		}
+	}
+	return nil
+}
+
+func parseAdapterConfig(configJSON string) (runtimeadapter.AdapterConfig, error) {
+	var cfg runtimeadapter.AdapterConfig
+	if strings.TrimSpace(configJSON) == "" {
+		return cfg, errors.New("runtime profile is missing adapter config")
+	}
+	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
+		return cfg, fmt.Errorf("runtime profile adapter config is invalid: %w", err)
+	}
+	if cfg.SchemaVersion != "" && cfg.SchemaVersion != runtimeadapter.SchemaVersion {
+		return cfg, fmt.Errorf("unsupported runtime adapter schema %q", cfg.SchemaVersion)
+	}
+	if strings.TrimSpace(cfg.Template.TemplateID) == "" {
+		return cfg, errors.New("runtime profile adapter config is missing template")
+	}
+	return cfg, nil
+}
+
+func normalizedAgentOptions(template runtimeadapter.InstanceTemplate, displayName string, values map[string]string) map[string]string {
+	clean := make(map[string]string, len(values)+1)
+	for key, value := range values {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		clean[key] = strings.TrimSpace(value)
+	}
+	if strings.TrimSpace(clean["display_name"]) == "" {
+		clean["display_name"] = strings.TrimSpace(displayName)
+	}
+	for _, option := range template.Options {
+		if _, ok := clean[option.Name]; !ok && option.Default != "" {
+			clean[option.Name] = option.Default
+		}
+	}
+	return clean
+}
+
+func instanceAdapterConfig(
+	base runtimeadapter.AdapterConfig,
+	options map[string]string,
+	wrap runtimeadapter.WrapCommand,
+	agentID string,
+	target string,
+) (string, error) {
+	base.Template.InventoryRole = "agent_instance"
+	payload := struct {
+		runtimeadapter.AdapterConfig
+		AgentID          string                     `json:"agentId"`
+		Target           string                     `json:"target,omitempty"`
+		SourceTemplateID string                     `json:"sourceTemplateId"`
+		SelectedOptions  map[string]string          `json:"selectedOptions"`
+		WrapCommand      runtimeadapter.WrapCommand `json:"wrapCommand"`
+	}{
+		AdapterConfig:    base,
+		AgentID:          agentID,
+		Target:           strings.TrimSpace(target),
+		SourceTemplateID: base.Template.TemplateID,
+		SelectedOptions:  redactedAgentOptions(base.Template, options),
+		WrapCommand:      wrap,
+	}
+	out, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func redactedAgentOptions(template runtimeadapter.InstanceTemplate, values map[string]string) map[string]string {
+	sensitive := make(map[string]bool, len(template.Options))
+	for _, option := range template.Options {
+		if option.Sensitive {
+			sensitive[option.Name] = true
+		}
+	}
+	out := make(map[string]string, len(values))
+	for key, value := range values {
+		if sensitive[key] && value != "" {
+			out[key] = "<redacted>"
+			continue
+		}
+		out[key] = value
+	}
+	return out
+}
+
+func optionValue(options []runtimeadapter.OptionSchema, values map[string]string, name string) string {
+	if value := strings.TrimSpace(values[name]); value != "" {
+		return value
+	}
+	for _, option := range options {
+		if option.Name == name {
+			return option.Default
+		}
+	}
+	return ""
+}
+
+func cloneCapabilities(capabilities []*daemonv1.Capability) []*daemonv1.Capability {
+	out := make([]*daemonv1.Capability, 0, len(capabilities))
+	for _, capability := range capabilities {
+		if capability == nil {
+			continue
+		}
+		out = append(out, proto.Clone(capability).(*daemonv1.Capability))
+	}
+	return out
+}
+
+func sanitizeAgentSlug(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	var b strings.Builder
+	lastDash := false
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if b.Len() > 0 && !lastDash {
+			b.WriteByte('-')
+			lastDash = true
+		}
+	}
+	return strings.Trim(b.String(), "-")
 }
 
 func (s *Server) AcknowledgeServerEvents(_ context.Context, req *daemonv1.AcknowledgeServerEventsRequest) (*daemonv1.AcknowledgeServerEventsResponse, error) {

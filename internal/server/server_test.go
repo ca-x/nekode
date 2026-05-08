@@ -712,6 +712,9 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		ComputerID:           "computer-1",
 		PreferredRuntimeKind: "codex",
 		AgentID:              "agent-1",
+		LookupPath: func(command string) (string, error) {
+			return "/usr/bin/" + command, nil
+		},
 	})
 	if _, err := s.daemon.RegisterComputer(context.Background(), &daemonv1.RegisterComputerRequest{
 		Info: &daemonv1.ComputerInfo{
@@ -745,6 +748,102 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		len(runtimeProfiles) < 2 ||
 		len(agents) != 1 {
 		t.Fatalf("daemon inventory body = %+v, want runtime types, templates, and bootstrap agent", inventoryBody)
+	}
+	var codexRuntimeID, codexTemplateID string
+	for _, runtimeEntry := range inventory.GetRuntimes() {
+		if runtimeEntry.GetKind() == "codex" {
+			codexRuntimeID = runtimeEntry.GetRuntimeId()
+			break
+		}
+	}
+	for _, profile := range inventory.GetRuntimeProfiles() {
+		if profile.GetKind() == "codex" {
+			codexTemplateID = profile.GetRuntimeProfileId()
+			break
+		}
+	}
+	if codexRuntimeID == "" || codexTemplateID == "" {
+		t.Fatalf("codex runtime/template missing in inventory")
+	}
+	createAgent := func(displayName string) struct {
+		Agent struct {
+			AgentID          string `json:"agent_id"`
+			DisplayName      string `json:"display_name"`
+			ComputerID       string `json:"computer_id"`
+			RuntimeProfileID string `json:"runtime_profile_id"`
+			RuntimeKind      string `json:"runtime_kind"`
+		} `json:"agent"`
+		RuntimeProfile struct {
+			RuntimeProfileID string `json:"runtime_profile_id"`
+			AdapterConfig    string `json:"adapter_config_json"`
+		} `json:"runtimeProfile"`
+	} {
+		resp := doJSON(t, s, http.MethodPost, "/api/daemon/agents", token, map[string]any{
+			"computerId":  "computer-1",
+			"runtimeId":   codexRuntimeID,
+			"templateId":  codexTemplateID,
+			"displayName": displayName,
+			"target":      "#general",
+			"options": map[string]string{
+				"model":            "gpt-test",
+				"reasoning_effort": "medium",
+				"allow_file_write": "true",
+				"api_token":        "secret-token",
+			},
+		})
+		if resp.Code != http.StatusCreated {
+			t.Fatalf("create daemon agent status = %d body=%s", resp.Code, resp.Body.String())
+		}
+		var body struct {
+			Agent struct {
+				AgentID          string `json:"agent_id"`
+				DisplayName      string `json:"display_name"`
+				ComputerID       string `json:"computer_id"`
+				RuntimeProfileID string `json:"runtime_profile_id"`
+				RuntimeKind      string `json:"runtime_kind"`
+			} `json:"agent"`
+			RuntimeProfile struct {
+				RuntimeProfileID string `json:"runtime_profile_id"`
+				AdapterConfig    string `json:"adapter_config_json"`
+			} `json:"runtimeProfile"`
+		}
+		if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+			t.Fatalf("decode create daemon agent: %v", err)
+		}
+		if body.Agent.AgentID == "" || body.Agent.ComputerID != "computer-1" || body.Agent.RuntimeKind != "codex" {
+			t.Fatalf("created daemon agent = %+v", body.Agent)
+		}
+		if body.Agent.RuntimeProfileID == codexTemplateID || body.RuntimeProfile.RuntimeProfileID == codexTemplateID {
+			t.Fatalf("created runtime profile reused template id: %+v", body.RuntimeProfile)
+		}
+		if !strings.Contains(body.RuntimeProfile.AdapterConfig, `"inventoryRole":"agent_instance"`) ||
+			!strings.Contains(body.RuntimeProfile.AdapterConfig, `"wrapCommand"`) {
+			t.Fatalf("created runtime profile adapter config = %s, want instance config with wrap command", body.RuntimeProfile.AdapterConfig)
+		}
+		if strings.Contains(body.RuntimeProfile.AdapterConfig, "secret-token") ||
+			!strings.Contains(body.RuntimeProfile.AdapterConfig, `"api_token":"\u003credacted\u003e"`) {
+			t.Fatalf("created runtime profile adapter config = %s, want redacted sensitive option", body.RuntimeProfile.AdapterConfig)
+		}
+		return body
+	}
+	firstAgent := createAgent("Review Agent")
+	secondAgent := createAgent("Review Agent")
+	if firstAgent.Agent.AgentID == secondAgent.Agent.AgentID {
+		t.Fatalf("multi-instance create reused agent id %q", firstAgent.Agent.AgentID)
+	}
+	invalidAgent := doJSON(t, s, http.MethodPost, "/api/daemon/agents", token, map[string]any{
+		"computerId":  "computer-1",
+		"runtimeId":   codexRuntimeID,
+		"templateId":  codexTemplateID,
+		"displayName": "Bad Agent",
+		"options":     map[string]string{"reasoning_effort": "warp"},
+	})
+	if invalidAgent.Code != http.StatusBadRequest {
+		t.Fatalf("invalid daemon agent status = %d body=%s, want 400", invalidAgent.Code, invalidAgent.Body.String())
+	}
+	updatedInventory := s.daemon.ListComputerInventories(1)
+	if got := len(updatedInventory[0].Inventory.GetAgents()); got != 3 {
+		t.Fatalf("inventory agents = %d, want bootstrap + two created agents", got)
 	}
 
 	if _, err := s.daemon.UpdateAgentStatus(context.Background(), &daemonv1.UpdateAgentStatusRequest{

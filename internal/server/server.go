@@ -185,6 +185,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/daemon/activity", s.requireAuth(s.handleDaemonActivity))
 	s.mux.HandleFunc("GET /api/daemon/runs", s.requireAuth(s.handleDaemonRuns))
 	s.mux.HandleFunc("GET /api/daemon/events", s.requireAuth(s.handleDaemonEvents))
+	s.mux.HandleFunc("POST /api/daemon/agents", s.requireAuth(s.handleCreateDaemonAgent))
 	s.mux.HandleFunc("POST /api/daemon/enrollments", s.requireAuth(s.handleCreateDaemonEnrollment))
 	s.mux.HandleFunc("GET /api/daemon/enrollments/{id}", s.requireAuth(s.handleGetDaemonEnrollment))
 	s.mux.HandleFunc("POST /api/daemon/enrollments/{id}/revoke", s.requireAuth(s.handleRevokeDaemonEnrollment))

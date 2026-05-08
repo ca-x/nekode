@@ -10,7 +10,10 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/storage"
+	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
 func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +60,37 @@ func (s *Server) handleDaemonInventory(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items": s.daemon.ListComputerInventories(intQuery(r, "limit", 100)),
 	})
+}
+
+func (s *Server) handleCreateDaemonAgent(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")
+		return
+	}
+	var input daemonrpc.CreateAgentInstanceInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	result, err := s.daemon.CreateAgentInstance(input)
+	if err != nil {
+		writeError(w, daemonAgentHTTPStatus(err), grpcstatus.Convert(err).Message())
+		return
+	}
+	writeJSON(w, http.StatusCreated, result)
+}
+
+func daemonAgentHTTPStatus(err error) int {
+	switch grpcstatus.Code(err) {
+	case codes.InvalidArgument:
+		return http.StatusBadRequest
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.FailedPrecondition:
+		return http.StatusConflict
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 func (s *Server) handleDaemonAgentStatuses(w http.ResponseWriter, r *http.Request) {
