@@ -187,6 +187,13 @@ shape as other providers and render agent replies plus outbound delivery status
 as terminal-readable lines. This keeps Terminal useful for smoke tests without
 creating a separate local chat store.
 
+The Terminal live smoke gate must use the real local channel path, not a static
+fixture: local operator input flows through `internal/imterminal.Channel`,
+normalizes into `imcoord`, persists as a source endpoint message, receives an
+agent reply through the normal daemon `SendMessage` source-only outbound
+delivery path, renders with the Terminal outbound renderer, and records the
+delivery as delivered.
+
 Expected channel binding flow:
 
 - bind an IM endpoint conversation to a Nekode channel, thread, default target,
