@@ -156,10 +156,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
+	s.mux.HandleFunc("PATCH /api/interaction-endpoints/{id}", s.requireAuth(s.handleUpdateInteractionEndpoint))
+	s.mux.HandleFunc("DELETE /api/interaction-endpoints/{id}", s.requireAuth(s.handleDeleteInteractionEndpoint))
+	s.mux.HandleFunc("POST /api/interaction-endpoints/{id}/test", s.requireAuth(s.handleTestInteractionEndpoint))
 	s.mux.HandleFunc("GET /api/notification-routes", s.requireAuth(s.handleListNotificationRoutes))
 	s.mux.HandleFunc("POST /api/notification-routes", s.requireAuth(s.handleCreateNotificationRoute))
 	s.mux.HandleFunc("GET /api/notification-routes/resolve", s.requireAuth(s.handleResolveNotificationRoutes))
 	s.mux.HandleFunc("PATCH /api/notification-routes/{id}", s.requireAuth(s.handleUpdateNotificationRoute))
+	s.mux.HandleFunc("DELETE /api/notification-routes/{id}", s.requireAuth(s.handleDeleteNotificationRoute))
 	s.mux.HandleFunc("POST /api/attachments", s.requireAuth(s.handleUploadAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}", s.requireAuth(s.handleGetAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}/content", s.requireAuth(s.handleDownloadAttachment))
@@ -524,6 +528,122 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 	writeJSON(w, http.StatusCreated, redactInteractionEndpoint(created))
 }
 
+func (s *Server) handleUpdateInteractionEndpoint(w http.ResponseWriter, r *http.Request) {
+	var req endpointPatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	patch := storage.InteractionEndpointPatch{
+		DisplayName:     optionalTrimmed(req.DisplayName),
+		TargetPrefix:    optionalTrimmed(req.TargetPrefix),
+		InboundEnabled:  req.InboundEnabled,
+		OutboundEnabled: req.OutboundEnabled,
+		AuthMode:        optionalTrimmed(req.AuthMode),
+		ConfigJSON:      optionalTrimmed(req.ConfigJSON),
+	}
+	if patch.ConfigJSON != nil && strings.EqualFold(endpoint.Kind, "im") {
+		if strings.Contains(*patch.ConfigJSON, `"***"`) {
+			patch.ConfigJSON = nil
+		} else {
+			if err := imadapter.ValidateConfig(endpoint.Provider, *patch.ConfigJSON); err != nil {
+				writeError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+		}
+	}
+	updated, err := s.store.UpdateInteractionEndpoint(r.Context(), endpoint.ID, patch)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "interaction endpoint already exists")
+		return
+	}
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid interaction endpoint update")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "update interaction endpoint failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, redactInteractionEndpoint(updated))
+}
+
+func (s *Server) handleDeleteInteractionEndpoint(w http.ResponseWriter, r *http.Request) {
+	err := s.store.DeleteInteractionEndpoint(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "interaction endpoint is still referenced by notification routes or deliveries")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "delete interaction endpoint failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) handleTestInteractionEndpoint(w http.ResponseWriter, r *http.Request) {
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	checks := []map[string]any{
+		{"name": "schema", "ok": endpoint.Kind != "" && endpoint.Provider != ""},
+		{"name": "inbound", "ok": endpoint.InboundEnabled},
+		{"name": "outbound", "ok": endpoint.OutboundEnabled},
+	}
+	if strings.EqualFold(endpoint.Kind, "im") {
+		if err := imadapter.ValidateConfig(endpoint.Provider, endpoint.ConfigJSON); err != nil {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"ready":       false,
+				"runtimeLive": false,
+				"summary":     err.Error(),
+				"checks":      append(checks, map[string]any{"name": "provider_config", "ok": false, "detail": err.Error()}),
+			})
+			return
+		}
+		redacted := redactInteractionEndpoint(endpoint)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ready":       true,
+			"runtimeLive": false,
+			"summary":     "Endpoint configuration is valid. Provider receive/send runtime still requires its platform smoke task.",
+			"checks": append(checks,
+				map[string]any{"name": "provider_config", "ok": true},
+				map[string]any{"name": "provider_runtime", "ok": false, "detail": "Not a live provider send/receive test."},
+			),
+			"endpoint": redacted,
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ready":       true,
+		"runtimeLive": false,
+		"summary":     "Endpoint metadata is reachable. No external provider runtime was exercised.",
+		"checks":      checks,
+		"endpoint":    endpoint,
+	})
+}
+
 func (s *Server) handleListNotificationRoutes(w http.ResponseWriter, r *http.Request) {
 	routes, err := s.store.ListNotificationRoutes(r.Context(), storage.NotificationRouteListOptions{
 		Target:     strings.TrimSpace(r.URL.Query().Get("target")),
@@ -609,6 +729,9 @@ func (s *Server) handleUpdateNotificationRoute(w http.ResponseWriter, r *http.Re
 		return
 	}
 	patch := storage.NotificationRoutePatch{
+		Target:     optionalTrimmed(req.Target),
+		ThreadID:   optionalTrimmed(req.ThreadID),
+		EndpointID: optionalTrimmed(req.EndpointID),
 		EventKind:  optionalTrimmed(req.EventKind),
 		Preference: optionalTrimmed(req.Preference),
 		Enabled:    req.Enabled,
@@ -632,6 +755,19 @@ func (s *Server) handleUpdateNotificationRoute(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeJSON(w, http.StatusOK, updated)
+}
+
+func (s *Server) handleDeleteNotificationRoute(w http.ResponseWriter, r *http.Request) {
+	err := s.store.DeleteNotificationRoute(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "notification route not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "delete notification route failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
@@ -1699,6 +1835,15 @@ type endpointRequest struct {
 	ConfigJSON      string `json:"configJson"`
 }
 
+type endpointPatchRequest struct {
+	DisplayName     *string `json:"displayName"`
+	TargetPrefix    *string `json:"targetPrefix"`
+	InboundEnabled  *bool   `json:"inboundEnabled"`
+	OutboundEnabled *bool   `json:"outboundEnabled"`
+	AuthMode        *string `json:"authMode"`
+	ConfigJSON      *string `json:"configJson"`
+}
+
 type notificationRouteRequest struct {
 	Target     string `json:"target"`
 	ThreadID   string `json:"threadId"`
@@ -1710,6 +1855,9 @@ type notificationRouteRequest struct {
 }
 
 type notificationRoutePatchRequest struct {
+	Target     *string `json:"target"`
+	ThreadID   *string `json:"threadId"`
+	EndpointID *string `json:"endpointId"`
 	EventKind  *string `json:"eventKind"`
 	Preference *string `json:"preference"`
 	Enabled    *bool   `json:"enabled"`

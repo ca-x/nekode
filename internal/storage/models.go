@@ -41,6 +41,15 @@ type InteractionEndpoint struct {
 	UpdatedUnix     int64  `json:"updatedUnix"`
 }
 
+type InteractionEndpointPatch struct {
+	DisplayName     *string
+	TargetPrefix    *string
+	InboundEnabled  *bool
+	OutboundEnabled *bool
+	AuthMode        *string
+	ConfigJSON      *string
+}
+
 type ChannelSummary struct {
 	Target          string `json:"target"`
 	DisplayName     string `json:"displayName"`
@@ -135,6 +144,9 @@ type NotificationRouteResolveOptions struct {
 }
 
 type NotificationRoutePatch struct {
+	Target     *string
+	ThreadID   *string
+	EndpointID *string
 	EventKind  *string
 	Preference *string
 	Enabled    *bool

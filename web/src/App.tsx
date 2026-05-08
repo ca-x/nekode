@@ -62,7 +62,9 @@ import type {
   IMProviderField,
   IMProviderSchema,
   InteractionEndpoint,
+  InteractionEndpointTestResult,
   Message,
+  NotificationRoute,
   ProtocolInfo,
   Reminder,
   ReminderEvent,
@@ -563,6 +565,7 @@ function App() {
   const [daemonActivity, setDaemonActivity] = useState<DaemonActivityRecord[]>([]);
   const [runtimePresets, setRuntimePresets] = useState<RuntimePreset[]>(fallbackRuntimePresets);
   const [endpoints, setEndpoints] = useState<InteractionEndpoint[]>([]);
+  const [notificationRoutes, setNotificationRoutes] = useState<NotificationRoute[]>([]);
   const [imProviders, setIMProviders] = useState<IMProviderSchema[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [channelMembers, setChannelMembers] = useState<ChannelMember[]>([]);
@@ -602,6 +605,7 @@ function App() {
           return null;
         }),
         api.listInteractionEndpoints(),
+        api.listNotificationRoutes(),
         api.listIMProviders().catch((err: unknown) => {
           if (isAuthError(err)) throw err;
           return { items: [] as IMProviderSchema[] };
@@ -626,6 +630,7 @@ function App() {
         protocolInfo,
         daemonBridgeInfo,
         endpointList,
+        notificationRouteList,
         imProviderList,
         channelList,
         channelMemberList,
@@ -640,6 +645,7 @@ function App() {
       setProtocol(protocolInfo);
       setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEndpoints(endpointList.items);
+      setNotificationRoutes(notificationRouteList.items);
       setIMProviders(imProviderList.items);
       setChannels(channelList.items.length ? channelList.items : fallbackChannels());
       setChannelMembers(channelMemberList.items);
@@ -987,7 +993,12 @@ function App() {
           />
         ) : null}
         {view === "endpoints" ? (
-          <EndpointsPanel endpoints={endpoints} imProviders={imProviders} onCreated={loadData} />
+          <EndpointsPanel
+            endpoints={endpoints}
+            routes={notificationRoutes}
+            imProviders={imProviders}
+            onCreated={loadData}
+          />
         ) : null}
         {view === "daemon" ? (
           <DaemonPanel
@@ -3362,6 +3373,8 @@ type EndpointConfigValue = string | boolean;
 
 const DEFAULT_BINDING_TARGETS = ["channel", "thread", "agent", "default_target"];
 const DEFAULT_GROUP_MODES = ["mention", "always", "disabled"];
+const NOTIFICATION_EVENT_KINDS = ["message", "mention", "task", "reminder", "run", "activity", "delivery_status", "all"];
+const NOTIFICATION_PREFERENCES = ["all", "mentions", "muted"];
 const REDACTED_VALUE = "***";
 
 function parseEndpointConfig(configJson?: string): Record<string, unknown> {
@@ -3408,6 +3421,10 @@ function defaultIMValues(schema: IMProviderSchema | null): Record<string, Endpoi
   return values;
 }
 
+function editableConfigJSON(endpoint: InteractionEndpoint) {
+  return endpoint.configJson.includes(`"${REDACTED_VALUE}"`) ? "" : endpoint.configJson || "{}";
+}
+
 function targetLabel(target: string) {
   return target
     .replace(/_/g, " ")
@@ -3416,10 +3433,12 @@ function targetLabel(target: string) {
 
 function EndpointsPanel({
   endpoints,
+  routes,
   imProviders,
   onCreated
 }: {
   endpoints: InteractionEndpoint[];
+  routes: NotificationRoute[];
   imProviders: IMProviderSchema[];
   onCreated: () => Promise<void>;
 }) {
@@ -3438,12 +3457,48 @@ function EndpointsPanel({
   const [groupMode, setGroupMode] = useState("mention");
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedEndpointId, setSelectedEndpointId] = useState("");
+  const [endpointEditName, setEndpointEditName] = useState("");
+  const [endpointEditTargetPrefix, setEndpointEditTargetPrefix] = useState("#");
+  const [endpointEditAuthMode, setEndpointEditAuthMode] = useState("bearer");
+  const [endpointEditInbound, setEndpointEditInbound] = useState(true);
+  const [endpointEditOutbound, setEndpointEditOutbound] = useState(true);
+  const [endpointEditConfig, setEndpointEditConfig] = useState("");
+  const [endpointActionError, setEndpointActionError] = useState("");
+  const [endpointActionBusy, setEndpointActionBusy] = useState("");
+  const [endpointTestResult, setEndpointTestResult] = useState<InteractionEndpointTestResult | null>(null);
+  const [routeTarget, setRouteTarget] = useState("#general");
+  const [routeThreadId, setRouteThreadId] = useState("");
+  const [routeEndpointId, setRouteEndpointId] = useState("");
+  const [routeEventKind, setRouteEventKind] = useState("message");
+  const [routePreference, setRoutePreference] = useState("all");
+  const [routeEnabled, setRouteEnabled] = useState(true);
+  const [routeConfigJson, setRouteConfigJson] = useState("{}");
+  const [routeResolveTarget, setRouteResolveTarget] = useState("#general");
+  const [routeResolveThreadId, setRouteResolveThreadId] = useState("");
+  const [routeResolveEventKind, setRouteResolveEventKind] = useState("message");
+  const [routeResolveResult, setRouteResolveResult] = useState<NotificationRoute[] | null>(null);
+  const [routeActionError, setRouteActionError] = useState("");
+  const [routeActionBusy, setRouteActionBusy] = useState("");
   const autoNameRef = useRef("");
 
+  const selectedEndpoint = useMemo(
+    () => endpoints.find((endpoint) => endpoint.id === selectedEndpointId) ?? endpoints[0] ?? null,
+    [endpoints, selectedEndpointId]
+  );
   const selectedProvider = useMemo(
     () => imProviders.find((schema) => schema.provider === provider) ?? imProviders[0] ?? null,
     [imProviders, provider]
   );
+  const endpointById = useMemo(
+    () => new Map(endpoints.map((endpoint) => [endpoint.id, endpoint])),
+    [endpoints]
+  );
+  const routesByEndpoint = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const route of routes) counts.set(route.endpointId, (counts.get(route.endpointId) ?? 0) + 1);
+    return counts;
+  }, [routes]);
   const bindingTargets = selectedProvider?.bindingTargets.length
     ? selectedProvider.bindingTargets
     : DEFAULT_BINDING_TARGETS;
@@ -3466,8 +3521,30 @@ function EndpointsPanel({
     }
   }, [mode, selectedProvider]);
 
+  useEffect(() => {
+    if (!selectedEndpoint) return;
+    setSelectedEndpointId(selectedEndpoint.id);
+    setEndpointEditName(selectedEndpoint.displayName);
+    setEndpointEditTargetPrefix(selectedEndpoint.targetPrefix || "#");
+    setEndpointEditAuthMode(selectedEndpoint.authMode || "bearer");
+    setEndpointEditInbound(selectedEndpoint.inboundEnabled);
+    setEndpointEditOutbound(selectedEndpoint.outboundEnabled);
+    setEndpointEditConfig(editableConfigJSON(selectedEndpoint));
+    setEndpointActionError("");
+    setEndpointTestResult(null);
+  }, [selectedEndpoint]);
+
+  useEffect(() => {
+    if (!routeEndpointId && endpoints[0]) setRouteEndpointId(endpoints[0].id);
+  }, [endpoints, routeEndpointId]);
+
   const updateIMValue = (field: IMProviderField, value: EndpointConfigValue) => {
     setIMConfigValues((current) => ({ ...current, [field.name]: value }));
+  };
+
+  const endpointLabel = (endpointId: string) => {
+    const endpoint = endpointById.get(endpointId);
+    return endpoint ? `${endpoint.displayName} (${formatProviderLabel(endpoint.provider, imProviders)})` : endpointId;
   };
 
   const createEndpoint = async (event: FormEvent) => {
@@ -3535,6 +3612,148 @@ function EndpointsPanel({
       setFormError(err instanceof Error ? err.message : "Endpoint creation failed.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const updateEndpoint = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedEndpoint) return;
+    setEndpointActionBusy("update-endpoint");
+    setEndpointActionError("");
+    try {
+      const patch: {
+        displayName: string;
+        targetPrefix: string;
+        inboundEnabled: boolean;
+        outboundEnabled: boolean;
+        authMode: string;
+        configJson?: string;
+      } = {
+        displayName: endpointEditName.trim(),
+        targetPrefix: endpointEditTargetPrefix.trim(),
+        inboundEnabled: endpointEditInbound,
+        outboundEnabled: endpointEditOutbound,
+        authMode: endpointEditAuthMode.trim()
+      };
+      if (endpointEditConfig.trim()) {
+        JSON.parse(endpointEditConfig);
+        patch.configJson = endpointEditConfig.trim();
+      }
+      await api.updateInteractionEndpoint(selectedEndpoint.id, patch);
+      await onCreated();
+    } catch (err) {
+      setEndpointActionError(err instanceof Error ? err.message : "Endpoint update failed.");
+    } finally {
+      setEndpointActionBusy("");
+    }
+  };
+
+  const testEndpoint = async (endpointId: string) => {
+    setSelectedEndpointId(endpointId);
+    setEndpointActionBusy(`test:${endpointId}`);
+    setEndpointActionError("");
+    setEndpointTestResult(null);
+    try {
+      setEndpointTestResult(await api.testInteractionEndpoint(endpointId));
+    } catch (err) {
+      setEndpointActionError(err instanceof Error ? err.message : "Endpoint test failed.");
+    } finally {
+      setEndpointActionBusy("");
+    }
+  };
+
+  const deleteEndpoint = async (endpoint: InteractionEndpoint) => {
+    if (!window.confirm(`Delete endpoint "${endpoint.displayName}"?`)) return;
+    setEndpointActionBusy(`delete:${endpoint.id}`);
+    setEndpointActionError("");
+    try {
+      await api.deleteInteractionEndpoint(endpoint.id);
+      await onCreated();
+    } catch (err) {
+      setEndpointActionError(err instanceof Error ? err.message : "Endpoint delete failed.");
+    } finally {
+      setEndpointActionBusy("");
+    }
+  };
+
+  const createRoute = async (event: FormEvent) => {
+    event.preventDefault();
+    setRouteActionBusy("create-route");
+    setRouteActionError("");
+    try {
+      JSON.parse(routeConfigJson || "{}");
+      await api.createNotificationRoute({
+        target: routeTarget.trim(),
+        threadId: routeThreadId.trim() || undefined,
+        endpointId: routeEndpointId,
+        eventKind: routeEventKind,
+        preference: routePreference,
+        enabled: routeEnabled,
+        configJson: routeConfigJson.trim() || "{}"
+      });
+      await onCreated();
+    } catch (err) {
+      setRouteActionError(err instanceof Error ? err.message : "Notification route creation failed.");
+    } finally {
+      setRouteActionBusy("");
+    }
+  };
+
+  const toggleRoute = async (route: NotificationRoute) => {
+    setRouteActionBusy(`toggle:${route.id}`);
+    setRouteActionError("");
+    try {
+      await api.updateNotificationRoute(route.id, { enabled: !route.enabled });
+      await onCreated();
+    } catch (err) {
+      setRouteActionError(err instanceof Error ? err.message : "Notification route update failed.");
+    } finally {
+      setRouteActionBusy("");
+    }
+  };
+
+  const rebindRoute = async (route: NotificationRoute) => {
+    setRouteActionBusy(`rebind:${route.id}`);
+    setRouteActionError("");
+    try {
+      await api.updateNotificationRoute(route.id, { endpointId: routeEndpointId });
+      await onCreated();
+    } catch (err) {
+      setRouteActionError(err instanceof Error ? err.message : "Notification route rebind failed.");
+    } finally {
+      setRouteActionBusy("");
+    }
+  };
+
+  const deleteRoute = async (route: NotificationRoute) => {
+    setRouteActionBusy(`delete-route:${route.id}`);
+    setRouteActionError("");
+    try {
+      await api.deleteNotificationRoute(route.id);
+      await onCreated();
+    } catch (err) {
+      setRouteActionError(err instanceof Error ? err.message : "Notification route delete failed.");
+    } finally {
+      setRouteActionBusy("");
+    }
+  };
+
+  const resolveRoutes = async (event: FormEvent) => {
+    event.preventDefault();
+    setRouteActionBusy("resolve-routes");
+    setRouteActionError("");
+    setRouteResolveResult(null);
+    try {
+      const result = await api.resolveNotificationRoutes({
+        target: routeResolveTarget.trim(),
+        threadId: routeResolveThreadId.trim() || undefined,
+        eventKind: routeResolveEventKind
+      });
+      setRouteResolveResult(result.items);
+    } catch (err) {
+      setRouteActionError(err instanceof Error ? err.message : "Notification route resolve failed.");
+    } finally {
+      setRouteActionBusy("");
     }
   };
 
@@ -3616,8 +3835,9 @@ function EndpointsPanel({
   };
 
   return (
-    <section className="two-column endpoint-workspace">
-      <div className="panel">
+    <section className="endpoint-workspace">
+      <div className="endpoint-grid">
+      <div className="panel endpoint-list-panel">
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Interaction Layer</p>
@@ -3640,7 +3860,14 @@ function EndpointsPanel({
                 .filter((key) => config[key] !== undefined && config[key] !== "")
                 .slice(0, 5);
               return (
-                <article className="endpoint-row endpoint-row-detailed" key={endpoint.id}>
+                <article
+                  className={
+                    endpoint.id === selectedEndpoint?.id
+                      ? "endpoint-row endpoint-row-detailed is-selected"
+                      : "endpoint-row endpoint-row-detailed"
+                  }
+                  key={endpoint.id}
+                >
                   <div className="endpoint-main">
                     <div>
                       <strong>{endpoint.displayName}</strong>
@@ -3671,6 +3898,28 @@ function EndpointsPanel({
                   <div className="endpoint-flags">
                     <StatusDot active={endpoint.inboundEnabled} label="Inbound" />
                     <StatusDot active={endpoint.outboundEnabled} label="Outbound" />
+                    <span className="route-count">{routesByEndpoint.get(endpoint.id) ?? 0} routes</span>
+                  </div>
+                  <div className="endpoint-actions">
+                    <button className="mini-action-button" type="button" onClick={() => setSelectedEndpointId(endpoint.id)}>
+                      Edit
+                    </button>
+                    <button
+                      className="mini-action-button"
+                      type="button"
+                      disabled={endpointActionBusy === `test:${endpoint.id}`}
+                      onClick={() => void testEndpoint(endpoint.id)}
+                    >
+                      Test
+                    </button>
+                    <button
+                      className="mini-action-button"
+                      type="button"
+                      disabled={endpointActionBusy === `delete:${endpoint.id}`}
+                      onClick={() => void deleteEndpoint(endpoint)}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </article>
               );
@@ -3679,6 +3928,7 @@ function EndpointsPanel({
             <EmptyState icon={Settings} title="No endpoints configured" />
           )}
         </div>
+        {endpointActionError ? <p className="inline-error" role="alert">{endpointActionError}</p> : null}
       </div>
       <form className="panel compact form-stack endpoint-create-panel" onSubmit={createEndpoint}>
         <p className="eyebrow">Create Endpoint</p>
@@ -3894,6 +4144,245 @@ function EndpointsPanel({
           Create
         </button>
       </form>
+
+      <form className="panel compact form-stack endpoint-edit-panel" onSubmit={updateEndpoint}>
+        <p className="eyebrow">Manage Endpoint</p>
+        {selectedEndpoint ? (
+          <>
+            <label htmlFor="endpoint-edit-name">
+              Display name
+              <input
+                id="endpoint-edit-name"
+                value={endpointEditName}
+                onChange={(event) => setEndpointEditName(event.target.value)}
+              />
+            </label>
+            <div className="endpoint-toggle-grid">
+              <label className="checkbox-row" htmlFor="endpoint-edit-inbound">
+                <input
+                  id="endpoint-edit-inbound"
+                  type="checkbox"
+                  checked={endpointEditInbound}
+                  onChange={(event) => setEndpointEditInbound(event.target.checked)}
+                />
+                <span>Inbound</span>
+              </label>
+              <label className="checkbox-row" htmlFor="endpoint-edit-outbound">
+                <input
+                  id="endpoint-edit-outbound"
+                  type="checkbox"
+                  checked={endpointEditOutbound}
+                  onChange={(event) => setEndpointEditOutbound(event.target.checked)}
+                />
+                <span>Outbound</span>
+              </label>
+            </div>
+            <label htmlFor="endpoint-edit-prefix">
+              Target prefix
+              <input
+                id="endpoint-edit-prefix"
+                value={endpointEditTargetPrefix}
+                onChange={(event) => setEndpointEditTargetPrefix(event.target.value)}
+              />
+            </label>
+            <label htmlFor="endpoint-edit-auth-mode">
+              Auth mode
+              <input
+                id="endpoint-edit-auth-mode"
+                value={endpointEditAuthMode}
+                onChange={(event) => setEndpointEditAuthMode(event.target.value)}
+              />
+            </label>
+            <label htmlFor="endpoint-edit-config">
+              Config JSON
+              <textarea
+                id="endpoint-edit-config"
+                value={endpointEditConfig}
+                placeholder={selectedEndpoint.configJson.includes(REDACTED_VALUE) ? "Leave blank to preserve stored redacted secrets" : "{}"}
+                onChange={(event) => setEndpointEditConfig(event.target.value)}
+              />
+              <small>Blank keeps the existing provider config when sensitive values are redacted.</small>
+            </label>
+            {endpointTestResult ? (
+              <div className="endpoint-test-result" role="status">
+                <div>
+                  <strong>{endpointTestResult.ready ? "Config ready" : "Needs attention"}</strong>
+                  <span>{endpointTestResult.summary}</span>
+                </div>
+                <div className="endpoint-config-chips">
+                  <span>{endpointTestResult.runtimeLive ? "Runtime smoke passed" : "Runtime not exercised"}</span>
+                  {endpointTestResult.checks.map((check) => (
+                    <span key={check.name}>
+                      {targetLabel(check.name)}: {check.ok ? "ok" : "not ready"}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div className="endpoint-actions">
+              <button className="primary-button" type="submit" disabled={endpointActionBusy === "update-endpoint"}>
+                Save endpoint
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={endpointActionBusy === `test:${selectedEndpoint.id}`}
+                onClick={() => void testEndpoint(selectedEndpoint.id)}
+              >
+                Test readiness
+              </button>
+            </div>
+          </>
+        ) : (
+          <EmptyState icon={Settings} title="Select an endpoint" />
+        )}
+      </form>
+      </div>
+
+      <div className="endpoint-route-grid">
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Notification Routes</p>
+              <h2>Delivery routing</h2>
+            </div>
+          </div>
+          <div className="endpoint-list">
+            {routes.length ? (
+              routes.map((route) => (
+                <article className="endpoint-row endpoint-row-detailed" key={route.id}>
+                  <div className="endpoint-main">
+                    <div>
+                      <strong>{route.target}{route.threadId ? ` / ${route.threadId}` : ""}</strong>
+                      <span>{route.eventKind} · {route.preference} · {endpointLabel(route.endpointId)}</span>
+                    </div>
+                    <div className="endpoint-config-chips">
+                      <span>{route.enabled ? "enabled" : "disabled"}</span>
+                      <span>{route.configJson || "{}"}</span>
+                    </div>
+                  </div>
+                  <div className="endpoint-actions">
+                    <button
+                      className="mini-action-button"
+                      type="button"
+                      disabled={routeActionBusy === `toggle:${route.id}`}
+                      onClick={() => void toggleRoute(route)}
+                    >
+                      {route.enabled ? "Disable" : "Enable"}
+                    </button>
+                    <button
+                      className="mini-action-button"
+                      type="button"
+                      disabled={!routeEndpointId || route.endpointId === routeEndpointId || routeActionBusy === `rebind:${route.id}`}
+                      onClick={() => void rebindRoute(route)}
+                    >
+                      Rebind
+                    </button>
+                    <button
+                      className="mini-action-button"
+                      type="button"
+                      disabled={routeActionBusy === `delete-route:${route.id}`}
+                      onClick={() => void deleteRoute(route)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <EmptyState icon={Bell} title="No notification routes configured" />
+            )}
+          </div>
+        </section>
+
+        <form className="panel compact form-stack" onSubmit={createRoute}>
+          <p className="eyebrow">Create / Rebind</p>
+          <label htmlFor="route-target">
+            Target
+            <input id="route-target" value={routeTarget} onChange={(event) => setRouteTarget(event.target.value)} />
+          </label>
+          <label htmlFor="route-thread">
+            Thread id
+            <input id="route-thread" value={routeThreadId} onChange={(event) => setRouteThreadId(event.target.value)} />
+          </label>
+          <label htmlFor="route-endpoint">
+            Endpoint
+            <select id="route-endpoint" value={routeEndpointId} onChange={(event) => setRouteEndpointId(event.target.value)}>
+              {endpoints.map((endpoint) => (
+                <option key={endpoint.id} value={endpoint.id}>
+                  {endpointLabel(endpoint.id)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="endpoint-binding-grid">
+            <label htmlFor="route-event-kind">
+              Event
+              <select id="route-event-kind" value={routeEventKind} onChange={(event) => setRouteEventKind(event.target.value)}>
+                {NOTIFICATION_EVENT_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>{targetLabel(kind)}</option>
+                ))}
+              </select>
+            </label>
+            <label htmlFor="route-preference">
+              Preference
+              <select id="route-preference" value={routePreference} onChange={(event) => setRoutePreference(event.target.value)}>
+                {NOTIFICATION_PREFERENCES.map((preference) => (
+                  <option key={preference} value={preference}>{targetLabel(preference)}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label htmlFor="route-config">
+            Config JSON
+            <textarea id="route-config" value={routeConfigJson} onChange={(event) => setRouteConfigJson(event.target.value)} />
+          </label>
+          <label className="checkbox-row" htmlFor="route-enabled">
+            <input
+              id="route-enabled"
+              type="checkbox"
+              checked={routeEnabled}
+              onChange={(event) => setRouteEnabled(event.target.checked)}
+            />
+            <span>Enabled</span>
+          </label>
+          {routeActionError ? <p className="inline-error" role="alert">{routeActionError}</p> : null}
+          <button className="primary-button" type="submit" disabled={!routeEndpointId || routeActionBusy === "create-route"}>
+            <Plus size={16} aria-hidden="true" />
+            Create route
+          </button>
+        </form>
+
+        <form className="panel compact form-stack" onSubmit={resolveRoutes}>
+          <p className="eyebrow">Resolve Test</p>
+          <label htmlFor="route-resolve-target">
+            Target
+            <input id="route-resolve-target" value={routeResolveTarget} onChange={(event) => setRouteResolveTarget(event.target.value)} />
+          </label>
+          <label htmlFor="route-resolve-thread">
+            Thread id
+            <input id="route-resolve-thread" value={routeResolveThreadId} onChange={(event) => setRouteResolveThreadId(event.target.value)} />
+          </label>
+          <label htmlFor="route-resolve-event">
+            Event
+            <select id="route-resolve-event" value={routeResolveEventKind} onChange={(event) => setRouteResolveEventKind(event.target.value)}>
+              {NOTIFICATION_EVENT_KINDS.filter((kind) => kind !== "all").map((kind) => (
+                <option key={kind} value={kind}>{targetLabel(kind)}</option>
+              ))}
+            </select>
+          </label>
+          <button className="secondary-button" type="submit" disabled={routeActionBusy === "resolve-routes"}>
+            Resolve delivery
+          </button>
+          {routeResolveResult ? (
+            <div className="endpoint-config-chips" role="status">
+              {routeResolveResult.length ? routeResolveResult.map((route) => (
+                <span key={route.id}>{endpointLabel(route.endpointId)}</span>
+              )) : <span>No enabled route</span>}
+            </div>
+          ) : null}
+        </form>
+      </div>
     </section>
   );
 }

@@ -333,6 +333,37 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 		!strings.Contains(imEndpointBody.ConfigJSON, `"verification_token":"***"`) {
 		t.Fatalf("IM endpoint config was not redacted: %s", imEndpointBody.ConfigJSON)
 	}
+	testEndpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+imEndpointBody.ID+"/test", token, map[string]any{})
+	if testEndpoint.Code != http.StatusOK {
+		t.Fatalf("test endpoint status = %d body=%s", testEndpoint.Code, testEndpoint.Body.String())
+	}
+	var testEndpointBody struct {
+		Ready       bool   `json:"ready"`
+		RuntimeLive bool   `json:"runtimeLive"`
+		Summary     string `json:"summary"`
+	}
+	if err := json.Unmarshal(testEndpoint.Body.Bytes(), &testEndpointBody); err != nil {
+		t.Fatalf("decode endpoint test: %v", err)
+	}
+	if !testEndpointBody.Ready || testEndpointBody.RuntimeLive || !strings.Contains(testEndpointBody.Summary, "Provider receive/send runtime") {
+		t.Fatalf("endpoint test result = %+v, want config-ready non-live runtime", testEndpointBody)
+	}
+	updateEndpoint := doJSON(t, s, http.MethodPatch, "/api/interaction-endpoints/"+imEndpointBody.ID, token, map[string]any{
+		"displayName":     "Feishu Ops Primary",
+		"inboundEnabled":  false,
+		"outboundEnabled": true,
+		"authMode":        "webhook_signature",
+	})
+	if updateEndpoint.Code != http.StatusOK {
+		t.Fatalf("update endpoint status = %d body=%s", updateEndpoint.Code, updateEndpoint.Body.String())
+	}
+	var updatedEndpoint storage.InteractionEndpoint
+	if err := json.Unmarshal(updateEndpoint.Body.Bytes(), &updatedEndpoint); err != nil {
+		t.Fatalf("decode updated endpoint: %v", err)
+	}
+	if updatedEndpoint.DisplayName != "Feishu Ops Primary" || updatedEndpoint.InboundEnabled {
+		t.Fatalf("updated endpoint = %+v, want renamed inbound-disabled endpoint", updatedEndpoint)
+	}
 	policyResp := doGET(t, s, "/api/im/policies/effective?endpointId="+imEndpointBody.ID+"&conversationId=oc_123", token)
 	if policyResp.Code != http.StatusOK {
 		t.Fatalf("effective IM policy status = %d body=%s", policyResp.Code, policyResp.Body.String())
@@ -409,6 +440,10 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if routeBody.EventKind != "message" || routeBody.EndpointID != imEndpointBody.ID {
 		t.Fatalf("notification route = %+v, want normalized message route for %s", routeBody, imEndpointBody.ID)
 	}
+	deleteActiveEndpoint := doJSON(t, s, http.MethodDelete, "/api/interaction-endpoints/"+imEndpointBody.ID, token, map[string]any{})
+	if deleteActiveEndpoint.Code != http.StatusConflict {
+		t.Fatalf("delete endpoint with route status = %d body=%s, want conflict", deleteActiveEndpoint.Code, deleteActiveEndpoint.Body.String())
+	}
 	resolvedRoutes := doGET(t, s, "/api/notification-routes/resolve?target=%23general&threadId=thread-im-1&eventKind=message", token)
 	if resolvedRoutes.Code != http.StatusOK {
 		t.Fatalf("resolve notification routes status = %d body=%s", resolvedRoutes.Code, resolvedRoutes.Body.String())
@@ -422,8 +457,40 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if len(resolvedBody.Items) != 1 || resolvedBody.Items[0].ID != routeBody.ID {
 		t.Fatalf("resolved routes = %+v, want %s", resolvedBody.Items, routeBody.ID)
 	}
+	targetRouteResp := doJSON(t, s, http.MethodPost, "/api/notification-routes", token, map[string]any{
+		"target":     "#general",
+		"endpointId": imEndpointBody.ID,
+		"eventKind":  "task",
+		"preference": "mentions",
+		"enabled":    true,
+		"configJson": `{}`,
+	})
+	if targetRouteResp.Code != http.StatusCreated {
+		t.Fatalf("create target route status = %d body=%s", targetRouteResp.Code, targetRouteResp.Body.String())
+	}
+	var targetRouteBody storage.NotificationRoute
+	if err := json.Unmarshal(targetRouteResp.Body.Bytes(), &targetRouteBody); err != nil {
+		t.Fatalf("decode target route: %v", err)
+	}
+	listRoutes := doGET(t, s, "/api/notification-routes?endpointId="+imEndpointBody.ID, token)
+	if listRoutes.Code != http.StatusOK {
+		t.Fatalf("list notification routes status = %d body=%s", listRoutes.Code, listRoutes.Body.String())
+	}
+	var listRoutesBody struct {
+		Items []storage.NotificationRoute `json:"items"`
+	}
+	if err := json.Unmarshal(listRoutes.Body.Bytes(), &listRoutesBody); err != nil {
+		t.Fatalf("decode route list: %v", err)
+	}
+	if len(listRoutesBody.Items) != 2 {
+		t.Fatalf("route list = %+v, want thread and target routes", listRoutesBody.Items)
+	}
 	updateRoute := doJSON(t, s, http.MethodPatch, "/api/notification-routes/"+routeBody.ID, token, map[string]any{
-		"preference": "muted",
+		"threadId":   "",
+		"endpointId": imEndpointBody.ID,
+		"eventKind":  "mention",
+		"preference": "mentions",
+		"enabled":    false,
 	})
 	if updateRoute.Code != http.StatusOK {
 		t.Fatalf("update notification route status = %d body=%s", updateRoute.Code, updateRoute.Body.String())
@@ -432,8 +499,16 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if err := json.Unmarshal(updateRoute.Body.Bytes(), &updatedRoute); err != nil {
 		t.Fatalf("decode updated route: %v", err)
 	}
-	if updatedRoute.Preference != "muted" {
-		t.Fatalf("updated route = %+v, want muted", updatedRoute)
+	if updatedRoute.ThreadID != "" || updatedRoute.EventKind != "mention" || updatedRoute.Preference != "mentions" || updatedRoute.Enabled {
+		t.Fatalf("updated route = %+v, want disabled target mention route", updatedRoute)
+	}
+	deleteRoute := doJSON(t, s, http.MethodDelete, "/api/notification-routes/"+targetRouteBody.ID, token, map[string]any{})
+	if deleteRoute.Code != http.StatusOK {
+		t.Fatalf("delete notification route status = %d body=%s", deleteRoute.Code, deleteRoute.Body.String())
+	}
+	deleteMissingRoute := doJSON(t, s, http.MethodDelete, "/api/notification-routes/"+targetRouteBody.ID, token, map[string]any{})
+	if deleteMissingRoute.Code != http.StatusNotFound {
+		t.Fatalf("delete missing notification route status = %d body=%s, want 404", deleteMissingRoute.Code, deleteMissingRoute.Body.String())
 	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{

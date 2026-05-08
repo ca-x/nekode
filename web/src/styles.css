@@ -1594,7 +1594,16 @@ textarea {
   gap: 12px;
 }
 
+.endpoint-grid,
+.endpoint-route-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
 .endpoint-row {
+  display: grid;
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
@@ -1602,11 +1611,18 @@ textarea {
   border-radius: 8px;
 }
 
+.endpoint-row.is-selected {
+  border-color: var(--primary);
+  background: #f1f7fb;
+}
+
 .endpoint-row div:first-child {
   display: grid;
 }
 
 .endpoint-workspace {
+  display: grid;
+  gap: 16px;
   align-items: start;
 }
 
@@ -1664,6 +1680,33 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.endpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.endpoint-test-result {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.endpoint-test-result div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.endpoint-test-result span,
+.route-count {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
 }
 
 .endpoint-create-panel {
@@ -2550,6 +2593,8 @@ textarea {
   .agent-options-grid,
   .auth-panel,
   .endpoint-binding-grid,
+  .endpoint-grid,
+  .endpoint-route-grid,
   .endpoint-toggle-grid,
   .enrollment-layout,
   .task-workspace,

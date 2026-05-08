@@ -35,6 +35,31 @@ export type InteractionEndpoint = {
   updatedUnix: number;
 };
 
+export type InteractionEndpointTestResult = {
+  ready: boolean;
+  runtimeLive: boolean;
+  summary: string;
+  checks: Array<{
+    name: string;
+    ok: boolean;
+    detail?: string;
+  }>;
+  endpoint?: InteractionEndpoint;
+};
+
+export type NotificationRoute = {
+  id: string;
+  target: string;
+  threadId?: string;
+  endpointId: string;
+  eventKind: string;
+  preference: string;
+  enabled: boolean;
+  configJson: string;
+  createdUnix: number;
+  updatedUnix: number;
+};
+
 export type IMProviderFieldType = "string" | "boolean" | "select" | "json";
 
 export type IMProviderField = {

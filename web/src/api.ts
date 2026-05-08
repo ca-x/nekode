@@ -25,6 +25,8 @@ import type {
   IMProviderSchema,
   JsonObject,
   Message,
+  NotificationRoute,
+  InteractionEndpointTestResult,
   ProtocolInfo,
   Reminder,
   ReminderEvent,
@@ -206,6 +208,47 @@ type RawSavedMessage = {
   savedTimeUnix?: unknown;
   saved_time_unix?: unknown;
   message?: unknown;
+};
+
+type RawInteractionEndpoint = {
+  id?: unknown;
+  kind?: unknown;
+  provider?: unknown;
+  displayName?: unknown;
+  display_name?: unknown;
+  targetPrefix?: unknown;
+  target_prefix?: unknown;
+  inboundEnabled?: unknown;
+  inbound_enabled?: unknown;
+  outboundEnabled?: unknown;
+  outbound_enabled?: unknown;
+  authMode?: unknown;
+  auth_mode?: unknown;
+  configJson?: unknown;
+  config_json?: unknown;
+  createdUnix?: unknown;
+  created_unix?: unknown;
+  updatedUnix?: unknown;
+  updated_unix?: unknown;
+};
+
+type RawNotificationRoute = {
+  id?: unknown;
+  target?: unknown;
+  threadId?: unknown;
+  thread_id?: unknown;
+  endpointId?: unknown;
+  endpoint_id?: unknown;
+  eventKind?: unknown;
+  event_kind?: unknown;
+  preference?: unknown;
+  enabled?: unknown;
+  configJson?: unknown;
+  config_json?: unknown;
+  createdUnix?: unknown;
+  created_unix?: unknown;
+  updatedUnix?: unknown;
+  updated_unix?: unknown;
 };
 
 type EventTransport = {
@@ -563,8 +606,8 @@ function normalizeReminderEvent(raw: unknown): ReminderEvent {
 }
 
 function normalizeSavedMessage(raw: unknown): SavedMessage {
-  const row = asRecord(raw) as RawSavedMessage;
-  return {
+	const row = asRecord(raw) as RawSavedMessage;
+	return {
     id: asString(row.id ?? row.savedMessageId ?? row.saved_message_id),
     target: asString(row.target),
     messageId: asString(row.messageId ?? row.message_id),
@@ -572,11 +615,44 @@ function normalizeSavedMessage(raw: unknown): SavedMessage {
     savedByAgentId: asOptionalString(row.savedByAgentId ?? row.saved_by_agent_id),
     createdUnix: asNumber(row.createdUnix ?? row.savedTimeUnix ?? row.saved_time_unix),
     message: normalizeMessage(row.message)
-  };
+	};
+}
+
+function normalizeInteractionEndpoint(raw: unknown): InteractionEndpoint {
+	const row = asRecord(raw) as RawInteractionEndpoint;
+	return {
+		id: asString(row.id),
+		kind: asString(row.kind),
+		provider: asString(row.provider),
+		displayName: asString(row.displayName ?? row.display_name),
+		targetPrefix: asString(row.targetPrefix ?? row.target_prefix),
+		inboundEnabled: Boolean(row.inboundEnabled ?? row.inbound_enabled),
+		outboundEnabled: Boolean(row.outboundEnabled ?? row.outbound_enabled),
+		authMode: asString(row.authMode ?? row.auth_mode),
+		configJson: asString(row.configJson ?? row.config_json),
+		createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+		updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix)
+	};
+}
+
+function normalizeNotificationRoute(raw: unknown): NotificationRoute {
+	const row = asRecord(raw) as RawNotificationRoute;
+	return {
+		id: asString(row.id),
+		target: asString(row.target),
+		threadId: asOptionalString(row.threadId ?? row.thread_id),
+		endpointId: asString(row.endpointId ?? row.endpoint_id),
+		eventKind: asString(row.eventKind ?? row.event_kind),
+		preference: asString(row.preference),
+		enabled: Boolean(row.enabled),
+		configJson: asString(row.configJson ?? row.config_json),
+		createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+		updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix)
+	};
 }
 
 function normalizeList<T>(response: RawListResponse<unknown>, normalize: (raw: unknown) => T): ListResponse<T> {
-  return { items: (response.items ?? []).map(normalize) };
+	return { items: (response.items ?? []).map(normalize) };
 }
 
 function normalizeCursor(raw: RawEventCursor | undefined): EventCursor | undefined {
@@ -1151,9 +1227,9 @@ export class ApiClient {
   }
 
   listInteractionEndpoints(limit = 100) {
-    return this.request<ListResponse<InteractionEndpoint>>(
+    return this.request<RawListResponse<unknown>>(
       `/api/interaction-endpoints?limit=${limit}`
-    );
+    ).then((response) => normalizeList(response, normalizeInteractionEndpoint));
   }
 
   createInteractionEndpoint(input: {
@@ -1166,10 +1242,104 @@ export class ApiClient {
     authMode: string;
     configJson: string;
   }) {
-    return this.request<InteractionEndpoint>("/api/interaction-endpoints", {
+    return this.request<unknown>("/api/interaction-endpoints", {
       method: "POST",
       body: JSON.stringify(input)
+    }).then(normalizeInteractionEndpoint);
+  }
+
+  updateInteractionEndpoint(id: string, patch: {
+    displayName?: string;
+    targetPrefix?: string;
+    inboundEnabled?: boolean;
+    outboundEnabled?: boolean;
+    authMode?: string;
+    configJson?: string;
+  }) {
+    return this.request<unknown>(`/api/interaction-endpoints/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }).then(normalizeInteractionEndpoint);
+  }
+
+  deleteInteractionEndpoint(id: string) {
+    return this.request<{ ok: boolean }>(`/api/interaction-endpoints/${encodeURIComponent(id)}`, {
+      method: "DELETE"
     });
+  }
+
+  testInteractionEndpoint(id: string) {
+    return this.request<InteractionEndpointTestResult>(
+      `/api/interaction-endpoints/${encodeURIComponent(id)}/test`,
+      { method: "POST", body: JSON.stringify({}) }
+    );
+  }
+
+  listNotificationRoutes(filters: {
+    target?: string;
+    threadId?: string;
+    endpointId?: string;
+    eventKind?: string;
+    enabled?: boolean;
+    limit?: number;
+  } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "target", filters.target);
+    appendIfPresent(params, "threadId", filters.threadId);
+    appendIfPresent(params, "endpointId", filters.endpointId);
+    appendIfPresent(params, "eventKind", filters.eventKind);
+    if (filters.enabled !== undefined) params.set("enabled", String(filters.enabled));
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return this.request<RawListResponse<unknown>>(`/api/notification-routes?${params}`).then((response) =>
+      normalizeList(response, normalizeNotificationRoute)
+    );
+  }
+
+  createNotificationRoute(input: {
+    target: string;
+    threadId?: string;
+    endpointId: string;
+    eventKind: string;
+    preference: string;
+    enabled: boolean;
+    configJson: string;
+  }) {
+    return this.request<unknown>("/api/notification-routes", {
+      method: "POST",
+      body: JSON.stringify(input)
+    }).then(normalizeNotificationRoute);
+  }
+
+  updateNotificationRoute(id: string, patch: {
+    target?: string;
+    threadId?: string;
+    endpointId?: string;
+    eventKind?: string;
+    preference?: string;
+    enabled?: boolean;
+    configJson?: string;
+  }) {
+    return this.request<unknown>(`/api/notification-routes/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }).then(normalizeNotificationRoute);
+  }
+
+  deleteNotificationRoute(id: string) {
+    return this.request<{ ok: boolean }>(`/api/notification-routes/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+  }
+
+  resolveNotificationRoutes(input: { target: string; threadId?: string; eventKind: string; limit?: number }) {
+    const params = new URLSearchParams();
+    params.set("target", input.target);
+    appendIfPresent(params, "threadId", input.threadId);
+    appendIfPresent(params, "eventKind", input.eventKind);
+    appendIfPresent(params, "limit", input.limit ?? 100);
+    return this.request<RawListResponse<unknown>>(`/api/notification-routes/resolve?${params}`).then((response) =>
+      normalizeList(response, normalizeNotificationRoute)
+    );
   }
 
   async listChannels(filters: { joinedOnly?: boolean; limit?: number } = {}) {

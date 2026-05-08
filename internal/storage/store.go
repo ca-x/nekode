@@ -310,6 +310,79 @@ func (s *Store) GetInteractionEndpoint(ctx context.Context, id string) (Interact
 	return endpointFromEnt(row), nil
 }
 
+func (s *Store) UpdateInteractionEndpoint(ctx context.Context, id string, patch InteractionEndpointPatch) (InteractionEndpoint, error) {
+	update := s.client.InteractionEndpoint.UpdateOneID(strings.TrimSpace(id)).
+		SetUpdatedUnix(unixNow())
+	if patch.DisplayName != nil {
+		displayName := strings.TrimSpace(*patch.DisplayName)
+		if displayName == "" {
+			return InteractionEndpoint{}, ErrInvalidState
+		}
+		update.SetDisplayName(displayName)
+	}
+	if patch.TargetPrefix != nil {
+		targetPrefix := strings.TrimSpace(*patch.TargetPrefix)
+		if targetPrefix == "" {
+			return InteractionEndpoint{}, ErrInvalidState
+		}
+		update.SetTargetPrefix(targetPrefix)
+	}
+	if patch.InboundEnabled != nil {
+		update.SetInboundEnabled(*patch.InboundEnabled)
+	}
+	if patch.OutboundEnabled != nil {
+		update.SetOutboundEnabled(*patch.OutboundEnabled)
+	}
+	if patch.AuthMode != nil {
+		authMode := strings.TrimSpace(*patch.AuthMode)
+		if authMode == "" {
+			return InteractionEndpoint{}, ErrInvalidState
+		}
+		update.SetAuthMode(authMode)
+	}
+	if patch.ConfigJSON != nil {
+		configJSON, err := normalizeJSONDocument(*patch.ConfigJSON)
+		if err != nil {
+			return InteractionEndpoint{}, ErrInvalidState
+		}
+		update.SetConfigJSON(configJSON)
+	}
+	row, err := update.Save(ctx)
+	if ent.IsNotFound(err) {
+		return InteractionEndpoint{}, ErrNotFound
+	}
+	if ent.IsConstraintError(err) {
+		return InteractionEndpoint{}, ErrConflict
+	}
+	if err != nil {
+		return InteractionEndpoint{}, err
+	}
+	return endpointFromEnt(row), nil
+}
+
+func (s *Store) DeleteInteractionEndpoint(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ErrNotFound
+	}
+	routeCount, err := s.client.NotificationRoute.Query().Where(notificationroute.EndpointIDEQ(id)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	deliveryCount, err := s.client.OutboundDelivery.Query().Where(outbounddelivery.EndpointIDEQ(id)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	if routeCount > 0 || deliveryCount > 0 {
+		return ErrConflict
+	}
+	err = s.client.InteractionEndpoint.DeleteOneID(id).Exec(ctx)
+	if ent.IsNotFound(err) {
+		return ErrNotFound
+	}
+	return err
+}
+
 func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Message, error) {
 	if messageModel.CreatedUnix == 0 {
 		messageModel.CreatedUnix = unixNow()
@@ -597,6 +670,29 @@ func (s *Store) ListNotificationRoutes(ctx context.Context, opts NotificationRou
 func (s *Store) UpdateNotificationRoute(ctx context.Context, id string, patch NotificationRoutePatch) (NotificationRoute, error) {
 	update := s.client.NotificationRoute.UpdateOneID(strings.TrimSpace(id)).
 		SetUpdatedUnix(unixNow())
+	if patch.Target != nil {
+		target := strings.TrimSpace(*patch.Target)
+		if target == "" {
+			return NotificationRoute{}, ErrInvalidState
+		}
+		update.SetTarget(target)
+	}
+	if patch.ThreadID != nil {
+		update.SetThreadID(strings.TrimSpace(*patch.ThreadID))
+	}
+	if patch.EndpointID != nil {
+		endpointID := strings.TrimSpace(*patch.EndpointID)
+		if endpointID == "" {
+			return NotificationRoute{}, ErrInvalidState
+		}
+		if _, err := s.GetInteractionEndpoint(ctx, endpointID); err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return NotificationRoute{}, ErrInvalidState
+			}
+			return NotificationRoute{}, err
+		}
+		update.SetEndpointID(endpointID)
+	}
 	if patch.EventKind != nil {
 		eventKind := normalizeNotificationEventKind(*patch.EventKind)
 		if !validNotificationEventKind(eventKind) {
@@ -632,6 +728,14 @@ func (s *Store) UpdateNotificationRoute(ctx context.Context, id string, patch No
 		return NotificationRoute{}, err
 	}
 	return notificationRouteFromEnt(row), nil
+}
+
+func (s *Store) DeleteNotificationRoute(ctx context.Context, id string) error {
+	err := s.client.NotificationRoute.DeleteOneID(strings.TrimSpace(id)).Exec(ctx)
+	if ent.IsNotFound(err) {
+		return ErrNotFound
+	}
+	return err
 }
 
 func (s *Store) ResolveNotificationRoutes(ctx context.Context, opts NotificationRouteResolveOptions) ([]NotificationRoute, error) {
