@@ -11,6 +11,8 @@ import type {
   DaemonEnrollment,
   DaemonActivityRecord,
   DaemonInfo,
+  DaemonInventoryComputer,
+  DaemonInventoryRuntime,
   DaemonRun,
   EventCursor,
   EventOperation,
@@ -25,6 +27,9 @@ import type {
   ReminderScheduleKind,
   ReminderStatus,
   RuntimePreset,
+  RuntimeInstanceTemplate,
+  RuntimeOptionSchema,
+  RuntimeTypeInventory,
   SavedMessage,
   SetupStatus,
   Task,
@@ -779,6 +784,137 @@ function normalizeDaemonActivity(raw: unknown): DaemonActivityRecord {
   };
 }
 
+function normalizeDaemonInventoryComputer(raw: unknown): DaemonInventoryComputer {
+  const row = asRecord(raw);
+  const info = asRecord(row.info);
+  const inventory = asRecord(row.inventory);
+  const profiles = Array.isArray(inventory.runtime_profiles)
+    ? inventory.runtime_profiles
+    : Array.isArray(inventory.runtimeProfiles)
+      ? inventory.runtimeProfiles
+      : [];
+  const templatesByKind = new Map<string, RuntimeInstanceTemplate[]>();
+  const runtimeTypesByKind = new Map<string, RuntimeTypeInventory>();
+  for (const profile of profiles) {
+    const adapter = parseAdapterConfig(asOptionalString(asRecord(profile).adapter_config_json ?? asRecord(profile).adapterConfigJson));
+    const template = normalizeRuntimeInstanceTemplate(profile);
+    if (!template.runtimeKind) continue;
+    const current = templatesByKind.get(template.runtimeKind) ?? [];
+    current.push(template);
+    templatesByKind.set(template.runtimeKind, current);
+    const runtimeType = normalizeRuntimeTypeInventory(asRecord(adapter.runtimeType));
+    if (runtimeType.kind) {
+      runtimeTypesByKind.set(runtimeType.kind, runtimeType);
+    }
+  }
+  const runtimes = (
+    Array.isArray(inventory.runtimes) ? inventory.runtimes : []
+  ).map((runtime) => normalizeDaemonInventoryRuntime(runtime, templatesByKind, runtimeTypesByKind));
+  const agents = (Array.isArray(inventory.agents) ? inventory.agents : []).map((agent) => {
+    const item = asRecord(agent);
+    return {
+      agentId: asString(item.agent_id ?? item.agentId),
+      runtimeKind: asOptionalString(item.runtime_kind ?? item.runtimeKind),
+      runtimeProfileId: asOptionalString(item.runtime_profile_id ?? item.runtimeProfileId),
+      displayName: asOptionalString(item.display_name ?? item.displayName)
+    };
+  }).filter((agent) => agent.agentId);
+  return {
+    computerId: asString(info.computer_id ?? info.computerId),
+    displayName: asOptionalString(info.display_name ?? info.displayName),
+    hostname: asOptionalString(info.hostname),
+    inventoryVersion: asOptionalString(row.inventoryVersion ?? row.inventory_version),
+    lastHeartbeatUnix: asNumber(row.lastHeartbeatUnix ?? row.last_heartbeat_unix) || undefined,
+    runtimes,
+    agents
+  };
+}
+
+function normalizeDaemonInventoryRuntime(
+  raw: unknown,
+  templatesByKind: Map<string, RuntimeInstanceTemplate[]>,
+  runtimeTypesByKind: Map<string, RuntimeTypeInventory>
+): DaemonInventoryRuntime {
+  const row = asRecord(raw);
+  const kind = asString(row.kind);
+  const runtimeType = runtimeTypesByKind.get(kind);
+  return {
+    runtimeId: asString(row.runtime_id ?? row.runtimeId),
+    computerId: asOptionalString(row.computer_id ?? row.computerId),
+    kind,
+    displayName: asString(row.display_name ?? row.displayName) || kind,
+    command: asOptionalString(row.command),
+    installed: Boolean(row.installed),
+    healthy: Boolean(row.healthy),
+    capabilities: normalizeCapabilityNames(row.capabilities),
+    runtimeType,
+    templates: templatesByKind.get(kind) ?? []
+  };
+}
+
+function normalizeRuntimeInstanceTemplate(raw: unknown): RuntimeInstanceTemplate {
+  const row = asRecord(raw);
+  const adapter = parseAdapterConfig(asOptionalString(row.adapter_config_json ?? row.adapterConfigJson));
+  const template = asRecord(adapter.template);
+  return {
+    templateId: asString(template.templateId) || asString(row.runtime_profile_id ?? row.runtimeProfileId),
+    runtimeKind: asString(template.runtimeKind) || asString(row.kind),
+    displayName: asString(template.displayName) || asString(row.kind),
+    description: asOptionalString(template.description),
+    capabilities: asStringArray(template.capabilities),
+    options: Array.isArray(template.options) ? template.options.map(normalizeRuntimeOptionSchema) : [],
+    multiInstance: Boolean(template.multiInstance),
+    inventoryRole: asString(template.inventoryRole),
+    agentIdPattern: asOptionalString(template.agentIdPattern)
+  };
+}
+
+function normalizeRuntimeTypeInventory(row: Record<string, unknown>): RuntimeTypeInventory {
+  return {
+    kind: asString(row.kind),
+    displayName: asString(row.displayName),
+    provider: asString(row.provider),
+    command: asOptionalString(row.command),
+    aliases: asStringArray(row.aliases),
+    installed: Boolean(row.installed),
+    healthy: Boolean(row.healthy),
+    resolvedPath: asOptionalString(row.resolvedPath),
+    capabilities: asStringArray(row.capabilities),
+    templates: asStringArray(row.templates)
+  };
+}
+
+function normalizeRuntimeOptionSchema(raw: unknown): RuntimeOptionSchema {
+  const row = asRecord(raw);
+  const type = asString(row.type) as RuntimeOptionSchema["type"];
+  return {
+    name: asString(row.name),
+    label: asString(row.label),
+    type: ["string", "free_text", "number", "boolean", "path", "enum"].includes(type) ? type : "string",
+    required: Boolean(row.required),
+    default: asOptionalString(row.default),
+    sensitive: Boolean(row.sensitive),
+    enum: asStringArray(row.enum),
+    description: asOptionalString(row.description)
+  };
+}
+
+function parseAdapterConfig(value: string | undefined): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return asRecord(parsed);
+  } catch {
+    return {};
+  }
+}
+
+function normalizeCapabilityNames(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((capability) => asString(asRecord(capability).name ?? capability)).filter(Boolean)
+    : [];
+}
+
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(asString).filter(Boolean) : [];
 }
@@ -908,6 +1044,13 @@ export class ApiClient {
   async getDaemonEnrollment(id: string) {
     return normalizeDaemonEnrollment(
       await this.request<unknown>(`/api/daemon/enrollments/${encodeURIComponent(id)}`)
+    );
+  }
+
+  async listDaemonInventory(limit = 100) {
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/daemon/inventory?limit=${limit}`),
+      normalizeDaemonInventoryComputer
     );
   }
 

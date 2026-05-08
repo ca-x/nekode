@@ -180,6 +180,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("PATCH /api/reminders/{id}", s.requireAuth(s.handleUpdateReminder))
 	s.mux.HandleFunc("GET /api/runtime-presets", s.requireAuth(s.handleListRuntimePresets))
 	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
+	s.mux.HandleFunc("GET /api/daemon/inventory", s.requireAuth(s.handleDaemonInventory))
 	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))
 	s.mux.HandleFunc("GET /api/daemon/activity", s.requireAuth(s.handleDaemonActivity))
 	s.mux.HandleFunc("GET /api/daemon/runs", s.requireAuth(s.handleDaemonRuns))

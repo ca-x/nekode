@@ -266,6 +266,65 @@ export type DaemonActivityRecord = {
   createdTimeUnix?: number;
 };
 
+export type RuntimeOptionSchema = {
+  name: string;
+  label: string;
+  type: "string" | "free_text" | "number" | "boolean" | "path" | "enum";
+  required: boolean;
+  default?: string;
+  sensitive?: boolean;
+  enum: string[];
+  description?: string;
+};
+
+export type RuntimeTypeInventory = {
+  kind: string;
+  displayName: string;
+  provider: string;
+  command?: string;
+  aliases: string[];
+  installed: boolean;
+  healthy: boolean;
+  resolvedPath?: string;
+  capabilities: string[];
+  templates: string[];
+};
+
+export type RuntimeInstanceTemplate = {
+  templateId: string;
+  runtimeKind: string;
+  displayName: string;
+  description?: string;
+  capabilities: string[];
+  options: RuntimeOptionSchema[];
+  multiInstance: boolean;
+  inventoryRole: string;
+  agentIdPattern?: string;
+};
+
+export type DaemonInventoryRuntime = {
+  runtimeId: string;
+  computerId?: string;
+  kind: string;
+  displayName: string;
+  command?: string;
+  installed: boolean;
+  healthy: boolean;
+  capabilities: string[];
+  runtimeType?: RuntimeTypeInventory;
+  templates: RuntimeInstanceTemplate[];
+};
+
+export type DaemonInventoryComputer = {
+  computerId: string;
+  displayName?: string;
+  hostname?: string;
+  inventoryVersion?: string;
+  lastHeartbeatUnix?: number;
+  runtimes: DaemonInventoryRuntime[];
+  agents: { agentId: string; runtimeKind?: string; runtimeProfileId?: string; displayName?: string }[];
+};
+
 export type RuntimePreset = {
   kind: string;
   displayName: string;

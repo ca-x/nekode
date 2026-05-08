@@ -56,6 +56,7 @@ import type {
   DaemonActivityRecord,
   DaemonEnrollment,
   DaemonInfo,
+  DaemonInventoryComputer,
   DaemonRun,
   InteractionEndpoint,
   Message,
@@ -438,6 +439,13 @@ function compactId(value?: string) {
   return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-6)}` : value;
 }
 
+function runtimeTemplateCount(inventory: DaemonInventoryComputer[]) {
+  return inventory.reduce(
+    (total, computer) => total + computer.runtimes.reduce((sum, runtime) => sum + runtime.templates.length, 0),
+    0
+  );
+}
+
 function messagePermalink(message: Message) {
   return `#${encodeURIComponent(message.target)}:${encodeURIComponent(message.id)}`;
 }
@@ -530,6 +538,7 @@ function App() {
   const [latestEvent, setLatestEvent] = useState<CollaborationEvent | null>(null);
   const [events, setEvents] = useState<CollaborationEvent[]>([]);
   const [agentStatuses, setAgentStatuses] = useState<AgentStatusSnapshot[]>([]);
+  const [daemonInventory, setDaemonInventory] = useState<DaemonInventoryComputer[]>([]);
   const [daemonRuns, setDaemonRuns] = useState<DaemonRun[]>([]);
   const [daemonActivity, setDaemonActivity] = useState<DaemonActivityRecord[]>([]);
   const [runtimePresets, setRuntimePresets] = useState<RuntimePreset[]>(fallbackRuntimePresets);
@@ -617,6 +626,7 @@ function App() {
       const [
         eventList,
         agentStatusList,
+        daemonInventoryList,
         daemonRunList,
         daemonActivityList,
         runtimePresetList
@@ -626,6 +636,10 @@ function App() {
           return { items: [] };
         }),
         api.listAgentStatuses({ target, limit: 100 }).catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] };
+        }),
+        api.listDaemonInventory(100).catch((err: unknown) => {
           if (isAuthError(err)) throw err;
           return { items: [] };
         }),
@@ -641,6 +655,7 @@ function App() {
       ]);
       setEvents(eventList.items);
       setAgentStatuses(agentStatusList.items);
+      setDaemonInventory(daemonInventoryList.items);
       setDaemonRuns(daemonRunList.items);
       setDaemonActivity(daemonActivityList.items);
       setRuntimePresets(runtimePresetList.items.length ? runtimePresetList.items : fallbackRuntimePresets);
@@ -954,6 +969,7 @@ function App() {
             realtimeStatus={realtimeStatus}
             latestEvent={latestEvent}
             agentStatuses={agentStatuses}
+            daemonInventory={daemonInventory}
             daemonRuns={daemonRuns}
             daemonActivity={daemonActivity}
             runtimePresets={runtimePresets}
@@ -3482,6 +3498,7 @@ function DaemonPanel({
   realtimeStatus,
   latestEvent,
   agentStatuses,
+  daemonInventory,
   daemonRuns,
   daemonActivity,
   runtimePresets
@@ -3491,6 +3508,7 @@ function DaemonPanel({
   realtimeStatus: RealtimeStatus;
   latestEvent: CollaborationEvent | null;
   agentStatuses: AgentStatusSnapshot[];
+  daemonInventory: DaemonInventoryComputer[];
   daemonRuns: DaemonRun[];
   daemonActivity: DaemonActivityRecord[];
   runtimePresets: RuntimePreset[];
@@ -3738,6 +3756,8 @@ function DaemonPanel({
       <MetricCard icon={CheckCircle2} label="Bridge Health" value={daemonInfo?.health ?? "unknown"} />
       <MetricCard icon={UsersRound} label="Agent Statuses" value={String(daemonInfo?.agentStatusCount ?? agentStatuses.length)} />
       <MetricCard icon={Wifi} label="SSE" value={realtimeStatus} />
+      <MetricCard icon={Monitor} label="Computers" value={String(daemonInventory.length)} />
+      <MetricCard icon={Bot} label="Runtime Templates" value={String(runtimeTemplateCount(daemonInventory))} />
       <section className="panel wide">
         <div className="panel-heading compact-heading">
           <div>
@@ -3782,6 +3802,37 @@ function DaemonPanel({
       </section>
       <MetricCard icon={Activity} label="Runs" value={String(daemonInfo?.runCount ?? daemonRuns.length)} />
       <MetricCard icon={AlertTriangle} label="Activity Logs" value={String(daemonInfo?.activityCount ?? daemonActivity.length)} />
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Inventory</p>
+            <h2>Runtime types and agent templates</h2>
+          </div>
+        </div>
+        {daemonInventory.length ? (
+          <div className="runtime-preset-grid">
+            {daemonInventory.flatMap((computer) =>
+              computer.runtimes.map((runtime) => (
+                <article className="runtime-preset" key={`${computer.computerId}-${runtime.runtimeId}`}>
+                  <div>
+                    <strong>{runtime.displayName || runtime.kind}</strong>
+                    <span>
+                      {computer.displayName || computer.hostname || computer.computerId} · {runtime.templates.length} template(s)
+                    </span>
+                  </div>
+                  <div className="runtime-flags">
+                    <span>{runtime.installed ? "installed" : "missing"}</span>
+                    <span>{runtime.healthy ? "healthy" : "offline"}</span>
+                    {runtime.templates.some((template) => template.multiInstance) ? <span>multi-instance</span> : null}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        ) : (
+          <EmptyState icon={Monitor} title="No daemon inventory reported" />
+        )}
+      </section>
       <section className="panel wide">
         <div className="panel-heading compact-heading">
           <div>

@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/ca-x/nekode/internal/runtimeadapter"
 )
 
 func TestLoadConfigReadsGeneratedInstallConfig(t *testing.T) {
@@ -90,6 +93,44 @@ func TestLoadConfigAcceptsServerGRPCAlias(t *testing.T) {
 	if cfg.GRPCAddr != "127.0.0.1:20001" {
 		t.Fatalf("GRPCAddr = %q, want --server-grpc value", cfg.GRPCAddr)
 	}
+}
+
+func TestDaemonInventoryUsesRuntimeAdapterTemplates(t *testing.T) {
+	cfg, err := loadConfig([]string{
+		"--daemon-id", "daemon-test",
+		"--computer-id", "computer-test",
+		"--agent-id", "agent-test",
+		"--runtime-kind", "codex",
+	})
+	if err != nil {
+		t.Fatalf("loadConfig() error = %v", err)
+	}
+	session := &daemonSession{cfg: cfg}
+	inventory := session.inventory()
+	if len(inventory.GetRuntimes()) < 2 || len(inventory.GetRuntimeProfiles()) < 2 {
+		t.Fatalf("inventory runtimes/profiles = %d/%d, want catalog runtime types and templates", len(inventory.GetRuntimes()), len(inventory.GetRuntimeProfiles()))
+	}
+	if len(inventory.GetAgents()) != 1 {
+		t.Fatalf("inventory agents = %d, want bootstrap agent only", len(inventory.GetAgents()))
+	}
+	agent := inventory.GetAgents()[0]
+	if agent.GetRuntimeProfileId() != runtimeadapter.DefaultTemplateID("codex") {
+		t.Fatalf("agent runtime profile = %q, want codex template", agent.GetRuntimeProfileId())
+	}
+	for _, profile := range inventory.GetRuntimeProfiles() {
+		if profile.GetKind() != "codex" {
+			continue
+		}
+		var adapter runtimeadapter.AdapterConfig
+		if err := json.Unmarshal([]byte(profile.GetAdapterConfigJson()), &adapter); err != nil {
+			t.Fatalf("decode adapter config: %v", err)
+		}
+		if adapter.Template.RuntimeKind != "codex" || !adapter.Template.MultiInstance {
+			t.Fatalf("adapter template = %+v, want codex multi-instance template", adapter.Template)
+		}
+		return
+	}
+	t.Fatal("codex runtime profile not found")
 }
 
 func TestFirstConfigPathArgIgnoresOtherFlags(t *testing.T) {

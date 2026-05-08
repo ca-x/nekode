@@ -17,6 +17,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -222,50 +223,12 @@ func (s *daemonSession) computerInfo(status daemonv1.ComputerStatus) *daemonv1.C
 }
 
 func (s *daemonSession) inventory() *daemonv1.ComputerInventory {
-	runtimeID := "runtime-" + s.cfg.ComputerID + "-" + s.cfg.RuntimeKind
-	profileID := "profile-" + s.cfg.AgentID
-	return &daemonv1.ComputerInventory{
-		Runtimes: []*daemonv1.Runtime{{
-			RuntimeId:   runtimeID,
-			ComputerId:  s.cfg.ComputerID,
-			Kind:        s.cfg.RuntimeKind,
-			DisplayName: s.cfg.RuntimeKind,
-			Command:     s.cfg.RuntimeKind,
-			Installed:   true,
-			Healthy:     true,
-			Capabilities: []*daemonv1.Capability{
-				{Name: "agent_instance.create", Description: "runtime can host multiple agent instances", Enabled: true},
-				{Name: "heartbeat", Description: "daemon liveness reporting", Enabled: true},
-				{Name: "agent_status", Description: "agent status reporting", Enabled: true},
-			},
-		}},
-		RuntimeProfiles: []*daemonv1.RuntimeProfile{{
-			RuntimeProfileId: profileID,
-			Kind:             s.cfg.RuntimeKind,
-			Provider:         "daemon",
-			Capabilities: []*daemonv1.Capability{{
-				Name:        "agent_instance.create",
-				Description: "Web can create multiple agent instances for this runtime kind",
-				Enabled:     true,
-			}},
-		}},
-		Agents: []*daemonv1.AgentProfile{{
-			AgentId:          s.cfg.AgentID,
-			Name:             s.cfg.AgentID,
-			DisplayName:      s.cfg.AgentID,
-			Enabled:          true,
-			ComputerId:       s.cfg.ComputerID,
-			RuntimeProfileId: profileID,
-			RuntimeKind:      s.cfg.RuntimeKind,
-			DaemonVersion:    version.Current().Version,
-			Status:           daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE,
-			Capabilities: []*daemonv1.Capability{{
-				Name:        "agent_instance.template",
-				Description: "template status for Web-created agent instances",
-				Enabled:     true,
-			}},
-		}},
-	}
+	return runtimeadapter.ComputerInventory(runtimeadapter.InventoryConfig{
+		ComputerID:           s.cfg.ComputerID,
+		DaemonVersion:        version.Current().Version,
+		PreferredRuntimeKind: s.cfg.RuntimeKind,
+		AgentID:              s.cfg.AgentID,
+	})
 }
 
 func (s *daemonSession) agentStatus(state daemonv1.AgentActivityState, summary string) *daemonv1.AgentStatusSnapshot {

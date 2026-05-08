@@ -18,6 +18,7 @@ import (
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/config"
+	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/storage"
 )
 
@@ -705,6 +706,45 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		if !gotKinds[kind] {
 			t.Fatalf("runtime presets missing %q; got=%v", kind, gotKinds)
 		}
+	}
+
+	inventory := runtimeadapter.ComputerInventory(runtimeadapter.InventoryConfig{
+		ComputerID:           "computer-1",
+		PreferredRuntimeKind: "codex",
+		AgentID:              "agent-1",
+	})
+	if _, err := s.daemon.RegisterComputer(context.Background(), &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			ComputerId:  "computer-1",
+			DaemonId:    "daemon-1",
+			DisplayName: "Test Computer",
+			Hostname:    "test-host",
+		},
+		Inventory: inventory,
+	}); err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+	inventoryResp := doGET(t, s, "/api/daemon/inventory", token)
+	if inventoryResp.Code != http.StatusOK {
+		t.Fatalf("daemon inventory status = %d body=%s", inventoryResp.Code, inventoryResp.Body.String())
+	}
+	var inventoryBody struct {
+		Items []struct {
+			Inventory map[string]any `json:"inventory"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(inventoryResp.Body.Bytes(), &inventoryBody); err != nil {
+		t.Fatalf("decode daemon inventory: %v", err)
+	}
+	gotInventory := inventoryBody.Items[0].Inventory
+	runtimes, _ := gotInventory["runtimes"].([]any)
+	runtimeProfiles, _ := gotInventory["runtime_profiles"].([]any)
+	agents, _ := gotInventory["agents"].([]any)
+	if len(inventoryBody.Items) != 1 ||
+		len(runtimes) < 2 ||
+		len(runtimeProfiles) < 2 ||
+		len(agents) != 1 {
+		t.Fatalf("daemon inventory body = %+v, want runtime types, templates, and bootstrap agent", inventoryBody)
 	}
 
 	if _, err := s.daemon.UpdateAgentStatus(context.Background(), &daemonv1.UpdateAgentStatusRequest{

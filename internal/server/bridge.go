@@ -49,6 +49,16 @@ func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleDaemonInventory(w http.ResponseWriter, r *http.Request) {
+	if s.daemon == nil {
+		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"items": s.daemon.ListComputerInventories(intQuery(r, "limit", 100)),
+	})
+}
+
 func (s *Server) handleDaemonAgentStatuses(w http.ResponseWriter, r *http.Request) {
 	if s.daemon == nil {
 		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")

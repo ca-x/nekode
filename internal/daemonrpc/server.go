@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,6 +47,13 @@ type computerState struct {
 	inventoryVersion string
 	lease            *daemonv1.Lease
 	lastHeartbeat    int64
+}
+
+type ComputerInventorySnapshot struct {
+	Info              *daemonv1.ComputerInfo      `json:"info,omitempty"`
+	Inventory         *daemonv1.ComputerInventory `json:"inventory,omitempty"`
+	InventoryVersion  string                      `json:"inventoryVersion,omitempty"`
+	LastHeartbeatUnix int64                       `json:"lastHeartbeatUnix,omitempty"`
 }
 
 func New(store *storage.Store, serverID string) *Server {
@@ -879,6 +887,17 @@ func (s *Server) ListAgentProfiles(_ context.Context, req *daemonv1.ListAgentPro
 		limit = 100
 	}
 	profiles := make([]*daemonv1.AgentProfile, 0, limit)
+	for _, computer := range s.computers {
+		for _, profile := range computer.inventory.GetAgents() {
+			if profile.GetAgentId() == "" {
+				continue
+			}
+			profiles = append(profiles, proto.Clone(profile).(*daemonv1.AgentProfile))
+			if len(profiles) >= limit {
+				return &daemonv1.ListAgentProfilesResponse{Profiles: profiles, NextCursor: cursorFromCount(len(profiles), "", s.serverID)}, nil
+			}
+		}
+	}
 	for _, snapshot := range s.statuses {
 		profiles = append(profiles, agentProfileFromStatus(snapshot))
 		if len(profiles) >= limit {
@@ -886,6 +905,38 @@ func (s *Server) ListAgentProfiles(_ context.Context, req *daemonv1.ListAgentPro
 		}
 	}
 	return &daemonv1.ListAgentProfilesResponse{Profiles: profiles, NextCursor: cursorFromCount(len(profiles), "", s.serverID)}, nil
+}
+
+func (s *Server) ListComputerInventories(limit int) []ComputerInventorySnapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	keys := make([]string, 0, len(s.computers))
+	for computerID := range s.computers {
+		keys = append(keys, computerID)
+	}
+	sort.Strings(keys)
+	out := make([]ComputerInventorySnapshot, 0, min(limit, len(keys)))
+	for _, computerID := range keys {
+		computer := s.computers[computerID]
+		snapshot := ComputerInventorySnapshot{
+			InventoryVersion:  computer.inventoryVersion,
+			LastHeartbeatUnix: computer.lastHeartbeat,
+		}
+		if computer.info != nil {
+			snapshot.Info = proto.Clone(computer.info).(*daemonv1.ComputerInfo)
+		}
+		if computer.inventory != nil {
+			snapshot.Inventory = proto.Clone(computer.inventory).(*daemonv1.ComputerInventory)
+		}
+		out = append(out, snapshot)
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out
 }
 
 func (s *Server) AcknowledgeServerEvents(_ context.Context, req *daemonv1.AcknowledgeServerEventsRequest) (*daemonv1.AcknowledgeServerEventsResponse, error) {
