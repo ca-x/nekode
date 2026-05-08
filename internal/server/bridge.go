@@ -256,6 +256,43 @@ func (s *Server) handleDaemonEnrollmentInstallPowerShell(w http.ResponseWriter, 
 	s.handleDaemonEnrollmentInstallScript(w, r, "ps1")
 }
 
+func (s *Server) handleDaemonUpgradeShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonManagementScript(w, r, "upgrade", "sh")
+}
+
+func (s *Server) handleDaemonReinstallShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonManagementScript(w, r, "reinstall", "sh")
+}
+
+func (s *Server) handleDaemonUninstallShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonManagementScript(w, r, "uninstall", "sh")
+}
+
+func (s *Server) handleDaemonUpgradePowerShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonManagementScript(w, r, "upgrade", "ps1")
+}
+
+func (s *Server) handleDaemonReinstallPowerShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonManagementScript(w, r, "reinstall", "ps1")
+}
+
+func (s *Server) handleDaemonUninstallPowerShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonManagementScript(w, r, "uninstall", "ps1")
+}
+
+func (s *Server) handleDaemonManagementScript(w http.ResponseWriter, _ *http.Request, action, scriptKind string) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	switch scriptKind {
+	case "ps1":
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte(s.renderDaemonManagementPowerShell(action)))
+	default:
+		w.Header().Set("Content-Type", "text/x-shellscript; charset=utf-8")
+		_, _ = w.Write([]byte(s.renderDaemonManagementShell(action)))
+	}
+}
+
 func (s *Server) handleDaemonEnrollmentInstallScript(w http.ResponseWriter, r *http.Request, scriptKind string) {
 	if s.daemonEnrollments == nil {
 		writeError(w, http.StatusServiceUnavailable, errDaemonEnrollmentNotReady.Error())

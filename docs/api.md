@@ -460,6 +460,49 @@ returns a Windows PowerShell installer that downloads
 the daemon config under `%ProgramData%\Nekode`, and installs/starts the
 `nekode-daemon` Windows Service.
 
+### `GET /api/daemon/scripts/{action}.sh`
+
+Public daemon management script endpoint for Linux/macOS. Supported actions:
+
+- `upgrade`: keep the existing config, download and verify the selected daemon
+  release artifact, replace the binary, and restart the service.
+- `reinstall`: keep the existing config, remove and recreate the service,
+  download and verify the selected daemon release artifact, and restart.
+- `uninstall`: stop/disable the service and remove the daemon binary.
+
+These scripts do not require bearer auth and do not contain enrollment install
+codes or daemon tokens. Upgrade/reinstall require an existing daemon config at
+`/etc/nekode/daemon.json` by default. Uninstall preserves that config unless
+`NEKODE_PURGE_CONFIG=1` is set.
+
+Script environment overrides:
+
+- `NEKODE_DAEMON_VERSION`: release version to download.
+- `NEKODE_DAEMON_DOWNLOAD_BASE_URL`: release artifact base URL.
+- `NEKODE_DAEMON_BIN_PATH`: daemon binary path, default
+  `/usr/local/bin/nekode-daemon`.
+- `NEKODE_DAEMON_CONFIG_PATH`: config path, default
+  `/etc/nekode/daemon.json`.
+- `NEKODE_DAEMON_SERVICE_NAME`: systemd service name, default
+  `nekode-daemon`.
+- `NEKODE_PURGE_CONFIG`: set to `1` during uninstall to remove config.
+
+### `GET /api/daemon/scripts/{action}.ps1`
+
+Public daemon management script endpoint for Windows PowerShell. Supported
+actions are the same `upgrade`, `reinstall`, and `uninstall` operations. The
+script downloads `nekode-daemon_${version}_windows_amd64.zip`, verifies
+`SHA256SUMS.txt`, manages the `nekode-daemon` Windows Service, and keeps the
+existing `%ProgramData%\Nekode\daemon.json` config unless
+`NEKODE_PURGE_CONFIG=1` is set during uninstall.
+
+Additional Windows overrides:
+
+- `NEKODE_DAEMON_INSTALL_DIR`: daemon binary directory, default
+  `%ProgramFiles%\Nekode`.
+- `NEKODE_DAEMON_CONFIG_DIR`: daemon config directory, default
+  `%ProgramData%\Nekode`.
+
 ### `POST /api/daemon/enrollments/{id}/revoke`
 
 Requires bearer auth. Revokes a pending enrollment, clears the stored daemon

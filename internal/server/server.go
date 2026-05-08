@@ -195,6 +195,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/daemon/enrollments/{id}/revoke", s.requireAuth(s.handleRevokeDaemonEnrollment))
 	s.mux.HandleFunc("GET /api/daemon/enrollments/{id}/install.sh", s.handleDaemonEnrollmentInstallShell)
 	s.mux.HandleFunc("GET /api/daemon/enrollments/{id}/install.ps1", s.handleDaemonEnrollmentInstallPowerShell)
+	s.mux.HandleFunc("GET /api/daemon/scripts/upgrade.sh", s.handleDaemonUpgradeShell)
+	s.mux.HandleFunc("GET /api/daemon/scripts/reinstall.sh", s.handleDaemonReinstallShell)
+	s.mux.HandleFunc("GET /api/daemon/scripts/uninstall.sh", s.handleDaemonUninstallShell)
+	s.mux.HandleFunc("GET /api/daemon/scripts/upgrade.ps1", s.handleDaemonUpgradePowerShell)
+	s.mux.HandleFunc("GET /api/daemon/scripts/reinstall.ps1", s.handleDaemonReinstallPowerShell)
+	s.mux.HandleFunc("GET /api/daemon/scripts/uninstall.ps1", s.handleDaemonUninstallPowerShell)
 	s.mux.HandleFunc("GET /api/server-events", s.requireAuthOrQueryToken(s.handleServerEvents))
 	s.mux.HandleFunc("GET /", s.handleWebConsole)
 }

@@ -115,10 +115,23 @@ should download the platform-specific daemon artifact from GitHub Releases
 instead of pulling it from the server runtime image. Private deployments can add
 a download-source override without changing the server image.
 
-The future install script should follow the Teleport installer shape: root
-assertion, clear logging, platform and architecture detection, checksum
-verification, 0600 config writes, systemd/launchd service installation, and
-explicit cleanup guidance on failure.
+Daemon management scripts are exposed without enrollment tokens for already
+installed machines:
+
+- `GET /api/daemon/scripts/upgrade.sh`
+- `GET /api/daemon/scripts/reinstall.sh`
+- `GET /api/daemon/scripts/uninstall.sh`
+- `GET /api/daemon/scripts/upgrade.ps1`
+- `GET /api/daemon/scripts/reinstall.ps1`
+- `GET /api/daemon/scripts/uninstall.ps1`
+
+Upgrade and reinstall scripts keep the existing daemon config, download the
+selected release artifact, verify `SHA256SUMS.txt`, replace the binary, and
+restart the service. Uninstall removes the service and binary; set
+`NEKODE_PURGE_CONFIG=1` to also remove local daemon config. The scripts follow
+the installer's Teleport-style shape: root/admin assertion, clear logging,
+platform and architecture detection, checksum verification, service manager
+integration, and explicit cleanup behavior.
 
 Environment variables:
 

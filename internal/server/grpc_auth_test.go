@@ -122,6 +122,67 @@ func TestDaemonEnrollmentInstallPowerShell(t *testing.T) {
 	}
 }
 
+func TestDaemonManagementScripts(t *testing.T) {
+	server, cleanup := newDaemonGRPCTestClient(t)
+	defer cleanup.close()
+	token := bootstrapToken(t, server)
+	enrollment := createDaemonEnrollment(t, server, token)
+
+	tests := []struct {
+		path string
+		want []string
+	}{
+		{
+			path: "/api/daemon/scripts/upgrade.sh",
+			want: []string{"ACTION=\"upgrade\"", "install_binary", "systemctl enable --now", "launchctl bootstrap system"},
+		},
+		{
+			path: "/api/daemon/scripts/reinstall.sh",
+			want: []string{"ACTION=\"reinstall\"", "remove_service", "install_service"},
+		},
+		{
+			path: "/api/daemon/scripts/uninstall.sh",
+			want: []string{"ACTION=\"uninstall\"", "NEKODE_PURGE_CONFIG", "rm -f \"$BIN_PATH\""},
+		},
+		{
+			path: "/api/daemon/scripts/upgrade.ps1",
+			want: []string{"$action = \"upgrade\"", "Install-DaemonBinary", "Start-Service"},
+		},
+		{
+			path: "/api/daemon/scripts/reinstall.ps1",
+			want: []string{"$action = \"reinstall\"", "Remove-DaemonService", "Install-DaemonService"},
+		},
+		{
+			path: "/api/daemon/scripts/uninstall.ps1",
+			want: []string{"$action = \"uninstall\"", "NEKODE_PURGE_CONFIG", "sc.exe delete"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			resp := doGET(t, server, tt.path, "")
+			if resp.Code != http.StatusOK {
+				t.Fatalf("management script status = %d body=%s", resp.Code, resp.Body.String())
+			}
+			if got := resp.Header().Get("Cache-Control"); got != "no-store" {
+				t.Fatalf("Cache-Control = %q, want no-store", got)
+			}
+			body := resp.Body.String()
+			for _, want := range tt.want {
+				if !strings.Contains(body, want) {
+					t.Fatalf("management script %s missing %q:\n%s", tt.path, want, body)
+				}
+			}
+			if strings.Contains(body, enrollment.Token) || strings.Contains(body, "ndt_") {
+				t.Fatalf("management script leaked daemon token material:\n%s", body)
+			}
+			if strings.Contains(body, "/api/daemon/enrollments/") {
+				t.Fatalf("management script should not reuse enrollment install code paths:\n%s", body)
+			}
+		})
+	}
+}
+
 func TestDaemonEnrollmentRevokeBlocksTokenAndInstallCode(t *testing.T) {
 	server, cleanup := newDaemonGRPCTestClient(t)
 	defer cleanup.close()
