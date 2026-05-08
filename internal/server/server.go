@@ -22,6 +22,7 @@ import (
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
 	"github.com/ca-x/nekode/internal/immedia"
+	"github.com/ca-x/nekode/internal/impolicy"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
@@ -152,6 +153,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/auth/logout", s.requireAuth(s.handleLogout))
 	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
 	s.mux.HandleFunc("GET /api/im/providers", s.requireAuth(s.handleListIMProviders))
+	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
 	s.mux.HandleFunc("POST /api/attachments", s.requireAuth(s.handleUploadAttachment))
@@ -428,6 +430,34 @@ func (s *Server) handleListInteractionEndpoints(w http.ResponseWriter, r *http.R
 
 func (s *Server) handleListIMProviders(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"items": imadapter.ListProviders()})
+}
+
+func (s *Server) handleGetIMEffectivePolicy(w http.ResponseWriter, r *http.Request) {
+	endpointID := strings.TrimSpace(r.URL.Query().Get("endpointId"))
+	conversationID := strings.TrimSpace(r.URL.Query().Get("conversationId"))
+	if endpointID == "" || conversationID == "" {
+		writeError(w, http.StatusBadRequest, "endpointId and conversationId are required")
+		return
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), endpointID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") {
+		writeError(w, http.StatusBadRequest, "interaction endpoint is not an IM endpoint")
+		return
+	}
+	policy, err := impolicy.Resolve(endpoint.ID, endpoint.Provider, endpoint.ConfigJSON, conversationID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, policy)
 }
 
 func redactInteractionEndpoint(endpoint storage.InteractionEndpoint) storage.InteractionEndpoint {

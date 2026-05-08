@@ -300,7 +300,27 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 		"inboundEnabled":  true,
 		"outboundEnabled": true,
 		"authMode":        "webhook_signature",
-		"configJson":      `{"app_id":"app","app_secret":"secret","verification_token":"verify"}`,
+		"configJson": `{
+			"app_id":"app",
+			"app_secret":"secret",
+			"verification_token":"verify",
+			"group_mode":"mention",
+			"default_target":"#general",
+			"agent_profile_id":"agent-default",
+			"system_prompt_id":"prompt-default",
+			"allowed_tools":["search","shell"],
+			"groups":{
+				"oc_123":{
+					"target":"#ops",
+					"thread_id":"thread-ops",
+					"group_mode":"always",
+					"agent_profile_id":"agent-ops",
+					"system_prompt":"You are helping the ops channel.",
+					"tool_policy":{"allow":["search"]},
+					"disabled_tools":["shell"]
+				}
+			}
+		}`,
 	})
 	if imEndpoint.Code != http.StatusCreated {
 		t.Fatalf("create IM endpoint status = %d body=%s", imEndpoint.Code, imEndpoint.Body.String())
@@ -312,6 +332,63 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if !strings.Contains(imEndpointBody.ConfigJSON, `"app_secret":"***"`) ||
 		!strings.Contains(imEndpointBody.ConfigJSON, `"verification_token":"***"`) {
 		t.Fatalf("IM endpoint config was not redacted: %s", imEndpointBody.ConfigJSON)
+	}
+	policyResp := doGET(t, s, "/api/im/policies/effective?endpointId="+imEndpointBody.ID+"&conversationId=oc_123", token)
+	if policyResp.Code != http.StatusOK {
+		t.Fatalf("effective IM policy status = %d body=%s", policyResp.Code, policyResp.Body.String())
+	}
+	var policyBody struct {
+		EndpointID      string         `json:"endpointId"`
+		Provider        string         `json:"provider"`
+		ConversationID  string         `json:"conversationId"`
+		Matched         bool           `json:"matched"`
+		GroupMode       string         `json:"groupMode"`
+		Target          string         `json:"target"`
+		ThreadID        string         `json:"threadId"`
+		AgentProfileID  string         `json:"agentProfileId"`
+		SystemPromptID  string         `json:"systemPromptId"`
+		SystemPrompt    string         `json:"systemPrompt"`
+		ToolPolicy      map[string]any `json:"toolPolicy"`
+		AllowedTools    []string       `json:"allowedTools"`
+		DisabledTools   []string       `json:"disabledTools"`
+		AppSecret       string         `json:"app_secret"`
+		VerificationTok string         `json:"verification_token"`
+	}
+	if err := json.Unmarshal(policyResp.Body.Bytes(), &policyBody); err != nil {
+		t.Fatalf("decode IM policy: %v", err)
+	}
+	if policyBody.EndpointID != imEndpointBody.ID || policyBody.Provider != "feishu" || !policyBody.Matched {
+		t.Fatalf("effective IM policy source = %+v", policyBody)
+	}
+	if policyBody.GroupMode != "always" || policyBody.Target != "#ops" || policyBody.ThreadID != "thread-ops" {
+		t.Fatalf("effective IM policy routing = %+v", policyBody)
+	}
+	if policyBody.AgentProfileID != "agent-ops" || policyBody.SystemPromptID != "prompt-default" || policyBody.SystemPrompt == "" {
+		t.Fatalf("effective IM policy overrides = %+v", policyBody)
+	}
+	if policyBody.AppSecret != "" || policyBody.VerificationTok != "" {
+		t.Fatalf("effective IM policy leaked credential fields: %+v", policyBody)
+	}
+	fallbackPolicy := doGET(t, s, "/api/im/policies/effective?endpointId="+imEndpointBody.ID+"&conversationId=oc_unknown", token)
+	if fallbackPolicy.Code != http.StatusOK {
+		t.Fatalf("fallback IM policy status = %d body=%s", fallbackPolicy.Code, fallbackPolicy.Body.String())
+	}
+	var fallbackBody struct {
+		Matched        bool     `json:"matched"`
+		GroupMode      string   `json:"groupMode"`
+		Target         string   `json:"target"`
+		AgentProfileID string   `json:"agentProfileId"`
+		AllowedTools   []string `json:"allowedTools"`
+	}
+	if err := json.Unmarshal(fallbackPolicy.Body.Bytes(), &fallbackBody); err != nil {
+		t.Fatalf("decode fallback IM policy: %v", err)
+	}
+	if fallbackBody.Matched || fallbackBody.GroupMode != "mention" || fallbackBody.Target != "#general" || fallbackBody.AgentProfileID != "agent-default" || len(fallbackBody.AllowedTools) != 2 {
+		t.Fatalf("fallback IM policy = %+v", fallbackBody)
+	}
+	nonIMPolicy := doGET(t, s, "/api/im/policies/effective?endpointId="+endpointBodyID(t, endpoint)+"&conversationId=web", token)
+	if nonIMPolicy.Code != http.StatusBadRequest {
+		t.Fatalf("non-IM policy status = %d body=%s", nonIMPolicy.Code, nonIMPolicy.Body.String())
 	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
@@ -1137,6 +1214,15 @@ func bootstrapToken(t *testing.T, s *Server) string {
 		t.Fatal("bootstrap token is empty")
 	}
 	return body.Token
+}
+
+func endpointBodyID(t *testing.T, resp *httptest.ResponseRecorder) string {
+	t.Helper()
+	var endpoint storage.InteractionEndpoint
+	if err := json.Unmarshal(resp.Body.Bytes(), &endpoint); err != nil {
+		t.Fatalf("decode endpoint: %v", err)
+	}
+	return endpoint.ID
 }
 
 func doJSON(t *testing.T, s *Server, method, target, token string, body any) *httptest.ResponseRecorder {

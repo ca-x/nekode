@@ -81,7 +81,7 @@ Example non-secret config shape:
 
 ```json
 {
-    "provider": "feishu",
+  "provider": "feishu",
   "app_id": "cli_xxx",
   "app_secret_ref": "secret:im/feishu/prod/app_secret",
   "verification_token_ref": "secret:im/feishu/prod/verification_token",
@@ -92,7 +92,18 @@ Example non-secret config shape:
   "allowed_conversations": ["oc_xxx"],
   "agent_profile_id": "agent_profile_default",
   "system_prompt_id": "prompt_default",
-  "tool_policy_id": "tool_policy_default"
+  "tool_policy_id": "tool_policy_default",
+  "groups": {
+    "oc_xxx": {
+      "target": "#ops",
+      "thread_id": "thread_ops",
+      "group_mode": "always",
+      "agent_profile_id": "agent_profile_ops",
+      "system_prompt": "Use the on-call runbook before taking action.",
+      "tool_policy": { "allow": ["search", "incident.lookup"] },
+      "disabled_tools": ["shell"]
+    }
+  }
 }
 ```
 
@@ -105,6 +116,12 @@ rules are stable:
 - bind groups and private chats to Nekode targets through endpoint routing;
 - default group behavior to `mention`, with `always` and `disabled` available;
 - keep platform-specific fields under provider-scoped keys when possible.
+
+`GET /api/im/policies/effective?endpointId=<id>&conversationId=<external-id>`
+returns the merged policy for a specific IM conversation. The response includes
+endpoint/provider identity, `matched`, the effective `groupMode`, target/thread,
+agent profile, system prompt, tool policy, and allowed/disabled tools. It must
+not include the endpoint's credential fields or raw provider config.
 
 ## Provider Coverage
 
