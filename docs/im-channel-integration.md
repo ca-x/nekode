@@ -170,6 +170,12 @@ Expected channel add flow:
 - README/docs attribution that the channel creation/config interaction follows
   CherryHQ/stella where compatible.
 
+Terminal is the local development channel. It has no external credentials; its
+runtime should turn local operator input into the same `iminbound.RawEvent`
+shape as other providers and render agent replies plus outbound delivery status
+as terminal-readable lines. This keeps Terminal useful for smoke tests without
+creating a separate local chat store.
+
 Expected channel binding flow:
 
 - bind an IM endpoint conversation to a Nekode channel, thread, default target,

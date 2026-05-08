@@ -146,7 +146,10 @@ var providerSchemas = []ProviderSchema{
 		},
 		Fields: []Field{
 			{Name: "session_id", Label: "Session ID", Type: FieldString, Description: "Optional stable terminal session ID."},
+			{Name: "operator_id", Label: "Operator ID", Type: FieldString, Description: "Optional stable local operator identity."},
 			{Name: "operator", Label: "Operator name", Type: FieldString, Description: "Optional display name for local input."},
+			{Name: "target", Label: "Default target", Type: FieldString, Description: "Optional Nekode target hint for terminal input."},
+			{Name: "thread_id", Label: "Default thread ID", Type: FieldString, Description: "Optional Nekode thread hint for terminal input."},
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
 	},

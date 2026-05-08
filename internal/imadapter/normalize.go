@@ -295,9 +295,11 @@ func (n Normalizer) normalizeWeixin(event iminbound.RawEvent) (iminbound.Message
 
 func (n Normalizer) normalizeTerminal(event iminbound.RawEvent) (iminbound.Message, error) {
 	var payload struct {
+		ID           string `json:"id"`
 		MessageID    string `json:"message_id"`
 		SessionID    string `json:"session_id"`
 		OperatorID   string `json:"operator_id"`
+		Operator     string `json:"operator"`
 		OperatorName string `json:"operator_name"`
 		Text         string `json:"text"`
 		Target       string `json:"target"`
@@ -308,10 +310,10 @@ func (n Normalizer) normalizeTerminal(event iminbound.RawEvent) (iminbound.Messa
 	}
 	msg := n.baseMessage(event, ProviderTerminal)
 	if msg.ExternalMessageID == "" {
-		msg.ExternalMessageID = payload.MessageID
+		msg.ExternalMessageID = firstNonEmpty(payload.MessageID, payload.ID)
 	}
 	msg.Conversation = iminbound.Conversation{ExternalID: firstNonEmpty(payload.SessionID, "local"), TargetHint: payload.Target, ThreadID: payload.ThreadID}
-	msg.Sender = iminbound.Sender{ExternalID: firstNonEmpty(payload.OperatorID, "terminal"), DisplayName: payload.OperatorName, Kind: "human"}
+	msg.Sender = iminbound.Sender{ExternalID: firstNonEmpty(payload.OperatorID, payload.Operator, "terminal"), DisplayName: firstNonEmpty(payload.OperatorName, payload.Operator), Kind: "human"}
 	msg.Content = []iminbound.ContentBlock{{Type: iminbound.ContentTypeText, Text: payload.Text}}
 	return normalizeAndValidate(msg)
 }
