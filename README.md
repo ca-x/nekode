@@ -21,6 +21,43 @@ Slock behavior, while keeping the codebase independent from Nekobot.
   `/home/czyt/code/go/references/open-agent-room` and
   `/home/czyt/code/go/references/zano`
 
+## IM Channel Reference
+
+Nekode's IM endpoint and channel-adapter work references
+[CherryHQ/stella](https://github.com/CherryHQ/stella), an MIT-licensed
+self-hosted assistant with Telegram, QQ, Feishu, and WeChat channel runtimes.
+The intended reuse is Stella's proven channel shape: platform-specific adapters
+normalize inbound events, a shared coordinator handles identity/routing/session
+behavior, and platform renderers handle streaming/output details. Nekode keeps
+the implementation on its existing primitives: `InteractionEndpoint`,
+`storage.Message`, `SourceEndpointID`, `ExternalMessageID`, message attachment
+IDs, metadata JSON, and the existing attachment/message/notification storage
+paths. Platform adapters such as Feishu and WeChat may reuse Stella's channel
+configuration, validation, onboarding, and runtime structure where compatible,
+with source attribution retained in documentation.
+
+The integration model is endpoint-centric rather than a separate IM chat
+system:
+
+1. Each IM channel instance is an `InteractionEndpoint`, for example
+   `kind=im` with `provider=feishu`, `weixin`, `telegram`, or `qq`.
+2. Platform adapters verify inbound events, deduplicate by platform message id,
+   normalize sender/conversation/content into Nekode's inbound IM DTO, and use
+   the existing attachment path for media.
+3. Message coordination maps endpoint identity and external conversations onto
+   existing Nekode targets, threads, sessions, users, agents, and commands. IM
+   adapters must not call daemon runtimes directly.
+4. Inbound messages persist as existing `storage.Message` records with
+   `SourceEndpointID`, `ExternalMessageID`, attachment IDs, and metadata JSON so
+   Web, daemon, tasks, runs, search, saved messages, and activity all see the
+   same collaboration facts.
+5. Outbound delivery renders existing Nekode messages, activities, and
+   notifications back to bound IM endpoints through delivery records and retry
+   state; platform adapters only translate the delivery into provider API calls.
+6. Group behavior starts conservative (`mention` by default, with `always` and
+   `disabled` available) and can later add per-group agent, system prompt, and
+   tool policy overrides.
+
 ## Run Locally
 
 ```bash
