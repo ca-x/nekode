@@ -14,6 +14,8 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - Reusable daemon IDL: `proto/nekode/daemon/v1/*.proto`
 - Protocol capability review: `docs/protocol-capability-review.md`
 - Implementation design: `docs/slock-style-daemon-runtime.md`
+- IM channel integration and deployment notes:
+  `docs/im-channel-integration.md`
 - Web console assets: `web/src/assets-brand.png` and `web/public/*`
 - Container and binary build: `Dockerfile`, `docker-compose.yml`, and
   `build.sh`
@@ -25,16 +27,18 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 
 Nekode's IM endpoint and channel-adapter work references
 [CherryHQ/stella](https://github.com/CherryHQ/stella), an MIT-licensed
-self-hosted assistant with Telegram, QQ, Feishu, and WeChat channel runtimes.
+self-hosted assistant with Telegram, QQ, Feishu, WeChat, and Terminal channel
+runtimes.
 The intended reuse is Stella's proven channel shape: platform-specific adapters
 normalize inbound events, a shared coordinator handles identity/routing/session
 behavior, and platform renderers handle streaming/output details. Nekode keeps
 the implementation on its existing primitives: `InteractionEndpoint`,
 `storage.Message`, `SourceEndpointID`, `ExternalMessageID`, message attachment
 IDs, metadata JSON, and the existing attachment/message/notification storage
-paths. Platform adapters such as Feishu and WeChat may reuse Stella's channel
-configuration, validation, onboarding, and runtime structure where compatible,
-with source attribution retained in documentation.
+paths. Platform adapters and channel-add/binding UI for Telegram, QQ, Feishu,
+WeChat, and Terminal may reuse Stella's channel configuration, validation,
+onboarding, and runtime structure where compatible, with source attribution
+retained in documentation.
 
 The integration model is endpoint-centric rather than a separate IM chat
 system:
