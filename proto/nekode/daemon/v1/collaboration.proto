@@ -54,6 +54,40 @@ enum OutboundDeliveryStatus {
   OUTBOUND_DELIVERY_STATUS_CANCELED = 5;
 }
 
+// ChannelVisibility is the closed visibility/membership gate for a
+// collaboration target. Private channel names, membership, and content must
+// only be disclosed to authorized members.
+enum ChannelVisibility {
+  // Visibility is omitted or unknown.
+  CHANNEL_VISIBILITY_UNSPECIFIED = 0;
+  // Public channel visible to server members subject to normal permissions.
+  CHANNEL_VISIBILITY_PUBLIC = 1;
+  // Private channel; listing, members, and content require membership.
+  CHANNEL_VISIBILITY_PRIVATE = 2;
+}
+
+// ChannelMemberRole is the closed set of built-in channel membership roles.
+enum ChannelMemberRole {
+  // Role is omitted or unknown.
+  CHANNEL_MEMBER_ROLE_UNSPECIFIED = 0;
+  // Regular member.
+  CHANNEL_MEMBER_ROLE_MEMBER = 1;
+  // Channel administrator/owner.
+  CHANNEL_MEMBER_ROLE_ADMIN = 2;
+  // Read-only observer.
+  CHANNEL_MEMBER_ROLE_VIEWER = 3;
+}
+
+// MessageSearchSort controls the server-side search ordering.
+enum MessageSearchSort {
+  // Sort is omitted; servers should use relevance.
+  MESSAGE_SEARCH_SORT_UNSPECIFIED = 0;
+  // Best ranked match first.
+  MESSAGE_SEARCH_SORT_RELEVANCE = 1;
+  // Most recent matching message first.
+  MESSAGE_SEARCH_SORT_RECENT = 2;
+}
+
 message ChannelRecord {
   reserved 1000 to 1999;
 
@@ -69,6 +103,17 @@ message ChannelRecord {
   string source_kind = 7;
   string external_id = 8;
   repeated Capability capabilities = 9;
+  ChannelVisibility visibility = 10;
+  bool joined = 11;
+  uint32 member_count = 12;
+}
+message ChannelMemberRecord {
+  reserved 1000 to 1999;
+
+  string target = 1;
+  Actor member = 2;
+  ChannelMemberRole role = 3;
+  int64 joined_time_unix = 4;
 }
 message InteractionEndpoint {
   reserved 1000 to 1999;
@@ -99,9 +144,20 @@ message ListInteractionEndpointsResponse {
 message ListChannelsRequest {
   uint32 limit = 1;
   EventCursor cursor = 2;
+  bool include_private = 3;
+  bool joined_only = 4;
 }
 message ListChannelsResponse {
   repeated ChannelRecord channels = 1;
+  EventCursor next_cursor = 2;
+}
+message ListChannelMembersRequest {
+  string target = 1;
+  uint32 limit = 2;
+  EventCursor cursor = 3;
+}
+message ListChannelMembersResponse {
+  repeated ChannelMemberRecord members = 1;
   EventCursor next_cursor = 2;
 }
 message ThreadRecord {
@@ -169,6 +225,21 @@ message ReadMessagesResponse {
   reserved 3;
   reserved "next_page_token";
 
+  repeated CollaborationMessage messages = 1;
+  EventCursor next_cursor = 2;
+}
+message SearchMessagesRequest {
+  string query = 1;
+  // Optional target scope. Empty means all visible targets for the caller.
+  string target = 2;
+  // Sender handle such as @alice. Raw internal ids must use sender instead.
+  string sender_handle = 3;
+  Actor sender = 4;
+  MessageSearchSort sort = 5;
+  uint32 limit = 6;
+  EventCursor cursor = 7;
+}
+message SearchMessagesResponse {
   repeated CollaborationMessage messages = 1;
   EventCursor next_cursor = 2;
 }

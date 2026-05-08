@@ -198,6 +198,9 @@ service DaemonControlService {
   rpc ReadWorkspaceFile(ReadWorkspaceFileRequest) returns (ReadWorkspaceFileResponse);
   // List channels visible to the caller.
   rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  // List channel members. Private channel membership is only visible to
+  // authorized members/admins.
+  rpc ListChannelMembers(ListChannelMembersRequest) returns (ListChannelMembersResponse);
   // List configured interaction endpoints.
   rpc ListInteractionEndpoints(ListInteractionEndpointsRequest) returns (ListInteractionEndpointsResponse);
   // List known threads.
@@ -206,6 +209,8 @@ service DaemonControlService {
   rpc GetThread(GetThreadRequest) returns (GetThreadResponse);
   // Read messages with cursor pagination.
   rpc ReadMessages(ReadMessagesRequest) returns (ReadMessagesResponse);
+  // Search messages by query, optional target, optional sender, and sort order.
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
   // Send a collaboration message; idempotency_key deduplicates retries.
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   // Save/bookmark a message for an agent or user.

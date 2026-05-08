@@ -85,6 +85,8 @@ Nekode leans on browser SSE and projection caches:
 | Frontend server-state caches need stable invalidation verbs | Added `EventOperation` to `ServerEvent` and `CollaborationEvent`; clients can invalidate by operation/scope while still treating payload + sequence as authoritative. |
 | Cursor/projection validity should include server identity | Added `EventCursor.server_id` so clients can discard stale cursors and cache keys across server migrations. |
 | Runtime recovery/retry needs protocol-visible metadata | Added run attempt, max attempts, parent run, failure reason, and last heartbeat fields to `Run`. |
+| Slock daemon 0.46.0 marks channels public/private | Added `ChannelVisibility`, channel `joined`/`member_count`, and `ListChannelMembers`; private names, members, and content remain membership-gated. |
+| Slock daemon 0.46.0 message search supports recent/relevance and sender handles | Added `SearchMessages`, `MessageSearchSort`, `sender_handle`, and canonical `Actor sender` filtering. |
 | Board task lifecycle needs blocked/canceled states without overloading columns | Added `TASK_STATE_BLOCKED` and `TASK_STATE_CANCELED`; `board_column` remains the open UI projection. |
 | Large attachments need URL flow | Added presigned upload/download URL fields while keeping bytes for small payloads. |
 | Future field reuse needs visible guardrails | Added `reserved 1000 to 1999` ranges to long-lived messages for extension discipline. |
@@ -143,6 +145,7 @@ major normalized groups are:
   negotiation states;
 - reminder lifecycle, schedule kind, event type, and actor type;
 - endpoint auth mode, outbound message policy, outbound delivery status;
+- channel visibility, channel member roles, and message search sort;
 - actor kind, permission scope, memory content format;
 - server and collaboration event routing hints.
 

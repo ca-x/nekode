@@ -213,6 +213,171 @@ func (OutboundDeliveryStatus) EnumDescriptor() ([]byte, []int) {
 	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{2}
 }
 
+// ChannelVisibility is the closed visibility/membership gate for a
+// collaboration target. Private channel names, membership, and content must
+// only be disclosed to authorized members.
+type ChannelVisibility int32
+
+const (
+	// Visibility is omitted or unknown.
+	ChannelVisibility_CHANNEL_VISIBILITY_UNSPECIFIED ChannelVisibility = 0
+	// Public channel visible to server members subject to normal permissions.
+	ChannelVisibility_CHANNEL_VISIBILITY_PUBLIC ChannelVisibility = 1
+	// Private channel; listing, members, and content require membership.
+	ChannelVisibility_CHANNEL_VISIBILITY_PRIVATE ChannelVisibility = 2
+)
+
+// Enum value maps for ChannelVisibility.
+var (
+	ChannelVisibility_name = map[int32]string{
+		0: "CHANNEL_VISIBILITY_UNSPECIFIED",
+		1: "CHANNEL_VISIBILITY_PUBLIC",
+		2: "CHANNEL_VISIBILITY_PRIVATE",
+	}
+	ChannelVisibility_value = map[string]int32{
+		"CHANNEL_VISIBILITY_UNSPECIFIED": 0,
+		"CHANNEL_VISIBILITY_PUBLIC":      1,
+		"CHANNEL_VISIBILITY_PRIVATE":     2,
+	}
+)
+
+func (x ChannelVisibility) Enum() *ChannelVisibility {
+	p := new(ChannelVisibility)
+	*p = x
+	return p
+}
+
+func (x ChannelVisibility) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ChannelVisibility) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[3].Descriptor()
+}
+
+func (ChannelVisibility) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[3]
+}
+
+func (x ChannelVisibility) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ChannelVisibility.Descriptor instead.
+func (ChannelVisibility) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{3}
+}
+
+// ChannelMemberRole is the closed set of built-in channel membership roles.
+type ChannelMemberRole int32
+
+const (
+	// Role is omitted or unknown.
+	ChannelMemberRole_CHANNEL_MEMBER_ROLE_UNSPECIFIED ChannelMemberRole = 0
+	// Regular member.
+	ChannelMemberRole_CHANNEL_MEMBER_ROLE_MEMBER ChannelMemberRole = 1
+	// Channel administrator/owner.
+	ChannelMemberRole_CHANNEL_MEMBER_ROLE_ADMIN ChannelMemberRole = 2
+	// Read-only observer.
+	ChannelMemberRole_CHANNEL_MEMBER_ROLE_VIEWER ChannelMemberRole = 3
+)
+
+// Enum value maps for ChannelMemberRole.
+var (
+	ChannelMemberRole_name = map[int32]string{
+		0: "CHANNEL_MEMBER_ROLE_UNSPECIFIED",
+		1: "CHANNEL_MEMBER_ROLE_MEMBER",
+		2: "CHANNEL_MEMBER_ROLE_ADMIN",
+		3: "CHANNEL_MEMBER_ROLE_VIEWER",
+	}
+	ChannelMemberRole_value = map[string]int32{
+		"CHANNEL_MEMBER_ROLE_UNSPECIFIED": 0,
+		"CHANNEL_MEMBER_ROLE_MEMBER":      1,
+		"CHANNEL_MEMBER_ROLE_ADMIN":       2,
+		"CHANNEL_MEMBER_ROLE_VIEWER":      3,
+	}
+)
+
+func (x ChannelMemberRole) Enum() *ChannelMemberRole {
+	p := new(ChannelMemberRole)
+	*p = x
+	return p
+}
+
+func (x ChannelMemberRole) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ChannelMemberRole) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[4].Descriptor()
+}
+
+func (ChannelMemberRole) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[4]
+}
+
+func (x ChannelMemberRole) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ChannelMemberRole.Descriptor instead.
+func (ChannelMemberRole) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{4}
+}
+
+// MessageSearchSort controls the server-side search ordering.
+type MessageSearchSort int32
+
+const (
+	// Sort is omitted; servers should use relevance.
+	MessageSearchSort_MESSAGE_SEARCH_SORT_UNSPECIFIED MessageSearchSort = 0
+	// Best ranked match first.
+	MessageSearchSort_MESSAGE_SEARCH_SORT_RELEVANCE MessageSearchSort = 1
+	// Most recent matching message first.
+	MessageSearchSort_MESSAGE_SEARCH_SORT_RECENT MessageSearchSort = 2
+)
+
+// Enum value maps for MessageSearchSort.
+var (
+	MessageSearchSort_name = map[int32]string{
+		0: "MESSAGE_SEARCH_SORT_UNSPECIFIED",
+		1: "MESSAGE_SEARCH_SORT_RELEVANCE",
+		2: "MESSAGE_SEARCH_SORT_RECENT",
+	}
+	MessageSearchSort_value = map[string]int32{
+		"MESSAGE_SEARCH_SORT_UNSPECIFIED": 0,
+		"MESSAGE_SEARCH_SORT_RELEVANCE":   1,
+		"MESSAGE_SEARCH_SORT_RECENT":      2,
+	}
+)
+
+func (x MessageSearchSort) Enum() *MessageSearchSort {
+	p := new(MessageSearchSort)
+	*p = x
+	return p
+}
+
+func (x MessageSearchSort) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MessageSearchSort) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[5].Descriptor()
+}
+
+func (MessageSearchSort) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[5]
+}
+
+func (x MessageSearchSort) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MessageSearchSort.Descriptor instead.
+func (MessageSearchSort) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{5}
+}
+
 type ChannelRecord struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Target      string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
@@ -224,9 +389,12 @@ type ChannelRecord struct {
 	Enabled               bool   `protobuf:"varint,5,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	InteractionEndpointId string `protobuf:"bytes,6,opt,name=interaction_endpoint_id,json=interactionEndpointId,proto3" json:"interaction_endpoint_id,omitempty"`
 	// Open source taxonomy that mirrors InteractionEndpoint.kind when known.
-	SourceKind    string        `protobuf:"bytes,7,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
-	ExternalId    string        `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
-	Capabilities  []*Capability `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	SourceKind    string            `protobuf:"bytes,7,opt,name=source_kind,json=sourceKind,proto3" json:"source_kind,omitempty"`
+	ExternalId    string            `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	Capabilities  []*Capability     `protobuf:"bytes,9,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	Visibility    ChannelVisibility `protobuf:"varint,10,opt,name=visibility,proto3,enum=nekode.daemon.v1.ChannelVisibility" json:"visibility,omitempty"`
+	Joined        bool              `protobuf:"varint,11,opt,name=joined,proto3" json:"joined,omitempty"`
+	MemberCount   uint32            `protobuf:"varint,12,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -324,6 +492,95 @@ func (x *ChannelRecord) GetCapabilities() []*Capability {
 	return nil
 }
 
+func (x *ChannelRecord) GetVisibility() ChannelVisibility {
+	if x != nil {
+		return x.Visibility
+	}
+	return ChannelVisibility_CHANNEL_VISIBILITY_UNSPECIFIED
+}
+
+func (x *ChannelRecord) GetJoined() bool {
+	if x != nil {
+		return x.Joined
+	}
+	return false
+}
+
+func (x *ChannelRecord) GetMemberCount() uint32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
+}
+
+type ChannelMemberRecord struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Target         string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	Member         *Actor                 `protobuf:"bytes,2,opt,name=member,proto3" json:"member,omitempty"`
+	Role           ChannelMemberRole      `protobuf:"varint,3,opt,name=role,proto3,enum=nekode.daemon.v1.ChannelMemberRole" json:"role,omitempty"`
+	JoinedTimeUnix int64                  `protobuf:"varint,4,opt,name=joined_time_unix,json=joinedTimeUnix,proto3" json:"joined_time_unix,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ChannelMemberRecord) Reset() {
+	*x = ChannelMemberRecord{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelMemberRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelMemberRecord) ProtoMessage() {}
+
+func (x *ChannelMemberRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelMemberRecord.ProtoReflect.Descriptor instead.
+func (*ChannelMemberRecord) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ChannelMemberRecord) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *ChannelMemberRecord) GetMember() *Actor {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
+func (x *ChannelMemberRecord) GetRole() ChannelMemberRole {
+	if x != nil {
+		return x.Role
+	}
+	return ChannelMemberRole_CHANNEL_MEMBER_ROLE_UNSPECIFIED
+}
+
+func (x *ChannelMemberRecord) GetJoinedTimeUnix() int64 {
+	if x != nil {
+		return x.JoinedTimeUnix
+	}
+	return 0
+}
+
 type InteractionEndpoint struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	EndpointId string                 `protobuf:"bytes,1,opt,name=endpoint_id,json=endpointId,proto3" json:"endpoint_id,omitempty"`
@@ -346,7 +603,7 @@ type InteractionEndpoint struct {
 
 func (x *InteractionEndpoint) Reset() {
 	*x = InteractionEndpoint{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[1]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -358,7 +615,7 @@ func (x *InteractionEndpoint) String() string {
 func (*InteractionEndpoint) ProtoMessage() {}
 
 func (x *InteractionEndpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[1]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -371,7 +628,7 @@ func (x *InteractionEndpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InteractionEndpoint.ProtoReflect.Descriptor instead.
 func (*InteractionEndpoint) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{1}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *InteractionEndpoint) GetEndpointId() string {
@@ -454,7 +711,7 @@ type ListInteractionEndpointsRequest struct {
 
 func (x *ListInteractionEndpointsRequest) Reset() {
 	*x = ListInteractionEndpointsRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[2]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +723,7 @@ func (x *ListInteractionEndpointsRequest) String() string {
 func (*ListInteractionEndpointsRequest) ProtoMessage() {}
 
 func (x *ListInteractionEndpointsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[2]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +736,7 @@ func (x *ListInteractionEndpointsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInteractionEndpointsRequest.ProtoReflect.Descriptor instead.
 func (*ListInteractionEndpointsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{2}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListInteractionEndpointsRequest) GetLimit() uint32 {
@@ -506,7 +763,7 @@ type ListInteractionEndpointsResponse struct {
 
 func (x *ListInteractionEndpointsResponse) Reset() {
 	*x = ListInteractionEndpointsResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[3]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -518,7 +775,7 @@ func (x *ListInteractionEndpointsResponse) String() string {
 func (*ListInteractionEndpointsResponse) ProtoMessage() {}
 
 func (x *ListInteractionEndpointsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[3]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -531,7 +788,7 @@ func (x *ListInteractionEndpointsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInteractionEndpointsResponse.ProtoReflect.Descriptor instead.
 func (*ListInteractionEndpointsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{3}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListInteractionEndpointsResponse) GetEndpoints() []*InteractionEndpoint {
@@ -549,16 +806,18 @@ func (x *ListInteractionEndpointsResponse) GetNextCursor() *EventCursor {
 }
 
 type ListChannelsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        *EventCursor           `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Limit          uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor         *EventCursor           `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	IncludePrivate bool                   `protobuf:"varint,3,opt,name=include_private,json=includePrivate,proto3" json:"include_private,omitempty"`
+	JoinedOnly     bool                   `protobuf:"varint,4,opt,name=joined_only,json=joinedOnly,proto3" json:"joined_only,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListChannelsRequest) Reset() {
 	*x = ListChannelsRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -570,7 +829,7 @@ func (x *ListChannelsRequest) String() string {
 func (*ListChannelsRequest) ProtoMessage() {}
 
 func (x *ListChannelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[4]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -583,7 +842,7 @@ func (x *ListChannelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChannelsRequest.ProtoReflect.Descriptor instead.
 func (*ListChannelsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{4}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ListChannelsRequest) GetLimit() uint32 {
@@ -600,6 +859,20 @@ func (x *ListChannelsRequest) GetCursor() *EventCursor {
 	return nil
 }
 
+func (x *ListChannelsRequest) GetIncludePrivate() bool {
+	if x != nil {
+		return x.IncludePrivate
+	}
+	return false
+}
+
+func (x *ListChannelsRequest) GetJoinedOnly() bool {
+	if x != nil {
+		return x.JoinedOnly
+	}
+	return false
+}
+
 type ListChannelsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Channels      []*ChannelRecord       `protobuf:"bytes,1,rep,name=channels,proto3" json:"channels,omitempty"`
@@ -610,7 +883,7 @@ type ListChannelsResponse struct {
 
 func (x *ListChannelsResponse) Reset() {
 	*x = ListChannelsResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -622,7 +895,7 @@ func (x *ListChannelsResponse) String() string {
 func (*ListChannelsResponse) ProtoMessage() {}
 
 func (x *ListChannelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[5]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -635,7 +908,7 @@ func (x *ListChannelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListChannelsResponse.ProtoReflect.Descriptor instead.
 func (*ListChannelsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{5}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListChannelsResponse) GetChannels() []*ChannelRecord {
@@ -646,6 +919,118 @@ func (x *ListChannelsResponse) GetChannels() []*ChannelRecord {
 }
 
 func (x *ListChannelsResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
+type ListChannelMembersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Target        string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor           `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChannelMembersRequest) Reset() {
+	*x = ListChannelMembersRequest{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChannelMembersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChannelMembersRequest) ProtoMessage() {}
+
+func (x *ListChannelMembersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChannelMembersRequest.ProtoReflect.Descriptor instead.
+func (*ListChannelMembersRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListChannelMembersRequest) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *ListChannelMembersRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListChannelMembersRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+type ListChannelMembersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Members       []*ChannelMemberRecord `protobuf:"bytes,1,rep,name=members,proto3" json:"members,omitempty"`
+	NextCursor    *EventCursor           `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChannelMembersResponse) Reset() {
+	*x = ListChannelMembersResponse{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChannelMembersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChannelMembersResponse) ProtoMessage() {}
+
+func (x *ListChannelMembersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChannelMembersResponse.ProtoReflect.Descriptor instead.
+func (*ListChannelMembersResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListChannelMembersResponse) GetMembers() []*ChannelMemberRecord {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+func (x *ListChannelMembersResponse) GetNextCursor() *EventCursor {
 	if x != nil {
 		return x.NextCursor
 	}
@@ -669,7 +1054,7 @@ type ThreadRecord struct {
 
 func (x *ThreadRecord) Reset() {
 	*x = ThreadRecord{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -681,7 +1066,7 @@ func (x *ThreadRecord) String() string {
 func (*ThreadRecord) ProtoMessage() {}
 
 func (x *ThreadRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[6]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -694,7 +1079,7 @@ func (x *ThreadRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ThreadRecord.ProtoReflect.Descriptor instead.
 func (*ThreadRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{6}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ThreadRecord) GetTarget() string {
@@ -771,7 +1156,7 @@ type ListThreadsRequest struct {
 
 func (x *ListThreadsRequest) Reset() {
 	*x = ListThreadsRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -783,7 +1168,7 @@ func (x *ListThreadsRequest) String() string {
 func (*ListThreadsRequest) ProtoMessage() {}
 
 func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[7]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -796,7 +1181,7 @@ func (x *ListThreadsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListThreadsRequest.ProtoReflect.Descriptor instead.
 func (*ListThreadsRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{7}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListThreadsRequest) GetTargetPrefix() string {
@@ -830,7 +1215,7 @@ type ListThreadsResponse struct {
 
 func (x *ListThreadsResponse) Reset() {
 	*x = ListThreadsResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[8]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -842,7 +1227,7 @@ func (x *ListThreadsResponse) String() string {
 func (*ListThreadsResponse) ProtoMessage() {}
 
 func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[8]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -855,7 +1240,7 @@ func (x *ListThreadsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListThreadsResponse.ProtoReflect.Descriptor instead.
 func (*ListThreadsResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{8}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListThreadsResponse) GetThreads() []*ThreadRecord {
@@ -881,7 +1266,7 @@ type GetThreadRequest struct {
 
 func (x *GetThreadRequest) Reset() {
 	*x = GetThreadRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[9]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -893,7 +1278,7 @@ func (x *GetThreadRequest) String() string {
 func (*GetThreadRequest) ProtoMessage() {}
 
 func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[9]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -906,7 +1291,7 @@ func (x *GetThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetThreadRequest.ProtoReflect.Descriptor instead.
 func (*GetThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{9}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetThreadRequest) GetTarget() string {
@@ -925,7 +1310,7 @@ type GetThreadResponse struct {
 
 func (x *GetThreadResponse) Reset() {
 	*x = GetThreadResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[10]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -937,7 +1322,7 @@ func (x *GetThreadResponse) String() string {
 func (*GetThreadResponse) ProtoMessage() {}
 
 func (x *GetThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[10]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -950,7 +1335,7 @@ func (x *GetThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetThreadResponse.ProtoReflect.Descriptor instead.
 func (*GetThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{10}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetThreadResponse) GetThread() *ThreadRecord {
@@ -987,7 +1372,7 @@ type CollaborationMessage struct {
 
 func (x *CollaborationMessage) Reset() {
 	*x = CollaborationMessage{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[11]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -999,7 +1384,7 @@ func (x *CollaborationMessage) String() string {
 func (*CollaborationMessage) ProtoMessage() {}
 
 func (x *CollaborationMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[11]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1012,7 +1397,7 @@ func (x *CollaborationMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CollaborationMessage.ProtoReflect.Descriptor instead.
 func (*CollaborationMessage) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{11}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CollaborationMessage) GetMessageId() string {
@@ -1145,7 +1530,7 @@ type ReadMessagesRequest struct {
 
 func (x *ReadMessagesRequest) Reset() {
 	*x = ReadMessagesRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[12]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1157,7 +1542,7 @@ func (x *ReadMessagesRequest) String() string {
 func (*ReadMessagesRequest) ProtoMessage() {}
 
 func (x *ReadMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[12]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1170,7 +1555,7 @@ func (x *ReadMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ReadMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{12}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ReadMessagesRequest) GetTarget() string {
@@ -1204,7 +1589,7 @@ type ReadMessagesResponse struct {
 
 func (x *ReadMessagesResponse) Reset() {
 	*x = ReadMessagesResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[13]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1216,7 +1601,7 @@ func (x *ReadMessagesResponse) String() string {
 func (*ReadMessagesResponse) ProtoMessage() {}
 
 func (x *ReadMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[13]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1229,7 +1614,7 @@ func (x *ReadMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ReadMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{13}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ReadMessagesResponse) GetMessages() []*CollaborationMessage {
@@ -1240,6 +1625,152 @@ func (x *ReadMessagesResponse) GetMessages() []*CollaborationMessage {
 }
 
 func (x *ReadMessagesResponse) GetNextCursor() *EventCursor {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
+type SearchMessagesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Query string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// Optional target scope. Empty means all visible targets for the caller.
+	Target string `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	// Sender handle such as @alice. Raw internal ids must use sender instead.
+	SenderHandle  string            `protobuf:"bytes,3,opt,name=sender_handle,json=senderHandle,proto3" json:"sender_handle,omitempty"`
+	Sender        *Actor            `protobuf:"bytes,4,opt,name=sender,proto3" json:"sender,omitempty"`
+	Sort          MessageSearchSort `protobuf:"varint,5,opt,name=sort,proto3,enum=nekode.daemon.v1.MessageSearchSort" json:"sort,omitempty"`
+	Limit         uint32            `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        *EventCursor      `protobuf:"bytes,7,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchMessagesRequest) Reset() {
+	*x = SearchMessagesRequest{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchMessagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchMessagesRequest) ProtoMessage() {}
+
+func (x *SearchMessagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchMessagesRequest.ProtoReflect.Descriptor instead.
+func (*SearchMessagesRequest) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SearchMessagesRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *SearchMessagesRequest) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *SearchMessagesRequest) GetSenderHandle() string {
+	if x != nil {
+		return x.SenderHandle
+	}
+	return ""
+}
+
+func (x *SearchMessagesRequest) GetSender() *Actor {
+	if x != nil {
+		return x.Sender
+	}
+	return nil
+}
+
+func (x *SearchMessagesRequest) GetSort() MessageSearchSort {
+	if x != nil {
+		return x.Sort
+	}
+	return MessageSearchSort_MESSAGE_SEARCH_SORT_UNSPECIFIED
+}
+
+func (x *SearchMessagesRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *SearchMessagesRequest) GetCursor() *EventCursor {
+	if x != nil {
+		return x.Cursor
+	}
+	return nil
+}
+
+type SearchMessagesResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Messages      []*CollaborationMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	NextCursor    *EventCursor            `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SearchMessagesResponse) Reset() {
+	*x = SearchMessagesResponse{}
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SearchMessagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SearchMessagesResponse) ProtoMessage() {}
+
+func (x *SearchMessagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SearchMessagesResponse.ProtoReflect.Descriptor instead.
+func (*SearchMessagesResponse) Descriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *SearchMessagesResponse) GetMessages() []*CollaborationMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+func (x *SearchMessagesResponse) GetNextCursor() *EventCursor {
 	if x != nil {
 		return x.NextCursor
 	}
@@ -1271,7 +1802,7 @@ type SendMessageRequest struct {
 
 func (x *SendMessageRequest) Reset() {
 	*x = SendMessageRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[14]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1283,7 +1814,7 @@ func (x *SendMessageRequest) String() string {
 func (*SendMessageRequest) ProtoMessage() {}
 
 func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[14]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1296,7 +1827,7 @@ func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{14}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SendMessageRequest) GetTarget() string {
@@ -1414,7 +1945,7 @@ type SendMessageResponse struct {
 
 func (x *SendMessageResponse) Reset() {
 	*x = SendMessageResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[15]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1426,7 +1957,7 @@ func (x *SendMessageResponse) String() string {
 func (*SendMessageResponse) ProtoMessage() {}
 
 func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[15]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1439,7 +1970,7 @@ func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{15}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SendMessageResponse) GetAccepted() bool {
@@ -1472,7 +2003,7 @@ type SavedMessageRecord struct {
 
 func (x *SavedMessageRecord) Reset() {
 	*x = SavedMessageRecord{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[16]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1484,7 +2015,7 @@ func (x *SavedMessageRecord) String() string {
 func (*SavedMessageRecord) ProtoMessage() {}
 
 func (x *SavedMessageRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[16]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1497,7 +2028,7 @@ func (x *SavedMessageRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SavedMessageRecord.ProtoReflect.Descriptor instead.
 func (*SavedMessageRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{16}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *SavedMessageRecord) GetSavedMessageId() string {
@@ -1571,7 +2102,7 @@ type SaveMessageRequest struct {
 
 func (x *SaveMessageRequest) Reset() {
 	*x = SaveMessageRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[17]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1583,7 +2114,7 @@ func (x *SaveMessageRequest) String() string {
 func (*SaveMessageRequest) ProtoMessage() {}
 
 func (x *SaveMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[17]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1596,7 +2127,7 @@ func (x *SaveMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveMessageRequest.ProtoReflect.Descriptor instead.
 func (*SaveMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{17}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SaveMessageRequest) GetTarget() string {
@@ -1658,7 +2189,7 @@ type SaveMessageResponse struct {
 
 func (x *SaveMessageResponse) Reset() {
 	*x = SaveMessageResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[18]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1670,7 +2201,7 @@ func (x *SaveMessageResponse) String() string {
 func (*SaveMessageResponse) ProtoMessage() {}
 
 func (x *SaveMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[18]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1683,7 +2214,7 @@ func (x *SaveMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveMessageResponse.ProtoReflect.Descriptor instead.
 func (*SaveMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{18}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SaveMessageResponse) GetSaved() bool {
@@ -1715,7 +2246,7 @@ type UnsaveMessageRequest struct {
 
 func (x *UnsaveMessageRequest) Reset() {
 	*x = UnsaveMessageRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[19]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1727,7 +2258,7 @@ func (x *UnsaveMessageRequest) String() string {
 func (*UnsaveMessageRequest) ProtoMessage() {}
 
 func (x *UnsaveMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[19]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1740,7 +2271,7 @@ func (x *UnsaveMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnsaveMessageRequest.ProtoReflect.Descriptor instead.
 func (*UnsaveMessageRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{19}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *UnsaveMessageRequest) GetTarget() string {
@@ -1802,7 +2333,7 @@ type UnsaveMessageResponse struct {
 
 func (x *UnsaveMessageResponse) Reset() {
 	*x = UnsaveMessageResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[20]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1814,7 +2345,7 @@ func (x *UnsaveMessageResponse) String() string {
 func (*UnsaveMessageResponse) ProtoMessage() {}
 
 func (x *UnsaveMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[20]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1827,7 +2358,7 @@ func (x *UnsaveMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnsaveMessageResponse.ProtoReflect.Descriptor instead.
 func (*UnsaveMessageResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{20}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *UnsaveMessageResponse) GetRemoved() bool {
@@ -1857,7 +2388,7 @@ type ListSavedMessagesRequest struct {
 
 func (x *ListSavedMessagesRequest) Reset() {
 	*x = ListSavedMessagesRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[21]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1869,7 +2400,7 @@ func (x *ListSavedMessagesRequest) String() string {
 func (*ListSavedMessagesRequest) ProtoMessage() {}
 
 func (x *ListSavedMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[21]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1882,7 +2413,7 @@ func (x *ListSavedMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSavedMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListSavedMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{21}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListSavedMessagesRequest) GetTarget() string {
@@ -1930,7 +2461,7 @@ type ListSavedMessagesResponse struct {
 
 func (x *ListSavedMessagesResponse) Reset() {
 	*x = ListSavedMessagesResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[22]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1942,7 +2473,7 @@ func (x *ListSavedMessagesResponse) String() string {
 func (*ListSavedMessagesResponse) ProtoMessage() {}
 
 func (x *ListSavedMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[22]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1955,7 +2486,7 @@ func (x *ListSavedMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSavedMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListSavedMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{22}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListSavedMessagesResponse) GetSavedMessages() []*SavedMessageRecord {
@@ -1985,7 +2516,7 @@ type FollowThreadRequest struct {
 
 func (x *FollowThreadRequest) Reset() {
 	*x = FollowThreadRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[23]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1997,7 +2528,7 @@ func (x *FollowThreadRequest) String() string {
 func (*FollowThreadRequest) ProtoMessage() {}
 
 func (x *FollowThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[23]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2010,7 +2541,7 @@ func (x *FollowThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FollowThreadRequest.ProtoReflect.Descriptor instead.
 func (*FollowThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{23}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *FollowThreadRequest) GetTarget() string {
@@ -2057,7 +2588,7 @@ type FollowThreadResponse struct {
 
 func (x *FollowThreadResponse) Reset() {
 	*x = FollowThreadResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[24]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2069,7 +2600,7 @@ func (x *FollowThreadResponse) String() string {
 func (*FollowThreadResponse) ProtoMessage() {}
 
 func (x *FollowThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[24]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2082,7 +2613,7 @@ func (x *FollowThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FollowThreadResponse.ProtoReflect.Descriptor instead.
 func (*FollowThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{24}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *FollowThreadResponse) GetAccepted() bool {
@@ -2105,7 +2636,7 @@ type UnfollowThreadRequest struct {
 
 func (x *UnfollowThreadRequest) Reset() {
 	*x = UnfollowThreadRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[25]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2117,7 +2648,7 @@ func (x *UnfollowThreadRequest) String() string {
 func (*UnfollowThreadRequest) ProtoMessage() {}
 
 func (x *UnfollowThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[25]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2130,7 +2661,7 @@ func (x *UnfollowThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnfollowThreadRequest.ProtoReflect.Descriptor instead.
 func (*UnfollowThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{25}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *UnfollowThreadRequest) GetTarget() string {
@@ -2177,7 +2708,7 @@ type UnfollowThreadResponse struct {
 
 func (x *UnfollowThreadResponse) Reset() {
 	*x = UnfollowThreadResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[26]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2189,7 +2720,7 @@ func (x *UnfollowThreadResponse) String() string {
 func (*UnfollowThreadResponse) ProtoMessage() {}
 
 func (x *UnfollowThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[26]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2202,7 +2733,7 @@ func (x *UnfollowThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnfollowThreadResponse.ProtoReflect.Descriptor instead.
 func (*UnfollowThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{26}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *UnfollowThreadResponse) GetAccepted() bool {
@@ -2234,7 +2765,7 @@ type OutboundDeliveryRecord struct {
 
 func (x *OutboundDeliveryRecord) Reset() {
 	*x = OutboundDeliveryRecord{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[27]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2246,7 +2777,7 @@ func (x *OutboundDeliveryRecord) String() string {
 func (*OutboundDeliveryRecord) ProtoMessage() {}
 
 func (x *OutboundDeliveryRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[27]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2259,7 +2790,7 @@ func (x *OutboundDeliveryRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutboundDeliveryRecord.ProtoReflect.Descriptor instead.
 func (*OutboundDeliveryRecord) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{27}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *OutboundDeliveryRecord) GetDeliveryId() string {
@@ -2360,7 +2891,7 @@ type ListOutboundDeliveriesRequest struct {
 
 func (x *ListOutboundDeliveriesRequest) Reset() {
 	*x = ListOutboundDeliveriesRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[28]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2372,7 +2903,7 @@ func (x *ListOutboundDeliveriesRequest) String() string {
 func (*ListOutboundDeliveriesRequest) ProtoMessage() {}
 
 func (x *ListOutboundDeliveriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[28]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2385,7 +2916,7 @@ func (x *ListOutboundDeliveriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOutboundDeliveriesRequest.ProtoReflect.Descriptor instead.
 func (*ListOutboundDeliveriesRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{28}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListOutboundDeliveriesRequest) GetTarget() string {
@@ -2440,7 +2971,7 @@ type ListOutboundDeliveriesResponse struct {
 
 func (x *ListOutboundDeliveriesResponse) Reset() {
 	*x = ListOutboundDeliveriesResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[29]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2452,7 +2983,7 @@ func (x *ListOutboundDeliveriesResponse) String() string {
 func (*ListOutboundDeliveriesResponse) ProtoMessage() {}
 
 func (x *ListOutboundDeliveriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[29]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2465,7 +2996,7 @@ func (x *ListOutboundDeliveriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOutboundDeliveriesResponse.ProtoReflect.Descriptor instead.
 func (*ListOutboundDeliveriesResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{29}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListOutboundDeliveriesResponse) GetDeliveries() []*OutboundDeliveryRecord {
@@ -2494,7 +3025,7 @@ type RetryOutboundDeliveryRequest struct {
 
 func (x *RetryOutboundDeliveryRequest) Reset() {
 	*x = RetryOutboundDeliveryRequest{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[30]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2506,7 +3037,7 @@ func (x *RetryOutboundDeliveryRequest) String() string {
 func (*RetryOutboundDeliveryRequest) ProtoMessage() {}
 
 func (x *RetryOutboundDeliveryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[30]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2519,7 +3050,7 @@ func (x *RetryOutboundDeliveryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryOutboundDeliveryRequest.ProtoReflect.Descriptor instead.
 func (*RetryOutboundDeliveryRequest) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{30}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *RetryOutboundDeliveryRequest) GetDeliveryId() string {
@@ -2559,7 +3090,7 @@ type RetryOutboundDeliveryResponse struct {
 
 func (x *RetryOutboundDeliveryResponse) Reset() {
 	*x = RetryOutboundDeliveryResponse{}
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[31]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2571,7 +3102,7 @@ func (x *RetryOutboundDeliveryResponse) String() string {
 func (*RetryOutboundDeliveryResponse) ProtoMessage() {}
 
 func (x *RetryOutboundDeliveryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[31]
+	mi := &file_nekode_daemon_v1_collaboration_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2584,7 +3115,7 @@ func (x *RetryOutboundDeliveryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryOutboundDeliveryResponse.ProtoReflect.Descriptor instead.
 func (*RetryOutboundDeliveryResponse) Descriptor() ([]byte, []int) {
-	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{31}
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RetryOutboundDeliveryResponse) GetDelivery() *OutboundDeliveryRecord {
@@ -2598,7 +3129,7 @@ var File_nekode_daemon_v1_collaboration_proto protoreflect.FileDescriptor
 
 const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\n" +
-	"$nekode/daemon/v1/collaboration.proto\x12\x10nekode.daemon.v1\x1a!nekode/daemon/v1/attachment.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xea\x02\n" +
+	"$nekode/daemon/v1/collaboration.proto\x12\x10nekode.daemon.v1\x1a!nekode/daemon/v1/attachment.proto\x1a\x1dnekode/daemon/v1/common.proto\"\xea\x03\n" +
 	"\rChannelRecord\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x1d\n" +
 	"\n" +
@@ -2611,7 +3142,18 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"sourceKind\x12\x1f\n" +
 	"\vexternal_id\x18\b \x01(\tR\n" +
 	"externalId\x12@\n" +
-	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilitiesJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x03\n" +
+	"\fcapabilities\x18\t \x03(\v2\x1c.nekode.daemon.v1.CapabilityR\fcapabilities\x12C\n" +
+	"\n" +
+	"visibility\x18\n" +
+	" \x01(\x0e2#.nekode.daemon.v1.ChannelVisibilityR\n" +
+	"visibility\x12\x16\n" +
+	"\x06joined\x18\v \x01(\bR\x06joined\x12!\n" +
+	"\fmember_count\x18\f \x01(\rR\vmemberCountJ\x06\b\xe8\a\x10\xd0\x0f\"\xc9\x01\n" +
+	"\x13ChannelMemberRecord\x12\x16\n" +
+	"\x06target\x18\x01 \x01(\tR\x06target\x12/\n" +
+	"\x06member\x18\x02 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06member\x127\n" +
+	"\x04role\x18\x03 \x01(\x0e2#.nekode.daemon.v1.ChannelMemberRoleR\x04role\x12(\n" +
+	"\x10joined_time_unix\x18\x04 \x01(\x03R\x0ejoinedTimeUnixJ\x06\b\xe8\a\x10\xd0\x0f\"\xae\x03\n" +
 	"\x13InteractionEndpoint\x12\x1f\n" +
 	"\vendpoint_id\x18\x01 \x01(\tR\n" +
 	"endpointId\x12\x12\n" +
@@ -2632,12 +3174,23 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	" ListInteractionEndpointsResponse\x12C\n" +
 	"\tendpoints\x18\x01 \x03(\v2%.nekode.daemon.v1.InteractionEndpointR\tendpoints\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"b\n" +
+	"nextCursor\"\xac\x01\n" +
 	"\x13ListChannelsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\x125\n" +
-	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x93\x01\n" +
+	"\x06cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\x12'\n" +
+	"\x0finclude_private\x18\x03 \x01(\bR\x0eincludePrivate\x12\x1f\n" +
+	"\vjoined_only\x18\x04 \x01(\bR\n" +
+	"joinedOnly\"\x93\x01\n" +
 	"\x14ListChannelsResponse\x12;\n" +
 	"\bchannels\x18\x01 \x03(\v2\x1f.nekode.daemon.v1.ChannelRecordR\bchannels\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\x80\x01\n" +
+	"\x19ListChannelMembersRequest\x12\x16\n" +
+	"\x06target\x18\x01 \x01(\tR\x06target\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\x03 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x9d\x01\n" +
+	"\x1aListChannelMembersResponse\x12?\n" +
+	"\amembers\x18\x01 \x03(\v2%.nekode.daemon.v1.ChannelMemberRecordR\amembers\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
 	"nextCursor\"\xb3\x02\n" +
 	"\fThreadRecord\x12\x16\n" +
@@ -2692,7 +3245,19 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x14ReadMessagesResponse\x12B\n" +
 	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xd0\x05\n" +
+	"nextCursorJ\x04\b\x03\x10\x04R\x0fnext_page_token\"\xa1\x02\n" +
+	"\x15SearchMessagesRequest\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\x12\x16\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\x12#\n" +
+	"\rsender_handle\x18\x03 \x01(\tR\fsenderHandle\x12/\n" +
+	"\x06sender\x18\x04 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06sender\x127\n" +
+	"\x04sort\x18\x05 \x01(\x0e2#.nekode.daemon.v1.MessageSearchSortR\x04sort\x12\x14\n" +
+	"\x05limit\x18\x06 \x01(\rR\x05limit\x125\n" +
+	"\x06cursor\x18\a \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\x06cursor\"\x9c\x01\n" +
+	"\x16SearchMessagesResponse\x12B\n" +
+	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\x12>\n" +
+	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
+	"nextCursor\"\xd0\x05\n" +
 	"\x12SendMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
@@ -2840,7 +3405,20 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\"OUTBOUND_DELIVERY_STATUS_DELIVERED\x10\x02\x12#\n" +
 	"\x1fOUTBOUND_DELIVERY_STATUS_FAILED\x10\x03\x12%\n" +
 	"!OUTBOUND_DELIVERY_STATUS_RETRYING\x10\x04\x12%\n" +
-	"!OUTBOUND_DELIVERY_STATUS_CANCELED\x10\x05B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"!OUTBOUND_DELIVERY_STATUS_CANCELED\x10\x05*v\n" +
+	"\x11ChannelVisibility\x12\"\n" +
+	"\x1eCHANNEL_VISIBILITY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19CHANNEL_VISIBILITY_PUBLIC\x10\x01\x12\x1e\n" +
+	"\x1aCHANNEL_VISIBILITY_PRIVATE\x10\x02*\x97\x01\n" +
+	"\x11ChannelMemberRole\x12#\n" +
+	"\x1fCHANNEL_MEMBER_ROLE_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aCHANNEL_MEMBER_ROLE_MEMBER\x10\x01\x12\x1d\n" +
+	"\x19CHANNEL_MEMBER_ROLE_ADMIN\x10\x02\x12\x1e\n" +
+	"\x1aCHANNEL_MEMBER_ROLE_VIEWER\x10\x03*{\n" +
+	"\x11MessageSearchSort\x12#\n" +
+	"\x1fMESSAGE_SEARCH_SORT_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dMESSAGE_SEARCH_SORT_RELEVANCE\x10\x01\x12\x1e\n" +
+	"\x1aMESSAGE_SEARCH_SORT_RECENT\x10\x02B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_collaboration_proto_rawDescOnce sync.Once
@@ -2854,95 +3432,114 @@ func file_nekode_daemon_v1_collaboration_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_collaboration_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_collaboration_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_nekode_daemon_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_nekode_daemon_v1_collaboration_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_nekode_daemon_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
 	(EndpointAuthMode)(0),                    // 0: nekode.daemon.v1.EndpointAuthMode
 	(OutboundPolicy)(0),                      // 1: nekode.daemon.v1.OutboundPolicy
 	(OutboundDeliveryStatus)(0),              // 2: nekode.daemon.v1.OutboundDeliveryStatus
-	(*ChannelRecord)(nil),                    // 3: nekode.daemon.v1.ChannelRecord
-	(*InteractionEndpoint)(nil),              // 4: nekode.daemon.v1.InteractionEndpoint
-	(*ListInteractionEndpointsRequest)(nil),  // 5: nekode.daemon.v1.ListInteractionEndpointsRequest
-	(*ListInteractionEndpointsResponse)(nil), // 6: nekode.daemon.v1.ListInteractionEndpointsResponse
-	(*ListChannelsRequest)(nil),              // 7: nekode.daemon.v1.ListChannelsRequest
-	(*ListChannelsResponse)(nil),             // 8: nekode.daemon.v1.ListChannelsResponse
-	(*ThreadRecord)(nil),                     // 9: nekode.daemon.v1.ThreadRecord
-	(*ListThreadsRequest)(nil),               // 10: nekode.daemon.v1.ListThreadsRequest
-	(*ListThreadsResponse)(nil),              // 11: nekode.daemon.v1.ListThreadsResponse
-	(*GetThreadRequest)(nil),                 // 12: nekode.daemon.v1.GetThreadRequest
-	(*GetThreadResponse)(nil),                // 13: nekode.daemon.v1.GetThreadResponse
-	(*CollaborationMessage)(nil),             // 14: nekode.daemon.v1.CollaborationMessage
-	(*ReadMessagesRequest)(nil),              // 15: nekode.daemon.v1.ReadMessagesRequest
-	(*ReadMessagesResponse)(nil),             // 16: nekode.daemon.v1.ReadMessagesResponse
-	(*SendMessageRequest)(nil),               // 17: nekode.daemon.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),              // 18: nekode.daemon.v1.SendMessageResponse
-	(*SavedMessageRecord)(nil),               // 19: nekode.daemon.v1.SavedMessageRecord
-	(*SaveMessageRequest)(nil),               // 20: nekode.daemon.v1.SaveMessageRequest
-	(*SaveMessageResponse)(nil),              // 21: nekode.daemon.v1.SaveMessageResponse
-	(*UnsaveMessageRequest)(nil),             // 22: nekode.daemon.v1.UnsaveMessageRequest
-	(*UnsaveMessageResponse)(nil),            // 23: nekode.daemon.v1.UnsaveMessageResponse
-	(*ListSavedMessagesRequest)(nil),         // 24: nekode.daemon.v1.ListSavedMessagesRequest
-	(*ListSavedMessagesResponse)(nil),        // 25: nekode.daemon.v1.ListSavedMessagesResponse
-	(*FollowThreadRequest)(nil),              // 26: nekode.daemon.v1.FollowThreadRequest
-	(*FollowThreadResponse)(nil),             // 27: nekode.daemon.v1.FollowThreadResponse
-	(*UnfollowThreadRequest)(nil),            // 28: nekode.daemon.v1.UnfollowThreadRequest
-	(*UnfollowThreadResponse)(nil),           // 29: nekode.daemon.v1.UnfollowThreadResponse
-	(*OutboundDeliveryRecord)(nil),           // 30: nekode.daemon.v1.OutboundDeliveryRecord
-	(*ListOutboundDeliveriesRequest)(nil),    // 31: nekode.daemon.v1.ListOutboundDeliveriesRequest
-	(*ListOutboundDeliveriesResponse)(nil),   // 32: nekode.daemon.v1.ListOutboundDeliveriesResponse
-	(*RetryOutboundDeliveryRequest)(nil),     // 33: nekode.daemon.v1.RetryOutboundDeliveryRequest
-	(*RetryOutboundDeliveryResponse)(nil),    // 34: nekode.daemon.v1.RetryOutboundDeliveryResponse
-	(*Capability)(nil),                       // 35: nekode.daemon.v1.Capability
-	(*EventCursor)(nil),                      // 36: nekode.daemon.v1.EventCursor
-	(*AttachmentRecord)(nil),                 // 37: nekode.daemon.v1.AttachmentRecord
-	(*Actor)(nil),                            // 38: nekode.daemon.v1.Actor
-	(*RequestContext)(nil),                   // 39: nekode.daemon.v1.RequestContext
+	(ChannelVisibility)(0),                   // 3: nekode.daemon.v1.ChannelVisibility
+	(ChannelMemberRole)(0),                   // 4: nekode.daemon.v1.ChannelMemberRole
+	(MessageSearchSort)(0),                   // 5: nekode.daemon.v1.MessageSearchSort
+	(*ChannelRecord)(nil),                    // 6: nekode.daemon.v1.ChannelRecord
+	(*ChannelMemberRecord)(nil),              // 7: nekode.daemon.v1.ChannelMemberRecord
+	(*InteractionEndpoint)(nil),              // 8: nekode.daemon.v1.InteractionEndpoint
+	(*ListInteractionEndpointsRequest)(nil),  // 9: nekode.daemon.v1.ListInteractionEndpointsRequest
+	(*ListInteractionEndpointsResponse)(nil), // 10: nekode.daemon.v1.ListInteractionEndpointsResponse
+	(*ListChannelsRequest)(nil),              // 11: nekode.daemon.v1.ListChannelsRequest
+	(*ListChannelsResponse)(nil),             // 12: nekode.daemon.v1.ListChannelsResponse
+	(*ListChannelMembersRequest)(nil),        // 13: nekode.daemon.v1.ListChannelMembersRequest
+	(*ListChannelMembersResponse)(nil),       // 14: nekode.daemon.v1.ListChannelMembersResponse
+	(*ThreadRecord)(nil),                     // 15: nekode.daemon.v1.ThreadRecord
+	(*ListThreadsRequest)(nil),               // 16: nekode.daemon.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),              // 17: nekode.daemon.v1.ListThreadsResponse
+	(*GetThreadRequest)(nil),                 // 18: nekode.daemon.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),                // 19: nekode.daemon.v1.GetThreadResponse
+	(*CollaborationMessage)(nil),             // 20: nekode.daemon.v1.CollaborationMessage
+	(*ReadMessagesRequest)(nil),              // 21: nekode.daemon.v1.ReadMessagesRequest
+	(*ReadMessagesResponse)(nil),             // 22: nekode.daemon.v1.ReadMessagesResponse
+	(*SearchMessagesRequest)(nil),            // 23: nekode.daemon.v1.SearchMessagesRequest
+	(*SearchMessagesResponse)(nil),           // 24: nekode.daemon.v1.SearchMessagesResponse
+	(*SendMessageRequest)(nil),               // 25: nekode.daemon.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),              // 26: nekode.daemon.v1.SendMessageResponse
+	(*SavedMessageRecord)(nil),               // 27: nekode.daemon.v1.SavedMessageRecord
+	(*SaveMessageRequest)(nil),               // 28: nekode.daemon.v1.SaveMessageRequest
+	(*SaveMessageResponse)(nil),              // 29: nekode.daemon.v1.SaveMessageResponse
+	(*UnsaveMessageRequest)(nil),             // 30: nekode.daemon.v1.UnsaveMessageRequest
+	(*UnsaveMessageResponse)(nil),            // 31: nekode.daemon.v1.UnsaveMessageResponse
+	(*ListSavedMessagesRequest)(nil),         // 32: nekode.daemon.v1.ListSavedMessagesRequest
+	(*ListSavedMessagesResponse)(nil),        // 33: nekode.daemon.v1.ListSavedMessagesResponse
+	(*FollowThreadRequest)(nil),              // 34: nekode.daemon.v1.FollowThreadRequest
+	(*FollowThreadResponse)(nil),             // 35: nekode.daemon.v1.FollowThreadResponse
+	(*UnfollowThreadRequest)(nil),            // 36: nekode.daemon.v1.UnfollowThreadRequest
+	(*UnfollowThreadResponse)(nil),           // 37: nekode.daemon.v1.UnfollowThreadResponse
+	(*OutboundDeliveryRecord)(nil),           // 38: nekode.daemon.v1.OutboundDeliveryRecord
+	(*ListOutboundDeliveriesRequest)(nil),    // 39: nekode.daemon.v1.ListOutboundDeliveriesRequest
+	(*ListOutboundDeliveriesResponse)(nil),   // 40: nekode.daemon.v1.ListOutboundDeliveriesResponse
+	(*RetryOutboundDeliveryRequest)(nil),     // 41: nekode.daemon.v1.RetryOutboundDeliveryRequest
+	(*RetryOutboundDeliveryResponse)(nil),    // 42: nekode.daemon.v1.RetryOutboundDeliveryResponse
+	(*Capability)(nil),                       // 43: nekode.daemon.v1.Capability
+	(*Actor)(nil),                            // 44: nekode.daemon.v1.Actor
+	(*EventCursor)(nil),                      // 45: nekode.daemon.v1.EventCursor
+	(*AttachmentRecord)(nil),                 // 46: nekode.daemon.v1.AttachmentRecord
+	(*RequestContext)(nil),                   // 47: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_collaboration_proto_depIdxs = []int32{
-	35, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
-	0,  // 1: nekode.daemon.v1.InteractionEndpoint.auth_mode:type_name -> nekode.daemon.v1.EndpointAuthMode
-	35, // 2: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
-	36, // 3: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	4,  // 4: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
-	36, // 5: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 6: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	3,  // 7: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
-	36, // 8: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	36, // 9: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	9,  // 10: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
-	36, // 11: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	9,  // 12: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
-	37, // 13: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
-	38, // 14: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
-	36, // 15: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	14, // 16: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	36, // 17: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	39, // 18: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	1,  // 19: nekode.daemon.v1.SendMessageRequest.outbound_policy:type_name -> nekode.daemon.v1.OutboundPolicy
-	38, // 20: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
-	14, // 21: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	14, // 22: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	39, // 23: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	19, // 24: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	39, // 25: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	19, // 26: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	36, // 27: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	19, // 28: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
-	36, // 29: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	39, // 30: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	39, // 31: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	2,  // 32: nekode.daemon.v1.OutboundDeliveryRecord.status:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
-	2,  // 33: nekode.daemon.v1.ListOutboundDeliveriesRequest.statuses:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
-	36, // 34: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	30, // 35: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	36, // 36: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	39, // 37: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	30, // 38: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	39, // [39:39] is the sub-list for method output_type
-	39, // [39:39] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	43, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
+	3,  // 1: nekode.daemon.v1.ChannelRecord.visibility:type_name -> nekode.daemon.v1.ChannelVisibility
+	44, // 2: nekode.daemon.v1.ChannelMemberRecord.member:type_name -> nekode.daemon.v1.Actor
+	4,  // 3: nekode.daemon.v1.ChannelMemberRecord.role:type_name -> nekode.daemon.v1.ChannelMemberRole
+	0,  // 4: nekode.daemon.v1.InteractionEndpoint.auth_mode:type_name -> nekode.daemon.v1.EndpointAuthMode
+	43, // 5: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
+	45, // 6: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	8,  // 7: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
+	45, // 8: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	45, // 9: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	6,  // 10: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
+	45, // 11: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	45, // 12: nekode.daemon.v1.ListChannelMembersRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	7,  // 13: nekode.daemon.v1.ListChannelMembersResponse.members:type_name -> nekode.daemon.v1.ChannelMemberRecord
+	45, // 14: nekode.daemon.v1.ListChannelMembersResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	45, // 15: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	15, // 16: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
+	45, // 17: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	15, // 18: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
+	46, // 19: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
+	44, // 20: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
+	45, // 21: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	20, // 22: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	45, // 23: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	44, // 24: nekode.daemon.v1.SearchMessagesRequest.sender:type_name -> nekode.daemon.v1.Actor
+	5,  // 25: nekode.daemon.v1.SearchMessagesRequest.sort:type_name -> nekode.daemon.v1.MessageSearchSort
+	45, // 26: nekode.daemon.v1.SearchMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	20, // 27: nekode.daemon.v1.SearchMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	45, // 28: nekode.daemon.v1.SearchMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	47, // 29: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	1,  // 30: nekode.daemon.v1.SendMessageRequest.outbound_policy:type_name -> nekode.daemon.v1.OutboundPolicy
+	44, // 31: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
+	20, // 32: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	20, // 33: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	47, // 34: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	27, // 35: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	47, // 36: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	27, // 37: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	45, // 38: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	27, // 39: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
+	45, // 40: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	47, // 41: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	47, // 42: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	2,  // 43: nekode.daemon.v1.OutboundDeliveryRecord.status:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
+	2,  // 44: nekode.daemon.v1.ListOutboundDeliveriesRequest.statuses:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
+	45, // 45: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	38, // 46: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	45, // 47: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	47, // 48: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	38, // 49: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_collaboration_proto_init() }
@@ -2957,8 +3554,8 @@ func file_nekode_daemon_v1_collaboration_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_collaboration_proto_rawDesc), len(file_nekode_daemon_v1_collaboration_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   32,
+			NumEnums:      6,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
