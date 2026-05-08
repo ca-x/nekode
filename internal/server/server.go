@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -21,8 +22,10 @@ import (
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
+	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/immedia"
 	"github.com/ca-x/nekode/internal/impolicy"
+	"github.com/ca-x/nekode/internal/imtelegram"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
@@ -154,6 +157,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
 	s.mux.HandleFunc("GET /api/im/providers", s.requireAuth(s.handleListIMProviders))
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
+	s.mux.HandleFunc("POST /api/im/telegram/{endpointID}/webhook", s.handleTelegramWebhook)
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
 	s.mux.HandleFunc("PATCH /api/interaction-endpoints/{id}", s.requireAuth(s.handleUpdateInteractionEndpoint))
@@ -472,6 +476,61 @@ func (s *Server) handleGetIMEffectivePolicy(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, policy)
+}
+
+func (s *Server) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
+	endpointID := strings.TrimSpace(r.PathValue("endpointID"))
+	if endpointID == "" {
+		writeError(w, http.StatusBadRequest, "endpointID is required")
+		return
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), endpointID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") || !strings.EqualFold(endpoint.Provider, imadapter.ProviderTelegram) {
+		writeError(w, http.StatusBadRequest, "interaction endpoint is not a Telegram IM endpoint")
+		return
+	}
+	if !endpoint.InboundEnabled {
+		writeError(w, http.StatusForbidden, "interaction endpoint inbound is disabled")
+		return
+	}
+	cfg, err := imtelegram.ConfigFromEndpoint(endpoint)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read telegram webhook failed")
+		return
+	}
+	coord := imcoord.New(s.store, nil)
+	result, err := (imtelegram.Webhook{
+		Config:      cfg,
+		Normalizer:  imadapter.Normalizer{},
+		Coordinator: coord,
+	}).Handle(r.Context(), r.Header, body)
+	if errors.Is(err, imtelegram.ErrUnauthorizedWebhook) {
+		writeError(w, http.StatusUnauthorized, "invalid telegram webhook secret")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":        true,
+		"ignored":   result.Ignored,
+		"reason":    result.Reason,
+		"messageId": result.Message.ID,
+	})
 }
 
 func redactInteractionEndpoint(endpoint storage.InteractionEndpoint) storage.InteractionEndpoint {

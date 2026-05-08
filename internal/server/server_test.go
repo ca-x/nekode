@@ -18,6 +18,7 @@ import (
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/config"
+	"github.com/ca-x/nekode/internal/imtelegram"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/storage"
 )
@@ -509,6 +510,74 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	deleteMissingRoute := doJSON(t, s, http.MethodDelete, "/api/notification-routes/"+targetRouteBody.ID, token, map[string]any{})
 	if deleteMissingRoute.Code != http.StatusNotFound {
 		t.Fatalf("delete missing notification route status = %d body=%s, want 404", deleteMissingRoute.Code, deleteMissingRoute.Body.String())
+	}
+
+	telegramEndpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "telegram",
+		"displayName":     "Telegram Ops",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "secret_token",
+		"configJson":      `{"token":"telegram-token","secret_token":"secret-1","bot_username":"nekode_bot","default_target":"#ops","default_thread_id":"tg-thread","group_mode":"mention"}`,
+	})
+	if telegramEndpoint.Code != http.StatusCreated {
+		t.Fatalf("create Telegram endpoint status = %d body=%s", telegramEndpoint.Code, telegramEndpoint.Body.String())
+	}
+	var telegramEndpointBody storage.InteractionEndpoint
+	if err := json.Unmarshal(telegramEndpoint.Body.Bytes(), &telegramEndpointBody); err != nil {
+		t.Fatalf("decode Telegram endpoint: %v", err)
+	}
+	telegramPayload := map[string]any{
+		"update_id": 10,
+		"message": map[string]any{
+			"message_id": 99,
+			"text":       "@nekode_bot run smoke",
+			"chat": map[string]any{
+				"id":    -1001,
+				"type":  "supergroup",
+				"title": "Ops",
+			},
+			"from": map[string]any{
+				"id":         42,
+				"username":   "alice",
+				"first_name": "Alice",
+			},
+		},
+	}
+	badTelegramWebhook := doJSON(t, s, http.MethodPost, "/api/im/telegram/"+telegramEndpointBody.ID+"/webhook", "", telegramPayload)
+	if badTelegramWebhook.Code != http.StatusUnauthorized {
+		t.Fatalf("bad Telegram webhook status = %d body=%s", badTelegramWebhook.Code, badTelegramWebhook.Body.String())
+	}
+	var webhookBody bytes.Buffer
+	if err := json.NewEncoder(&webhookBody).Encode(telegramPayload); err != nil {
+		t.Fatalf("encode telegram webhook: %v", err)
+	}
+	telegramWebhook := httptest.NewRecorder()
+	telegramReq := httptest.NewRequest(http.MethodPost, "/api/im/telegram/"+telegramEndpointBody.ID+"/webhook", &webhookBody)
+	telegramReq.Header.Set("Content-Type", "application/json")
+	telegramReq.Header.Set(imtelegram.SecretTokenHeader, "secret-1")
+	s.Handler().ServeHTTP(telegramWebhook, telegramReq)
+	if telegramWebhook.Code != http.StatusOK {
+		t.Fatalf("telegram webhook status = %d body=%s", telegramWebhook.Code, telegramWebhook.Body.String())
+	}
+	var telegramWebhookBody struct {
+		OK        bool   `json:"ok"`
+		MessageID string `json:"messageId"`
+	}
+	if err := json.Unmarshal(telegramWebhook.Body.Bytes(), &telegramWebhookBody); err != nil {
+		t.Fatalf("decode telegram webhook: %v", err)
+	}
+	storedTelegram, err := s.store.GetMessage(context.Background(), "#ops", telegramWebhookBody.MessageID)
+	if err != nil {
+		t.Fatalf("GetMessage(telegram) error = %v", err)
+	}
+	if !telegramWebhookBody.OK ||
+		storedTelegram.SourceEndpointID != telegramEndpointBody.ID ||
+		storedTelegram.ExternalMessageID != "99" ||
+		storedTelegram.ThreadID != "tg-thread" ||
+		storedTelegram.SenderDisplayName != "Alice" {
+		t.Fatalf("stored Telegram message = %+v webhook=%+v", storedTelegram, telegramWebhookBody)
 	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{

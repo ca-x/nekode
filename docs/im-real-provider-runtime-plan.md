@@ -106,6 +106,11 @@ Add a provider runtime layer that is separate from the existing mock gate:
    - Acceptance: `setWebhook`/secret-token setup docs, HTTP webhook route,
      secret header validation, update dedupe, message normalization, group-mode
      guard, chunked `sendMessage`, delivery status updates, live bot smoke.
+   - Implemented path: Nekode uses the official Bot API directly for webhook
+     receive and `sendMessage`, keeping the runtime thin and testable without
+     adding an SDK dependency. Configure Telegram with:
+     `setWebhook(url=<base>/api/im/telegram/<endpoint_id>/webhook,
+     secret_token=<secret_token>)`.
 3. task #180 Feishu callback and send integration.
    - Use `larksuite/oapi-sdk-go/v3`.
    - Acceptance: verification token/encrypt key handling, callback challenge or
