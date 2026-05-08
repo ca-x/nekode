@@ -344,19 +344,27 @@ ping/reconnect signals. Polling may exist as a degraded fallback, but it must
 preserve the same cursor and idempotency semantics.
 
 Authentication is part of the transport contract, not a caller-provided identity
-field. gRPC deployments should use bearer/mTLS metadata. `RequestContext.actor`
-is attribution metadata only; the server must derive the canonical actor from
-the authenticated principal and reject mismatches.
+field. gRPC deployments should use bearer/mTLS metadata. Nekode's release
+baseline uses server-generated daemon enrollment tokens: when a user adds a
+Computer, the server creates a one-time install token, stores only its hash, and
+the installed daemon sends `authorization: Bearer <token>` metadata on every
+gRPC call. `RequestContext.actor` is attribution metadata only; the server must
+derive the canonical actor from the authenticated principal and reject
+mismatches.
 
 The required contract is:
 
-1. daemon authenticates;
-2. daemon registers or resumes the computer;
-3. daemon sends heartbeat and inventory updates;
-4. server sends events;
-5. daemon acknowledges consumed stream events with `AcknowledgeServerEvents`;
-6. daemon reports agent status and run/activity progress;
-7. daemon reconnects and replays missed events from a cursor, sequence, and
+1. server creates a pending Computer enrollment and returns an install command
+   with the generated daemon token;
+2. daemon authenticates with that token;
+3. daemon registers or resumes the computer;
+4. server marks the enrollment connected so Web polling can allow the user to
+   continue;
+5. daemon sends heartbeat and inventory updates;
+6. server sends events;
+7. daemon acknowledges consumed stream events with `AcknowledgeServerEvents`;
+8. daemon reports agent status and run/activity progress;
+9. daemon reconnects and replays missed events from a cursor, sequence, and
    aggregate id.
 
 Heartbeats are liveness and status updates, not mandatory full inventory syncs.

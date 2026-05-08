@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/storage"
 )
 
 func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +133,44 @@ func (s *Server) handleDaemonEvents(w http.ResponseWriter, r *http.Request) {
 		"items":      resp.GetEvents(),
 		"nextCursor": resp.GetNextCursor(),
 	})
+}
+
+func (s *Server) handleCreateDaemonEnrollment(w http.ResponseWriter, r *http.Request) {
+	if s.daemonEnrollments == nil {
+		writeError(w, http.StatusServiceUnavailable, errDaemonEnrollmentNotReady.Error())
+		return
+	}
+	var req daemonEnrollmentCreate
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.ExpiresUnix > 0 && req.ExpiresUnix <= time.Now().Unix() {
+		writeError(w, http.StatusBadRequest, "expiresUnix must be in the future")
+		return
+	}
+	enrollment, token, err := s.daemonEnrollments.create(req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create daemon enrollment failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, s.daemonEnrollmentResponse(enrollment, token))
+}
+
+func (s *Server) handleGetDaemonEnrollment(w http.ResponseWriter, r *http.Request) {
+	if s.daemonEnrollments == nil {
+		writeError(w, http.StatusServiceUnavailable, errDaemonEnrollmentNotReady.Error())
+		return
+	}
+	enrollment, err := s.daemonEnrollments.get(r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "daemon enrollment not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "get daemon enrollment failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(enrollment, ""))
 }
 
 func (s *Server) handleServerEvents(w http.ResponseWriter, r *http.Request) {

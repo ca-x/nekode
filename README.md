@@ -27,6 +27,11 @@ go run ./cmd/nekode serve --addr :18790 --grpc-addr 127.0.0.1:18789
 curl http://localhost:18790/health
 ```
 
+Daemon enrollment is token based. Use the authenticated HTTP API to create an
+enrollment; the server returns a generated install token and command skeleton.
+The daemon sends that token to gRPC as `authorization: Bearer <token>` metadata.
+The token is not a manually configured global server secret.
+
 Environment variables:
 
 | Name | Default | Purpose |

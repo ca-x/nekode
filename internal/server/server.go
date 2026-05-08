@@ -35,13 +35,14 @@ type contextKey string
 const principalKey contextKey = "principal"
 
 type Server struct {
-	cfg    config.Config
-	logger *slog.Logger
-	mux    *http.ServeMux
-	store  *storage.Store
-	cache  cache.Cache
-	auth   *auth.Service
-	daemon *daemonrpc.Server
+	cfg               config.Config
+	logger            *slog.Logger
+	mux               *http.ServeMux
+	store             *storage.Store
+	cache             cache.Cache
+	auth              *auth.Service
+	daemon            *daemonrpc.Server
+	daemonEnrollments *daemonEnrollmentStore
 }
 
 type Principal struct {
@@ -70,6 +71,7 @@ func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, 
 		if err != nil {
 			logger.Warn("failed to load server id; using ephemeral id", "error", err)
 		}
+		s.daemonEnrollments = newDaemonEnrollmentStore(filepath.Join(cfg.DataDir, daemonEnrollmentDir))
 		s.daemon = daemonrpc.New(store, serverID)
 	}
 	s.routes()
@@ -126,7 +128,7 @@ func (s *Server) startGRPC() (*grpc.Server, net.Listener, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(s.grpcServerOptions()...)
 	daemonv1.RegisterDaemonControlServiceServer(grpcServer, s.daemon)
 	go func() {
 		s.logger.Info("nekode daemon grpc starting", "addr", s.cfg.GRPCAddr)
@@ -182,6 +184,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/daemon/activity", s.requireAuth(s.handleDaemonActivity))
 	s.mux.HandleFunc("GET /api/daemon/runs", s.requireAuth(s.handleDaemonRuns))
 	s.mux.HandleFunc("GET /api/daemon/events", s.requireAuth(s.handleDaemonEvents))
+	s.mux.HandleFunc("POST /api/daemon/enrollments", s.requireAuth(s.handleCreateDaemonEnrollment))
+	s.mux.HandleFunc("GET /api/daemon/enrollments/{id}", s.requireAuth(s.handleGetDaemonEnrollment))
 	s.mux.HandleFunc("GET /api/server-events", s.requireAuthOrQueryToken(s.handleServerEvents))
 	s.mux.HandleFunc("GET /", s.handleWebConsole)
 }
