@@ -1433,11 +1433,12 @@ func firstNonEmptyString(values ...string) string {
 
 func (s *Server) handleSearchMessages(w http.ResponseWriter, r *http.Request) {
 	messages, err := s.store.SearchMessages(r.Context(), storage.MessageSearchOptions{
-		Query:        strings.TrimSpace(r.URL.Query().Get("q")),
-		Target:       strings.TrimSpace(r.URL.Query().Get("target")),
-		SenderHandle: strings.TrimSpace(r.URL.Query().Get("sender")),
-		Sort:         strings.TrimSpace(r.URL.Query().Get("sort")),
-		Limit:        intQuery(r, "limit", 50),
+		Query:         strings.TrimSpace(r.URL.Query().Get("q")),
+		Target:        strings.TrimSpace(r.URL.Query().Get("target")),
+		SenderHandle:  strings.TrimSpace(r.URL.Query().Get("sender")),
+		HasAttachment: boolQuery(r, "hasAttachment"),
+		Sort:          strings.TrimSpace(r.URL.Query().Get("sort")),
+		Limit:         intQuery(r, "limit", 50),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "search messages failed")
@@ -1587,13 +1588,13 @@ func (s *Server) handleUnsaveMessage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListSavedMessages(w http.ResponseWriter, r *http.Request) {
 	principal := principalFromContext(r.Context())
-	saved, err := s.store.ListSavedMessages(
-		r.Context(),
-		strings.TrimSpace(r.URL.Query().Get("target")),
-		principal.User.ID,
-		"",
-		intQuery(r, "limit", 50),
-	)
+	saved, err := s.store.ListSavedMessagesWithOptions(r.Context(), storage.SavedMessageListOptions{
+		Target:        strings.TrimSpace(r.URL.Query().Get("target")),
+		UserID:        principal.User.ID,
+		Query:         strings.TrimSpace(r.URL.Query().Get("q")),
+		HasAttachment: boolQuery(r, "hasAttachment"),
+		Limit:         intQuery(r, "limit", 50),
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list saved messages failed")
 		return

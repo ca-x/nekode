@@ -1541,11 +1541,12 @@ export class ApiClient {
     );
   }
 
-  searchMessages(filters: { query?: string; target?: string; sender?: string; sort?: "recent" | "relevance"; limit?: number }) {
+  searchMessages(filters: { query?: string; target?: string; sender?: string; hasAttachment?: boolean; sort?: "recent" | "relevance"; limit?: number }) {
     const params = new URLSearchParams();
     appendIfPresent(params, "q", filters.query);
     appendIfPresent(params, "target", filters.target);
     appendIfPresent(params, "sender", filters.sender);
+    if (filters.hasAttachment) params.set("hasAttachment", "true");
     appendIfPresent(params, "sort", filters.sort ?? "recent");
     appendIfPresent(params, "limit", filters.limit ?? 50);
     return this.request<RawListResponse<unknown>>(`/api/messages/search?${params}`).then((response) =>
@@ -1593,10 +1594,15 @@ export class ApiClient {
     });
   }
 
-  listSavedMessages(target: string, limit = 50) {
-    return this.request<RawListResponse<unknown>>(
-      `/api/messages/saved?target=${encodeURIComponent(target)}&limit=${limit}`
-    ).then((response) => normalizeList(response, normalizeSavedMessage));
+  listSavedMessages(target: string, limit = 50, filters: { query?: string; hasAttachment?: boolean } = {}) {
+    const params = new URLSearchParams();
+    params.set("target", target);
+    params.set("limit", String(limit));
+    appendIfPresent(params, "q", filters.query);
+    if (filters.hasAttachment) params.set("hasAttachment", "true");
+    return this.request<RawListResponse<unknown>>(`/api/messages/saved?${params}`).then((response) =>
+      normalizeList(response, normalizeSavedMessage)
+    );
   }
 
   saveMessage(messageId: string, target: string) {

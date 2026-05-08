@@ -202,11 +202,21 @@ type ThreadInboxItem struct {
 }
 
 type MessageSearchOptions struct {
-	Query        string
-	Target       string
-	SenderHandle string
-	Sort         string
-	Limit        int
+	Query         string
+	Target        string
+	SenderHandle  string
+	HasAttachment bool
+	Sort          string
+	Limit         int
+}
+
+type SavedMessageListOptions struct {
+	Target        string
+	UserID        string
+	AgentID       string
+	Query         string
+	HasAttachment bool
+	Limit         int
 }
 
 type SavedMessage struct {

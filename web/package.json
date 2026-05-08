@@ -7,18 +7,21 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e": "npm run build && node e2e/attachment-search.mjs",
+    "e2e:install": "playwright install chromium"
   },
   "dependencies": {
+    "lucide-react": "^0.555.0",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "lucide-react": "^0.555.0"
+    "react-dom": "^19.2.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.1.1",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.0.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@types/node": "^25.0.1",
+    "@vitejs/plugin-react": "^5.1.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.6"
   }

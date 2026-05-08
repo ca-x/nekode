@@ -755,9 +755,37 @@ textarea {
 
 .message-search {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(120px, 160px) minmax(120px, 140px) auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(120px, 160px) minmax(116px, auto) minmax(120px, 140px) auto;
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.saved-discovery {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(116px, auto) auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.compact-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.compact-checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 .search-results,
@@ -784,6 +812,11 @@ textarea {
 
 .search-results button {
   grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+}
+
+.discovery-results {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
 }
 
 .message-bubble {
@@ -2788,6 +2821,8 @@ textarea {
   .endpoint-route-grid,
   .endpoint-toggle-grid,
   .enrollment-layout,
+  .message-search,
+  .saved-discovery,
   .task-workspace,
   .two-column {
     grid-template-columns: 1fr;

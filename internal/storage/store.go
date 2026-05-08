@@ -1096,7 +1096,11 @@ func (s *Store) SearchMessages(ctx context.Context, opts MessageSearchOptions) (
 			message.SenderDisplayNameContainsFold(search),
 			message.SenderAgentIDContainsFold(strings.TrimPrefix(search, "@")),
 			message.SenderUserIDContainsFold(strings.TrimPrefix(search, "@")),
+			message.AttachmentsJSONContainsFold(search),
 		))
+	}
+	if opts.HasAttachment {
+		query.Where(message.AttachmentsJSONNEQ("[]"))
 	}
 	if sender := strings.TrimPrefix(strings.TrimSpace(opts.SenderHandle), "@"); sender != "" {
 		query.Where(message.Or(
@@ -1174,16 +1178,71 @@ func (s *Store) UnsaveMessage(ctx context.Context, target, messageID, userID, ag
 }
 
 func (s *Store) ListSavedMessages(ctx context.Context, target, userID, agentID string, limit int) ([]SavedMessage, error) {
-	if limit <= 0 || limit > 200 {
-		limit = 50
+	return s.ListSavedMessagesWithOptions(ctx, SavedMessageListOptions{
+		Target:  target,
+		UserID:  userID,
+		AgentID: agentID,
+		Limit:   limit,
+	})
+}
+
+func (s *Store) ListSavedMessagesWithOptions(ctx context.Context, opts SavedMessageListOptions) ([]SavedMessage, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 50
 	}
-	rows, err := s.savedMessageQuery(target, userID, agentID).
-		Order(savedmessage.ByCreatedUnix(sql.OrderDesc()), savedmessage.ByID(sql.OrderDesc())).
-		Limit(limit).
-		All(ctx)
-	if err != nil {
-		return nil, err
+	if !opts.hasFilters() {
+		rows, err := s.savedMessageQuery(opts.Target, opts.UserID, opts.AgentID).
+			Order(savedmessage.ByCreatedUnix(sql.OrderDesc()), savedmessage.ByID(sql.OrderDesc())).
+			Limit(opts.Limit).
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return s.savedMessagesFromEnt(ctx, rows)
 	}
+
+	saved := make([]SavedMessage, 0, opts.Limit)
+	pageSize := opts.Limit
+	if pageSize < 50 {
+		pageSize = 50
+	}
+	for offset := 0; ; offset += pageSize {
+		rows, err := s.savedMessageQuery(opts.Target, opts.UserID, opts.AgentID).
+			Order(savedmessage.ByCreatedUnix(sql.OrderDesc()), savedmessage.ByID(sql.OrderDesc())).
+			Offset(offset).
+			Limit(pageSize).
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(rows) == 0 {
+			break
+		}
+		for _, row := range rows {
+			record, err := s.savedMessageFromEnt(ctx, row)
+			if err != nil {
+				return nil, err
+			}
+			if !messageMatchesSavedFilters(record.Message, opts) {
+				continue
+			}
+			saved = append(saved, record)
+			if len(saved) >= opts.Limit {
+				return saved, nil
+			}
+		}
+		if len(rows) < pageSize {
+			break
+		}
+	}
+	return saved, nil
+}
+
+func (opts SavedMessageListOptions) hasFilters() bool {
+	return opts.HasAttachment || strings.TrimSpace(opts.Query) != ""
+}
+
+func (s *Store) savedMessagesFromEnt(ctx context.Context, rows []*ent.SavedMessage) ([]SavedMessage, error) {
 	saved := make([]SavedMessage, 0, len(rows))
 	for _, row := range rows {
 		record, err := s.savedMessageFromEnt(ctx, row)
@@ -1193,6 +1252,32 @@ func (s *Store) ListSavedMessages(ctx context.Context, target, userID, agentID s
 		saved = append(saved, record)
 	}
 	return saved, nil
+}
+
+func messageMatchesSavedFilters(msg Message, opts SavedMessageListOptions) bool {
+	if opts.HasAttachment && len(msg.Attachments) == 0 {
+		return false
+	}
+	search := strings.ToLower(strings.TrimSpace(opts.Query))
+	if search == "" {
+		return true
+	}
+	values := []string{
+		msg.ID,
+		msg.Content,
+		msg.SenderDisplayName,
+		msg.SenderAgentID,
+		msg.SenderUserID,
+	}
+	for _, attachment := range msg.Attachments {
+		values = append(values, attachment.ID, attachment.Filename, attachment.MimeType)
+	}
+	for _, value := range values {
+		if strings.Contains(strings.ToLower(value), search) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Store) savedMessageQuery(target, userID, agentID string) *ent.SavedMessageQuery {

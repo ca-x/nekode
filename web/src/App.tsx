@@ -1686,8 +1686,12 @@ function MessagesPanel({
   const [lightboxAttachment, setLightboxAttachment] = useState<Attachment | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [senderFilter, setSenderFilter] = useState("");
+  const [attachmentOnlySearch, setAttachmentOnlySearch] = useState(false);
   const [searchSort, setSearchSort] = useState<"recent" | "relevance">("recent");
   const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [savedQuery, setSavedQuery] = useState("");
+  const [savedAttachmentOnly, setSavedAttachmentOnly] = useState(false);
+  const [savedDiscovery, setSavedDiscovery] = useState<SavedMessage[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1826,17 +1830,36 @@ function MessagesPanel({
     event.preventDefault();
     const query = searchQuery.trim();
     const sender = senderFilter.trim();
-    if (!query && !sender) {
+    if (!query && !sender && !attachmentOnlySearch) {
       setSearchResults([]);
       return;
     }
     setBusy(true);
     setActionError("");
     try {
-      const results = await api.searchMessages({ query, sender, sort: searchSort, target, limit: 25 });
+      const results = await api.searchMessages({ query, sender, hasAttachment: attachmentOnlySearch, sort: searchSort, target, limit: 25 });
       setSearchResults(results.items);
     } catch (err) {
       setActionError(errorMessage(err, "Unable to search messages"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const discoverSavedMessages = async (event: FormEvent) => {
+    event.preventDefault();
+    const query = savedQuery.trim();
+    if (!query && !savedAttachmentOnly) {
+      setSavedDiscovery([]);
+      return;
+    }
+    setBusy(true);
+    setActionError("");
+    try {
+      const results = await api.listSavedMessages(target, 25, { query, hasAttachment: savedAttachmentOnly });
+      setSavedDiscovery(results.items);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to search saved messages"));
     } finally {
       setBusy(false);
     }
@@ -1911,6 +1934,15 @@ function MessagesPanel({
             onChange={(event) => setSenderFilter(event.target.value)}
             placeholder="@sender"
           />
+          <label className="checkbox-line compact-checkbox">
+            <input
+              type="checkbox"
+              aria-label="Only messages with attachments"
+              checked={attachmentOnlySearch}
+              onChange={(event) => setAttachmentOnlySearch(event.target.checked)}
+            />
+            Attachments
+          </label>
           <select
             aria-label="Search sort"
             value={searchSort}
@@ -1929,7 +1961,41 @@ function MessagesPanel({
             {searchResults.map((message) => (
               <button key={message.id} type="button" onClick={() => setReplyTo(message)}>
                 <strong>{message.senderDisplayName || message.senderKind}</strong>
-                <span>{message.content}</span>
+                <span>{messageSearchSummary(message)}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <form className="saved-discovery" onSubmit={discoverSavedMessages}>
+          <label className="search-field">
+            <Bookmark size={16} aria-hidden="true" />
+            <input
+              aria-label="Search saved messages"
+              value={savedQuery}
+              onChange={(event) => setSavedQuery(event.target.value)}
+              placeholder="Find saved messages"
+            />
+          </label>
+          <label className="checkbox-line compact-checkbox">
+            <input
+              type="checkbox"
+              aria-label="Only saved messages with attachments"
+              checked={savedAttachmentOnly}
+              onChange={(event) => setSavedAttachmentOnly(event.target.checked)}
+            />
+            Attachments
+          </label>
+          <button className="secondary-button" type="submit" disabled={busy}>
+            <Search size={16} aria-hidden="true" />
+            Find
+          </button>
+        </form>
+        {savedDiscovery.length ? (
+          <div className="saved-message-list discovery-results" aria-label="Saved message search results">
+            {savedDiscovery.map((item) => (
+              <button key={item.id} type="button" onClick={() => setReplyTo(item.message)}>
+                <Bookmark size={14} aria-hidden="true" />
+                <span>{messageSearchSummary(item.message)}</span>
               </button>
             ))}
           </div>
@@ -2315,6 +2381,13 @@ function AttachmentPreview({
       </div>
     </div>
   );
+}
+
+function messageSearchSummary(message: Message) {
+  const attachmentText = message.attachments?.length
+    ? ` [${message.attachments.map((attachment) => attachment.filename).join(", ")}]`
+    : "";
+  return `${message.content}${attachmentText}`;
 }
 
 function AttachmentLightbox({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) {

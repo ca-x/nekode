@@ -454,6 +454,60 @@ func TestMessageThreadSaveAndSearchInvariants(t *testing.T) {
 		t.Fatalf("SearchMessages() error = %v", err)
 	}
 	assertMessageIDs(t, searchResults, reply3.ID)
+
+	attachmentSearch, err := store.SearchMessages(ctx, MessageSearchOptions{Query: "plan.txt", HasAttachment: true, Limit: 10})
+	if err != nil {
+		t.Fatalf("SearchMessages(attachment filename) error = %v", err)
+	}
+	assertMessageIDs(t, attachmentSearch, parent.ID)
+
+	attachmentOnlySearch, err := store.SearchMessages(ctx, MessageSearchOptions{HasAttachment: true, Limit: 10})
+	if err != nil {
+		t.Fatalf("SearchMessages(has attachment) error = %v", err)
+	}
+	assertMessageIDs(t, attachmentOnlySearch, parent.ID)
+
+	savedParent, err := store.SaveMessage(ctx, "#general", parent.ID, "user-1", "")
+	if err != nil {
+		t.Fatalf("SaveMessage(parent attachment) error = %v", err)
+	}
+	if _, err := store.client.SavedMessage.UpdateOneID(savedParent.ID).SetCreatedUnix(200).Save(ctx); err != nil {
+		t.Fatalf("backdate saved parent error = %v", err)
+	}
+	for i := 0; i < 5; i++ {
+		filler, err := store.CreateMessage(ctx, Message{
+			ID:           "msg-saved-filler-" + string(rune('a'+i)),
+			Target:       "#general",
+			Role:         "user",
+			Content:      "saved filler without attachment",
+			SenderUserID: "user-1",
+			SenderKind:   "human",
+			CreatedUnix:  int64(205 + i),
+		})
+		if err != nil {
+			t.Fatalf("CreateMessage(saved filler %d) error = %v", i, err)
+		}
+		savedFiller, err := store.SaveMessage(ctx, "#general", filler.ID, "user-1", "")
+		if err != nil {
+			t.Fatalf("SaveMessage(saved filler %d) error = %v", i, err)
+		}
+		if _, err := store.client.SavedMessage.UpdateOneID(savedFiller.ID).SetCreatedUnix(int64(205 + i)).Save(ctx); err != nil {
+			t.Fatalf("update saved filler %d created_unix error = %v", i, err)
+		}
+	}
+	savedAttachmentMessages, err := store.ListSavedMessagesWithOptions(ctx, SavedMessageListOptions{
+		Target:        "#general",
+		UserID:        "user-1",
+		Query:         "plan.txt",
+		HasAttachment: true,
+		Limit:         1,
+	})
+	if err != nil {
+		t.Fatalf("ListSavedMessagesWithOptions(attachment query) error = %v", err)
+	}
+	if len(savedAttachmentMessages) != 1 || savedAttachmentMessages[0].Message.ID != parent.ID {
+		t.Fatalf("savedAttachmentMessages = %+v, want parent", savedAttachmentMessages)
+	}
 }
 
 func TestTaskStateVersionAndClaimInvariants(t *testing.T) {

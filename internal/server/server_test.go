@@ -803,6 +803,20 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if len(attachmentMessageBody.Attachments) != 1 || attachmentMessageBody.Attachments[0].Filename != "preview.html" {
 		t.Fatalf("message attachments = %+v, want uploaded attachment", attachmentMessageBody.Attachments)
 	}
+	attachmentSearch := doGET(t, s, "/api/messages/search?target=%23general&q=preview.html&hasAttachment=true", token)
+	if attachmentSearch.Code != http.StatusOK {
+		t.Fatalf("attachment search status = %d body=%s", attachmentSearch.Code, attachmentSearch.Body.String())
+	}
+	assertJSONItems(t, attachmentSearch.Body.Bytes(), 1)
+	saveAttachment := doJSON(t, s, http.MethodPost, "/api/messages/"+attachmentMessageBody.ID+"/save?target=%23general", token, map[string]any{})
+	if saveAttachment.Code != http.StatusOK {
+		t.Fatalf("save attachment message status = %d body=%s", saveAttachment.Code, saveAttachment.Body.String())
+	}
+	savedAttachmentSearch := doGET(t, s, "/api/messages/saved?target=%23general&q=preview.html&hasAttachment=true", token)
+	if savedAttachmentSearch.Code != http.StatusOK {
+		t.Fatalf("saved attachment search status = %d body=%s", savedAttachmentSearch.Code, savedAttachmentSearch.Body.String())
+	}
+	assertJSONItems(t, savedAttachmentSearch.Body.Bytes(), 1)
 	download := doGET(t, s, "/api/attachments/"+attachment.ID+"/content", token)
 	if download.Code != http.StatusOK || !strings.Contains(download.Body.String(), "<strong>safe</strong>") {
 		t.Fatalf("download attachment status = %d body=%s", download.Code, download.Body.String())
