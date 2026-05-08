@@ -22,6 +22,7 @@ import type {
   EventScope,
   EventScopeType,
   InteractionEndpoint,
+  IMProviderSchema,
   JsonObject,
   Message,
   ProtocolInfo,
@@ -1143,6 +1144,10 @@ export class ApiClient {
       await this.request<RawListResponse<unknown>>(`/api/runtime-presets?${params}`),
       normalizeRuntimePreset
     );
+  }
+
+  listIMProviders() {
+    return this.request<ListResponse<IMProviderSchema>>("/api/im/providers");
   }
 
   listInteractionEndpoints(limit = 100) {

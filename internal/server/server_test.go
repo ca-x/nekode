@@ -248,6 +248,32 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
 
 	token := bootstrapToken(t, s)
+	providers := doGET(t, s, "/api/im/providers", token)
+	if providers.Code != http.StatusOK {
+		t.Fatalf("list IM providers status = %d body=%s", providers.Code, providers.Body.String())
+	}
+	var providerBody struct {
+		Items []struct {
+			Provider string `json:"provider"`
+			Fields   []struct {
+				Name      string `json:"name"`
+				Sensitive bool   `json:"sensitive"`
+			} `json:"fields"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(providers.Body.Bytes(), &providerBody); err != nil {
+		t.Fatalf("decode IM providers: %v", err)
+	}
+	seenProviders := map[string]bool{}
+	for _, provider := range providerBody.Items {
+		seenProviders[provider.Provider] = true
+	}
+	for _, provider := range []string{"telegram", "qq", "feishu", "weixin", "terminal"} {
+		if !seenProviders[provider] {
+			t.Fatalf("IM providers missing %q: %+v", provider, providerBody.Items)
+		}
+	}
+
 	endpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
 		"kind":            "web",
 		"provider":        "browser",
@@ -257,6 +283,35 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	})
 	if endpoint.Code != http.StatusCreated {
 		t.Fatalf("create endpoint status = %d body=%s", endpoint.Code, endpoint.Body.String())
+	}
+	missingIMConfig := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":        "im",
+		"provider":    "feishu",
+		"displayName": "Feishu",
+		"configJson":  `{"app_id":"app"}`,
+	})
+	if missingIMConfig.Code != http.StatusBadRequest {
+		t.Fatalf("create IM endpoint without secret status = %d body=%s", missingIMConfig.Code, missingIMConfig.Body.String())
+	}
+	imEndpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "feishu",
+		"displayName":     "Feishu Ops",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "webhook_signature",
+		"configJson":      `{"app_id":"app","app_secret":"secret","verification_token":"verify"}`,
+	})
+	if imEndpoint.Code != http.StatusCreated {
+		t.Fatalf("create IM endpoint status = %d body=%s", imEndpoint.Code, imEndpoint.Body.String())
+	}
+	var imEndpointBody storage.InteractionEndpoint
+	if err := json.Unmarshal(imEndpoint.Body.Bytes(), &imEndpointBody); err != nil {
+		t.Fatalf("decode IM endpoint: %v", err)
+	}
+	if !strings.Contains(imEndpointBody.ConfigJSON, `"app_secret":"***"`) ||
+		!strings.Contains(imEndpointBody.ConfigJSON, `"verification_token":"***"`) {
+		t.Fatalf("IM endpoint config was not redacted: %s", imEndpointBody.ConfigJSON)
 	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{

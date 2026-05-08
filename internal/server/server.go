@@ -20,6 +20,7 @@ import (
 	"github.com/ca-x/nekode/internal/cache"
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/daemonrpc"
+	"github.com/ca-x/nekode/internal/imadapter"
 	"github.com/ca-x/nekode/internal/immedia"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
@@ -150,6 +151,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/auth/login", s.handleLogin)
 	s.mux.HandleFunc("POST /api/auth/logout", s.requireAuth(s.handleLogout))
 	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
+	s.mux.HandleFunc("GET /api/im/providers", s.requireAuth(s.handleListIMProviders))
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
 	s.mux.HandleFunc("POST /api/attachments", s.requireAuth(s.handleUploadAttachment))
@@ -418,7 +420,25 @@ func (s *Server) handleListInteractionEndpoints(w http.ResponseWriter, r *http.R
 		writeError(w, http.StatusInternalServerError, "list interaction endpoints failed")
 		return
 	}
+	for i := range endpoints {
+		endpoints[i] = redactInteractionEndpoint(endpoints[i])
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": endpoints})
+}
+
+func (s *Server) handleListIMProviders(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"items": imadapter.ListProviders()})
+}
+
+func redactInteractionEndpoint(endpoint storage.InteractionEndpoint) storage.InteractionEndpoint {
+	if !strings.EqualFold(endpoint.Kind, "im") {
+		return endpoint
+	}
+	redacted, err := imadapter.RedactConfig(endpoint.Provider, endpoint.ConfigJSON)
+	if err == nil {
+		endpoint.ConfigJSON = redacted
+	}
+	return endpoint
 }
 
 func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.Request) {
@@ -446,6 +466,12 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 	if endpoint.AuthMode == "" {
 		endpoint.AuthMode = "bearer"
 	}
+	if strings.EqualFold(endpoint.Kind, "im") {
+		if err := imadapter.ValidateConfig(endpoint.Provider, endpoint.ConfigJSON); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 	created, err := s.store.CreateInteractionEndpoint(r.Context(), endpoint)
 	if errors.Is(err, storage.ErrConflict) {
 		writeError(w, http.StatusConflict, "interaction endpoint already exists")
@@ -455,7 +481,7 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusInternalServerError, "create interaction endpoint failed")
 		return
 	}
-	writeJSON(w, http.StatusCreated, created)
+	writeJSON(w, http.StatusCreated, redactInteractionEndpoint(created))
 }
 
 func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) {

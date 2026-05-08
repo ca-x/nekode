@@ -35,6 +35,33 @@ export type InteractionEndpoint = {
   updatedUnix: number;
 };
 
+export type IMProviderFieldType = "string" | "boolean" | "select" | "json";
+
+export type IMProviderField = {
+  name: string;
+  label: string;
+  type: IMProviderFieldType | string;
+  required?: boolean;
+  sensitive?: boolean;
+  description?: string;
+  placeholder?: string;
+  options?: string[];
+};
+
+export type IMProviderSchema = {
+  provider: string;
+  displayName: string;
+  transport: string;
+  description: string;
+  supportsWebhook: boolean;
+  supportsPolling: boolean;
+  supportsStreaming: boolean;
+  supportsMedia: boolean;
+  bindingTargets: string[];
+  setupHints: string[];
+  fields: IMProviderField[];
+};
+
 export type ChannelVisibility = "public" | "private" | "unspecified";
 export type ChannelMemberRole = "admin" | "member" | "viewer" | "unspecified";
 
