@@ -6,6 +6,11 @@ Audience: implementers, reviewers, and deployment operators
 This document defines the first-version IM integration plan for Nekode. It is
 the deployment and attribution companion to tasks #156-#165.
 
+For real provider runtime selection and SDK/API boundaries, also read
+`docs/im-real-provider-runtime-plan.md`. The current first-version IM code is an
+adapter boundary plus mock gate, not a completed live Telegram/QQ/Feishu/WeChat
+provider runtime.
+
 ## Design Boundary
 
 IM is an `InteractionEndpoint` ingress and egress layer for Nekode. It is not a
@@ -147,6 +152,12 @@ The common acceptance bar for every provider is:
 
 Real credential smoke can be phased by provider availability, but mock fixtures
 for all five providers are part of the first-version gate.
+
+Mock fixtures do not prove live provider connectivity. A provider becomes live
+only when its runtime can receive provider events, verify provider auth or
+signature material, normalize into Nekode through the existing coordinator,
+send real provider API messages from `OutboundDelivery`, and pass live smoke
+with operator-owned credentials.
 
 ## Channel Configuration UX
 

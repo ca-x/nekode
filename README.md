@@ -16,6 +16,8 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - Implementation design: `docs/slock-style-daemon-runtime.md`
 - IM channel integration and deployment notes:
   `docs/im-channel-integration.md`
+- Real IM provider runtime plan:
+  `docs/im-real-provider-runtime-plan.md`
 - Web console assets: `web/src/assets-brand.png` and `web/public/*`
 - Container and binary build: `Dockerfile`, `docker-compose.yml`, and
   `build.sh`
@@ -61,6 +63,14 @@ system:
 6. Group behavior starts conservative (`mention` by default, with `always` and
    `disabled` available) and can later add per-group agent, system prompt, and
    tool policy overrides.
+
+Current status: the repository has provider schemas, normalizers, outbound
+delivery lifecycle, frame/render helpers, UI configuration, and mock fixtures.
+Real Telegram, QQ, Feishu, and WeChat provider SDK/API runtimes are separate
+follow-up work. Do not describe mock fixtures or frame/render boundaries as
+live provider connectivity until the provider runtime task has webhook/callback
+or polling receive, provider auth verification, real send API delivery, and
+live smoke evidence. See `docs/im-real-provider-runtime-plan.md`.
 
 ## Run Locally
 
