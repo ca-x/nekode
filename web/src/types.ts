@@ -208,6 +208,7 @@ export type DaemonEnrollment = {
   tokenPrefix: string;
   token?: string;
   installCommand?: string;
+  installScriptUrl?: string;
   statusUrl: string;
   displayName?: string;
   computerId?: string;
@@ -217,6 +218,7 @@ export type DaemonEnrollment = {
   expiresUnix?: number;
   connectedUnix?: number;
   lastHeartbeatUnix?: number;
+  revokedUnix?: number;
   status: DaemonEnrollmentStatus;
 };
 

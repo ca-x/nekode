@@ -153,6 +153,8 @@ type RawDaemonEnrollment = {
   token?: unknown;
   installCommand?: unknown;
   install_command?: unknown;
+  installScriptUrl?: unknown;
+  install_script_url?: unknown;
   statusUrl?: unknown;
   status_url?: unknown;
   displayName?: unknown;
@@ -178,6 +180,10 @@ type RawDaemonEnrollment = {
   last_heartbeat_unix?: unknown;
   lastHeartbeatTimeUnix?: unknown;
   last_heartbeat_time_unix?: unknown;
+  revokedUnix?: unknown;
+  revoked_unix?: unknown;
+  revokedTimeUnix?: unknown;
+  revoked_time_unix?: unknown;
   status?: unknown;
 };
 
@@ -710,6 +716,7 @@ function normalizeDaemonEnrollment(raw: unknown): DaemonEnrollment {
     tokenPrefix: asString(row.tokenPrefix ?? row.token_prefix),
     token: asOptionalString(row.token),
     installCommand: asOptionalString(row.installCommand ?? row.install_command),
+    installScriptUrl: asOptionalString(row.installScriptUrl ?? row.install_script_url),
     statusUrl: asString(row.statusUrl ?? row.status_url),
     displayName: asOptionalString(row.displayName ?? row.display_name),
     computerId: asOptionalString(row.computerId ?? row.computer_id),
@@ -721,6 +728,7 @@ function normalizeDaemonEnrollment(raw: unknown): DaemonEnrollment {
     lastHeartbeatUnix:
       asNumber(row.lastHeartbeatUnix ?? row.last_heartbeat_unix ?? row.lastHeartbeatTimeUnix ?? row.last_heartbeat_time_unix) ||
       undefined,
+    revokedUnix: asNumber(row.revokedUnix ?? row.revoked_unix ?? row.revokedTimeUnix ?? row.revoked_time_unix) || undefined,
     status: asString(row.status) || "pending"
   };
 }
@@ -1044,6 +1052,14 @@ export class ApiClient {
   async getDaemonEnrollment(id: string) {
     return normalizeDaemonEnrollment(
       await this.request<unknown>(`/api/daemon/enrollments/${encodeURIComponent(id)}`)
+    );
+  }
+
+  async revokeDaemonEnrollment(id: string) {
+    return normalizeDaemonEnrollment(
+      await this.request<unknown>(`/api/daemon/enrollments/${encodeURIComponent(id)}/revoke`, {
+        method: "POST"
+      })
     );
   }
 

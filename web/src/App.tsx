@@ -473,13 +473,16 @@ function mergeEnrollmentStatus(current: DaemonEnrollment | null, next: DaemonEnr
   return {
     ...next,
     installCommand: current?.installCommand,
+    installScriptUrl: current?.installScriptUrl,
     token: current?.token
   };
 }
 
 function platformInstallCommands(enrollment: DaemonEnrollment | null) {
   if (!enrollment) return [];
-  const statusURL = enrollment.statusUrl || `/api/daemon/enrollments/${encodeURIComponent(enrollment.id)}`;
+  const installScriptUrl = enrollment.installScriptUrl || "";
+  const macScriptUrl = installScriptUrl.replace("platform=linux", "platform=darwin");
+  const windowsScriptUrl = macScriptUrl.replace("/install.sh", "/install.ps1").replace("platform=darwin", "platform=windows");
   return [
     {
       platform: "linux" as EnrollmentPlatform,
@@ -492,15 +495,15 @@ function platformInstallCommands(enrollment: DaemonEnrollment | null) {
       platform: "macos" as EnrollmentPlatform,
       label: "macOS",
       detail: "Bash entry for launchd hosts",
-      command: `sudo bash -c "$(curl -fsSL ${statusURL}/install.sh?platform=darwin)"`,
-      ready: false
+      command: macScriptUrl ? `sudo bash -c "$(curl -fsSL ${macScriptUrl})"` : "",
+      ready: Boolean(macScriptUrl)
     },
     {
       platform: "windows" as EnrollmentPlatform,
       label: "Windows",
       detail: "PowerShell entry for Windows Service",
-      command: `powershell -ExecutionPolicy Bypass -Command "iwr ${statusURL}/install.ps1?platform=windows | iex"`,
-      ready: false
+      command: windowsScriptUrl ? `powershell -ExecutionPolicy Bypass -Command "iwr ${windowsScriptUrl} | iex"` : "",
+      ready: Boolean(windowsScriptUrl)
     }
   ];
 }
@@ -3590,6 +3593,19 @@ function DaemonPanel({
     }
   };
 
+  const cancelEnrollment = async () => {
+    if (!enrollment?.id) return;
+    setWizardError("");
+    try {
+      await api.revokeDaemonEnrollment(enrollment.id);
+      setEnrollment(null);
+      setWizardState("idle");
+      setCopyState("idle");
+    } catch (err) {
+      setWizardError(err instanceof Error ? err.message : "Unable to revoke enrollment");
+    }
+  };
+
   return (
     <section className="content-grid">
       <section className="panel wide">
@@ -3643,12 +3659,7 @@ function DaemonPanel({
                 </button>
               ) : null}
               {enrollment && !canFinishEnrollment ? (
-                <button className="secondary-button" type="button" onClick={() => {
-                  setEnrollment(null);
-                  setWizardState("idle");
-                  setWizardError("");
-                  setCopyState("idle");
-                }}>
+                <button className="secondary-button" type="button" onClick={() => void cancelEnrollment()}>
                   <X size={16} aria-hidden="true" />
                   Cancel
                 </button>

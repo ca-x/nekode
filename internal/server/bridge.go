@@ -158,12 +158,12 @@ func (s *Server) handleCreateDaemonEnrollment(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "expiresUnix must be in the future")
 		return
 	}
-	enrollment, token, err := s.daemonEnrollments.create(req)
+	enrollment, token, installCode, err := s.daemonEnrollments.create(req)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "create daemon enrollment failed")
 		return
 	}
-	writeJSON(w, http.StatusCreated, s.daemonEnrollmentResponse(enrollment, token))
+	writeJSON(w, http.StatusCreated, s.daemonEnrollmentResponse(enrollment, token, installCode))
 }
 
 func (s *Server) handleGetDaemonEnrollment(w http.ResponseWriter, r *http.Request) {
@@ -180,7 +180,58 @@ func (s *Server) handleGetDaemonEnrollment(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "get daemon enrollment failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(enrollment, ""))
+	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(enrollment, "", ""))
+}
+
+func (s *Server) handleRevokeDaemonEnrollment(w http.ResponseWriter, r *http.Request) {
+	if s.daemonEnrollments == nil {
+		writeError(w, http.StatusServiceUnavailable, errDaemonEnrollmentNotReady.Error())
+		return
+	}
+	enrollment, err := s.daemonEnrollments.revoke(r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "daemon enrollment not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "revoke daemon enrollment failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(enrollment, "", ""))
+}
+
+func (s *Server) handleDaemonEnrollmentInstallShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonEnrollmentInstallScript(w, r, "sh")
+}
+
+func (s *Server) handleDaemonEnrollmentInstallPowerShell(w http.ResponseWriter, r *http.Request) {
+	s.handleDaemonEnrollmentInstallScript(w, r, "ps1")
+}
+
+func (s *Server) handleDaemonEnrollmentInstallScript(w http.ResponseWriter, r *http.Request, scriptKind string) {
+	if s.daemonEnrollments == nil {
+		writeError(w, http.StatusServiceUnavailable, errDaemonEnrollmentNotReady.Error())
+		return
+	}
+	enrollment, token, err := s.daemonEnrollments.consumeInstallCode(r.PathValue("id"), r.URL.Query().Get("code"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "daemon install code not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create daemon install script failed")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	switch scriptKind {
+	case "ps1":
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte(s.renderDaemonInstallPowerShell(enrollment, token)))
+	default:
+		w.Header().Set("Content-Type", "text/x-shellscript; charset=utf-8")
+		_, _ = w.Write([]byte(s.renderDaemonInstallShell(enrollment, token)))
+	}
 }
 
 func (s *Server) handleServerEvents(w http.ResponseWriter, r *http.Request) {
