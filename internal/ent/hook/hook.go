@@ -57,6 +57,18 @@ func (f MessageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MessageMutation", m)
 }
 
+// The NotificationRouteFunc type is an adapter to allow the use of ordinary
+// function as NotificationRoute mutator.
+type NotificationRouteFunc func(context.Context, *ent.NotificationRouteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f NotificationRouteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.NotificationRouteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.NotificationRouteMutation", m)
+}
+
 // The OutboundDeliveryFunc type is an adapter to allow the use of ordinary
 // function as OutboundDelivery mutator.
 type OutboundDeliveryFunc func(context.Context, *ent.OutboundDeliveryMutation) (ent.Value, error)

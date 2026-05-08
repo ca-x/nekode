@@ -156,6 +156,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
+	s.mux.HandleFunc("GET /api/notification-routes", s.requireAuth(s.handleListNotificationRoutes))
+	s.mux.HandleFunc("POST /api/notification-routes", s.requireAuth(s.handleCreateNotificationRoute))
+	s.mux.HandleFunc("GET /api/notification-routes/resolve", s.requireAuth(s.handleResolveNotificationRoutes))
+	s.mux.HandleFunc("PATCH /api/notification-routes/{id}", s.requireAuth(s.handleUpdateNotificationRoute))
 	s.mux.HandleFunc("POST /api/attachments", s.requireAuth(s.handleUploadAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}", s.requireAuth(s.handleGetAttachment))
 	s.mux.HandleFunc("GET /api/attachments/{id}/content", s.requireAuth(s.handleDownloadAttachment))
@@ -518,6 +522,116 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 		return
 	}
 	writeJSON(w, http.StatusCreated, redactInteractionEndpoint(created))
+}
+
+func (s *Server) handleListNotificationRoutes(w http.ResponseWriter, r *http.Request) {
+	routes, err := s.store.ListNotificationRoutes(r.Context(), storage.NotificationRouteListOptions{
+		Target:     strings.TrimSpace(r.URL.Query().Get("target")),
+		ThreadID:   strings.TrimSpace(r.URL.Query().Get("threadId")),
+		EndpointID: strings.TrimSpace(r.URL.Query().Get("endpointId")),
+		EventKind:  strings.TrimSpace(r.URL.Query().Get("eventKind")),
+		Enabled:    optionalBoolQuery(r, "enabled"),
+		Limit:      intQuery(r, "limit", 100),
+	})
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid notification route filter")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list notification routes failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": routes})
+}
+
+func (s *Server) handleCreateNotificationRoute(w http.ResponseWriter, r *http.Request) {
+	var req notificationRouteRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	route := storage.NotificationRoute{
+		Target:     strings.TrimSpace(req.Target),
+		ThreadID:   strings.TrimSpace(req.ThreadID),
+		EndpointID: strings.TrimSpace(req.EndpointID),
+		EventKind:  strings.TrimSpace(req.EventKind),
+		Preference: strings.TrimSpace(req.Preference),
+		Enabled:    req.Enabled == nil || *req.Enabled,
+		ConfigJSON: normalizedJSON(req.ConfigJSON),
+	}
+	if route.Target == "" || route.EndpointID == "" {
+		writeError(w, http.StatusBadRequest, "target and endpointId are required")
+		return
+	}
+	if _, err := s.store.GetInteractionEndpoint(r.Context(), route.EndpointID); errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusBadRequest, "endpointId must reference an existing endpoint")
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "get interaction endpoint failed")
+		return
+	}
+	created, err := s.store.CreateNotificationRoute(r.Context(), route)
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "notification route already exists")
+		return
+	}
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid notification route")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create notification route failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, created)
+}
+
+func (s *Server) handleResolveNotificationRoutes(w http.ResponseWriter, r *http.Request) {
+	routes, err := s.store.ResolveNotificationRoutes(r.Context(), storage.NotificationRouteResolveOptions{
+		Target:    strings.TrimSpace(r.URL.Query().Get("target")),
+		ThreadID:  strings.TrimSpace(r.URL.Query().Get("threadId")),
+		EventKind: strings.TrimSpace(r.URL.Query().Get("eventKind")),
+		Limit:     intQuery(r, "limit", 100),
+	})
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "target and valid eventKind are required")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "resolve notification routes failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": routes})
+}
+
+func (s *Server) handleUpdateNotificationRoute(w http.ResponseWriter, r *http.Request) {
+	var req notificationRoutePatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	patch := storage.NotificationRoutePatch{
+		EventKind:  optionalTrimmed(req.EventKind),
+		Preference: optionalTrimmed(req.Preference),
+		Enabled:    req.Enabled,
+		ConfigJSON: optionalTrimmed(req.ConfigJSON),
+	}
+	updated, err := s.store.UpdateNotificationRoute(r.Context(), r.PathValue("id"), patch)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "notification route not found")
+		return
+	}
+	if errors.Is(err, storage.ErrConflict) {
+		writeError(w, http.StatusConflict, "notification route already exists")
+		return
+	}
+	if errors.Is(err, storage.ErrInvalidState) {
+		writeError(w, http.StatusBadRequest, "invalid notification route update")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "update notification route failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (s *Server) handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
@@ -1420,6 +1534,18 @@ func boolQuery(r *http.Request, name string) bool {
 	return err == nil && value
 }
 
+func optionalBoolQuery(r *http.Request, name string) *bool {
+	raw := strings.TrimSpace(r.URL.Query().Get(name))
+	if raw == "" {
+		return nil
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return nil
+	}
+	return &value
+}
+
 func normalizedJSON(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "{}"
@@ -1571,6 +1697,23 @@ type endpointRequest struct {
 	OutboundEnabled bool   `json:"outboundEnabled"`
 	AuthMode        string `json:"authMode"`
 	ConfigJSON      string `json:"configJson"`
+}
+
+type notificationRouteRequest struct {
+	Target     string `json:"target"`
+	ThreadID   string `json:"threadId"`
+	EndpointID string `json:"endpointId"`
+	EventKind  string `json:"eventKind"`
+	Preference string `json:"preference"`
+	Enabled    *bool  `json:"enabled"`
+	ConfigJSON string `json:"configJson"`
+}
+
+type notificationRoutePatchRequest struct {
+	EventKind  *string `json:"eventKind"`
+	Preference *string `json:"preference"`
+	Enabled    *bool   `json:"enabled"`
+	ConfigJSON *string `json:"configJson"`
 }
 
 type messageRequest struct {

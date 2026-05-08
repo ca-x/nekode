@@ -390,6 +390,51 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if nonIMPolicy.Code != http.StatusBadRequest {
 		t.Fatalf("non-IM policy status = %d body=%s", nonIMPolicy.Code, nonIMPolicy.Body.String())
 	}
+	routeResp := doJSON(t, s, http.MethodPost, "/api/notification-routes", token, map[string]any{
+		"target":     "#general",
+		"threadId":   "thread-im-1",
+		"endpointId": imEndpointBody.ID,
+		"eventKind":  "messages",
+		"preference": "all",
+		"enabled":    true,
+		"configJson": `{"purpose":"im-notifications"}`,
+	})
+	if routeResp.Code != http.StatusCreated {
+		t.Fatalf("create notification route status = %d body=%s", routeResp.Code, routeResp.Body.String())
+	}
+	var routeBody storage.NotificationRoute
+	if err := json.Unmarshal(routeResp.Body.Bytes(), &routeBody); err != nil {
+		t.Fatalf("decode notification route: %v", err)
+	}
+	if routeBody.EventKind != "message" || routeBody.EndpointID != imEndpointBody.ID {
+		t.Fatalf("notification route = %+v, want normalized message route for %s", routeBody, imEndpointBody.ID)
+	}
+	resolvedRoutes := doGET(t, s, "/api/notification-routes/resolve?target=%23general&threadId=thread-im-1&eventKind=message", token)
+	if resolvedRoutes.Code != http.StatusOK {
+		t.Fatalf("resolve notification routes status = %d body=%s", resolvedRoutes.Code, resolvedRoutes.Body.String())
+	}
+	var resolvedBody struct {
+		Items []storage.NotificationRoute `json:"items"`
+	}
+	if err := json.Unmarshal(resolvedRoutes.Body.Bytes(), &resolvedBody); err != nil {
+		t.Fatalf("decode resolved routes: %v", err)
+	}
+	if len(resolvedBody.Items) != 1 || resolvedBody.Items[0].ID != routeBody.ID {
+		t.Fatalf("resolved routes = %+v, want %s", resolvedBody.Items, routeBody.ID)
+	}
+	updateRoute := doJSON(t, s, http.MethodPatch, "/api/notification-routes/"+routeBody.ID, token, map[string]any{
+		"preference": "muted",
+	})
+	if updateRoute.Code != http.StatusOK {
+		t.Fatalf("update notification route status = %d body=%s", updateRoute.Code, updateRoute.Body.String())
+	}
+	var updatedRoute storage.NotificationRoute
+	if err := json.Unmarshal(updateRoute.Body.Bytes(), &updatedRoute); err != nil {
+		t.Fatalf("decode updated route: %v", err)
+	}
+	if updatedRoute.Preference != "muted" {
+		t.Fatalf("updated route = %+v, want muted", updatedRoute)
+	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
 		"target":  "#general",

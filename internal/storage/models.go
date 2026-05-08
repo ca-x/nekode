@@ -105,6 +105,42 @@ type OutboundDeliveryListOptions struct {
 	Limit      int
 }
 
+type NotificationRoute struct {
+	ID          string `json:"id"`
+	Target      string `json:"target"`
+	ThreadID    string `json:"threadId,omitempty"`
+	EndpointID  string `json:"endpointId"`
+	EventKind   string `json:"eventKind"`
+	Preference  string `json:"preference"`
+	Enabled     bool   `json:"enabled"`
+	ConfigJSON  string `json:"configJson"`
+	CreatedUnix int64  `json:"createdUnix"`
+	UpdatedUnix int64  `json:"updatedUnix"`
+}
+
+type NotificationRouteListOptions struct {
+	Target     string
+	ThreadID   string
+	EndpointID string
+	EventKind  string
+	Enabled    *bool
+	Limit      int
+}
+
+type NotificationRouteResolveOptions struct {
+	Target    string
+	ThreadID  string
+	EventKind string
+	Limit     int
+}
+
+type NotificationRoutePatch struct {
+	EventKind  *string
+	Preference *string
+	Enabled    *bool
+	ConfigJSON *string
+}
+
 type Attachment struct {
 	ID              string `json:"id"`
 	Target          string `json:"target"`

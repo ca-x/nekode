@@ -537,6 +537,70 @@ func TestOutboundDeliveryLifecycleForIMReply(t *testing.T) {
 	}
 }
 
+func TestOutboundDeliveryUsesNotificationRoutes(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_notification_routes")
+	srv := New(store, "srv_test")
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "telegram",
+		DisplayName:     "Telegram Alerts",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	if _, err := store.CreateNotificationRoute(ctx, storage.NotificationRoute{
+		Target:     "#ops",
+		EndpointID: endpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: `{"purpose":"alerts"}`,
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute() error = %v", err)
+	}
+
+	sent, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:         "#ops",
+		Content:        "deploy complete",
+		OutboundPolicy: daemonv1.OutboundPolicy_OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS,
+		RequestId:      "notify-1",
+		IdempotencyKey: "notify-1",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-release",
+			DisplayName: "Release Agent",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage() error = %v", err)
+	}
+	listed, err := srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: sent.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries() error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 1 {
+		t.Fatalf("ListOutboundDeliveries() returned %d deliveries, want 1", len(listed.GetDeliveries()))
+	}
+	delivery := listed.GetDeliveries()[0]
+	if delivery.GetEndpointId() != endpoint.ID ||
+		delivery.GetEndpointKind() != "im" ||
+		delivery.GetExternalMessageId() != "" ||
+		delivery.GetStatus() != daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING {
+		t.Fatalf("delivery = %+v, want pending routed IM delivery without source message id", delivery)
+	}
+}
+
 func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
 	client, cleanup := newTestClient(t)
 	defer cleanup()

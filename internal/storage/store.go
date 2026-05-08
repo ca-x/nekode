@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,6 +19,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/notificationroute"
 	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/predicate"
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
@@ -512,6 +514,179 @@ func (s *Store) ScheduleOutboundDeliveryRetry(ctx context.Context, id string, ne
 		return OutboundDelivery{}, err
 	}
 	return outboundDeliveryFromEnt(row), nil
+}
+
+func (s *Store) CreateNotificationRoute(ctx context.Context, route NotificationRoute) (NotificationRoute, error) {
+	normalized, err := normalizeNotificationRoute(route)
+	if err != nil {
+		return NotificationRoute{}, err
+	}
+	now := unixNow()
+	create := s.client.NotificationRoute.Create().
+		SetTarget(normalized.Target).
+		SetThreadID(normalized.ThreadID).
+		SetEndpointID(normalized.EndpointID).
+		SetEventKind(normalized.EventKind).
+		SetPreference(normalized.Preference).
+		SetEnabled(normalized.Enabled).
+		SetConfigJSON(normalized.ConfigJSON).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now)
+	if normalized.ID != "" {
+		create.SetID(normalized.ID)
+	}
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
+		return NotificationRoute{}, ErrConflict
+	}
+	if err != nil {
+		return NotificationRoute{}, err
+	}
+	return notificationRouteFromEnt(row), nil
+}
+
+func (s *Store) GetNotificationRoute(ctx context.Context, id string) (NotificationRoute, error) {
+	row, err := s.client.NotificationRoute.Query().Where(notificationroute.IDEQ(id)).Only(ctx)
+	if ent.IsNotFound(err) {
+		return NotificationRoute{}, ErrNotFound
+	}
+	if err != nil {
+		return NotificationRoute{}, err
+	}
+	return notificationRouteFromEnt(row), nil
+}
+
+func (s *Store) ListNotificationRoutes(ctx context.Context, opts NotificationRouteListOptions) ([]NotificationRoute, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 100
+	}
+	query := s.client.NotificationRoute.Query()
+	if opts.Target != "" {
+		query.Where(notificationroute.TargetEQ(strings.TrimSpace(opts.Target)))
+	}
+	if opts.ThreadID != "" {
+		query.Where(notificationroute.ThreadIDEQ(strings.TrimSpace(opts.ThreadID)))
+	}
+	if opts.EndpointID != "" {
+		query.Where(notificationroute.EndpointIDEQ(strings.TrimSpace(opts.EndpointID)))
+	}
+	if opts.EventKind != "" {
+		eventKind := normalizeNotificationEventKind(opts.EventKind)
+		if !validNotificationEventKind(eventKind) {
+			return nil, ErrInvalidState
+		}
+		query.Where(notificationroute.EventKindEQ(eventKind))
+	}
+	if opts.Enabled != nil {
+		query.Where(notificationroute.EnabledEQ(*opts.Enabled))
+	}
+	rows, err := query.
+		Order(notificationroute.ByUpdatedUnix(sql.OrderDesc()), notificationroute.ByID(sql.OrderDesc())).
+		Limit(opts.Limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	routes := make([]NotificationRoute, 0, len(rows))
+	for _, row := range rows {
+		routes = append(routes, notificationRouteFromEnt(row))
+	}
+	return routes, nil
+}
+
+func (s *Store) UpdateNotificationRoute(ctx context.Context, id string, patch NotificationRoutePatch) (NotificationRoute, error) {
+	update := s.client.NotificationRoute.UpdateOneID(strings.TrimSpace(id)).
+		SetUpdatedUnix(unixNow())
+	if patch.EventKind != nil {
+		eventKind := normalizeNotificationEventKind(*patch.EventKind)
+		if !validNotificationEventKind(eventKind) {
+			return NotificationRoute{}, ErrInvalidState
+		}
+		update.SetEventKind(eventKind)
+	}
+	if patch.Preference != nil {
+		preference := normalizeNotificationPreference(*patch.Preference)
+		if !validNotificationPreference(preference) {
+			return NotificationRoute{}, ErrInvalidState
+		}
+		update.SetPreference(preference)
+	}
+	if patch.Enabled != nil {
+		update.SetEnabled(*patch.Enabled)
+	}
+	if patch.ConfigJSON != nil {
+		configJSON, err := normalizeJSONDocument(*patch.ConfigJSON)
+		if err != nil {
+			return NotificationRoute{}, ErrInvalidState
+		}
+		update.SetConfigJSON(configJSON)
+	}
+	row, err := update.Save(ctx)
+	if ent.IsNotFound(err) {
+		return NotificationRoute{}, ErrNotFound
+	}
+	if ent.IsConstraintError(err) {
+		return NotificationRoute{}, ErrConflict
+	}
+	if err != nil {
+		return NotificationRoute{}, err
+	}
+	return notificationRouteFromEnt(row), nil
+}
+
+func (s *Store) ResolveNotificationRoutes(ctx context.Context, opts NotificationRouteResolveOptions) ([]NotificationRoute, error) {
+	target := strings.TrimSpace(opts.Target)
+	if target == "" {
+		return nil, ErrInvalidState
+	}
+	eventKind := normalizeNotificationEventKind(opts.EventKind)
+	if !validNotificationEventKind(eventKind) || eventKind == "all" {
+		return nil, ErrInvalidState
+	}
+	limit := opts.Limit
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	enabled := true
+	routes, err := s.ListNotificationRoutes(ctx, NotificationRouteListOptions{
+		Target:  target,
+		Enabled: &enabled,
+		Limit:   200,
+	})
+	if err != nil {
+		return nil, err
+	}
+	threadID := strings.TrimSpace(opts.ThreadID)
+	scored := make([]scoredNotificationRoute, 0, len(routes))
+	for _, route := range routes {
+		score, ok := notificationRouteScore(route, threadID, eventKind)
+		if !ok {
+			continue
+		}
+		scored = append(scored, scoredNotificationRoute{route: route, score: score})
+	}
+	sort.SliceStable(scored, func(i, j int) bool {
+		if scored[i].score != scored[j].score {
+			return scored[i].score > scored[j].score
+		}
+		if scored[i].route.UpdatedUnix != scored[j].route.UpdatedUnix {
+			return scored[i].route.UpdatedUnix > scored[j].route.UpdatedUnix
+		}
+		return scored[i].route.ID > scored[j].route.ID
+	})
+	out := make([]NotificationRoute, 0, len(scored))
+	seenEndpoint := make(map[string]struct{}, len(scored))
+	for _, item := range scored {
+		if _, ok := seenEndpoint[item.route.EndpointID]; ok {
+			continue
+		}
+		seenEndpoint[item.route.EndpointID] = struct{}{}
+		out = append(out, item.route)
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
 }
 
 func (s *Store) SearchMessages(ctx context.Context, opts MessageSearchOptions) ([]Message, error) {
@@ -1361,6 +1536,21 @@ func outboundDeliveryFromEnt(row *ent.OutboundDelivery) OutboundDelivery {
 	}
 }
 
+func notificationRouteFromEnt(row *ent.NotificationRoute) NotificationRoute {
+	return NotificationRoute{
+		ID:          row.ID,
+		Target:      row.Target,
+		ThreadID:    row.ThreadID,
+		EndpointID:  row.EndpointID,
+		EventKind:   row.EventKind,
+		Preference:  row.Preference,
+		Enabled:     row.Enabled,
+		ConfigJSON:  row.ConfigJSON,
+		CreatedUnix: row.CreatedUnix,
+		UpdatedUnix: row.UpdatedUnix,
+	}
+}
+
 func marshalAttachments(attachments []Attachment) (string, error) {
 	if len(attachments) == 0 {
 		return "[]", nil
@@ -1501,6 +1691,124 @@ func validOutboundDeliveryStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+type scoredNotificationRoute struct {
+	route NotificationRoute
+	score int
+}
+
+func normalizeNotificationRoute(route NotificationRoute) (NotificationRoute, error) {
+	route.Target = strings.TrimSpace(route.Target)
+	route.ThreadID = strings.TrimSpace(route.ThreadID)
+	route.EndpointID = strings.TrimSpace(route.EndpointID)
+	route.EventKind = normalizeNotificationEventKind(route.EventKind)
+	route.Preference = normalizeNotificationPreference(route.Preference)
+	configJSON, err := normalizeJSONDocument(route.ConfigJSON)
+	if err != nil {
+		return NotificationRoute{}, ErrInvalidState
+	}
+	route.ConfigJSON = configJSON
+	if route.Target == "" || route.EndpointID == "" {
+		return NotificationRoute{}, ErrInvalidState
+	}
+	if !validNotificationEventKind(route.EventKind) || !validNotificationPreference(route.Preference) {
+		return NotificationRoute{}, ErrInvalidState
+	}
+	return route, nil
+}
+
+func notificationRouteScore(route NotificationRoute, threadID, eventKind string) (int, bool) {
+	if !route.Enabled || route.Preference == "muted" {
+		return 0, false
+	}
+	if route.ThreadID != "" && route.ThreadID != threadID {
+		return 0, false
+	}
+	score := 0
+	if threadID != "" && route.ThreadID == threadID {
+		score += 4
+	}
+	switch route.EventKind {
+	case eventKind:
+		score += 2
+	case "all":
+		score++
+	default:
+		return 0, false
+	}
+	if route.Preference == "mentions" && eventKind != "mention" {
+		return 0, false
+	}
+	return score, true
+}
+
+func normalizeNotificationEventKind(kind string) string {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	kind = strings.ReplaceAll(kind, "-", "_")
+	switch kind {
+	case "", "messages":
+		return "message"
+	case "*", "any":
+		return "all"
+	case "mentions":
+		return "mention"
+	case "tasks":
+		return "task"
+	case "reminders":
+		return "reminder"
+	case "runs":
+		return "run"
+	case "activities":
+		return "activity"
+	case "delivery", "delivery_status", "outbound", "outbound_delivery":
+		return "delivery_status"
+	default:
+		return kind
+	}
+}
+
+func validNotificationEventKind(kind string) bool {
+	switch kind {
+	case "all", "message", "mention", "task", "reminder", "run", "activity", "delivery_status":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeNotificationPreference(preference string) string {
+	switch strings.ToLower(strings.TrimSpace(preference)) {
+	case "", "all", "enabled":
+		return "all"
+	case "mention", "mentions":
+		return "mentions"
+	case "none", "mute", "muted", "disabled", "off":
+		return "muted"
+	default:
+		return strings.ToLower(strings.TrimSpace(preference))
+	}
+}
+
+func validNotificationPreference(preference string) bool {
+	switch preference {
+	case "all", "mentions", "muted":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeJSONDocument(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "{}", nil
+	}
+	var out bytes.Buffer
+	if err := json.Compact(&out, []byte(value)); err != nil {
+		return "", err
+	}
+	return out.String(), nil
 }
 
 func normalizeTaskState(state string) string {

@@ -187,6 +187,42 @@ var (
 			},
 		},
 	}
+	// NotificationRoutesColumns holds the columns for the "notification_routes" table.
+	NotificationRoutesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "thread_id", Type: field.TypeString, Default: ""},
+		{Name: "endpoint_id", Type: field.TypeString},
+		{Name: "event_kind", Type: field.TypeString, Default: "message"},
+		{Name: "preference", Type: field.TypeString, Default: "all"},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "config_json", Type: field.TypeString, Default: "{}"},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// NotificationRoutesTable holds the schema information for the "notification_routes" table.
+	NotificationRoutesTable = &schema.Table{
+		Name:       "notification_routes",
+		Columns:    NotificationRoutesColumns,
+		PrimaryKey: []*schema.Column{NotificationRoutesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "notificationroute_target_thread_id_event_kind",
+				Unique:  false,
+				Columns: []*schema.Column{NotificationRoutesColumns[1], NotificationRoutesColumns[2], NotificationRoutesColumns[4]},
+			},
+			{
+				Name:    "notificationroute_endpoint_id_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{NotificationRoutesColumns[3], NotificationRoutesColumns[6]},
+			},
+			{
+				Name:    "notificationroute_target_endpoint_id_event_kind_thread_id",
+				Unique:  true,
+				Columns: []*schema.Column{NotificationRoutesColumns[1], NotificationRoutesColumns[3], NotificationRoutesColumns[4], NotificationRoutesColumns[2]},
+			},
+		},
+	}
 	// OutboundDeliveriesColumns holds the columns for the "outbound_deliveries" table.
 	OutboundDeliveriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -484,6 +520,7 @@ var (
 		IdempotencyRecordsTable,
 		InteractionEndpointsTable,
 		MessagesTable,
+		NotificationRoutesTable,
 		OutboundDeliveriesTable,
 		RemindersTable,
 		ReminderEventsTable,

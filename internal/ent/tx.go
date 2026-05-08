@@ -20,6 +20,8 @@ type Tx struct {
 	InteractionEndpoint *InteractionEndpointClient
 	// Message is the client for interacting with the Message builders.
 	Message *MessageClient
+	// NotificationRoute is the client for interacting with the NotificationRoute builders.
+	NotificationRoute *NotificationRouteClient
 	// OutboundDelivery is the client for interacting with the OutboundDelivery builders.
 	OutboundDelivery *OutboundDeliveryClient
 	// Reminder is the client for interacting with the Reminder builders.
@@ -171,6 +173,7 @@ func (tx *Tx) init() {
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
 	tx.InteractionEndpoint = NewInteractionEndpointClient(tx.config)
 	tx.Message = NewMessageClient(tx.config)
+	tx.NotificationRoute = NewNotificationRouteClient(tx.config)
 	tx.OutboundDelivery = NewOutboundDeliveryClient(tx.config)
 	tx.Reminder = NewReminderClient(tx.config)
 	tx.ReminderEvent = NewReminderEventClient(tx.config)

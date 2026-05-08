@@ -200,6 +200,58 @@ Request:
 }
 ```
 
+## Notification Routes
+
+Notification routes map Nekode targets or threads to dedicated outbound
+interaction endpoints. They are preferences and routing facts only; provider
+send runtimes still consume `OutboundDelivery` records.
+
+### `GET /api/notification-routes`
+
+Query:
+
+- `target`: optional target filter.
+- `threadId`: optional thread filter.
+- `endpointId`: optional endpoint filter.
+- `eventKind`: optional event kind such as `message`, `mention`, `task`,
+  `reminder`, `run`, `activity`, `delivery_status`, or `all`.
+- `enabled`: optional boolean.
+- `limit`: optional, defaults to `100`.
+
+### `POST /api/notification-routes`
+
+Request:
+
+```json
+{
+  "target": "#general",
+  "threadId": "optional-thread-id",
+  "endpointId": "iep_...",
+  "eventKind": "message",
+  "preference": "all",
+  "enabled": true,
+  "configJson": "{}"
+}
+```
+
+`preference` accepts `all`, `mentions`, or `muted`.
+
+### `GET /api/notification-routes/resolve`
+
+Query:
+
+- `target`: required target.
+- `threadId`: optional thread.
+- `eventKind`: required event kind.
+- `limit`: optional, defaults to `100`.
+
+Returns the enabled routes that should receive that event, with thread-specific
+routes preferred over target defaults and duplicate endpoints collapsed.
+
+### `PATCH /api/notification-routes/{id}`
+
+Patchable fields are `eventKind`, `preference`, `enabled`, and `configJson`.
+
 ## Messages
 
 ### `GET /api/messages?target=%23general`

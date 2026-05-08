@@ -7,6 +7,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
+	"github.com/ca-x/nekode/internal/ent/notificationroute"
 	"github.com/ca-x/nekode/internal/ent/outbounddelivery"
 	"github.com/ca-x/nekode/internal/ent/reminder"
 	"github.com/ca-x/nekode/internal/ent/reminderevent"
@@ -226,6 +227,40 @@ func init() {
 	messageDescID := messageFields[0].Descriptor()
 	// message.DefaultID holds the default value on creation for the id field.
 	message.DefaultID = messageDescID.Default.(func() string)
+	notificationrouteFields := schema.NotificationRoute{}.Fields()
+	_ = notificationrouteFields
+	// notificationrouteDescTarget is the schema descriptor for target field.
+	notificationrouteDescTarget := notificationrouteFields[1].Descriptor()
+	// notificationroute.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	notificationroute.TargetValidator = notificationrouteDescTarget.Validators[0].(func(string) error)
+	// notificationrouteDescThreadID is the schema descriptor for thread_id field.
+	notificationrouteDescThreadID := notificationrouteFields[2].Descriptor()
+	// notificationroute.DefaultThreadID holds the default value on creation for the thread_id field.
+	notificationroute.DefaultThreadID = notificationrouteDescThreadID.Default.(string)
+	// notificationrouteDescEndpointID is the schema descriptor for endpoint_id field.
+	notificationrouteDescEndpointID := notificationrouteFields[3].Descriptor()
+	// notificationroute.EndpointIDValidator is a validator for the "endpoint_id" field. It is called by the builders before save.
+	notificationroute.EndpointIDValidator = notificationrouteDescEndpointID.Validators[0].(func(string) error)
+	// notificationrouteDescEventKind is the schema descriptor for event_kind field.
+	notificationrouteDescEventKind := notificationrouteFields[4].Descriptor()
+	// notificationroute.DefaultEventKind holds the default value on creation for the event_kind field.
+	notificationroute.DefaultEventKind = notificationrouteDescEventKind.Default.(string)
+	// notificationrouteDescPreference is the schema descriptor for preference field.
+	notificationrouteDescPreference := notificationrouteFields[5].Descriptor()
+	// notificationroute.DefaultPreference holds the default value on creation for the preference field.
+	notificationroute.DefaultPreference = notificationrouteDescPreference.Default.(string)
+	// notificationrouteDescEnabled is the schema descriptor for enabled field.
+	notificationrouteDescEnabled := notificationrouteFields[6].Descriptor()
+	// notificationroute.DefaultEnabled holds the default value on creation for the enabled field.
+	notificationroute.DefaultEnabled = notificationrouteDescEnabled.Default.(bool)
+	// notificationrouteDescConfigJSON is the schema descriptor for config_json field.
+	notificationrouteDescConfigJSON := notificationrouteFields[7].Descriptor()
+	// notificationroute.DefaultConfigJSON holds the default value on creation for the config_json field.
+	notificationroute.DefaultConfigJSON = notificationrouteDescConfigJSON.Default.(string)
+	// notificationrouteDescID is the schema descriptor for id field.
+	notificationrouteDescID := notificationrouteFields[0].Descriptor()
+	// notificationroute.DefaultID holds the default value on creation for the id field.
+	notificationroute.DefaultID = notificationrouteDescID.Default.(func() string)
 	outbounddeliveryFields := schema.OutboundDelivery{}.Fields()
 	_ = outbounddeliveryFields
 	// outbounddeliveryDescTarget is the schema descriptor for target field.

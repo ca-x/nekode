@@ -244,6 +244,36 @@ Agent replies to IM-origin messages should display in the same Web
 channel/thread/inbox topic and be delivered back to the original IM endpoint by
 the outbound dispatcher. The adapter layer should not post the reply directly.
 
+## Notification Routing
+
+Task #162 owns notification preferences and dedicated endpoint routing. The
+first-version surface is a durable `NotificationRoute` record that maps a
+Nekode target, and optionally a thread, to an outbound-capable
+`InteractionEndpoint`.
+
+Route fields:
+
+- `target`: Nekode channel, thread parent, DM, or inbox target;
+- `threadId`: optional thread-specific override;
+- `endpointId`: destination `InteractionEndpoint`;
+- `eventKind`: `message`, `mention`, `task`, `reminder`, `run`, `activity`,
+  `delivery_status`, or `all`;
+- `preference`: `all`, `mentions`, or `muted`;
+- `enabled`: whether the route participates in resolution;
+- `configJson`: non-secret route-specific options.
+
+The HTTP API exposes `GET/POST /api/notification-routes`,
+`PATCH /api/notification-routes/{id}`, and
+`GET /api/notification-routes/resolve`. Resolution prefers thread-specific
+routes over target defaults, filters muted or disabled routes, and collapses
+duplicates by endpoint.
+
+When daemon `SendMessage` uses `OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS`, Nekode
+keeps the source-only IM reply behavior and also enqueues pending
+`OutboundDelivery` records for resolved notification routes. Provider runtimes
+still consume and update those delivery records through the task #158 lifecycle;
+task #162 does not send directly to provider SDKs.
+
 ## Deployment Steps
 
 For each IM channel:

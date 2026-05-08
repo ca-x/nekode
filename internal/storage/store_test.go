@@ -118,6 +118,30 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	if deliveredDelivery.Status != "delivered" || deliveredDelivery.DeliveredTimeUnix == 0 {
 		t.Fatalf("delivered delivery = %+v, want delivered timestamp", deliveredDelivery)
 	}
+	notificationRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#general",
+		ThreadID:   "thread-1",
+		EndpointID: endpoint.ID,
+		EventKind:  "messages",
+		Preference: "all",
+		ConfigJSON: `{"reason":"ops"}`,
+		Enabled:    true,
+	})
+	if err != nil {
+		t.Fatalf("CreateNotificationRoute() error = %v", err)
+	}
+	resolvedRoutes, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#general",
+		ThreadID:  "thread-1",
+		EventKind: "message",
+		Limit:     10,
+	})
+	if err != nil {
+		t.Fatalf("ResolveNotificationRoutes() error = %v", err)
+	}
+	if len(resolvedRoutes) != 1 || resolvedRoutes[0].ID != notificationRoute.ID {
+		t.Fatalf("resolved routes = %+v, want %s", resolvedRoutes, notificationRoute.ID)
+	}
 
 	task, err := store.CreateTask(ctx, Task{
 		Summary:         "ship backend",
@@ -260,6 +284,126 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	}
 }
 
+func TestNotificationRouteResolution(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	channelEndpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "feishu",
+		DisplayName:     "Feishu",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(feishu) error = %v", err)
+	}
+	threadEndpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "telegram",
+		DisplayName:     "Telegram",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(telegram) error = %v", err)
+	}
+	mutedEndpoint, err := store.CreateInteractionEndpoint(ctx, InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "terminal",
+		DisplayName:     "Terminal",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "bearer",
+		ConfigJSON:      "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint(terminal) error = %v", err)
+	}
+
+	if _, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: channelEndpoint.ID,
+		EventKind:  "all",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute(channel) error = %v", err)
+	}
+	threadRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		ThreadID:   "thread-incident",
+		EndpointID: threadEndpoint.ID,
+		EventKind:  "message",
+		Preference: "all",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	})
+	if err != nil {
+		t.Fatalf("CreateNotificationRoute(thread) error = %v", err)
+	}
+	if _, err := store.CreateNotificationRoute(ctx, NotificationRoute{
+		Target:     "#ops",
+		EndpointID: mutedEndpoint.ID,
+		EventKind:  "message",
+		Preference: "muted",
+		Enabled:    true,
+		ConfigJSON: "{}",
+	}); err != nil {
+		t.Fatalf("CreateNotificationRoute(muted) error = %v", err)
+	}
+
+	resolved, err := store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#ops",
+		ThreadID:  "thread-incident",
+		EventKind: "message",
+	})
+	if err != nil {
+		t.Fatalf("ResolveNotificationRoutes() error = %v", err)
+	}
+	if len(resolved) != 2 {
+		t.Fatalf("resolved routes = %+v, want thread + channel routes", resolved)
+	}
+	if resolved[0].ID != threadRoute.ID {
+		t.Fatalf("resolved[0] = %+v, want thread-specific route first", resolved[0])
+	}
+	for _, route := range resolved {
+		if route.EndpointID == mutedEndpoint.ID {
+			t.Fatalf("resolved routes include muted route: %+v", resolved)
+		}
+	}
+	updated, err := store.UpdateNotificationRoute(ctx, threadRoute.ID, NotificationRoutePatch{
+		Preference: stringPtr("mentions"),
+	})
+	if err != nil {
+		t.Fatalf("UpdateNotificationRoute() error = %v", err)
+	}
+	if updated.Preference != "mentions" {
+		t.Fatalf("updated.Preference = %q, want mentions", updated.Preference)
+	}
+	resolved, err = store.ResolveNotificationRoutes(ctx, NotificationRouteResolveOptions{
+		Target:    "#ops",
+		ThreadID:  "thread-incident",
+		EventKind: "message",
+	})
+	if err != nil {
+		t.Fatalf("ResolveNotificationRoutes(after mention preference) error = %v", err)
+	}
+	for _, route := range resolved {
+		if route.ID == threadRoute.ID {
+			t.Fatalf("message resolution included mentions-only route: %+v", resolved)
+		}
+	}
+}
+
 func TestStoreRejectsInvalidTaskState(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)
@@ -271,6 +415,10 @@ func TestStoreRejectsInvalidTaskState(t *testing.T) {
 	if _, err := store.ListTasks(ctx, "reviewing", "#general", 10); !errors.Is(err, ErrInvalidState) {
 		t.Fatalf("ListTasks() error = %v, want %v", err, ErrInvalidState)
 	}
+}
+
+func stringPtr(value string) *string {
+	return &value
 }
 
 func newTestStore(t *testing.T) *Store {

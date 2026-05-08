@@ -379,8 +379,8 @@ func (s *Server) SendMessage(ctx context.Context, req *daemonv1.SendMessageReque
 	if err := s.RecordMessageMutation(ctx, created, daemonv1.EventOperation_EVENT_OPERATION_APPENDED); err != nil {
 		return nil, status.Errorf(codes.Internal, "append message event: %v", err)
 	}
-	if shouldEnqueueSourceDelivery(req, messageModel.SenderKind) {
-		if _, err := s.EnqueueSourceOutboundDelivery(ctx, created); err != nil {
+	if shouldEnqueueOutboundDelivery(req, messageModel.SenderKind) {
+		if _, err := s.EnqueueOutboundDeliveries(ctx, created, req.GetOutboundPolicy()); err != nil {
 			return nil, status.Errorf(codes.Internal, "enqueue outbound delivery: %v", err)
 		}
 	}
@@ -1973,7 +1973,7 @@ func idempotencyCacheKey(method, requestID, idempotencyKey string) string {
 	return method + ":" + key
 }
 
-func shouldEnqueueSourceDelivery(req *daemonv1.SendMessageRequest, senderKind string) bool {
+func shouldEnqueueOutboundDelivery(req *daemonv1.SendMessageRequest, senderKind string) bool {
 	switch req.GetOutboundPolicy() {
 	case daemonv1.OutboundPolicy_OUTBOUND_POLICY_NONE:
 		return false
@@ -1983,6 +1983,23 @@ func shouldEnqueueSourceDelivery(req *daemonv1.SendMessageRequest, senderKind st
 		return true
 	default:
 		return req.GetEmitOutbound() || senderKind == "agent"
+	}
+}
+
+func (s *Server) EnqueueOutboundDeliveries(ctx context.Context, msg storage.Message, policy daemonv1.OutboundPolicy) ([]storage.OutboundDelivery, error) {
+	switch policy {
+	case daemonv1.OutboundPolicy_OUTBOUND_POLICY_NONE:
+		return nil, nil
+	case daemonv1.OutboundPolicy_OUTBOUND_POLICY_ALL_BOUND_ENDPOINTS:
+		return s.enqueueRoutedOutboundDeliveries(ctx, msg, true)
+	case daemonv1.OutboundPolicy_OUTBOUND_POLICY_SELECTED_ENDPOINTS:
+		return s.enqueueRoutedOutboundDeliveries(ctx, msg, false)
+	default:
+		delivery, err := s.EnqueueSourceOutboundDelivery(ctx, msg)
+		if err != nil || delivery.ID == "" {
+			return nil, err
+		}
+		return []storage.OutboundDelivery{delivery}, nil
 	}
 }
 
@@ -2046,6 +2063,66 @@ func (s *Server) EnqueueSourceOutboundDelivery(ctx context.Context, msg storage.
 	}
 	s.EmitOutboundDeliveryEvent(delivery, daemonv1.EventOperation_EVENT_OPERATION_CREATED)
 	return delivery, nil
+}
+
+func (s *Server) enqueueRoutedOutboundDeliveries(ctx context.Context, msg storage.Message, includeSource bool) ([]storage.OutboundDelivery, error) {
+	if s == nil || s.store == nil {
+		return nil, nil
+	}
+	deliveries := make([]storage.OutboundDelivery, 0, 2)
+	seenEndpoints := map[string]struct{}{}
+	if includeSource {
+		sourceDelivery, err := s.EnqueueSourceOutboundDelivery(ctx, msg)
+		if err != nil {
+			return nil, err
+		}
+		if sourceDelivery.ID != "" {
+			deliveries = append(deliveries, sourceDelivery)
+			seenEndpoints[sourceDelivery.EndpointID] = struct{}{}
+		}
+	}
+	routes, err := s.store.ResolveNotificationRoutes(ctx, storage.NotificationRouteResolveOptions{
+		Target:    msg.Target,
+		ThreadID:  msg.ThreadID,
+		EventKind: "message",
+		Limit:     100,
+	})
+	if errors.Is(err, storage.ErrInvalidState) {
+		return deliveries, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, route := range routes {
+		if _, ok := seenEndpoints[route.EndpointID]; ok {
+			continue
+		}
+		endpoint, err := s.store.GetInteractionEndpoint(ctx, route.EndpointID)
+		if errors.Is(err, storage.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if !endpoint.OutboundEnabled {
+			continue
+		}
+		delivery, err := s.store.CreateOutboundDelivery(ctx, storage.OutboundDelivery{
+			Target:       msg.Target,
+			MessageID:    msg.ID,
+			EndpointID:   endpoint.ID,
+			EndpointKind: endpoint.Kind,
+			Status:       "pending",
+			RequestID:    firstNonEmpty(msg.RequestID, msg.ID+":"+endpoint.ID),
+		})
+		if err != nil {
+			return nil, err
+		}
+		s.EmitOutboundDeliveryEvent(delivery, daemonv1.EventOperation_EVENT_OPERATION_CREATED)
+		deliveries = append(deliveries, delivery)
+		seenEndpoints[route.EndpointID] = struct{}{}
+	}
+	return deliveries, nil
 }
 
 func (s *Server) sourceMessageForOutbound(ctx context.Context, msg storage.Message) (storage.Message, bool, error) {
