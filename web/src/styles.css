@@ -408,6 +408,62 @@ textarea {
   background: #fdebea;
 }
 
+.section-notice-row {
+  display: grid;
+  gap: 10px;
+}
+
+.section-status-notice,
+.section-issues-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.section-status-notice {
+  color: var(--warning);
+  border: 1px solid #f6d88f;
+  background: #fff9e8;
+  font-weight: 700;
+}
+
+.section-status-notice svg {
+  animation: spin 1s linear infinite;
+}
+
+.section-issues-notice {
+  align-items: flex-start;
+  color: var(--danger);
+  border: 1px solid #f2b8b5;
+  background: #fff5f4;
+}
+
+.section-issues-notice div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.section-issues-notice span {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.section-issues-notice .secondary-button {
+  margin-left: auto;
+  min-height: 34px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

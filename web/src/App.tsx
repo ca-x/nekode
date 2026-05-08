@@ -62,6 +62,7 @@ import type {
   DaemonInfo,
   DaemonInventoryComputer,
   DaemonRun,
+  EventCursor,
   IMProviderField,
   IMProviderSchema,
   InteractionEndpoint,
@@ -103,10 +104,35 @@ type TaskViewMode = "board" | "list";
 type TaskStateFilter = TaskState | "all" | "open";
 type TaskSortKey = "updated_desc" | "created_desc" | "summary_asc" | "state_asc";
 type AgentActionBusy = { agentId: string; kind: "control" | "message" } | null;
+type SectionIssueKey =
+  | "setup"
+  | "protocol"
+  | "daemon"
+  | "endpoints"
+  | "notificationRoutes"
+  | "imProviders"
+  | "channels"
+  | "channelMembers"
+  | "messages"
+  | "savedMessages"
+  | "inbox"
+  | "tasks"
+  | "reminders"
+  | "activity"
+  | "agentStatuses"
+  | "daemonInventory"
+  | "daemonRuns"
+  | "daemonActivity"
+  | "runtimePresets";
 type StoredEventCursor = {
   serverId: string;
   protocolVersion: number;
   sequence: number;
+};
+type SectionIssue = {
+  section: SectionIssueKey;
+  label: string;
+  message: string;
 };
 type MessageFeedItem =
   | { kind: "message"; message: Message }
@@ -306,6 +332,18 @@ function wrapCanvasText(
 
 function isAuthError(error: unknown) {
   return error instanceof ApiError && error.status === 401;
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function sectionIssue(section: SectionIssueKey, error: unknown): SectionIssue {
+  return {
+    section,
+    label: sectionIssueLabels[section],
+    message: errorMessage(error, "Unable to load this section")
+  };
 }
 
 function readStoredEventCursor(info: DaemonInfo | null): StoredEventCursor | null {
@@ -602,6 +640,7 @@ function App() {
   const [view, setView] = useState<ViewKey>("overview");
   const [status, setStatus] = useState<LoadState>("idle");
   const [error, setError] = useState("");
+  const [sectionIssues, setSectionIssues] = useState<SectionIssue[]>([]);
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [protocol, setProtocol] = useState<ProtocolInfo | null>(null);
   const [daemonInfo, setDaemonInfo] = useState<DaemonInfo | null>(null);
@@ -636,6 +675,21 @@ function App() {
     () => realAgentSidebarItems(daemonInventory, agentStatuses),
     [daemonInventory, agentStatuses]
   );
+  const sectionIssueGroups = useMemo(() => {
+    const pick = (sections: SectionIssueKey[]) =>
+      sectionIssues.filter((issue) => sections.includes(issue.section));
+    return {
+      overview: sectionIssues,
+      inbox: pick(["inbox"]),
+      messages: pick(["messages", "savedMessages", "channelMembers"]),
+      tasks: pick(["tasks"]),
+      reminders: pick(["reminders"]),
+      activity: pick(["activity", "agentStatuses", "daemonRuns", "daemonActivity"]),
+      settings: pick(["setup", "protocol", "daemon", "channels", "channelMembers", "runtimePresets"]),
+      endpoints: pick(["endpoints", "notificationRoutes", "imProviders"]),
+      daemon: pick(["daemon", "agentStatuses", "daemonInventory", "daemonRuns", "daemonActivity", "runtimePresets"])
+    };
+  }, [sectionIssues]);
 
   const loadData = useCallback(async (options: { background?: boolean } = {}) => {
     if (!token) return;
@@ -644,39 +698,37 @@ function App() {
       setStatus((current) => (current === "ready" ? current : "loading"));
     }
     setError("");
+    if (!options.background) {
+      setSectionIssues([]);
+    }
+    const issues: SectionIssue[] = [];
+    const capture = async <T,>(section: SectionIssueKey, request: Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await request;
+      } catch (err) {
+        if (isAuthError(err)) throw err;
+        issues.push(sectionIssue(section, err));
+        return fallback;
+      }
+    };
     try {
       const messageTarget = activeThread?.target ?? target;
       const messageThreadID = activeThread?.threadId ?? "";
       const coreData = await Promise.all([
         api.me(),
-        api.setupStatus().catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return null;
-        }),
-        api.protocol(),
-        api.daemonInfo().catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return null;
-        }),
-        api.listInteractionEndpoints(),
-        api.listNotificationRoutes(),
-        api.listIMProviders().catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] as IMProviderSchema[] };
-        }),
-        api.listChannels({ joinedOnly: false }).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listChannelMembers(messageTarget).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listMessages(messageTarget, 50, messageThreadID),
-        api.listSavedMessages(messageTarget),
-        api.listThreadInbox({ limit: 100 }),
-        api.listTasks({ target }),
-        api.listReminders({ target, includeCanceled: true, limit: 100 })
+        capture<SetupStatus | null>("setup", api.setupStatus(), null),
+        capture<ProtocolInfo | null>("protocol", api.protocol(), null),
+        capture<DaemonInfo | null>("daemon", api.daemonInfo(), null),
+        capture("endpoints", api.listInteractionEndpoints(), { items: [] as InteractionEndpoint[] }),
+        capture("notificationRoutes", api.listNotificationRoutes(), { items: [] as NotificationRoute[] }),
+        capture("imProviders", api.listIMProviders(), { items: [] as IMProviderSchema[] }),
+        capture("channels", api.listChannels({ joinedOnly: false }), { items: [] as Channel[] }),
+        capture("channelMembers", api.listChannelMembers(messageTarget), { items: [] as ChannelMember[] }),
+        capture("messages", api.listMessages(messageTarget, 50, messageThreadID), { items: [] as Message[] }),
+        capture("savedMessages", api.listSavedMessages(messageTarget), { items: [] as SavedMessage[] }),
+        capture("inbox", api.listThreadInbox({ limit: 100 }), { items: [] as ThreadInboxItem[] }),
+        capture("tasks", api.listTasks({ target }), { items: [] as Task[] }),
+        capture("reminders", api.listReminders({ target, includeCanceled: true, limit: 100 }), { items: [] as Reminder[] })
       ]);
       const [
         me,
@@ -718,27 +770,12 @@ function App() {
         daemonActivityList,
         runtimePresetList
       ] = await Promise.all([
-        api.listDaemonEvents({ target, limit: 80 }).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listAgentStatuses({ target, limit: 100 }).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listDaemonInventory(100).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listDaemonRuns({ target, limit: 100 }).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listDaemonActivity({ target, limit: 100 }).catch((err: unknown) => {
-          if (isAuthError(err)) throw err;
-          return { items: [] };
-        }),
-        api.listRuntimePresets({ includeExperimental: true })
+        capture("activity", api.listDaemonEvents({ target, limit: 80 }), { items: [] as CollaborationEvent[], nextCursor: undefined as EventCursor | undefined }),
+        capture("agentStatuses", api.listAgentStatuses({ target, limit: 100 }), { items: [] as AgentStatusSnapshot[] }),
+        capture("daemonInventory", api.listDaemonInventory(100), { items: [] as DaemonInventoryComputer[] }),
+        capture("daemonRuns", api.listDaemonRuns({ target, limit: 100 }), { items: [] as DaemonRun[] }),
+        capture("daemonActivity", api.listDaemonActivity({ target, limit: 100 }), { items: [] as DaemonActivityRecord[] }),
+        capture("runtimePresets", api.listRuntimePresets({ includeExperimental: true }), { items: [] as RuntimePreset[] })
       ]);
       setEvents(eventList.items);
       setAgentStatuses(agentStatusList.items);
@@ -746,15 +783,17 @@ function App() {
       setDaemonRuns(daemonRunList.items);
       setDaemonActivity(daemonActivityList.items);
       setRuntimePresets(runtimePresetList.items.length ? runtimePresetList.items : fallbackRuntimePresets);
+      setSectionIssues(issues);
     } catch (err) {
       if (isAuthError(err)) {
         localStorage.removeItem(TOKEN_KEY);
         setToken("");
         setUser(null);
         setStatus("idle");
+        setSectionIssues([]);
         return;
       }
-      setError(err instanceof Error ? err.message : "Unable to load console data");
+      setError(errorMessage(err, "Unable to load console data"));
       setStatus("error");
     }
   }, [activeThread, target, token]);
@@ -985,6 +1024,10 @@ function App() {
             {error}
           </div>
         ) : null}
+        {status === "loading" ? <SectionStatusNotice loading message="Loading console sections" /> : null}
+        {sectionIssues.length ? (
+          <SectionIssuesNotice issues={sectionIssues} onRetry={loadData} />
+        ) : null}
 
         {view === "overview" ? (
           <Overview
@@ -997,6 +1040,9 @@ function App() {
             tasks={tasks}
             reminders={reminders}
             events={events}
+            issues={sectionIssueGroups.overview}
+            loading={status === "loading"}
+            onRetry={loadData}
           />
         ) : null}
         {view === "inbox" ? (
@@ -1005,6 +1051,9 @@ function App() {
             onOpenThread={openThread}
             onMarkRead={markThreadRead}
             onMarkAllRead={markThreadInboxRead}
+            issues={sectionIssueGroups.inbox}
+            loading={status === "loading" && threadInbox.length === 0}
+            onRetry={loadData}
           />
         ) : null}
         {view === "messages" ? (
@@ -1019,6 +1068,9 @@ function App() {
             channel={channels.find((item) => item.target === (activeThread?.target ?? target)) ?? null}
             channelMembers={channelMembers}
             onCreated={loadData}
+            issues={sectionIssueGroups.messages}
+            loading={status === "loading" && messages.length === 0}
+            onRetry={loadData}
           />
         ) : null}
         {view === "tasks" ? (
@@ -1028,10 +1080,20 @@ function App() {
             selectedTask={selectedTask}
             onSelectTask={setSelectedTaskId}
             onChanged={loadData}
+            issues={sectionIssueGroups.tasks}
+            loading={status === "loading" && tasks.length === 0}
+            onRetry={loadData}
           />
         ) : null}
         {view === "reminders" ? (
-          <RemindersPanel target={target} reminders={reminders} onChanged={loadData} />
+          <RemindersPanel
+            target={target}
+            reminders={reminders}
+            onChanged={loadData}
+            issues={sectionIssueGroups.reminders}
+            loading={status === "loading" && reminders.length === 0}
+            onRetry={loadData}
+          />
         ) : null}
         {view === "activity" ? (
           <ActivityPanel
@@ -1040,6 +1102,8 @@ function App() {
             latestEvent={latestEvent}
             realtimeStatus={realtimeStatus}
             onRefresh={loadData}
+            issues={sectionIssueGroups.activity}
+            loading={status === "loading" && events.length === 0}
           />
         ) : null}
         {view === "skills" ? <SkillsPanel runtimePresets={runtimePresets} /> : null}
@@ -1055,6 +1119,9 @@ function App() {
             channelMembers={channelMembers}
             endpoints={endpoints}
             runtimePresets={runtimePresets}
+            issues={sectionIssueGroups.settings}
+            loading={status === "loading"}
+            onRetry={loadData}
           />
         ) : null}
         {view === "endpoints" ? (
@@ -1063,6 +1130,9 @@ function App() {
             routes={notificationRoutes}
             imProviders={imProviders}
             onCreated={loadData}
+            issues={sectionIssueGroups.endpoints}
+            loading={status === "loading" && endpoints.length === 0}
+            onRetry={loadData}
           />
         ) : null}
         {view === "daemon" ? (
@@ -1077,6 +1147,9 @@ function App() {
             daemonActivity={daemonActivity}
             runtimePresets={runtimePresets}
             onAgentCreated={() => void loadData({ background: true })}
+            issues={sectionIssueGroups.daemon}
+            loading={status === "loading" && !daemonInfo}
+            onRetry={loadData}
           />
         ) : null}
       </main>
@@ -1284,6 +1357,42 @@ function StatusPill({ status }: { status: LoadState }) {
   );
 }
 
+function SectionStatusNotice({ loading, message }: { loading: boolean; message: string }) {
+  if (!loading) return null;
+  return (
+    <div className="section-status-notice" role="status">
+      <Loader2 size={16} aria-hidden="true" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function SectionIssuesNotice({
+  issues,
+  onRetry
+}: {
+  issues: SectionIssue[];
+  onRetry: () => Promise<void>;
+}) {
+  if (!issues.length) return null;
+  const summary = issues.length === 1
+    ? `${issues[0].label}: ${issues[0].message}`
+    : issues.map((issue) => issue.label).join(", ");
+  return (
+    <div className="section-issues-notice" role="alert">
+      <AlertTriangle size={16} aria-hidden="true" />
+      <div>
+        <strong>{issues.length === 1 ? "Section needs refresh" : `${issues.length} sections need refresh`}</strong>
+        <span>{summary}</span>
+      </div>
+      <button className="secondary-button" type="button" onClick={() => void onRetry()}>
+        <RefreshCw size={16} aria-hidden="true" />
+        Retry
+      </button>
+    </div>
+  );
+}
+
 function Overview({
   protocol,
   daemonInfo,
@@ -1293,7 +1402,10 @@ function Overview({
   messages,
   tasks,
   reminders,
-  events
+  events,
+  issues,
+  loading,
+  onRetry
 }: {
   protocol: ProtocolInfo | null;
   daemonInfo: DaemonInfo | null;
@@ -1304,11 +1416,18 @@ function Overview({
   tasks: Task[];
   reminders: Reminder[];
   events: CollaborationEvent[];
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const activeTasks = tasks.filter((task) => task.state !== "done" && task.state !== "canceled").length;
   const activeReminders = reminders.filter((reminder) => reminder.status === "active").length;
   return (
     <section className="content-grid">
+      <div className="wide section-notice-row">
+        <SectionStatusNotice loading={loading} message="Loading overview data" />
+        <SectionIssuesNotice issues={issues} onRetry={onRetry} />
+      </div>
       <MetricCard icon={Server} label="Protocol" value={protocol?.name ?? "Unknown"} />
       <MetricCard icon={Wifi} label="Realtime" value={realtimeStatus} />
       <MetricCard icon={Settings} label="Endpoints" value={String(endpoints.length)} />
@@ -1414,21 +1533,43 @@ function InboxPanel({
   items,
   onOpenThread,
   onMarkRead,
-  onMarkAllRead
+  onMarkAllRead,
+  issues,
+  loading,
+  onRetry
 }: {
   items: ThreadInboxItem[];
   onOpenThread: (item: ThreadInboxItem) => Promise<void>;
   onMarkRead: (item: ThreadInboxItem) => Promise<void>;
   onMarkAllRead: () => Promise<void>;
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const [busyThread, setBusyThread] = useState("");
+  const [actionError, setActionError] = useState("");
   const unreadCount = items.reduce((sum, item) => sum + item.unreadCount, 0);
   const nextUnread = items.find((item) => item.unreadCount > 0) ?? items[0] ?? null;
 
   const runItemAction = async (item: ThreadInboxItem, action: (item: ThreadInboxItem) => Promise<void>) => {
     setBusyThread(item.threadId);
+    setActionError("");
     try {
       await action(item);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to update this thread"));
+    } finally {
+      setBusyThread("");
+    }
+  };
+
+  const runBulkAction = async () => {
+    setBusyThread("__all__");
+    setActionError("");
+    try {
+      await onMarkAllRead();
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to update the inbox"));
     } finally {
       setBusyThread("");
     }
@@ -1451,12 +1592,15 @@ function InboxPanel({
             <Inbox size={16} aria-hidden="true" />
             Next unread
           </button>
-          <button className="secondary-button" type="button" disabled={!unreadCount} onClick={onMarkAllRead}>
+          <button className="secondary-button" type="button" disabled={!unreadCount || busyThread === "__all__"} onClick={runBulkAction}>
             <CheckCircle2 size={16} aria-hidden="true" />
             Mark all read
           </button>
         </div>
       </div>
+      <SectionStatusNotice loading={loading} message="Loading inbox threads" />
+      <SectionIssuesNotice issues={issues} onRetry={onRetry} />
+      {actionError ? <p className="inline-error" role="alert">{actionError}</p> : null}
       <div className="inbox-summary" role="status">
         <strong>{items.length}</strong> threads · <strong>{unreadCount}</strong> unread replies
       </div>
@@ -1515,7 +1659,10 @@ function MessagesPanel({
   onMarkThreadRead,
   channel,
   channelMembers,
-  onCreated
+  onCreated,
+  issues,
+  loading,
+  onRetry
 }: {
   target: string;
   thread: ThreadInboxItem | null;
@@ -1527,6 +1674,9 @@ function MessagesPanel({
   channel: Channel | null;
   channelMembers: ChannelMember[];
   onCreated: () => Promise<void>;
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const [content, setContent] = useState("");
   const [sourceEndpointId, setSourceEndpointId] = useState("");
@@ -1540,6 +1690,7 @@ function MessagesPanel({
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ordered = useMemo(() => [...messages].reverse(), [messages]);
@@ -1564,6 +1715,7 @@ function MessagesPanel({
     event.preventDefault();
     if (!content.trim() && draftAttachments.length === 0) return;
     setBusy(true);
+    setActionError("");
     try {
       await api.createMessage({
         target,
@@ -1578,6 +1730,8 @@ function MessagesPanel({
       setDraftAttachments([]);
       setReplyTo(null);
       await onCreated();
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to send message"));
     } finally {
       setBusy(false);
     }
@@ -1586,9 +1740,12 @@ function MessagesPanel({
   const uploadFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
+    setActionError("");
     try {
       const uploaded = await Promise.all(Array.from(files).map((file) => api.uploadAttachment(target, file)));
       setDraftAttachments((current) => [...current, ...uploaded]);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to upload attachment"));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -1617,7 +1774,12 @@ function MessagesPanel({
         return `[${unixTime(message.createdUnix)}] ${sender}: ${message.content}${attachments}`;
       })
       .join("\n\n");
-    await navigator.clipboard.writeText(text);
+    setActionError("");
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to copy selected messages"));
+    }
   };
 
   const saveSelectedAsImage = () => {
@@ -1668,25 +1830,43 @@ function MessagesPanel({
       return;
     }
     setBusy(true);
+    setActionError("");
     try {
       const results = await api.searchMessages({ query, sender, sort: searchSort, target, limit: 25 });
       setSearchResults(results.items);
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to search messages"));
     } finally {
       setBusy(false);
     }
   };
 
   const toggleSaved = async (message: Message) => {
-    if (savedIds.has(message.id)) {
-      await api.unsaveMessage(message.id, target);
-    } else {
-      await api.saveMessage(message.id, target);
+    setActionError("");
+    try {
+      if (savedIds.has(message.id)) {
+        await api.unsaveMessage(message.id, target);
+      } else {
+        await api.saveMessage(message.id, target);
+      }
+      await onCreated();
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to update saved message"));
     }
-    await onCreated();
   };
 
   const addMention = (name: string) => {
     setContent((current) => `${current}${current && !current.endsWith(" ") ? " " : ""}@${name} `);
+  };
+
+  const markCurrentThreadRead = async () => {
+    if (!onMarkThreadRead) return;
+    setActionError("");
+    try {
+      await onMarkThreadRead();
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to mark thread read"));
+    }
   };
 
   return (
@@ -1703,7 +1883,7 @@ function MessagesPanel({
                 Back to channel
               </button>
               {onMarkThreadRead ? (
-                <button className="secondary-button" type="button" onClick={() => void onMarkThreadRead()}>
+                <button className="secondary-button" type="button" onClick={() => void markCurrentThreadRead()}>
                   <CheckCircle2 size={16} aria-hidden="true" />
                   Mark read
                 </button>
@@ -1711,6 +1891,9 @@ function MessagesPanel({
             </div>
           ) : null}
         </div>
+        <SectionStatusNotice loading={loading} message="Loading messages" />
+        <SectionIssuesNotice issues={issues} onRetry={onRetry} />
+        {actionError ? <p className="inline-error" role="alert">{actionError}</p> : null}
         <form className="message-search" onSubmit={runSearch}>
           <label className="search-field">
             <Search size={16} aria-hidden="true" />
@@ -2195,13 +2378,19 @@ function TasksPanel({
   tasks,
   selectedTask,
   onSelectTask,
-  onChanged
+  onChanged,
+  issues,
+  loading,
+  onRetry
 }: {
   target: string;
   tasks: Task[];
   selectedTask: Task | null;
   onSelectTask: (taskId: string | null) => void;
   onChanged: () => Promise<void>;
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const [summary, setSummary] = useState("");
   const [newTaskState, setNewTaskState] = useState<TaskState>("todo");
@@ -2210,6 +2399,7 @@ function TasksPanel({
   const [sortKey, setSortKey] = useState<TaskSortKey>("updated_desc");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [taskReceipt, setTaskReceipt] = useState<TaskReceipt | null>(null);
 
   const taskStats = useMemo(
@@ -2258,6 +2448,7 @@ function TasksPanel({
     event.preventDefault();
     if (!summary.trim()) return;
     setBusy(true);
+    setActionError("");
     try {
       const createdSummary = summary.trim();
       const createdState = newTaskState;
@@ -2272,21 +2463,31 @@ function TasksPanel({
         createdUnix: Math.floor(Date.now() / 1000)
       });
       await onChanged();
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to create task"));
     } finally {
       setBusy(false);
     }
   };
 
   const moveTask = async (task: Task, state: TaskState) => {
-    const updated = await api.updateTask(task.id, { state });
-    setTaskReceipt({
-      id: updated.id || task.id,
-      summary: updated.summary || task.summary,
-      state: updated.state || state,
-      action: "moved",
-      createdUnix: Math.floor(Date.now() / 1000)
-    });
-    await onChanged();
+    setBusy(true);
+    setActionError("");
+    try {
+      const updated = await api.updateTask(task.id, { state });
+      setTaskReceipt({
+        id: updated.id || task.id,
+        summary: updated.summary || task.summary,
+        state: updated.state || state,
+        action: "moved",
+        createdUnix: Math.floor(Date.now() / 1000)
+      });
+      await onChanged();
+    } catch (err) {
+      setActionError(errorMessage(err, "Unable to move task"));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const filtersActive = query.trim() !== "" || stateFilter !== "all" || sortKey !== "updated_desc";
@@ -2323,6 +2524,9 @@ function TasksPanel({
             </button>
           </form>
         </div>
+        <SectionStatusNotice loading={loading} message="Loading task board" />
+        <SectionIssuesNotice issues={issues} onRetry={onRetry} />
+        {actionError ? <p className="inline-error" role="alert">{actionError}</p> : null}
         <div className="task-toolbar" aria-label="Task filters">
           <label className="search-field">
             <Search size={16} aria-hidden="true" />
@@ -2503,11 +2707,17 @@ function TaskStatusReceipt({
 function RemindersPanel({
   target,
   reminders,
-  onChanged
+  onChanged,
+  issues,
+  loading,
+  onRetry
 }: {
   target: string;
   reminders: Reminder[];
   onChanged: () => Promise<void>;
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
   const [delayMinutes, setDelayMinutes] = useState(15);
@@ -2580,6 +2790,18 @@ function RemindersPanel({
     }
   };
 
+  const refreshReminders = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await onChanged();
+    } catch (err) {
+      setError(errorMessage(err, "Unable to refresh reminders"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const snoozeReminder = async (reminder: Reminder, minutes: number) => {
     setBusy(true);
     setError("");
@@ -2635,11 +2857,13 @@ function RemindersPanel({
             <p className="eyebrow">{target}</p>
             <h2>Reminder Lifecycle</h2>
           </div>
-          <button className="secondary-button" type="button" onClick={() => void onChanged()}>
+          <button className="secondary-button" type="button" onClick={() => void refreshReminders()} disabled={busy}>
             <RefreshCw size={16} aria-hidden="true" />
             Refetch
           </button>
         </div>
+        <SectionStatusNotice loading={loading} message="Loading reminders" />
+        <SectionIssuesNotice issues={issues} onRetry={onRetry} />
         {error ? (
           <div className="notice error" role="alert">
             {error}
@@ -3176,15 +3400,29 @@ function ActivityPanel({
   events,
   latestEvent,
   realtimeStatus,
-  onRefresh
+  onRefresh,
+  issues,
+  loading
 }: {
   target: string;
   events: CollaborationEvent[];
   latestEvent: CollaborationEvent | null;
   realtimeStatus: RealtimeStatus;
   onRefresh: () => Promise<void>;
+  issues: SectionIssue[];
+  loading: boolean;
 }) {
   const ordered = useMemo(() => [...events].sort((a, b) => b.sequence - a.sequence), [events]);
+  const [refreshError, setRefreshError] = useState("");
+
+  const refreshActivity = async () => {
+    setRefreshError("");
+    try {
+      await onRefresh();
+    } catch (err) {
+      setRefreshError(errorMessage(err, "Unable to refresh activity"));
+    }
+  };
 
   return (
     <section className="two-column">
@@ -3194,11 +3432,14 @@ function ActivityPanel({
             <p className="eyebrow">{target}</p>
             <h2>Activity Stream</h2>
           </div>
-          <button className="secondary-button" type="button" onClick={() => void onRefresh()}>
+          <button className="secondary-button" type="button" onClick={() => void refreshActivity()}>
             <RefreshCw size={16} aria-hidden="true" />
             Refetch
           </button>
         </div>
+        <SectionStatusNotice loading={loading} message="Loading activity stream" />
+        <SectionIssuesNotice issues={issues} onRetry={refreshActivity} />
+        {refreshError ? <p className="inline-error" role="alert">{refreshError}</p> : null}
         <div className="board-note" role="note">
           <Activity size={16} aria-hidden="true" />
           Events are routing signals. The UI refetches authoritative server DTOs instead of moving
@@ -3275,7 +3516,10 @@ function SettingsPanel({
   channel,
   channelMembers,
   endpoints,
-  runtimePresets
+  runtimePresets,
+  issues,
+  loading,
+  onRetry
 }: {
   user: User | null;
   setupStatus: SetupStatus | null;
@@ -3287,6 +3531,9 @@ function SettingsPanel({
   channelMembers: ChannelMember[];
   endpoints: InteractionEndpoint[];
   runtimePresets: RuntimePreset[];
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const userRole = user?.role || "member";
   const channelRole = channel?.currentUserRole || "member";
@@ -3297,6 +3544,10 @@ function SettingsPanel({
 
   return (
     <section className="content-grid settings-grid">
+      <div className="wide section-notice-row">
+        <SectionStatusNotice loading={loading} message="Loading settings posture" />
+        <SectionIssuesNotice issues={issues} onRetry={onRetry} />
+      </div>
       <MetricCard icon={ShieldCheck} label="Account Role" value={userRole} />
       <MetricCard icon={Hash} label="Active Target" value={target} />
       <MetricCard icon={UsersRound} label="Visible Members" value={String(channelMembers.length)} />
@@ -3442,6 +3693,28 @@ const NOTIFICATION_EVENT_KINDS = ["message", "mention", "task", "reminder", "run
 const NOTIFICATION_PREFERENCES = ["all", "mentions", "muted"];
 const REDACTED_VALUE = "***";
 
+const sectionIssueLabels: Record<SectionIssueKey, string> = {
+  setup: "Setup",
+  protocol: "Protocol",
+  daemon: "Daemon bridge",
+  endpoints: "Endpoints",
+  notificationRoutes: "Notification routes",
+  imProviders: "IM providers",
+  channels: "Channels",
+  channelMembers: "Members",
+  messages: "Messages",
+  savedMessages: "Saved messages",
+  inbox: "Inbox",
+  tasks: "Tasks",
+  reminders: "Reminders",
+  activity: "Activity",
+  agentStatuses: "Agent status",
+  daemonInventory: "Daemon inventory",
+  daemonRuns: "Daemon runs",
+  daemonActivity: "Daemon activity",
+  runtimePresets: "Runtime presets"
+};
+
 function parseEndpointConfig(configJson?: string): Record<string, unknown> {
   if (!configJson?.trim()) return {};
   try {
@@ -3500,12 +3773,18 @@ function EndpointsPanel({
   endpoints,
   routes,
   imProviders,
-  onCreated
+  onCreated,
+  issues,
+  loading,
+  onRetry
 }: {
   endpoints: InteractionEndpoint[];
   routes: NotificationRoute[];
   imProviders: IMProviderSchema[];
   onCreated: () => Promise<void>;
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const [mode, setMode] = useState<EndpointCreateMode>("im");
   const [displayName, setDisplayName] = useState("");
@@ -3901,6 +4180,8 @@ function EndpointsPanel({
 
   return (
     <section className="endpoint-workspace">
+      <SectionStatusNotice loading={loading} message="Loading endpoint configuration" />
+      <SectionIssuesNotice issues={issues} onRetry={onRetry} />
       <div className="endpoint-grid">
       <div className="panel endpoint-list-panel">
         <div className="panel-heading">
@@ -4540,7 +4821,10 @@ function DaemonPanel({
   daemonRuns,
   daemonActivity,
   runtimePresets,
-  onAgentCreated
+  onAgentCreated,
+  issues,
+  loading,
+  onRetry
 }: {
   protocol: ProtocolInfo | null;
   daemonInfo: DaemonInfo | null;
@@ -4552,6 +4836,9 @@ function DaemonPanel({
   daemonActivity: DaemonActivityRecord[];
   runtimePresets: RuntimePreset[];
   onAgentCreated: () => void;
+  issues: SectionIssue[];
+  loading: boolean;
+  onRetry: () => Promise<void>;
 }) {
   const [displayName, setDisplayName] = useState("");
   const [computerId, setComputerId] = useState("");
@@ -4835,6 +5122,10 @@ function DaemonPanel({
 
   return (
     <section className="content-grid">
+      <div className="wide section-notice-row">
+        <SectionStatusNotice loading={loading} message="Loading daemon state" />
+        <SectionIssuesNotice issues={issues} onRetry={onRetry} />
+      </div>
       <section className="panel wide">
         <div className="panel-heading compact-heading">
           <div>
