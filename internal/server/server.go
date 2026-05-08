@@ -27,6 +27,7 @@ import (
 	"github.com/ca-x/nekode/internal/immedia"
 	"github.com/ca-x/nekode/internal/impolicy"
 	"github.com/ca-x/nekode/internal/imtelegram"
+	"github.com/ca-x/nekode/internal/imwechat"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
@@ -160,6 +161,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
 	s.mux.HandleFunc("POST /api/im/telegram/{endpointID}/webhook", s.handleTelegramWebhook)
 	s.mux.HandleFunc("POST /api/im/feishu/{endpointID}/callback", s.handleFeishuCallback)
+	s.mux.HandleFunc("GET /api/im/weixin/{endpointID}/callback", s.handleWeChatCallback)
+	s.mux.HandleFunc("POST /api/im/weixin/{endpointID}/callback", s.handleWeChatCallback)
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
 	s.mux.HandleFunc("POST /api/interaction-endpoints", s.requireAuth(s.handleCreateInteractionEndpoint))
 	s.mux.HandleFunc("PATCH /api/interaction-endpoints/{id}", s.requireAuth(s.handleUpdateInteractionEndpoint))
@@ -589,6 +592,77 @@ func (s *Server) handleFeishuCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if result.Challenge != "" {
 		writeJSON(w, http.StatusOK, map[string]string{"challenge": result.Challenge})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":        true,
+		"ignored":   result.Ignored,
+		"reason":    result.Reason,
+		"messageId": result.Message.ID,
+	})
+}
+
+func (s *Server) handleWeChatCallback(w http.ResponseWriter, r *http.Request) {
+	endpointID := strings.TrimSpace(r.PathValue("endpointID"))
+	if endpointID == "" {
+		writeError(w, http.StatusBadRequest, "endpointID is required")
+		return
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), endpointID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") || !strings.EqualFold(endpoint.Provider, imadapter.ProviderWeixin) {
+		writeError(w, http.StatusBadRequest, "interaction endpoint is not a WeChat official account endpoint")
+		return
+	}
+	if !endpoint.InboundEnabled {
+		writeError(w, http.StatusForbidden, "interaction endpoint inbound is disabled")
+		return
+	}
+	cfg, err := imwechat.ConfigFromEndpoint(endpoint)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	query := imwechat.Query{
+		Signature: r.URL.Query().Get("signature"),
+		Timestamp: r.URL.Query().Get("timestamp"),
+		Nonce:     r.URL.Query().Get("nonce"),
+		Echo:      r.URL.Query().Get("echostr"),
+	}
+	webhook := imwechat.Webhook{Config: cfg, Normalizer: imadapter.Normalizer{}, Coordinator: imcoord.New(s.store, nil)}
+	if r.Method == http.MethodGet {
+		echo, err := webhook.VerifyURL(query)
+		if errors.Is(err, imwechat.ErrUnauthorizedWebhook) {
+			writeError(w, http.StatusUnauthorized, "invalid wechat callback signature")
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte(echo))
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read wechat callback failed")
+		return
+	}
+	result, err := webhook.Handle(r.Context(), query, body)
+	if errors.Is(err, imwechat.ErrUnauthorizedWebhook) {
+		writeError(w, http.StatusUnauthorized, "invalid wechat callback signature")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{

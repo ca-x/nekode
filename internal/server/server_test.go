@@ -19,6 +19,7 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/imtelegram"
+	"github.com/ca-x/nekode/internal/imwechat"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/storage"
 )
@@ -669,6 +670,57 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	encryptedFeishu := doJSON(t, s, http.MethodPost, "/api/im/feishu/"+feishuEndpointBody.ID+"/callback", "", map[string]any{"encrypt": "ciphertext"})
 	if encryptedFeishu.Code != http.StatusBadRequest || !strings.Contains(encryptedFeishu.Body.String(), "encrypted") {
 		t.Fatalf("encrypted Feishu status = %d body=%s", encryptedFeishu.Code, encryptedFeishu.Body.String())
+	}
+
+	wechatEndpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "weixin",
+		"displayName":     "WeChat Official",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "webhook_signature",
+		"configJson":      `{"mode":"official_account","app_id":"wx-app","app_secret":"wx-secret","token":"wechat-token","default_target":"#ops","default_thread_id":"wechat-thread"}`,
+	})
+	if wechatEndpoint.Code != http.StatusCreated {
+		t.Fatalf("create WeChat endpoint status = %d body=%s", wechatEndpoint.Code, wechatEndpoint.Body.String())
+	}
+	var wechatEndpointBody storage.InteractionEndpoint
+	if err := json.Unmarshal(wechatEndpoint.Body.Bytes(), &wechatEndpointBody); err != nil {
+		t.Fatalf("decode WeChat endpoint: %v", err)
+	}
+	wechatSignature := imwechat.Signature("wechat-token", "1700000020", "nonce-1")
+	verifyWechat := doGET(t, s, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+wechatSignature+"&timestamp=1700000020&nonce=nonce-1&echostr=hello-wechat", "")
+	if verifyWechat.Code != http.StatusOK || strings.TrimSpace(verifyWechat.Body.String()) != "hello-wechat" {
+		t.Fatalf("verify WeChat callback status = %d body=%s", verifyWechat.Code, verifyWechat.Body.String())
+	}
+	badWechatWebhook := doJSON(t, s, http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature=bad&timestamp=1700000020&nonce=nonce-1", "", map[string]any{})
+	if badWechatWebhook.Code != http.StatusUnauthorized {
+		t.Fatalf("bad WeChat webhook status = %d body=%s", badWechatWebhook.Code, badWechatWebhook.Body.String())
+	}
+	wechatBody := strings.NewReader(`<xml><ToUserName><![CDATA[gh_app]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName><CreateTime>1700000020</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[hello official account]]></Content><MsgId>888</MsgId></xml>`)
+	wechatWebhook := httptest.NewRecorder()
+	wechatReq := httptest.NewRequest(http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+wechatSignature+"&timestamp=1700000020&nonce=nonce-1", wechatBody)
+	wechatReq.Header.Set("Content-Type", "application/xml")
+	s.Handler().ServeHTTP(wechatWebhook, wechatReq)
+	if wechatWebhook.Code != http.StatusOK {
+		t.Fatalf("wechat webhook status = %d body=%s", wechatWebhook.Code, wechatWebhook.Body.String())
+	}
+	var wechatWebhookBody struct {
+		OK        bool   `json:"ok"`
+		MessageID string `json:"messageId"`
+	}
+	if err := json.Unmarshal(wechatWebhook.Body.Bytes(), &wechatWebhookBody); err != nil {
+		t.Fatalf("decode wechat webhook: %v", err)
+	}
+	storedWeChat, err := s.store.GetMessage(context.Background(), "#ops", wechatWebhookBody.MessageID)
+	if err != nil {
+		t.Fatalf("GetMessage(wechat) error = %v", err)
+	}
+	if !wechatWebhookBody.OK ||
+		storedWeChat.SourceEndpointID != wechatEndpointBody.ID ||
+		storedWeChat.ExternalMessageID != "888" ||
+		storedWeChat.ThreadID != "wechat-thread" {
+		t.Fatalf("stored WeChat message = %+v webhook=%+v", storedWeChat, wechatWebhookBody)
 	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{

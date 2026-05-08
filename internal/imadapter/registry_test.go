@@ -45,6 +45,13 @@ func TestValidateConfigAndRedact(t *testing.T) {
 	if config["app_secret"] != "***" || config["verification_token"] != "***" || config["app_id"] != "app" {
 		t.Fatalf("redacted config = %#v", config)
 	}
+
+	if err := ValidateConfig(ProviderWeixin, `{"mode":"official_account","app_id":"wx","app_secret":"secret","token":"callback"}`); err != nil {
+		t.Fatalf("ValidateConfig(weixin official account) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderWeixin, `{"mode":"official_account","app_id":"wx","token":"callback"}`); err == nil || !strings.Contains(err.Error(), "app_secret") {
+		t.Fatalf("ValidateConfig(weixin missing secret) error = %v, want missing app_secret", err)
+	}
 }
 
 func TestProviderSchemaShapeForConfigUI(t *testing.T) {

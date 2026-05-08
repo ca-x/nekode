@@ -64,6 +64,10 @@ func FeishuRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
 	return providerRawEvent(ProviderFeishu, input)
 }
 
+func WeChatRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
+	return providerRawEvent(ProviderWeixin, input)
+}
+
 func providerRawEvent(provider string, input ProviderRawEventInput) iminbound.RawEvent {
 	return iminbound.RawEvent{
 		EndpointID:        strings.TrimSpace(input.EndpointID),
