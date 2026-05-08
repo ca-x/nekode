@@ -317,7 +317,10 @@ function sameDaemonInfo(left: DaemonInfo | null, right: DaemonInfo | null) {
   );
 }
 
-function shouldInvalidateForEvent(event: CollaborationEvent) {
+function shouldInvalidateForEvent(event: CollaborationEvent, activeTarget: string) {
+  if (event.target && event.target !== activeTarget) {
+    return false;
+  }
   const scopeType = event.scope?.scopeType;
   if (event.kind === "message" && event.operation === "appended" && scopeType === "target") {
     return true;
@@ -371,6 +374,7 @@ function App() {
   const [protocol, setProtocol] = useState<ProtocolInfo | null>(null);
   const [daemonInfo, setDaemonInfo] = useState<DaemonInfo | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>("disabled");
+  const [realtimeReconnectAttempt, setRealtimeReconnectAttempt] = useState(0);
   const [latestEvent, setLatestEvent] = useState<CollaborationEvent | null>(null);
   const [events, setEvents] = useState<CollaborationEvent[]>([]);
   const [agentStatuses, setAgentStatuses] = useState<AgentStatusSnapshot[]>([]);
@@ -388,31 +392,41 @@ function App() {
     [selectedTaskId, tasks]
   );
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options: { background?: boolean } = {}) => {
     if (!token) return;
     api.setToken(token);
-    setStatus("loading");
+    if (!options.background) {
+      setStatus((current) => (current === "ready" ? current : "loading"));
+    }
     setError("");
     try {
-      const [
-        me,
-        protocolInfo,
-        daemonBridgeInfo,
-        eventList,
-        agentStatusList,
-        daemonRunList,
-        daemonActivityList,
-        runtimePresetList,
-        endpointList,
-        messageList,
-        taskList
-      ] = await Promise.all([
+      const coreData = await Promise.all([
         api.me(),
         api.protocol(),
         api.daemonInfo().catch((err: unknown) => {
           if (isAuthError(err)) throw err;
           return null;
         }),
+        api.listInteractionEndpoints(),
+        api.listMessages(target),
+        api.listTasks({ target })
+      ]);
+      const [me, protocolInfo, daemonBridgeInfo, endpointList, messageList, taskList] = coreData;
+      setUser(me);
+      setProtocol(protocolInfo);
+      setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
+      setEndpoints(endpointList.items);
+      setMessages(messageList.items);
+      setTasks(taskList.items);
+      setStatus("ready");
+
+      const [
+        eventList,
+        agentStatusList,
+        daemonRunList,
+        daemonActivityList,
+        runtimePresetList
+      ] = await Promise.all([
         api.listDaemonEvents({ target, limit: 80 }).catch((err: unknown) => {
           if (isAuthError(err)) throw err;
           return { items: [] };
@@ -429,23 +443,13 @@ function App() {
           if (isAuthError(err)) throw err;
           return { items: [] };
         }),
-        api.listRuntimePresets({ includeExperimental: true }),
-        api.listInteractionEndpoints(),
-        api.listMessages(target),
-        api.listTasks({ target })
+        api.listRuntimePresets({ includeExperimental: true })
       ]);
-      setUser(me);
-      setProtocol(protocolInfo);
-      setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEvents(eventList.items);
       setAgentStatuses(agentStatusList.items);
       setDaemonRuns(daemonRunList.items);
       setDaemonActivity(daemonActivityList.items);
       setRuntimePresets(runtimePresetList.items.length ? runtimePresetList.items : fallbackRuntimePresets);
-      setEndpoints(endpointList.items);
-      setMessages(messageList.items);
-      setTasks(taskList.items);
-      setStatus("ready");
     } catch (err) {
       if (isAuthError(err)) {
         localStorage.removeItem(TOKEN_KEY);
@@ -470,6 +474,7 @@ function App() {
     }
 
     const storedCursor = readStoredEventCursor(daemonInfo);
+    let reconnectTimer: number | undefined;
     setRealtimeStatus("connecting");
     const unsubscribe = api.subscribeServerEvents({
       token,
@@ -481,17 +486,31 @@ function App() {
         }
         setLatestEvent(event);
         setRealtimeStatus("connected");
-        if (shouldInvalidateForEvent(event)) {
-          void loadData();
+        if (realtimeReconnectAttempt > 0) {
+          setRealtimeReconnectAttempt(0);
+        }
+        if (shouldInvalidateForEvent(event, target)) {
+          void loadData({ background: true });
         }
       },
       onError: () => {
         setRealtimeStatus("error");
+        if (reconnectTimer === undefined) {
+          const delay = Math.min(30000, 1000 * 2 ** Math.min(realtimeReconnectAttempt, 5));
+          reconnectTimer = window.setTimeout(() => {
+            setRealtimeReconnectAttempt((attempt) => attempt + 1);
+          }, delay);
+        }
       }
     });
 
-    return () => unsubscribe.close();
-  }, [daemonInfo, loadData, token]);
+    return () => {
+      unsubscribe.close();
+      if (reconnectTimer !== undefined) {
+        window.clearTimeout(reconnectTimer);
+      }
+    };
+  }, [daemonInfo, loadData, realtimeReconnectAttempt, target, token]);
 
   const handleAuth = (auth: AuthResponse) => {
     api.setToken(auth.token);
