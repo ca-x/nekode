@@ -31,7 +31,7 @@ guide. Those stay in task #92 and task #93.
 | Protocol package | `nekode.daemon.v1` | Reuses Slock-style field/RPC semantics while removing old application naming. |
 | Proto generation | `buf` + Go/gRPC stubs | Keeps the protocol first-class and testable. |
 | Data store | SQLite planned, not implemented in bootstrap | Self-hosted friendly; schema should be added when domain services land. |
-| Branding | `assets/brand.png` copied from the Nekobot logo asset | Matches the requested visual lineage for later UI work. |
+| Branding | Web console assets under `web/src/` and `web/public/` | Matches the requested visual lineage for the current UI work. |
 
 ## Interaction Endpoint Extensibility
 

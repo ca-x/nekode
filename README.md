@@ -13,7 +13,7 @@ Slock behavior, while keeping the codebase independent from Nekobot.
 - Reusable daemon IDL: `proto/nekode/daemon/v1/*.proto`
 - Protocol capability review: `docs/protocol-capability-review.md`
 - Implementation design: `docs/slock-style-daemon-runtime.md`
-- Logo asset: `assets/brand.png`
+- Web console assets: `web/src/assets-brand.png` and `web/public/*`
 - Container bootstrap: `Dockerfile` and `docker-compose.yml`
 - Local references for future design comparison:
   `/home/czyt/code/go/references/open-agent-room` and

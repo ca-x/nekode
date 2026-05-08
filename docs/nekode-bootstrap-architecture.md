@@ -16,7 +16,8 @@ internal/version/           build metadata
 proto/nekode/daemon/v1/     split daemon/server protobuf contract
 gen/go/nekode/daemon/v1/    generated Go bindings
 docs/                       implementation design and architecture notes
-assets/brand.png            logo asset for later UI work
+web/src/assets-brand.png    Web console logo asset
+web/public/                 favicon and web manifest assets
 ```
 
 ## Bootstrap API
