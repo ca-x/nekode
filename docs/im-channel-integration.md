@@ -261,8 +261,21 @@ Do not add a provider-specific media store for first-version IM support.
 
 ## Outbound Delivery
 
-Outbound delivery should render existing Nekode messages, activity, and
-notifications into provider-specific payloads.
+Outbound delivery renders existing Nekode messages, activity, and notifications
+into provider-specific payloads. Task #158 provides the durable lifecycle
+surface; real provider send runtimes can plug into that surface later.
+
+When an agent reply is created in an IM-origin thread/inbox, Nekode enqueues a
+source-only `OutboundDelivery` record from the original message source:
+
+- source endpoint: `storage.Message.SourceEndpointID`;
+- external source message: `storage.Message.ExternalMessageID`;
+- target and message ID: the Nekode thread/channel/inbox message being sent;
+- endpoint kind: copied from the source `InteractionEndpoint`;
+- request ID: preserved for idempotency when present.
+
+This keeps IM private conversations in their IM-origin thread/inbox and does
+not turn them into Web-native agent DM.
 
 The dispatcher owns:
 
@@ -274,6 +287,35 @@ The dispatcher owns:
 - external provider message IDs.
 
 Provider adapters own only the API translation and response parsing.
+
+### Delivery Lifecycle
+
+Delivery records use these statuses:
+
+- `pending`: delivery is waiting for an adapter/runtime attempt;
+- `delivered`: provider delivery succeeded;
+- `failed`: provider delivery failed and is not currently retrying;
+- `retrying`: provider delivery is scheduled for another attempt;
+- `canceled`: delivery was intentionally canceled.
+
+Each record also carries `attemptCount`, `nextRetryTimeUnix`,
+`deliveredTimeUnix`, `lastError`, and `requestId`. Web should display delivery
+status on the same IM-origin message chain where the agent reply is shown.
+
+Daemon/API integration points:
+
+- `ListOutboundDeliveries` lists records by target, message, endpoint, and
+  status filters.
+- `RetryOutboundDelivery` schedules a retry and is idempotent through request
+  ID / idempotency key handling.
+- `RecordOutboundDeliveryStatus` is the internal hook for future provider
+  runtimes to mark `delivered`, `failed`, or `retrying`.
+- outbound delivery server events are emitted when records are created or
+  updated, so Web and daemon consumers can refresh status without polling.
+
+Task #164 should extend its mock gate after #158 with assertions for source-only
+enqueue, `ListOutboundDeliveries`, `RetryOutboundDelivery`, status events, and
+delivery status rendering in the same IM-origin thread/inbox.
 
 ## CherryHQ/stella Attribution
 
