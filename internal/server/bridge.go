@@ -11,10 +11,24 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 )
 
-func (s *Server) handleDaemonInfo(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
 	if s.daemon == nil {
 		writeError(w, http.StatusServiceUnavailable, "daemon bridge is disabled")
 		return
+	}
+	statuses, _ := s.daemon.ListAgentStatuses(r.Context(), &daemonv1.ListAgentStatusesRequest{Limit: 200})
+	runs, _ := s.daemon.ListRuns(r.Context(), &daemonv1.ListRunsRequest{Limit: 200})
+	activities, _ := s.daemon.ListActivity(r.Context(), &daemonv1.ListActivityRequest{Limit: 200})
+	health := "ok"
+	if len(statuses.GetStatuses()) == 0 {
+		health = "idle"
+	}
+	for _, status := range statuses.GetStatuses() {
+		if status.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_OK &&
+			status.GetHealth() != daemonv1.AgentHealth_AGENT_HEALTH_UNSPECIFIED {
+			health = "degraded"
+			break
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"serverId":           s.daemon.ServerID(),
@@ -25,6 +39,11 @@ func (s *Server) handleDaemonInfo(w http.ResponseWriter, _ *http.Request) {
 		"grpcAddr":           s.cfg.GRPCAddr,
 		"daemonTransport":    s.cfg.DaemonTransport,
 		"cacheDriver":        s.cfg.CacheDriver,
+		"serverTimeUnix":     time.Now().Unix(),
+		"health":             health,
+		"agentStatusCount":   len(statuses.GetStatuses()),
+		"runCount":           len(runs.GetRuns()),
+		"activityCount":      len(activities.GetActivities()),
 	})
 }
 

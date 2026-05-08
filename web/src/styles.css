@@ -1003,6 +1003,89 @@ textarea {
   white-space: nowrap;
 }
 
+.event-sequence {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.diagnostic-list {
+  display: grid;
+  gap: 10px;
+}
+
+.diagnostic-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, auto);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.diagnostic-row > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.diagnostic-row strong,
+.diagnostic-row span {
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-row > div:first-child span {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.diagnostic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.diagnostic-meta span,
+.diagnostic-badge {
+  min-height: 26px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+}
+
+.diagnostic-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-weight: 800;
+}
+
+.diagnostic-badge.is-ok {
+  color: var(--success);
+  background: #eaf7f0;
+}
+
+.diagnostic-badge.is-idle {
+  color: var(--accent);
+  background: #edf4fb;
+}
+
+.diagnostic-badge.is-warn {
+  color: var(--danger);
+  background: #fdebea;
+}
+
+.diagnostic-table td {
+  font-size: 0.875rem;
+}
+
 .status-dot {
   gap: 6px;
   color: var(--muted);

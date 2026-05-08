@@ -91,7 +91,59 @@ export type DaemonInfo = {
   minProtocolVersion: number;
   maxProtocolVersion: number;
   grpcAddr: string;
+  daemonTransport: string;
   cacheDriver: string;
+  serverTimeUnix?: number;
+  health?: string;
+  agentStatusCount?: number;
+  runCount?: number;
+  activityCount?: number;
+};
+
+export type AgentStatusSnapshot = {
+  agentId: string;
+  computerId?: string;
+  runtimeProfileId?: string;
+  presence: string;
+  activityState: string;
+  health: string;
+  severity: string;
+  summary?: string;
+  detail?: string;
+  target?: string;
+  taskId?: string;
+  runId?: string;
+  updatedTimeUnix?: number;
+  expiresTimeUnix?: number;
+};
+
+export type DaemonRun = {
+  runId: string;
+  taskId?: string;
+  target?: string;
+  agentId?: string;
+  computerId?: string;
+  runtimeProfileId?: string;
+  state: string;
+  summary?: string;
+  error?: string;
+  startedTimeUnix?: number;
+  updatedTimeUnix?: number;
+  completedTimeUnix?: number;
+  lastHeartbeatTimeUnix?: number;
+};
+
+export type DaemonActivityRecord = {
+  activityId: string;
+  target?: string;
+  agentId?: string;
+  kind: string;
+  summary?: string;
+  detail?: string;
+  runId?: string;
+  stepId?: string;
+  sequence?: number;
+  createdTimeUnix?: number;
 };
 
 export type EventCursor = {

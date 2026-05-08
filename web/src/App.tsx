@@ -32,9 +32,12 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 
 import { ApiClient, ApiError, makeRequestId } from "./api";
 import brandMarkUrl from "./assets-brand.png";
 import type {
+  AgentStatusSnapshot,
   AuthResponse,
   CollaborationEvent,
+  DaemonActivityRecord,
   DaemonInfo,
+  DaemonRun,
   InteractionEndpoint,
   Message,
   ProtocolInfo,
@@ -239,6 +242,23 @@ function eventSummary(event: CollaborationEvent) {
   return `${event.kind}/${event.operation}/${event.scope?.scopeType ?? "unspecified"}`;
 }
 
+function formatUnixTime(value?: number) {
+  if (!value) return "unknown";
+  return new Date(value * 1000).toLocaleString();
+}
+
+function compactId(value?: string) {
+  if (!value) return "n/a";
+  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-6)}` : value;
+}
+
+function healthClass(value?: string) {
+  const normalized = (value || "unknown").toLowerCase();
+  if (normalized === "ok" || normalized === "online" || normalized === "running") return "is-ok";
+  if (normalized === "idle" || normalized === "unspecified" || normalized === "queued") return "is-idle";
+  return "is-warn";
+}
+
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
   const [user, setUser] = useState<User | null>(null);
@@ -250,6 +270,9 @@ function App() {
   const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>("disabled");
   const [latestEvent, setLatestEvent] = useState<CollaborationEvent | null>(null);
   const [events, setEvents] = useState<CollaborationEvent[]>([]);
+  const [agentStatuses, setAgentStatuses] = useState<AgentStatusSnapshot[]>([]);
+  const [daemonRuns, setDaemonRuns] = useState<DaemonRun[]>([]);
+  const [daemonActivity, setDaemonActivity] = useState<DaemonActivityRecord[]>([]);
   const [endpoints, setEndpoints] = useState<InteractionEndpoint[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -267,7 +290,18 @@ function App() {
     setStatus("loading");
     setError("");
     try {
-      const [me, protocolInfo, daemonBridgeInfo, eventList, endpointList, messageList, taskList] = await Promise.all([
+      const [
+        me,
+        protocolInfo,
+        daemonBridgeInfo,
+        eventList,
+        agentStatusList,
+        daemonRunList,
+        daemonActivityList,
+        endpointList,
+        messageList,
+        taskList
+      ] = await Promise.all([
         api.me(),
         api.protocol(),
         api.daemonInfo().catch((err: unknown) => {
@@ -275,6 +309,18 @@ function App() {
           return null;
         }),
         api.listDaemonEvents({ target, limit: 80 }).catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] };
+        }),
+        api.listAgentStatuses({ target, limit: 100 }).catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] };
+        }),
+        api.listDaemonRuns({ target, limit: 100 }).catch((err: unknown) => {
+          if (isAuthError(err)) throw err;
+          return { items: [] };
+        }),
+        api.listDaemonActivity({ target, limit: 100 }).catch((err: unknown) => {
           if (isAuthError(err)) throw err;
           return { items: [] };
         }),
@@ -286,6 +332,9 @@ function App() {
       setProtocol(protocolInfo);
       setDaemonInfo((current) => (sameDaemonInfo(current, daemonBridgeInfo) ? current : daemonBridgeInfo));
       setEvents(eventList.items);
+      setAgentStatuses(agentStatusList.items);
+      setDaemonRuns(daemonRunList.items);
+      setDaemonActivity(daemonActivityList.items);
       setEndpoints(endpointList.items);
       setMessages(messageList.items);
       setTasks(taskList.items);
@@ -357,6 +406,9 @@ function App() {
     setDaemonInfo(null);
     setLatestEvent(null);
     setEvents([]);
+    setAgentStatuses([]);
+    setDaemonRuns([]);
+    setDaemonActivity([]);
     setSelectedTaskId(null);
     setRealtimeStatus("disabled");
   };
@@ -511,7 +563,15 @@ function App() {
           <EndpointsPanel endpoints={endpoints} onCreated={loadData} />
         ) : null}
         {view === "daemon" ? (
-          <DaemonPanel protocol={protocol} daemonInfo={daemonInfo} realtimeStatus={realtimeStatus} latestEvent={latestEvent} />
+          <DaemonPanel
+            protocol={protocol}
+            daemonInfo={daemonInfo}
+            realtimeStatus={realtimeStatus}
+            latestEvent={latestEvent}
+            agentStatuses={agentStatuses}
+            daemonRuns={daemonRuns}
+            daemonActivity={daemonActivity}
+          />
         ) : null}
       </main>
     </div>
@@ -1670,12 +1730,18 @@ function DaemonPanel({
   protocol,
   daemonInfo,
   realtimeStatus,
-  latestEvent
+  latestEvent,
+  agentStatuses,
+  daemonRuns,
+  daemonActivity
 }: {
   protocol: ProtocolInfo | null;
   daemonInfo: DaemonInfo | null;
   realtimeStatus: RealtimeStatus;
   latestEvent: CollaborationEvent | null;
+  agentStatuses: AgentStatusSnapshot[];
+  daemonRuns: DaemonRun[];
+  daemonActivity: DaemonActivityRecord[];
 }) {
   return (
     <section className="content-grid">
@@ -1704,24 +1770,40 @@ function DaemonPanel({
         </div>
       </section>
       <MetricCard icon={Server} label="Protocol Path" value={protocol?.protoPath ?? "Loading"} />
-      <MetricCard icon={CheckCircle2} label="Frontend Mode" value="Typed DTO boundary" />
-      <MetricCard icon={UsersRound} label="Server ID" value={daemonInfo?.serverId ?? "Unavailable"} />
+      <MetricCard icon={CheckCircle2} label="Bridge Health" value={daemonInfo?.health ?? "unknown"} />
+      <MetricCard icon={UsersRound} label="Agent Statuses" value={String(daemonInfo?.agentStatusCount ?? agentStatuses.length)} />
       <MetricCard icon={Wifi} label="SSE" value={realtimeStatus} />
       <section className="panel wide">
         <div className="panel-heading compact-heading">
           <div>
-            <p className="eyebrow">Cursor State</p>
-            <h2>Realtime resume boundary</h2>
+            <p className="eyebrow">Runtime Health</p>
+            <h2>Daemon bridge diagnostics</h2>
           </div>
         </div>
         <dl className="definition-list">
+          <div>
+            <dt>Server ID</dt>
+            <dd>{daemonInfo?.serverId || "unavailable"}</dd>
+          </div>
           <div>
             <dt>Protocol version</dt>
             <dd>{daemonInfo?.protocolVersion ?? "unknown"}</dd>
           </div>
           <div>
+            <dt>gRPC address</dt>
+            <dd>{daemonInfo?.grpcAddr || "unknown"}</dd>
+          </div>
+          <div>
+            <dt>Daemon transport</dt>
+            <dd>{daemonInfo?.daemonTransport || "unknown"}</dd>
+          </div>
+          <div>
             <dt>Cache driver</dt>
             <dd>{daemonInfo?.cacheDriver || "unknown"}</dd>
+          </div>
+          <div>
+            <dt>Server time</dt>
+            <dd>{formatUnixTime(daemonInfo?.serverTimeUnix)}</dd>
           </div>
           <div>
             <dt>Latest event</dt>
@@ -1732,6 +1814,103 @@ function DaemonPanel({
             </dd>
           </div>
         </dl>
+      </section>
+      <MetricCard icon={Activity} label="Runs" value={String(daemonInfo?.runCount ?? daemonRuns.length)} />
+      <MetricCard icon={AlertTriangle} label="Activity Logs" value={String(daemonInfo?.activityCount ?? daemonActivity.length)} />
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Agents</p>
+            <h2>Agent runtime health</h2>
+          </div>
+        </div>
+        {agentStatuses.length ? (
+          <div className="diagnostic-list">
+            {agentStatuses.map((status) => (
+              <article className="diagnostic-row" key={`${status.agentId}-${status.target ?? "global"}`}>
+                <div>
+                  <strong>{status.agentId || "unknown agent"}</strong>
+                  <span>{status.summary || status.detail || status.target || "No runtime summary"}</span>
+                </div>
+                <div className="diagnostic-meta">
+                  <span className={`diagnostic-badge ${healthClass(status.health)}`}>{status.health}</span>
+                  <span>{status.presence || "presence_unknown"}</span>
+                  <span>{status.activityState || "activity_unknown"}</span>
+                  <span>{status.target || "global"}</span>
+                  <span>{formatUnixTime(status.updatedTimeUnix)}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={Bot} title="No agent runtime status yet" />
+        )}
+      </section>
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Runs</p>
+            <h2>Runtime run queue</h2>
+          </div>
+        </div>
+        {daemonRuns.length ? (
+          <div className="task-list-shell">
+            <table className="task-table diagnostic-table">
+              <thead>
+                <tr>
+                  <th>Run</th>
+                  <th>State</th>
+                  <th>Agent</th>
+                  <th>Target</th>
+                  <th>Updated</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody>
+                {daemonRuns.map((run) => (
+                  <tr key={run.runId}>
+                    <td>{compactId(run.runId)}</td>
+                    <td><span className={`diagnostic-badge ${healthClass(run.state)}`}>{run.state}</span></td>
+                    <td>{run.agentId || "n/a"}</td>
+                    <td>{run.target || "global"}</td>
+                    <td>{formatUnixTime(run.updatedTimeUnix || run.lastHeartbeatTimeUnix)}</td>
+                    <td>{run.error || run.summary || "No summary"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon={Activity} title="No daemon runs recorded" />
+        )}
+      </section>
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Activity</p>
+            <h2>Daemon activity timeline</h2>
+          </div>
+        </div>
+        {daemonActivity.length ? (
+          <div className="event-stream" role="log" aria-label="Daemon activity">
+            {daemonActivity.map((activity) => (
+              <article className="event-row" key={activity.activityId}>
+                <div className="event-main">
+                  <Activity size={18} aria-hidden="true" />
+                  <div>
+                    <strong>{activity.kind || "activity"}</strong>
+                    <span>{activity.summary || activity.detail || "No detail"}</span>
+                  </div>
+                </div>
+                <span className="event-sequence">
+                  {activity.agentId || "system"} · seq {activity.sequence ?? "n/a"}
+                </span>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={Activity} title="No daemon activity recorded" />
+        )}
       </section>
     </section>
   );

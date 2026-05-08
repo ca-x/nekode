@@ -1,8 +1,11 @@
 import type {
   AuthResponse,
+  AgentStatusSnapshot,
   CollaborationEvent,
   CollaborationEventKind,
+  DaemonActivityRecord,
   DaemonInfo,
+  DaemonRun,
   EventCursor,
   EventOperation,
   EventScope,
@@ -162,6 +165,61 @@ const eventScopeTypeByNumber: Record<number, EventScopeType> = {
   12: "custom"
 };
 
+const agentPresenceByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "online",
+  2: "idle",
+  3: "busy",
+  4: "sleeping",
+  5: "stale",
+  6: "offline",
+  7: "degraded"
+};
+
+const agentActivityStateByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "receiving_message",
+  2: "reading_context",
+  3: "compacting_context",
+  4: "thinking",
+  5: "coding",
+  6: "running_command",
+  7: "running_test",
+  8: "reviewing",
+  9: "waiting",
+  10: "blocked",
+  11: "restarting",
+  12: "restoring_memory"
+};
+
+const agentHealthByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "ok",
+  2: "provider_quota",
+  3: "command_failed",
+  4: "test_failed",
+  5: "auth_required",
+  6: "runtime_error",
+  7: "offline"
+};
+
+const agentSeverityByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "info",
+  2: "warning",
+  3: "error"
+};
+
+const runStateByNumber: Record<number, string> = {
+  0: "unspecified",
+  1: "queued",
+  2: "running",
+  3: "blocked",
+  4: "completed",
+  5: "failed",
+  6: "canceled"
+};
+
 function asRecord(value: unknown): RawRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as RawRecord) : {};
 }
@@ -188,6 +246,11 @@ function enumLabel(value: unknown): string {
   return asString(value)
     .toLowerCase()
     .replace(/^(collaboration_event_kind|event_operation|event_scope_type|task_state)_/, "");
+}
+
+function knownEnumLabel(value: unknown, byNumber: Record<number, string>, prefix: string): string {
+  if (typeof value === "number") return byNumber[value] ?? "unspecified";
+  return enumLabel(value).replace(new RegExp(`^${prefix}_`), "") || "unspecified";
 }
 
 export function normalizeTaskState(value: unknown): TaskState {
@@ -352,7 +415,72 @@ function normalizeDaemonInfo(raw: unknown): DaemonInfo {
     minProtocolVersion: asNumber(row.minProtocolVersion ?? row.min_protocol_version),
     maxProtocolVersion: asNumber(row.maxProtocolVersion ?? row.max_protocol_version),
     grpcAddr: asString(row.grpcAddr ?? row.grpc_addr),
-    cacheDriver: asString(row.cacheDriver ?? row.cache_driver)
+    daemonTransport: asString(row.daemonTransport ?? row.daemon_transport),
+    cacheDriver: asString(row.cacheDriver ?? row.cache_driver),
+    serverTimeUnix: asNumber(row.serverTimeUnix ?? row.server_time_unix) || undefined,
+    health: asOptionalString(row.health),
+    agentStatusCount: asNumber(row.agentStatusCount ?? row.agent_status_count),
+    runCount: asNumber(row.runCount ?? row.run_count),
+    activityCount: asNumber(row.activityCount ?? row.activity_count)
+  };
+}
+
+function normalizeAgentStatus(raw: unknown): AgentStatusSnapshot {
+  const row = asRecord(raw);
+  return {
+    agentId: asString(row.agentId ?? row.agent_id),
+    computerId: asOptionalString(row.computerId ?? row.computer_id),
+    runtimeProfileId: asOptionalString(row.runtimeProfileId ?? row.runtime_profile_id),
+    presence: knownEnumLabel(row.presence, agentPresenceByNumber, "agent_presence"),
+    activityState: knownEnumLabel(
+      row.activityState ?? row.activity_state,
+      agentActivityStateByNumber,
+      "agent_activity_state"
+    ),
+    health: knownEnumLabel(row.health, agentHealthByNumber, "agent_health"),
+    severity: knownEnumLabel(row.severity, agentSeverityByNumber, "agent_status_severity"),
+    summary: asOptionalString(row.summary),
+    detail: asOptionalString(row.detail),
+    target: asOptionalString(row.target),
+    taskId: asOptionalString(row.taskId ?? row.task_id),
+    runId: asOptionalString(row.runId ?? row.run_id),
+    updatedTimeUnix: asNumber(row.updatedTimeUnix ?? row.updated_time_unix) || undefined,
+    expiresTimeUnix: asNumber(row.expiresTimeUnix ?? row.expires_time_unix) || undefined
+  };
+}
+
+function normalizeDaemonRun(raw: unknown): DaemonRun {
+  const row = asRecord(raw);
+  return {
+    runId: asString(row.runId ?? row.run_id),
+    taskId: asOptionalString(row.taskId ?? row.task_id),
+    target: asOptionalString(row.target),
+    agentId: asOptionalString(row.agentId ?? row.agent_id),
+    computerId: asOptionalString(row.computerId ?? row.computer_id),
+    runtimeProfileId: asOptionalString(row.runtimeProfileId ?? row.runtime_profile_id),
+    state: knownEnumLabel(row.state, runStateByNumber, "run_state"),
+    summary: asOptionalString(row.summary),
+    error: asOptionalString(row.error),
+    startedTimeUnix: asNumber(row.startedTimeUnix ?? row.started_time_unix) || undefined,
+    updatedTimeUnix: asNumber(row.updatedTimeUnix ?? row.updated_time_unix) || undefined,
+    completedTimeUnix: asNumber(row.completedTimeUnix ?? row.completed_time_unix) || undefined,
+    lastHeartbeatTimeUnix: asNumber(row.lastHeartbeatTimeUnix ?? row.last_heartbeat_time_unix) || undefined
+  };
+}
+
+function normalizeDaemonActivity(raw: unknown): DaemonActivityRecord {
+  const row = asRecord(raw);
+  return {
+    activityId: asString(row.activityId ?? row.activity_id),
+    target: asOptionalString(row.target),
+    agentId: asOptionalString(row.agentId ?? row.agent_id),
+    kind: asString(row.kind),
+    summary: asOptionalString(row.summary),
+    detail: asOptionalString(row.detail),
+    runId: asOptionalString(row.runId ?? row.run_id),
+    stepId: asOptionalString(row.stepId ?? row.step_id),
+    sequence: asNumber(row.sequence) || undefined,
+    createdTimeUnix: asNumber(row.createdTimeUnix ?? row.created_time_unix) || undefined
   };
 }
 
@@ -441,6 +569,40 @@ export class ApiClient {
 
   async daemonInfo() {
     return normalizeDaemonInfo(await this.request<unknown>("/api/daemon/info"));
+  }
+
+  async listAgentStatuses(filters: { target?: string; agentId?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "target", filters.target);
+    appendIfPresent(params, "agentId", filters.agentId);
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/daemon/agent-statuses?${params}`),
+      normalizeAgentStatus
+    );
+  }
+
+  async listDaemonRuns(filters: { target?: string; taskId?: string; agentId?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "target", filters.target);
+    appendIfPresent(params, "taskId", filters.taskId);
+    appendIfPresent(params, "agentId", filters.agentId);
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/daemon/runs?${params}`),
+      normalizeDaemonRun
+    );
+  }
+
+  async listDaemonActivity(filters: { target?: string; agentId?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "target", filters.target);
+    appendIfPresent(params, "agentId", filters.agentId);
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/daemon/activity?${params}`),
+      normalizeDaemonActivity
+    );
   }
 
   listInteractionEndpoints(limit = 100) {

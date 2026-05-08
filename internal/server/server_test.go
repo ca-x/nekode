@@ -373,6 +373,9 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 	if infoBody["serverId"] == "" || infoBody["protocolVersion"] == float64(0) {
 		t.Fatalf("daemon info body = %+v, want server identity and protocol version", infoBody)
 	}
+	if infoBody["health"] != "idle" || infoBody["agentStatusCount"] != float64(0) {
+		t.Fatalf("daemon info initial diagnostics = %+v, want idle with zero agents", infoBody)
+	}
 
 	if _, err := s.daemon.UpdateAgentStatus(context.Background(), &daemonv1.UpdateAgentStatusRequest{
 		Status: &daemonv1.AgentStatusSnapshot{
@@ -391,6 +394,20 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 	}
 	assertJSONItems(t, statuses.Body.Bytes(), 1)
 
+	if _, err := s.daemon.UpdateRunStatus(context.Background(), &daemonv1.UpdateRunStatusRequest{
+		RunId:   "run-1",
+		AgentId: "agent-1",
+		State:   daemonv1.RunState_RUN_STATE_RUNNING,
+		Summary: "runtime smoke",
+	}); err != nil {
+		t.Fatalf("UpdateRunStatus() error = %v", err)
+	}
+	runs := doGET(t, s, "/api/daemon/runs?agentId=agent-1", token)
+	if runs.Code != http.StatusOK {
+		t.Fatalf("runs status = %d body=%s", runs.Code, runs.Body.String())
+	}
+	assertJSONItems(t, runs.Body.Bytes(), 1)
+
 	if _, err := s.daemon.LogActivity(context.Background(), &daemonv1.LogActivityRequest{
 		Target:  "#general",
 		AgentId: "agent-1",
@@ -404,6 +421,37 @@ func TestDaemonBridgeEndpoints(t *testing.T) {
 		t.Fatalf("activity status = %d body=%s", activity.Code, activity.Body.String())
 	}
 	assertJSONItems(t, activity.Body.Bytes(), 1)
+
+	info = doGET(t, s, "/api/daemon/info", token)
+	if info.Code != http.StatusOK {
+		t.Fatalf("daemon info after diagnostics status = %d body=%s", info.Code, info.Body.String())
+	}
+	if err := json.Unmarshal(info.Body.Bytes(), &infoBody); err != nil {
+		t.Fatalf("decode daemon info after diagnostics: %v", err)
+	}
+	if infoBody["health"] != "ok" || infoBody["agentStatusCount"] != float64(1) ||
+		infoBody["runCount"] != float64(1) || infoBody["activityCount"] != float64(1) {
+		t.Fatalf("daemon info diagnostics = %+v, want health/count rollup", infoBody)
+	}
+
+	if _, err := s.daemon.UpdateAgentStatus(context.Background(), &daemonv1.UpdateAgentStatusRequest{
+		Status: &daemonv1.AgentStatusSnapshot{
+			AgentId:       "agent-1",
+			ComputerId:    "computer-1",
+			Presence:      daemonv1.AgentPresence_AGENT_PRESENCE_ONLINE,
+			ActivityState: daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_CODING,
+			Health:        daemonv1.AgentHealth_AGENT_HEALTH_TEST_FAILED,
+		},
+	}); err != nil {
+		t.Fatalf("UpdateAgentStatus(degraded) error = %v", err)
+	}
+	info = doGET(t, s, "/api/daemon/info", token)
+	if err := json.Unmarshal(info.Body.Bytes(), &infoBody); err != nil {
+		t.Fatalf("decode daemon info degraded: %v", err)
+	}
+	if infoBody["health"] != "degraded" {
+		t.Fatalf("daemon degraded health = %+v, want degraded", infoBody)
+	}
 
 	events := doGET(t, s, "/api/daemon/events?target=%23general", token)
 	if events.Code != http.StatusOK {
