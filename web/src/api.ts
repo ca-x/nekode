@@ -8,6 +8,7 @@ import type {
   ChannelVisibility,
   CollaborationEvent,
   CollaborationEventKind,
+  DaemonEnrollment,
   DaemonActivityRecord,
   DaemonInfo,
   DaemonRun,
@@ -138,6 +139,41 @@ type RawMessage = {
   createdUnix?: unknown;
   created_time_unix?: unknown;
   createdTimeUnix?: unknown;
+};
+
+type RawDaemonEnrollment = {
+  id?: unknown;
+  tokenPrefix?: unknown;
+  token_prefix?: unknown;
+  token?: unknown;
+  installCommand?: unknown;
+  install_command?: unknown;
+  statusUrl?: unknown;
+  status_url?: unknown;
+  displayName?: unknown;
+  display_name?: unknown;
+  computerId?: unknown;
+  computer_id?: unknown;
+  daemonId?: unknown;
+  daemon_id?: unknown;
+  hostname?: unknown;
+  createdUnix?: unknown;
+  created_unix?: unknown;
+  createdTimeUnix?: unknown;
+  created_time_unix?: unknown;
+  expiresUnix?: unknown;
+  expires_unix?: unknown;
+  expiresTimeUnix?: unknown;
+  expires_time_unix?: unknown;
+  connectedUnix?: unknown;
+  connected_unix?: unknown;
+  connectedTimeUnix?: unknown;
+  connected_time_unix?: unknown;
+  lastHeartbeatUnix?: unknown;
+  last_heartbeat_unix?: unknown;
+  lastHeartbeatTimeUnix?: unknown;
+  last_heartbeat_time_unix?: unknown;
+  status?: unknown;
 };
 
 type RawSavedMessage = {
@@ -662,6 +698,28 @@ function normalizeDaemonInfo(raw: unknown): DaemonInfo {
   };
 }
 
+function normalizeDaemonEnrollment(raw: unknown): DaemonEnrollment {
+  const row = asRecord(raw) as RawDaemonEnrollment;
+  return {
+    id: asString(row.id),
+    tokenPrefix: asString(row.tokenPrefix ?? row.token_prefix),
+    token: asOptionalString(row.token),
+    installCommand: asOptionalString(row.installCommand ?? row.install_command),
+    statusUrl: asString(row.statusUrl ?? row.status_url),
+    displayName: asOptionalString(row.displayName ?? row.display_name),
+    computerId: asOptionalString(row.computerId ?? row.computer_id),
+    daemonId: asOptionalString(row.daemonId ?? row.daemon_id),
+    hostname: asOptionalString(row.hostname),
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix ?? row.createdTimeUnix ?? row.created_time_unix),
+    expiresUnix: asNumber(row.expiresUnix ?? row.expires_unix ?? row.expiresTimeUnix ?? row.expires_time_unix) || undefined,
+    connectedUnix: asNumber(row.connectedUnix ?? row.connected_unix ?? row.connectedTimeUnix ?? row.connected_time_unix) || undefined,
+    lastHeartbeatUnix:
+      asNumber(row.lastHeartbeatUnix ?? row.last_heartbeat_unix ?? row.lastHeartbeatTimeUnix ?? row.last_heartbeat_time_unix) ||
+      undefined,
+    status: asString(row.status) || "pending"
+  };
+}
+
 function normalizeAgentStatus(raw: unknown): AgentStatusSnapshot {
   const row = asRecord(raw);
   return {
@@ -833,6 +891,24 @@ export class ApiClient {
 
   async daemonInfo() {
     return normalizeDaemonInfo(await this.request<unknown>("/api/daemon/info"));
+  }
+
+  async createDaemonEnrollment(input: {
+    displayName?: string;
+    computerId?: string;
+    hostname?: string;
+    expiresUnix?: number;
+  }) {
+    return normalizeDaemonEnrollment(await this.request<unknown>("/api/daemon/enrollments", {
+      method: "POST",
+      body: JSON.stringify(input)
+    }));
+  }
+
+  async getDaemonEnrollment(id: string) {
+    return normalizeDaemonEnrollment(
+      await this.request<unknown>(`/api/daemon/enrollments/${encodeURIComponent(id)}`)
+    );
   }
 
   async listAgentStatuses(filters: { target?: string; agentId?: string; limit?: number } = {}) {

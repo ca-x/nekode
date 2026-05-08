@@ -1795,6 +1795,147 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.enrollment-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.enrollment-form,
+.enrollment-command {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.enrollment-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.enrollment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.enrollment-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.enrollment-status-grid > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.enrollment-status-grid span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.enrollment-status-grid strong {
+  overflow-wrap: anywhere;
+}
+
+.command-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.platform-install-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.platform-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.platform-tabs button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+  font-weight: 800;
+}
+
+.platform-tabs button.is-active {
+  color: var(--primary-strong);
+  border-color: #c5e7de;
+  background: var(--primary-soft);
+}
+
+.command-box > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.command-box > div > span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.command-box code {
+  min-height: 44px;
+  padding: 12px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #edf7f3;
+  background: #111c18;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.command-box.is-pending code {
+  color: var(--muted);
+  background: #f8faf9;
+}
+
+.inline-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.enrollment-ready {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #b9e6cb;
+  border-radius: 8px;
+  color: var(--success);
+  background: #eefaf2;
+  font-weight: 700;
+}
+
+.enrollment-ready .primary-button {
+  margin-left: auto;
+}
+
 .runtime-preset {
   display: grid;
   gap: 10px;
@@ -2253,6 +2394,7 @@ textarea {
 @media (max-width: 980px) {
   .app-shell,
   .auth-panel,
+  .enrollment-layout,
   .task-workspace,
   .two-column {
     grid-template-columns: 1fr;
@@ -2298,6 +2440,7 @@ textarea {
 
   .topbar,
   .panel-heading,
+  .command-box,
   .quick-task-form,
   .reminder-create-form,
   .task-toolbar,
@@ -2333,6 +2476,7 @@ textarea {
 
   .content-grid,
   .contract-grid,
+  .enrollment-status-grid,
   .inline-form,
   .quick-task-form,
   .reference-grid,

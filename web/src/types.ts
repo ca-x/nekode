@@ -201,6 +201,25 @@ export type DaemonInfo = {
   activityCount?: number;
 };
 
+export type DaemonEnrollmentStatus = "pending" | "connected" | "expired" | "revoked" | "failed" | string;
+
+export type DaemonEnrollment = {
+  id: string;
+  tokenPrefix: string;
+  token?: string;
+  installCommand?: string;
+  statusUrl: string;
+  displayName?: string;
+  computerId?: string;
+  daemonId?: string;
+  hostname?: string;
+  createdUnix: number;
+  expiresUnix?: number;
+  connectedUnix?: number;
+  lastHeartbeatUnix?: number;
+  status: DaemonEnrollmentStatus;
+};
+
 export type AgentStatusSnapshot = {
   agentId: string;
   computerId?: string;

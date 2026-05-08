@@ -54,6 +54,7 @@ import type {
   ChannelMember,
   CollaborationEvent,
   DaemonActivityRecord,
+  DaemonEnrollment,
   DaemonInfo,
   DaemonRun,
   InteractionEndpoint,
@@ -105,6 +106,7 @@ type TaskReceipt = {
   action: "created" | "moved";
   createdUnix: number;
 };
+type EnrollmentPlatform = "linux" | "macos" | "windows";
 
 const api = new ApiClient();
 
@@ -442,9 +444,57 @@ function messagePermalink(message: Message) {
 
 function healthClass(value?: string) {
   const normalized = (value || "unknown").toLowerCase();
-  if (normalized === "ok" || normalized === "online" || normalized === "running") return "is-ok";
-  if (normalized === "idle" || normalized === "unspecified" || normalized === "queued") return "is-idle";
+  if (normalized === "ok" || normalized === "online" || normalized === "running" || normalized === "connected") {
+    return "is-ok";
+  }
+  if (normalized === "idle" || normalized === "pending" || normalized === "unspecified" || normalized === "queued") {
+    return "is-idle";
+  }
   return "is-warn";
+}
+
+function enrollmentStatus(enrollment: DaemonEnrollment | null) {
+  if (!enrollment) return "idle";
+  if (enrollment.status === "pending" && enrollment.expiresUnix && enrollment.expiresUnix <= Math.floor(Date.now() / 1000)) {
+    return "expired";
+  }
+  return enrollment.status || "pending";
+}
+
+function mergeEnrollmentStatus(current: DaemonEnrollment | null, next: DaemonEnrollment) {
+  return {
+    ...next,
+    installCommand: current?.installCommand,
+    token: current?.token
+  };
+}
+
+function platformInstallCommands(enrollment: DaemonEnrollment | null) {
+  if (!enrollment) return [];
+  const statusURL = enrollment.statusUrl || `/api/daemon/enrollments/${encodeURIComponent(enrollment.id)}`;
+  return [
+    {
+      platform: "linux" as EnrollmentPlatform,
+      label: "Linux",
+      detail: "Bash entry for systemd hosts",
+      command: enrollment.installCommand || "",
+      ready: Boolean(enrollment.installCommand)
+    },
+    {
+      platform: "macos" as EnrollmentPlatform,
+      label: "macOS",
+      detail: "Bash entry for launchd hosts",
+      command: `sudo bash -c "$(curl -fsSL ${statusURL}/install.sh?platform=darwin)"`,
+      ready: false
+    },
+    {
+      platform: "windows" as EnrollmentPlatform,
+      label: "Windows",
+      detail: "PowerShell entry for Windows Service",
+      command: `powershell -ExecutionPolicy Bypass -Command "iwr ${statusURL}/install.ps1?platform=windows | iex"`,
+      ready: false
+    }
+  ];
 }
 
 function roleClass(value?: string) {
@@ -3445,8 +3495,221 @@ function DaemonPanel({
   daemonActivity: DaemonActivityRecord[];
   runtimePresets: RuntimePreset[];
 }) {
+  const [displayName, setDisplayName] = useState("");
+  const [computerId, setComputerId] = useState("");
+  const [hostname, setHostname] = useState("");
+  const [enrollment, setEnrollment] = useState<DaemonEnrollment | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<EnrollmentPlatform>("linux");
+  const [wizardState, setWizardState] = useState<"idle" | "creating" | "polling" | "error">("idle");
+  const [wizardError, setWizardError] = useState("");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const currentEnrollmentStatus = enrollmentStatus(enrollment);
+  const canFinishEnrollment = currentEnrollmentStatus === "connected";
+  const canRegenerateEnrollment = ["expired", "revoked", "failed"].includes(currentEnrollmentStatus);
+  const canCreateEnrollment = wizardState !== "creating" && !["pending", "connected"].includes(currentEnrollmentStatus);
+  const platformCommands = platformInstallCommands(enrollment);
+  const selectedCommand =
+    platformCommands.find((entry) => entry.platform === selectedPlatform) ?? platformCommands[0] ?? null;
+
+  useEffect(() => {
+    if (!enrollment?.id || canFinishEnrollment || currentEnrollmentStatus !== "pending") {
+      return undefined;
+    }
+    setWizardState("polling");
+    const timer = window.setInterval(() => {
+      void api.getDaemonEnrollment(enrollment.id).then((next) => {
+        setEnrollment((current) => mergeEnrollmentStatus(current, next));
+        setWizardError("");
+        if (enrollmentStatus(next) === "connected") {
+          setWizardState("idle");
+        }
+      }).catch((err: unknown) => {
+        setWizardState("error");
+        setWizardError(err instanceof Error ? err.message : "Unable to refresh enrollment status");
+      });
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [canFinishEnrollment, currentEnrollmentStatus, enrollment?.id]);
+
+  const createEnrollment = async () => {
+    setWizardState("creating");
+    setWizardError("");
+    setCopyState("idle");
+    try {
+      const next = await api.createDaemonEnrollment({
+        displayName,
+        computerId,
+        hostname
+      });
+      setEnrollment(next);
+      setSelectedPlatform("linux");
+      setWizardState("polling");
+    } catch (err) {
+      setWizardState("error");
+      setWizardError(err instanceof Error ? err.message : "Unable to create device enrollment");
+    }
+  };
+
+  const copyInstallCommand = async () => {
+    if (!selectedCommand?.ready || !selectedCommand.command) return;
+    try {
+      await navigator.clipboard.writeText(selectedCommand.command);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 1800);
+    } catch {
+      setCopyState("error");
+    }
+  };
+
+  const refreshEnrollment = async () => {
+    if (!enrollment?.id) return;
+    setWizardError("");
+    try {
+      const next = await api.getDaemonEnrollment(enrollment.id);
+      setEnrollment((current) => mergeEnrollmentStatus(current, next));
+    } catch (err) {
+      setWizardError(err instanceof Error ? err.message : "Unable to refresh enrollment status");
+    }
+  };
+
   return (
     <section className="content-grid">
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Add Computer</p>
+            <h2>Install a daemon</h2>
+          </div>
+          <span className={`diagnostic-badge ${healthClass(currentEnrollmentStatus)}`}>
+            {currentEnrollmentStatus}
+          </span>
+        </div>
+        <div className="enrollment-layout">
+          <form className="enrollment-form" onSubmit={(event) => {
+            event.preventDefault();
+            void createEnrollment();
+          }}>
+            <label>
+              Display name
+              <input
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="Office Mac mini"
+              />
+            </label>
+            <label>
+              Computer ID
+              <input
+                value={computerId}
+                onChange={(event) => setComputerId(event.target.value)}
+                placeholder="computer-office"
+              />
+            </label>
+            <label>
+              Hostname
+              <input
+                value={hostname}
+                onChange={(event) => setHostname(event.target.value)}
+                placeholder="office-mini"
+              />
+            </label>
+            <div className="enrollment-actions">
+              <button className="primary-button" type="submit" disabled={!canCreateEnrollment}>
+                <Plus size={16} aria-hidden="true" />
+                {canRegenerateEnrollment ? "Regenerate" : enrollment ? "Waiting" : "Create enrollment"}
+              </button>
+              {enrollment ? (
+                <button className="secondary-button" type="button" onClick={refreshEnrollment}>
+                  <RefreshCw size={16} aria-hidden="true" />
+                  Refresh
+                </button>
+              ) : null}
+              {enrollment && !canFinishEnrollment ? (
+                <button className="secondary-button" type="button" onClick={() => {
+                  setEnrollment(null);
+                  setWizardState("idle");
+                  setWizardError("");
+                  setCopyState("idle");
+                }}>
+                  <X size={16} aria-hidden="true" />
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+          </form>
+          <div className="enrollment-command">
+            <div className="enrollment-status-grid">
+              <div>
+                <span>Enrollment</span>
+                <strong>{enrollment?.id || "not created"}</strong>
+              </div>
+              <div>
+                <span>Computer</span>
+                <strong>{enrollment?.computerId || computerId || "pending"}</strong>
+              </div>
+              <div>
+                <span>Connected</span>
+                <strong>{formatUnixTime(enrollment?.connectedUnix)}</strong>
+              </div>
+              <div>
+                <span>Heartbeat</span>
+                <strong>{formatUnixTime(enrollment?.lastHeartbeatUnix)}</strong>
+              </div>
+            </div>
+            {enrollment ? (
+              <div className="platform-install-shell">
+                <div className="platform-tabs" role="tablist" aria-label="Daemon install platform">
+                  {platformCommands.map((entry) => (
+                    <button
+                      key={entry.platform}
+                      type="button"
+                      role="tab"
+                      aria-selected={selectedPlatform === entry.platform}
+                      className={selectedPlatform === entry.platform ? "is-active" : ""}
+                      onClick={() => {
+                        setSelectedPlatform(entry.platform);
+                        setCopyState("idle");
+                      }}
+                    >
+                      {entry.label}
+                    </button>
+                  ))}
+                </div>
+                {selectedCommand ? (
+                  <div className={selectedCommand.ready ? "command-box" : "command-box is-pending"}>
+                    <div>
+                      <span>{selectedCommand.detail}</span>
+                      <code>{selectedCommand.command}</code>
+                    </div>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={copyInstallCommand}
+                      disabled={!selectedCommand.ready}
+                    >
+                      <Copy size={16} aria-hidden="true" />
+                      {selectedCommand.ready ? (copyState === "copied" ? "Copied" : "Copy") : "Script pending"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState icon={Monitor} title="Create an enrollment to get an install command" />
+            )}
+            {wizardError ? <p className="inline-error" role="alert">{wizardError}</p> : null}
+            {copyState === "error" ? <p className="inline-error" role="alert">Clipboard access failed</p> : null}
+            {canFinishEnrollment ? (
+              <div className="enrollment-ready">
+                <CheckCircle2 size={18} aria-hidden="true" />
+                <span>{enrollment?.displayName || enrollment?.computerId || "Computer"} is connected.</span>
+                <button className="primary-button" type="button" onClick={() => setEnrollment(null)}>
+                  Finish
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
       <section className="panel wide">
         <div className="panel-heading">
           <div>
