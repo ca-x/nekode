@@ -32,15 +32,17 @@ type Server struct {
 	serverID   string
 	serverName string
 
-	mu          sync.Mutex
-	computers   map[string]*computerState
-	leases      map[string]*daemonv1.Lease
-	statuses    map[string]*daemonv1.AgentStatusSnapshot
-	runs        map[string]*daemonv1.Run
-	runSteps    map[string][]*daemonv1.RunStep
-	activities  []*daemonv1.ActivityRecord
-	eventSeq    int64
-	idempotency map[string]proto.Message
+	mu           sync.Mutex
+	computers    map[string]*computerState
+	leases       map[string]*daemonv1.Lease
+	statuses     map[string]*daemonv1.AgentStatusSnapshot
+	runs         map[string]*daemonv1.Run
+	runSteps     map[string][]*daemonv1.RunStep
+	controls     map[string]*daemonv1.AgentControlOperation
+	serverEvents map[string]*daemonv1.ServerEvent
+	activities   []*daemonv1.ActivityRecord
+	eventSeq     int64
+	idempotency  map[string]proto.Message
 }
 
 type computerState struct {
@@ -78,15 +80,17 @@ func New(store *storage.Store, serverID string) *Server {
 		serverID = storage.NewID("srv")
 	}
 	return &Server{
-		store:       store,
-		serverID:    serverID,
-		serverName:  "Nekode",
-		computers:   make(map[string]*computerState),
-		leases:      make(map[string]*daemonv1.Lease),
-		statuses:    make(map[string]*daemonv1.AgentStatusSnapshot),
-		runs:        make(map[string]*daemonv1.Run),
-		runSteps:    make(map[string][]*daemonv1.RunStep),
-		idempotency: make(map[string]proto.Message),
+		store:        store,
+		serverID:     serverID,
+		serverName:   "Nekode",
+		computers:    make(map[string]*computerState),
+		leases:       make(map[string]*daemonv1.Lease),
+		statuses:     make(map[string]*daemonv1.AgentStatusSnapshot),
+		runs:         make(map[string]*daemonv1.Run),
+		runSteps:     make(map[string][]*daemonv1.RunStep),
+		controls:     make(map[string]*daemonv1.AgentControlOperation),
+		serverEvents: make(map[string]*daemonv1.ServerEvent),
+		idempotency:  make(map[string]proto.Message),
 	}
 }
 
@@ -924,6 +928,133 @@ func (s *Server) ListAgentProfiles(_ context.Context, req *daemonv1.ListAgentPro
 	return &daemonv1.ListAgentProfilesResponse{Profiles: profiles, NextCursor: cursorFromCount(len(profiles), "", s.serverID)}, nil
 }
 
+func (s *Server) ControlAgent(ctx context.Context, req *daemonv1.ControlAgentRequest) (*daemonv1.ControlAgentResponse, error) {
+	if resp, ok := replay(ctx, s, "ControlAgent", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.ControlAgentResponse {
+		return &daemonv1.ControlAgentResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "ControlAgent", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetAgentId() == "" || req.GetAction() == daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_UNSPECIFIED {
+		return nil, status.Error(codes.InvalidArgument, "agent_id and action are required")
+	}
+	computerID := req.GetComputerId()
+	runtimeProfileID := req.GetRuntimeProfileId()
+	s.mu.Lock()
+	if computerID == "" || runtimeProfileID == "" {
+		foundComputerID, foundRuntimeProfileID := s.agentRouteLocked(req.GetAgentId())
+		if computerID == "" {
+			computerID = foundComputerID
+		}
+		if runtimeProfileID == "" {
+			runtimeProfileID = foundRuntimeProfileID
+		}
+	}
+	if computerID == "" {
+		s.mu.Unlock()
+		return nil, status.Error(codes.NotFound, "agent computer not found")
+	}
+	now := unixNow()
+	operation := &daemonv1.AgentControlOperation{
+		OperationId:        storage.NewID("ctl"),
+		AgentId:            req.GetAgentId(),
+		ComputerId:         computerID,
+		RuntimeProfileId:   runtimeProfileID,
+		Action:             req.GetAction(),
+		State:              daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED,
+		Reason:             req.GetReason(),
+		RequestedByAgentId: req.GetRequestedByAgentId(),
+		CreatedTimeUnix:    now,
+		UpdatedTimeUnix:    now,
+	}
+	leaseTTL := defaultTTL(req.GetLeaseTtlSeconds(), 300)
+	lease := newLease("agent_control", operation.GetOperationId(), req.GetAgentId(), int64(leaseTTL))
+	s.leases[lease.GetLeaseId()] = lease
+	s.controls[operation.GetOperationId()] = proto.Clone(operation).(*daemonv1.AgentControlOperation)
+	event := s.serverEventLocked(&daemonv1.ServerEvent{
+		AggregateId: operation.GetOperationId(),
+		Target:      operation.GetAgentId(),
+		Kind:        daemonv1.ServerEventKind_SERVER_EVENT_KIND_AGENT_CONTROL,
+		RequestId:   req.GetRequestId(),
+		Operation:   daemonv1.EventOperation_EVENT_OPERATION_CREATED,
+		Scope: &daemonv1.EventScope{
+			ScopeType: daemonv1.EventScopeType_EVENT_SCOPE_TYPE_AGENT,
+			ScopeId:   operation.GetAgentId(),
+			Target:    operation.GetAgentId(),
+		},
+		Payload: &daemonv1.ServerEvent_AgentControl{AgentControl: proto.Clone(operation).(*daemonv1.AgentControlOperation)},
+	})
+	s.serverEvents[event.GetEventId()] = event
+	profile := s.agentProfileLocked(req.GetAgentId())
+	s.mu.Unlock()
+
+	resp := &daemonv1.ControlAgentResponse{Accepted: true, Operation: operation, Profile: profile, Lease: lease}
+	remember(ctx, s, "ControlAgent", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
+func (s *Server) SendAgentDirectMessage(ctx context.Context, req *daemonv1.SendAgentDirectMessageRequest) (*daemonv1.SendAgentDirectMessageResponse, error) {
+	if resp, ok := replay(ctx, s, "SendAgentDirectMessage", req.GetRequestId(), req.GetIdempotencyKey(), func() *daemonv1.SendAgentDirectMessageResponse {
+		return &daemonv1.SendAgentDirectMessageResponse{}
+	}); ok {
+		return resp, nil
+	}
+	if err := reserve(ctx, s, "SendAgentDirectMessage", req.GetRequestId(), req.GetIdempotencyKey()); err != nil {
+		return nil, err
+	}
+	if req.GetAgentId() == "" || req.GetContent() == "" {
+		return nil, status.Error(codes.InvalidArgument, "agent_id and content are required")
+	}
+	s.mu.Lock()
+	computerID, _ := s.agentRouteLocked(req.GetAgentId())
+	s.mu.Unlock()
+	if computerID == "" {
+		return nil, status.Error(codes.NotFound, "agent computer not found")
+	}
+	target := "dm:" + req.GetAgentId()
+	sender := req.GetSender()
+	if sender == nil {
+		sender = &daemonv1.Actor{ActorKind: daemonv1.ActorKind_ACTOR_KIND_HUMAN, DisplayName: "User"}
+	}
+	messageResp, err := s.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           target,
+		Content:          req.GetContent(),
+		ReplyToMessageId: req.GetReplyToMessageId(),
+		AttachmentIds:    append([]string(nil), req.GetAttachmentIds()...),
+		RequestId:        req.GetRequestId() + "-message",
+		IdempotencyKey:   req.GetIdempotencyKey() + "-message",
+		Context:          req.GetContext(),
+		Sender:           sender,
+		Role:             "user",
+	})
+	if err != nil {
+		return nil, err
+	}
+	message := messageResp.GetMessage()
+	s.mu.Lock()
+	event := s.serverEventLocked(&daemonv1.ServerEvent{
+		AggregateId: req.GetAgentId(),
+		Target:      target,
+		Kind:        daemonv1.ServerEventKind_SERVER_EVENT_KIND_MESSAGE,
+		RequestId:   req.GetRequestId(),
+		Operation:   daemonv1.EventOperation_EVENT_OPERATION_APPENDED,
+		Scope: &daemonv1.EventScope{
+			ScopeType: daemonv1.EventScopeType_EVENT_SCOPE_TYPE_AGENT,
+			ScopeId:   req.GetAgentId(),
+			Target:    target,
+		},
+		Payload: &daemonv1.ServerEvent_Message{Message: proto.Clone(message).(*daemonv1.CollaborationMessage)},
+	})
+	s.serverEvents[event.GetEventId()] = event
+	s.mu.Unlock()
+
+	resp := &daemonv1.SendAgentDirectMessageResponse{Accepted: true, Message: message}
+	remember(ctx, s, "SendAgentDirectMessage", req.GetRequestId(), req.GetIdempotencyKey(), resp)
+	return resp, nil
+}
+
 func (s *Server) ListComputerInventories(limit int) []ComputerInventorySnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1192,6 +1323,11 @@ func sanitizeAgentSlug(value string) string {
 }
 
 func (s *Server) AcknowledgeServerEvents(_ context.Context, req *daemonv1.AcknowledgeServerEventsRequest) (*daemonv1.AcknowledgeServerEventsResponse, error) {
+	s.mu.Lock()
+	for _, eventID := range req.GetEventIds() {
+		delete(s.serverEvents, eventID)
+	}
+	s.mu.Unlock()
 	return &daemonv1.AcknowledgeServerEventsResponse{Accepted: true, Cursor: req.GetCursor()}, nil
 }
 
@@ -1218,8 +1354,22 @@ func (s *Server) SubscribeServerEvents(req *daemonv1.SubscribeServerEventsReques
 	if err := stream.Send(&daemonv1.SubscribeServerEventsResponse{Event: event}); err != nil {
 		return err
 	}
-	<-stream.Context().Done()
-	return nil
+	sent := map[string]bool{}
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case <-ticker.C:
+			for _, event := range s.pendingServerEvents(req, sent) {
+				if err := stream.Send(&daemonv1.SubscribeServerEventsResponse{Event: event}); err != nil {
+					return err
+				}
+				sent[event.GetEventId()] = true
+			}
+		}
+	}
 }
 
 func (s *Server) LogActivity(ctx context.Context, req *daemonv1.LogActivityRequest) (*daemonv1.LogActivityResponse, error) {
@@ -2038,6 +2188,107 @@ func agentProfileFromStatus(snapshot *daemonv1.AgentStatusSnapshot) *daemonv1.Ag
 		LastActivityTimeUnix: snapshot.GetUpdatedTimeUnix(),
 		StatusSnapshot:       proto.Clone(snapshot).(*daemonv1.AgentStatusSnapshot),
 	}
+}
+
+func (s *Server) agentRouteLocked(agentID string) (string, string) {
+	for computerID, computer := range s.computers {
+		for _, profile := range computer.inventory.GetAgents() {
+			if profile.GetAgentId() == agentID {
+				return firstNonEmpty(profile.GetComputerId(), computerID), profile.GetRuntimeProfileId()
+			}
+		}
+	}
+	if snapshot := s.statuses[agentID]; snapshot != nil {
+		return snapshot.GetComputerId(), snapshot.GetRuntimeProfileId()
+	}
+	return "", ""
+}
+
+func (s *Server) agentProfileLocked(agentID string) *daemonv1.AgentProfile {
+	for _, computer := range s.computers {
+		for _, profile := range computer.inventory.GetAgents() {
+			if profile.GetAgentId() == agentID {
+				return proto.Clone(profile).(*daemonv1.AgentProfile)
+			}
+		}
+	}
+	if snapshot := s.statuses[agentID]; snapshot != nil {
+		return agentProfileFromStatus(snapshot)
+	}
+	return &daemonv1.AgentProfile{AgentId: agentID, Name: agentID, DisplayName: agentID, Enabled: true}
+}
+
+func (s *Server) serverEventLocked(event *daemonv1.ServerEvent) *daemonv1.ServerEvent {
+	cp := proto.Clone(event).(*daemonv1.ServerEvent)
+	if cp.EventId == "" {
+		cp.EventId = storage.NewID("evt")
+	}
+	if cp.Sequence == 0 {
+		s.eventSeq++
+		cp.Sequence = s.eventSeq
+	}
+	if cp.CreatedTimeUnix == 0 {
+		cp.CreatedTimeUnix = unixNow()
+	}
+	if cp.ProtocolVersion == 0 {
+		cp.ProtocolVersion = protocolVersion
+	}
+	return cp
+}
+
+func (s *Server) pendingServerEvents(req *daemonv1.SubscribeServerEventsRequest, sent map[string]bool) []*daemonv1.ServerEvent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	events := make([]*daemonv1.ServerEvent, 0, len(s.serverEvents))
+	for eventID, event := range s.serverEvents {
+		if sent[eventID] || !serverEventMatches(req, event) {
+			continue
+		}
+		events = append(events, proto.Clone(event).(*daemonv1.ServerEvent))
+	}
+	sort.SliceStable(events, func(i, j int) bool {
+		return events[i].GetSequence() < events[j].GetSequence()
+	})
+	return events
+}
+
+func serverEventMatches(req *daemonv1.SubscribeServerEventsRequest, event *daemonv1.ServerEvent) bool {
+	if event == nil {
+		return false
+	}
+	if len(req.GetKinds()) > 0 && !containsServerEventKind(req.GetKinds(), event.GetKind()) {
+		return false
+	}
+	if req.GetIncludeAllAgents() || req.GetIncludeAllScopes() {
+		return true
+	}
+	switch payload := event.GetPayload().(type) {
+	case *daemonv1.ServerEvent_AgentControl:
+		op := payload.AgentControl
+		if op.GetComputerId() != "" && op.GetComputerId() == req.GetComputerId() {
+			return true
+		}
+		return contains(req.GetAgentIds(), op.GetAgentId())
+	case *daemonv1.ServerEvent_Message:
+		return contains(req.GetAgentIds(), event.GetAggregateId()) || contains(req.GetTargets(), payload.Message.GetTarget())
+	case *daemonv1.ServerEvent_Run:
+		run := payload.Run
+		if run.GetComputerId() != "" && run.GetComputerId() == req.GetComputerId() {
+			return true
+		}
+		return contains(req.GetAgentIds(), run.GetAgentId())
+	default:
+		return event.GetTarget() == req.GetComputerId()
+	}
+}
+
+func containsServerEventKind(values []daemonv1.ServerEventKind, needle daemonv1.ServerEventKind) bool {
+	for _, value := range values {
+		if value == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func taskToProto(task storage.Task) *daemonv1.Task {

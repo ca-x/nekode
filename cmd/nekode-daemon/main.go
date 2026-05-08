@@ -209,6 +209,7 @@ func (s *daemonSession) loop(ctx context.Context) error {
 		RequestContext: s.requestContext,
 		Runner:         commandRunner{},
 	})
+	go s.streamServerEvents(ctx, supervisor)
 	runTicker := time.NewTicker(s.cfg.RunPollInterval)
 	defer runTicker.Stop()
 	pollSupervisor(ctx, supervisor)
@@ -223,6 +224,83 @@ func (s *daemonSession) loop(ctx context.Context) error {
 		case <-runTicker.C:
 			pollSupervisor(ctx, supervisor)
 		}
+	}
+}
+
+func (s *daemonSession) streamServerEvents(ctx context.Context, supervisor *runSupervisor) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		callCtx := s.withToken(ctx)
+		stream, err := s.client.SubscribeServerEvents(callCtx, &daemonv1.SubscribeServerEventsRequest{
+			DaemonId:   s.cfg.DaemonID,
+			ComputerId: s.cfg.ComputerID,
+			AgentIds:   []string{s.cfg.AgentID},
+			RequestId:  newRequestID("events"),
+			LeaseId:    s.lease.GetLeaseId(),
+			Kinds: []daemonv1.ServerEventKind{
+				daemonv1.ServerEventKind_SERVER_EVENT_KIND_AGENT_CONTROL,
+				daemonv1.ServerEventKind_SERVER_EVENT_KIND_MESSAGE,
+				daemonv1.ServerEventKind_SERVER_EVENT_KIND_RUN_ASSIGNED,
+			},
+		})
+		if err != nil {
+			slog.Warn("daemon event stream open failed", "error", err)
+			if !sleepOrDone(ctx, 2*time.Second) {
+				return
+			}
+			continue
+		}
+		for {
+			resp, err := stream.Recv()
+			if err != nil {
+				slog.Warn("daemon event stream closed", "error", err)
+				break
+			}
+			event := resp.GetEvent()
+			if err := supervisor.handleServerEvent(ctx, event); err != nil {
+				slog.Warn("daemon server event handling failed", "event_id", event.GetEventId(), "error", err)
+				continue
+			}
+			if err := s.ackServerEvent(ctx, event); err != nil {
+				slog.Warn("daemon server event ack failed", "event_id", event.GetEventId(), "error", err)
+			}
+		}
+		if !sleepOrDone(ctx, 2*time.Second) {
+			return
+		}
+	}
+}
+
+func (s *daemonSession) ackServerEvent(ctx context.Context, event *daemonv1.ServerEvent) error {
+	if event == nil || event.GetEventId() == "" {
+		return nil
+	}
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	_, err := s.client.AcknowledgeServerEvents(callCtx, &daemonv1.AcknowledgeServerEventsRequest{
+		DaemonId:       s.cfg.DaemonID,
+		ComputerId:     s.cfg.ComputerID,
+		EventIds:       []string{event.GetEventId()},
+		Cursor:         &daemonv1.EventCursor{Sequence: event.GetSequence(), ServerId: event.GetAggregateId()},
+		RequestId:      newRequestID("event-ack"),
+		IdempotencyKey: newRequestID("event-ack"),
+		Context:        s.requestContext(),
+	})
+	return err
+}
+
+func sleepOrDone(ctx context.Context, delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
 	}
 }
 

@@ -25,6 +25,7 @@ type runSupervisorClient interface {
 	UpdateRunStatus(context.Context, *daemonv1.UpdateRunStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateRunStatusResponse, error)
 	AppendRunStep(context.Context, *daemonv1.AppendRunStepRequest, ...grpc.CallOption) (*daemonv1.AppendRunStepResponse, error)
 	UpdateAgentStatus(context.Context, *daemonv1.UpdateAgentStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error)
+	SendMessage(context.Context, *daemonv1.SendMessageRequest, ...grpc.CallOption) (*daemonv1.SendMessageResponse, error)
 	LogActivity(context.Context, *daemonv1.LogActivityRequest, ...grpc.CallOption) (*daemonv1.LogActivityResponse, error)
 }
 
@@ -165,6 +166,151 @@ func (s *runSupervisor) releaseRun(runID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.running, runID)
+}
+
+func (s *runSupervisor) handleServerEvent(ctx context.Context, event *daemonv1.ServerEvent) error {
+	switch payload := event.GetPayload().(type) {
+	case *daemonv1.ServerEvent_AgentControl:
+		return s.executeControl(ctx, payload.AgentControl)
+	case *daemonv1.ServerEvent_Message:
+		return s.executeDirectMessage(ctx, payload.Message)
+	case *daemonv1.ServerEvent_Run:
+		run := payload.Run
+		if !shouldStartRun(run) {
+			return nil
+		}
+		if !s.reserveRun(run.GetRunId()) {
+			return nil
+		}
+		defer s.releaseRun(run.GetRunId())
+		s.executeRun(ctx, run)
+		return nil
+	default:
+		return nil
+	}
+}
+
+func (s *runSupervisor) executeControl(ctx context.Context, op *daemonv1.AgentControlOperation) error {
+	if op == nil || op.GetOperationId() == "" {
+		return nil
+	}
+	agentID := firstNonEmpty(op.GetAgentId(), s.cfg.AgentID)
+	switch op.GetAction() {
+	case daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE:
+		canceled := s.cancelAgentRuns(agentID)
+		s.logActivity(ctx, s.cfg.Target, agentID, "agent_control_terminate", "terminate requested", fmt.Sprintf("operation=%s canceled_runs=%d", op.GetOperationId(), canceled), "", "")
+		return s.reportControlStatus(ctx, op, daemonv1.AgentControlState_AGENT_CONTROL_STATE_COMPLETED, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING, "terminate completed")
+	case daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART,
+		daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_RESET_SESSION,
+		daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_RESTART_FULL_RESET:
+		canceled := s.cancelAgentRuns(agentID)
+		s.logActivity(ctx, s.cfg.Target, agentID, "agent_control_restart", "restart requested", fmt.Sprintf("operation=%s canceled_runs=%d action=%s", op.GetOperationId(), canceled, op.GetAction().String()), "", "")
+		if err := s.reportControlStatus(ctx, op, daemonv1.AgentControlState_AGENT_CONTROL_STATE_RUNNING, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_RESTARTING, "restart running"); err != nil {
+			return err
+		}
+		return s.reportControlStatus(ctx, op, daemonv1.AgentControlState_AGENT_CONTROL_STATE_COMPLETED, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING, "restart completed")
+	default:
+		s.logActivity(ctx, s.cfg.Target, agentID, "agent_control_unsupported", "unsupported control requested", op.GetAction().String(), "", "")
+		return s.reportControlStatus(ctx, op, daemonv1.AgentControlState_AGENT_CONTROL_STATE_UNSUPPORTED, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_BLOCKED, "control unsupported")
+	}
+}
+
+func (s *runSupervisor) cancelAgentRuns(agentID string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	count := 0
+	for _, process := range s.running {
+		if agentID != "" && process.AgentID != "" && process.AgentID != agentID {
+			continue
+		}
+		if process.cancel != nil {
+			process.cancel()
+			count++
+		}
+	}
+	return count
+}
+
+func (s *runSupervisor) reportControlStatus(ctx context.Context, op *daemonv1.AgentControlOperation, controlState daemonv1.AgentControlState, activityState daemonv1.AgentActivityState, summary string) error {
+	now := time.Now().Unix()
+	agentID := firstNonEmpty(op.GetAgentId(), s.cfg.AgentID)
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	_, err := s.client.UpdateAgentStatus(callCtx, &daemonv1.UpdateAgentStatusRequest{
+		Status: &daemonv1.AgentStatusSnapshot{
+			AgentId:          agentID,
+			ComputerId:       s.cfg.ComputerID,
+			RuntimeProfileId: firstNonEmpty(op.GetRuntimeProfileId(), "profile-"+agentID),
+			Presence:         presenceForActivity(activityState),
+			ActivityState:    activityState,
+			Health:           healthForControlState(controlState),
+			Severity:         severityForHealth(healthForControlState(controlState)),
+			Summary:          summary,
+			Detail:           op.GetReason(),
+			Target:           s.cfg.Target,
+			OperationId:      op.GetOperationId(),
+			StartedTimeUnix:  firstNonZero(op.GetCreatedTimeUnix(), now),
+			UpdatedTimeUnix:  now,
+			ExpiresTimeUnix:  now + int64((2*s.cfg.HeartbeatInterval)/time.Second),
+		},
+		RequestId:      newRequestID("agent-control-status"),
+		IdempotencyKey: newRequestID("agent-control-status"),
+		Context:        s.requestContext(),
+	})
+	return err
+}
+
+func healthForControlState(state daemonv1.AgentControlState) daemonv1.AgentHealth {
+	switch state {
+	case daemonv1.AgentControlState_AGENT_CONTROL_STATE_FAILED,
+		daemonv1.AgentControlState_AGENT_CONTROL_STATE_UNSUPPORTED:
+		return daemonv1.AgentHealth_AGENT_HEALTH_RUNTIME_ERROR
+	default:
+		return daemonv1.AgentHealth_AGENT_HEALTH_OK
+	}
+}
+
+func (s *runSupervisor) executeDirectMessage(ctx context.Context, message *daemonv1.CollaborationMessage) error {
+	if message == nil || message.GetMessageId() == "" {
+		return nil
+	}
+	agentID := firstNonEmpty(s.cfg.AgentID, message.GetAggregateId())
+	run := &daemonv1.Run{
+		RunId:            "direct-" + message.GetMessageId(),
+		Target:           message.GetTarget(),
+		AgentId:          agentID,
+		ComputerId:       s.cfg.ComputerID,
+		RuntimeProfileId: "profile-" + agentID,
+		State:            daemonv1.RunState_RUN_STATE_QUEUED,
+		InputMessageId:   message.GetMessageId(),
+		Summary:          message.GetContent(),
+	}
+	if !s.reserveRun(run.GetRunId()) {
+		return nil
+	}
+	defer s.releaseRun(run.GetRunId())
+	s.executeRun(ctx, run)
+	return s.sendDirectMessageReceipt(ctx, message, agentID)
+}
+
+func (s *runSupervisor) sendDirectMessageReceipt(ctx context.Context, message *daemonv1.CollaborationMessage, agentID string) error {
+	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
+	defer cancel()
+	_, err := s.client.SendMessage(callCtx, &daemonv1.SendMessageRequest{
+		Target:           message.GetTarget(),
+		Role:             "assistant",
+		Content:          "Processed direct message " + message.GetMessageId(),
+		ReplyToMessageId: message.GetMessageId(),
+		RequestId:        newRequestID("direct-receipt"),
+		IdempotencyKey:   newRequestID("direct-receipt"),
+		Context:          s.requestContext(),
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     agentID,
+			DisplayName: agentID,
+		},
+	})
+	return err
 }
 
 func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {

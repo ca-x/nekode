@@ -325,6 +325,96 @@ func TestMessageTaskAndActivityFlow(t *testing.T) {
 	}
 }
 
+func TestAgentControlAndDirectMessageEmitDaemonEvents(t *testing.T) {
+	client, cleanup := newTestClient(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	_, err := client.RegisterComputer(ctx, &daemonv1.RegisterComputerRequest{
+		Info: &daemonv1.ComputerInfo{
+			DaemonId:   "daemon-1",
+			ComputerId: "computer-1",
+			Hostname:   "test-host",
+			Status:     daemonv1.ComputerStatus_COMPUTER_STATUS_ONLINE,
+		},
+		Inventory: &daemonv1.ComputerInventory{
+			Agents: []*daemonv1.AgentProfile{
+				{
+					AgentId:          "agent-1",
+					ComputerId:       "computer-1",
+					RuntimeProfileId: "profile-agent-1",
+					Enabled:          true,
+				},
+			},
+		},
+		RequestId:      "register-control-1",
+		IdempotencyKey: "register-control-1",
+	})
+	if err != nil {
+		t.Fatalf("RegisterComputer() error = %v", err)
+	}
+
+	control, err := client.ControlAgent(ctx, &daemonv1.ControlAgentRequest{
+		AgentId:        "agent-1",
+		Action:         daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE,
+		Reason:         "test terminate",
+		RequestId:      "control-1",
+		IdempotencyKey: "control-1",
+	})
+	if err != nil {
+		t.Fatalf("ControlAgent() error = %v", err)
+	}
+	if !control.GetAccepted() ||
+		control.GetOperation().GetComputerId() != "computer-1" ||
+		control.GetOperation().GetState() != daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED {
+		t.Fatalf("ControlAgent() = %+v, want queued operation for computer-1", control)
+	}
+
+	direct, err := client.SendAgentDirectMessage(ctx, &daemonv1.SendAgentDirectMessageRequest{
+		AgentId:        "agent-1",
+		Content:        "hello agent",
+		RequestId:      "direct-1",
+		IdempotencyKey: "direct-1",
+		Sender:         &daemonv1.Actor{ActorKind: daemonv1.ActorKind_ACTOR_KIND_HUMAN, DisplayName: "Tester"},
+	})
+	if err != nil {
+		t.Fatalf("SendAgentDirectMessage() error = %v", err)
+	}
+	if !direct.GetAccepted() || direct.GetMessage().GetTarget() != "dm:agent-1" {
+		t.Fatalf("SendAgentDirectMessage() = %+v, want dm:agent-1", direct)
+	}
+
+	streamCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	stream, err := client.SubscribeServerEvents(streamCtx, &daemonv1.SubscribeServerEventsRequest{
+		DaemonId:   "daemon-1",
+		ComputerId: "computer-1",
+		AgentIds:   []string{"agent-1"},
+		Kinds: []daemonv1.ServerEventKind{
+			daemonv1.ServerEventKind_SERVER_EVENT_KIND_AGENT_CONTROL,
+			daemonv1.ServerEventKind_SERVER_EVENT_KIND_MESSAGE,
+		},
+		RequestId: "stream-control-1",
+	})
+	if err != nil {
+		t.Fatalf("SubscribeServerEvents() error = %v", err)
+	}
+	seenControl := false
+	seenMessage := false
+	for !seenControl || !seenMessage {
+		resp, err := stream.Recv()
+		if err != nil {
+			t.Fatalf("stream Recv() error = %v", err)
+		}
+		switch payload := resp.GetEvent().GetPayload().(type) {
+		case *daemonv1.ServerEvent_AgentControl:
+			seenControl = payload.AgentControl.GetOperationId() == control.GetOperation().GetOperationId()
+		case *daemonv1.ServerEvent_Message:
+			seenMessage = payload.Message.GetMessageId() == direct.GetMessage().GetMessageId()
+		}
+	}
+}
+
 func findEvent(events []*daemonv1.CollaborationEvent, kind daemonv1.CollaborationEventKind, operation daemonv1.EventOperation) *daemonv1.CollaborationEvent {
 	for _, event := range events {
 		if event.GetKind() == kind && event.GetOperation() == operation {

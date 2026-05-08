@@ -114,13 +114,104 @@ func TestRunSupervisorMarksRunFailed(t *testing.T) {
 	}
 }
 
+func TestRunSupervisorHandlesTerminateControl(t *testing.T) {
+	client := newFakeSupervisorClient()
+	canceled := make(chan struct{}, 1)
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "agent-1",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+		},
+		Client: client,
+		Runner: &fakeRuntimeRunner{},
+	})
+	supervisor.running["run-1"] = &supervisedProcess{
+		RunID:   "run-1",
+		AgentID: "agent-1",
+		cancel:  func() { canceled <- struct{}{} },
+	}
+
+	err := supervisor.handleServerEvent(context.Background(), &daemonv1.ServerEvent{
+		Payload: &daemonv1.ServerEvent_AgentControl{AgentControl: &daemonv1.AgentControlOperation{
+			OperationId:      "control-1",
+			AgentId:          "agent-1",
+			ComputerId:       "computer-1",
+			RuntimeProfileId: "profile-agent-1",
+			Action:           daemonv1.AgentControlAction_AGENT_CONTROL_ACTION_TERMINATE,
+			State:            daemonv1.AgentControlState_AGENT_CONTROL_STATE_QUEUED,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("handleServerEvent(control) error = %v", err)
+	}
+	select {
+	case <-canceled:
+	case <-time.After(time.Second):
+		t.Fatalf("terminate control did not cancel running process")
+	}
+	if !client.hasActivity("agent_control_terminate") {
+		t.Fatalf("activities = %+v, want terminate activity", client.activities)
+	}
+	if !client.hasAgentStatus(daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING) {
+		t.Fatalf("agent statuses = %+v, want waiting control status", client.agentStatuses)
+	}
+}
+
+func TestRunSupervisorHandlesDirectMessage(t *testing.T) {
+	client := newFakeSupervisorClient()
+	runner := &fakeRuntimeRunner{result: runtimeCommandResult{Output: "direct ok"}}
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "agent-1",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+			ExecutorCommand:   "echo",
+			ExecutorArgs:      []string{"direct"},
+		},
+		Client: client,
+		Runner: runner,
+	})
+
+	err := supervisor.handleServerEvent(context.Background(), &daemonv1.ServerEvent{
+		Payload: &daemonv1.ServerEvent_Message{Message: &daemonv1.CollaborationMessage{
+			MessageId: "msg-1",
+			Target:    "dm:agent-1",
+			Content:   "please work",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("handleServerEvent(message) error = %v", err)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("runner commands = %+v, want one direct-message run", runner.commands)
+	}
+	states := client.runStates()
+	if len(states) == 0 || states[len(states)-1] != daemonv1.RunState_RUN_STATE_COMPLETED {
+		t.Fatalf("run states = %v, want completed", states)
+	}
+	if len(client.messages) != 1 || client.messages[0].GetReplyToMessageId() != "msg-1" {
+		t.Fatalf("messages = %+v, want reply to msg-1", client.messages)
+	}
+}
+
 type fakeRuntimeRunner struct {
 	commands []runtimeCommand
 	result   runtimeCommandResult
+	onRun    func()
 }
 
 func (r *fakeRuntimeRunner) Run(_ context.Context, cmd runtimeCommand) runtimeCommandResult {
 	r.commands = append(r.commands, cmd)
+	if r.onRun != nil {
+		r.onRun()
+	}
 	return r.result
 }
 
@@ -130,6 +221,7 @@ type fakeSupervisorClient struct {
 	steps           []*daemonv1.RunStep
 	activities      []*daemonv1.LogActivityRequest
 	agentStatuses   []*daemonv1.AgentStatusSnapshot
+	messages        []*daemonv1.SendMessageRequest
 	releasedPermits []string
 }
 
@@ -181,6 +273,11 @@ func (c *fakeSupervisorClient) AppendRunStep(_ context.Context, req *daemonv1.Ap
 func (c *fakeSupervisorClient) UpdateAgentStatus(_ context.Context, req *daemonv1.UpdateAgentStatusRequest, _ ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error) {
 	c.agentStatuses = append(c.agentStatuses, req.GetStatus())
 	return &daemonv1.UpdateAgentStatusResponse{Status: req.GetStatus()}, nil
+}
+
+func (c *fakeSupervisorClient) SendMessage(_ context.Context, req *daemonv1.SendMessageRequest, _ ...grpc.CallOption) (*daemonv1.SendMessageResponse, error) {
+	c.messages = append(c.messages, req)
+	return &daemonv1.SendMessageResponse{Accepted: true, Message: &daemonv1.CollaborationMessage{MessageId: "reply-1", Target: req.GetTarget(), Content: req.GetContent()}}, nil
 }
 
 func (c *fakeSupervisorClient) LogActivity(_ context.Context, req *daemonv1.LogActivityRequest, _ ...grpc.CallOption) (*daemonv1.LogActivityResponse, error) {
