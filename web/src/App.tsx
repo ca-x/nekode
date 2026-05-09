@@ -54,6 +54,7 @@ import { ComputersListPanel } from "./panels/computers/ComputersListPanel";
 import { NewComputerModal } from "./panels/computers/NewComputerModal";
 import { AgentDetailPanel } from "./panels/agents/AgentDetailPanel";
 import { AlertPill } from "./panels/_shared/alert-pill";
+import { TabBar } from "./panels/_shared/tab-bar";
 import { isComputerOnline } from "./panels/computers/computer-utils";
 import brandMarkUrl from "./assets-brand.png";
 import type {
@@ -4262,7 +4263,7 @@ function SettingsPanel({
   };
 
   return (
-    <section className="content-grid settings-grid">
+    <section className="content-grid settings-grid" data-active-settings-tab={settingsTab}>
       <div className="wide section-notice-row">
         <SectionStatusNotice loading={loading} message="Loading settings posture" />
         <SectionIssuesNotice issues={issues} onRetry={onRetry} />
@@ -4272,7 +4273,16 @@ function SettingsPanel({
       <MetricCard icon={UsersRound} label="Visible Members" value={String(channelMembers.length)} />
       <MetricCard icon={Bot} label="Runtime Presets" value={String(runtimePresets.length)} />
 
-      <section className="panel wide">
+      <div className="wide settings-tabbar">
+        <TabBar
+          tabs={SETTINGS_TABS.map((entry) => ({ key: entry.key, labelKey: entry.labelKey }))}
+          active={settingsTab}
+          onChange={setSettingsTab}
+          ariaLabel="Settings sections"
+        />
+      </div>
+
+      <section className="panel wide" data-settings-tab="account">
         <div className="panel-heading compact-heading">
           <div>
             <p className="eyebrow">Appearance</p>
@@ -4297,7 +4307,7 @@ function SettingsPanel({
         </div>
       </section>
 
-      <section className="panel wide">
+      <section className="panel wide" data-settings-tab="system">
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Setup</p>
@@ -4339,7 +4349,7 @@ function SettingsPanel({
         </div>
       </section>
 
-      <section className="panel wide">
+      <section className="panel wide" data-settings-tab="account">
         <div className="panel-heading compact-heading">
           <div>
             <p className="eyebrow">Permissions</p>
@@ -4382,7 +4392,7 @@ function SettingsPanel({
         </div>
       </section>
 
-      <section className="panel wide">
+      <section className="panel wide" data-settings-tab="users">
         <div className="panel-heading compact-heading">
           <div>
             <p className="eyebrow">Channel Admin</p>
@@ -4570,7 +4580,7 @@ function SettingsPanel({
         </div>
       </section>
 
-      <section className="panel wide">
+      <section className="panel wide" data-settings-tab="runtimes">
         <div className="panel-heading compact-heading">
           <div>
             <p className="eyebrow">Configuration</p>

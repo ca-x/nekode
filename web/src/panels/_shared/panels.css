@@ -472,6 +472,21 @@
   background: var(--surface);
 }
 
+.settings-tabbar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.settings-grid[data-active-settings-tab="account"] section[data-settings-tab]:not([data-settings-tab="account"]),
+.settings-grid[data-active-settings-tab="users"] section[data-settings-tab]:not([data-settings-tab="users"]),
+.settings-grid[data-active-settings-tab="imProviders"] section[data-settings-tab]:not([data-settings-tab="imProviders"]),
+.settings-grid[data-active-settings-tab="runtimes"] section[data-settings-tab]:not([data-settings-tab="runtimes"]),
+.settings-grid[data-active-settings-tab="notifications"] section[data-settings-tab]:not([data-settings-tab="notifications"]),
+.settings-grid[data-active-settings-tab="system"] section[data-settings-tab]:not([data-settings-tab="system"]) {
+  display: none;
+}
+
 .sidebar-alerts {
   display: flex;
   flex-direction: column;
