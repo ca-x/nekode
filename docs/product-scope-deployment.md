@@ -282,9 +282,10 @@ Container Registry:
 
 Stable non-prerelease tags also publish `latest`, and semantic aliases such as
 `0.1` and `0` are generated from the release tag. The Docker Hub publish path
-requires repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; a tag
-release fails early if they are missing so the release cannot appear successful
-without a Docker Hub image.
+depends on GitHub organization secrets `DOCKERHUB_USERNAME` and
+`DOCKERHUB_TOKEN`; a tag release fails early if they are missing so the release
+cannot appear successful without a Docker Hub image. These are release
+infrastructure secrets, not developer-local environment variables.
 
 `docker-compose.yml` starts a single server with `/data` persisted. It also
 shows the optional first-admin bootstrap env variables as commented examples.

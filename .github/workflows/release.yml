@@ -173,7 +173,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
-            echo "Docker Hub publish requires DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository secrets." >&2
+            echo "Docker Hub publish requires GitHub organization secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN." >&2
             exit 1
           fi
 
