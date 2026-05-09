@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestRunSupervisorCompletesQueuedRun(t *testing.T) {
@@ -635,6 +637,28 @@ func (c *fakeSupervisorClient) LogActivity(_ context.Context, req *daemonv1.LogA
 	c.activities = append(c.activities, req)
 	return &daemonv1.LogActivityResponse{Activity: &daemonv1.ActivityRecord{ActivityId: "activity-" + req.GetKind(), Kind: req.GetKind()}}, nil
 }
+
+// ReportAgentRun stub: tests don't exercise the archive; return a no-op
+// stream that discards events. This keeps the fake client in sync with
+// the supervisor interface without pulling in the full archive wiring.
+func (c *fakeSupervisorClient) ReportAgentRun(_ context.Context, _ ...grpc.CallOption) (daemonv1.DaemonControlService_ReportAgentRunClient, error) {
+	return &noopReportAgentRunClient{}, nil
+}
+
+type noopReportAgentRunClient struct {
+	grpc.ClientStream
+}
+
+func (noopReportAgentRunClient) Send(*daemonv1.AgentRunEvent) error { return nil }
+func (noopReportAgentRunClient) CloseAndRecv() (*daemonv1.ReportAgentRunResponse, error) {
+	return &daemonv1.ReportAgentRunResponse{}, nil
+}
+func (noopReportAgentRunClient) Header() (metadata.MD, error) { return metadata.MD{}, nil }
+func (noopReportAgentRunClient) Trailer() metadata.MD         { return metadata.MD{} }
+func (noopReportAgentRunClient) CloseSend() error             { return nil }
+func (noopReportAgentRunClient) Context() context.Context     { return context.Background() }
+func (noopReportAgentRunClient) SendMsg(m any) error          { return nil }
+func (noopReportAgentRunClient) RecvMsg(m any) error          { return io.EOF }
 
 func (c *fakeSupervisorClient) runStates() []daemonv1.RunState {
 	out := make([]daemonv1.RunState, 0, len(c.updates))

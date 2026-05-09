@@ -31,6 +31,7 @@ type runSupervisorClient interface {
 	UpdateAgentStatus(context.Context, *daemonv1.UpdateAgentStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error)
 	SendMessage(context.Context, *daemonv1.SendMessageRequest, ...grpc.CallOption) (*daemonv1.SendMessageResponse, error)
 	LogActivity(context.Context, *daemonv1.LogActivityRequest, ...grpc.CallOption) (*daemonv1.LogActivityResponse, error)
+	ReportAgentRun(context.Context, ...grpc.CallOption) (daemonv1.DaemonControlService_ReportAgentRunClient, error)
 }
 
 type runSupervisorConfig struct {
@@ -319,6 +320,15 @@ func (s *runSupervisor) sendDirectMessageReceipt(ctx context.Context, message *d
 func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 	agentID := firstNonEmpty(run.GetAgentId(), s.cfg.AgentID)
 	target := firstNonEmpty(run.GetTarget(), s.cfg.Target)
+	// Open an agent_runs archive stream for the whole run. Failures are
+	// non-fatal — the supervisor's own RunStep/Activity tracking is the
+	// authoritative record; the archive is a convenience for the UI.
+	recorder := newRunRecorder(ctx, s.client, s.withToken, s.cfg.ComputerID, agentID, run.GetRunId(), "run started")
+	defer func() {
+		if recorder != nil {
+			recorder.closeWithEnd("run closed", 0, "")
+		}
+	}()
 	permitLeaseID := ""
 	permit, err := s.acquirePermit(ctx, run, agentID)
 	if err != nil {
@@ -356,6 +366,10 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 		s.logActivity(ctx, target, agentID, "run_started", "daemon supervisor started run", "", run.GetRunId(), startStep.GetStepId())
 	}
 	s.logActivity(ctx, target, agentID, "command_run", "runtime command running", commandSummary, run.GetRunId(), commandStepID(commandStep))
+	recorder.recordToolEvent(daemonv1.AgentRunPhase_AGENT_RUN_PHASE_TOOL_CALL, "runtime command running", map[string]any{
+		"command": cmd.Command,
+		"args":    cmd.Args,
+	})
 
 	runCtx, cancel := context.WithTimeout(ctx, s.cfg.RunTimeout)
 	defer cancel()
@@ -371,6 +385,8 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 		if commandStep != nil {
 			s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_FAILED, "runtime command failed", errDetail)
 		}
+		recorder.closeWithEnd("runtime command failed", int32(result.ExitCode), result.Err.Error())
+		recorder = nil
 		s.failRun(ctx, run, agentID, permitLeaseID, "runtime command failed", result.Err)
 		s.logActivity(ctx, target, agentID, "run_failed", "runtime command failed", errDetail, run.GetRunId(), commandStepID(commandStep))
 		return
@@ -378,6 +394,10 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 	if commandStep != nil {
 		s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "runtime command completed", detail)
 	}
+	recorder.recordToolEvent(daemonv1.AgentRunPhase_AGENT_RUN_PHASE_TOOL_RESULT, "runtime command completed", map[string]any{
+		"exit_code": result.ExitCode,
+		"detail":    detail,
+	})
 	resultStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_RESULT, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "run completed", detail)
 	if err := s.updateRun(ctx, run, agentID, daemonv1.RunState_RUN_STATE_COMPLETED, "runtime command completed", "", permitLeaseID); err != nil {
 		slog.Warn("daemon supervisor completion update failed", "run_id", run.GetRunId(), "error", err)
@@ -385,6 +405,8 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 	if err := s.reportRunAgentStatus(ctx, run, agentID, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING, daemonv1.AgentHealth_AGENT_HEALTH_OK, "run completed"); err != nil {
 		slog.Warn("daemon supervisor status update failed", "run_id", run.GetRunId(), "error", err)
 	}
+	recorder.closeWithEnd("run completed", int32(result.ExitCode), "")
+	recorder = nil
 	s.logActivity(ctx, target, agentID, "run_completed", "runtime command completed", detail, run.GetRunId(), commandStepID(resultStep))
 }
 

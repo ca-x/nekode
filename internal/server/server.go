@@ -213,6 +213,17 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/reminders/{id}/snooze", s.requireAuth(s.handleSnoozeReminder))
 	s.mux.HandleFunc("PATCH /api/reminders/{id}", s.requireAuth(s.handleUpdateReminder))
 	s.mux.HandleFunc("GET /api/runtime-presets", s.requireAuth(s.handleListRuntimePresets))
+	// Channel decisions (governance records with voting).
+	s.mux.HandleFunc("GET /api/channels/{target}/decisions", s.requireAuth(s.handleListChannelDecisions))
+	s.mux.HandleFunc("POST /api/channels/{target}/decisions", s.requireAuth(s.handleProposeChannelDecision))
+	s.mux.HandleFunc("POST /api/decisions/{id}/vote", s.requireAuth(s.handleVoteChannelDecision))
+	s.mux.HandleFunc("POST /api/decisions/{id}/ratify", s.requireAuth(s.handleRatifyChannelDecision))
+	s.mux.HandleFunc("POST /api/decisions/{id}/retire", s.requireAuth(s.handleRetireChannelDecision))
+	s.mux.HandleFunc("GET /api/decisions/{id}/votes", s.requireAuth(s.handleListDecisionVotes))
+	// Agent runs archive (read side only; writes come over the gRPC stream).
+	s.mux.HandleFunc("GET /api/agent-runs", s.requireAuth(s.handleListAgentRuns))
+	s.mux.HandleFunc("GET /api/agent-runs/search", s.requireAuth(s.handleSearchAgentRuns))
+	s.mux.HandleFunc("GET /api/agent-runs/{id}", s.requireAuth(s.handleGetAgentRun))
 	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
 	s.mux.HandleFunc("GET /api/daemon/inventory", s.requireAuth(s.handleDaemonInventory))
 	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))
@@ -1630,6 +1641,7 @@ func (s *Server) handleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		ThreadID:          strings.TrimSpace(req.ThreadID),
 		Role:              role,
 		Content:           content,
+		Kind:              strings.TrimSpace(req.Kind),
 		ReplyToMessageID:  strings.TrimSpace(req.ReplyToMessageID),
 		SenderUserID:      principal.User.ID,
 		SenderDisplayName: principal.User.DisplayName,
@@ -2507,6 +2519,7 @@ type messageRequest struct {
 	ThreadID          string   `json:"threadId"`
 	Role              string   `json:"role"`
 	Content           string   `json:"content"`
+	Kind              string   `json:"kind"`
 	ReplyToMessageID  string   `json:"replyToMessageId"`
 	AttachmentIDs     []string `json:"attachmentIds"`
 	SourceEndpointID  string   `json:"sourceEndpointId"`
