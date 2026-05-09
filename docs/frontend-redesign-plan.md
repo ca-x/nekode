@@ -237,6 +237,10 @@ cleanly on its own.
 
 - ComputersListPanel for the context rail.
 - ComputerDetailPanel with header / INFO / CONNECT COMMAND / AGENTS / ACTIONS.
+- **The M1 Machines sidebar currently routes every row to the same generic
+  DaemonPanel because no selected-machine state exists yet. M3a is where
+  the selection is wired through the hash route (`#/computers/<id>`) and
+  rendered by ComputerDetailPanel, closing codex review finding M1-P2-2.**
 - NewComputerModal reusing the existing enrollment flow but presented as a
   focused modal with polling pill.
 - Wire `Delete Computer` guard: disabled unless agent count is zero.

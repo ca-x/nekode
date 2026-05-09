@@ -5584,6 +5584,10 @@ function DaemonPanel({
         setWizardError("");
         if (enrollmentStatus(next) === "connected") {
           setWizardState("idle");
+          // Refresh the daemon inventory once the enrollment connects so the
+          // sidebar Machines list picks up the new computer without requiring
+          // the operator to click Finish or navigate elsewhere.
+          onAgentCreated();
         }
       }).catch((err: unknown) => {
         setWizardState("error");
@@ -5591,7 +5595,7 @@ function DaemonPanel({
       });
     }, 3000);
     return () => window.clearInterval(timer);
-  }, [canFinishEnrollment, currentEnrollmentStatus, enrollment?.id]);
+  }, [canFinishEnrollment, currentEnrollmentStatus, enrollment?.id, onAgentCreated]);
 
   useEffect(() => {
     if (selectedAgentComputer && selectedAgentComputer.computerId !== agentComputerId) {
