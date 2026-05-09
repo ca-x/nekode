@@ -41,6 +41,8 @@ const (
 	FieldRequestID = "request_id"
 	// FieldCreatedUnix holds the string denoting the created_unix field in the database.
 	FieldCreatedUnix = "created_unix"
+	// FieldKind holds the string denoting the kind field in the database.
+	FieldKind = "kind"
 	// Table holds the table name of the message in the database.
 	Table = "messages"
 )
@@ -63,6 +65,7 @@ var Columns = []string{
 	FieldAttachmentsJSON,
 	FieldRequestID,
 	FieldCreatedUnix,
+	FieldKind,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -104,6 +107,8 @@ var (
 	DefaultAttachmentsJSON string
 	// DefaultRequestID holds the default value on creation for the "request_id" field.
 	DefaultRequestID string
+	// DefaultKind holds the default value on creation for the "kind" field.
+	DefaultKind string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -189,4 +194,9 @@ func ByRequestID(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedUnix orders the results by the created_unix field.
 func ByCreatedUnix(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedUnix, opts...).ToFunc()
+}
+
+// ByKind orders the results by the kind field.
+func ByKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKind, opts...).ToFunc()
 }

@@ -10,7 +10,11 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/ca-x/nekode/internal/ent/agentrun"
+	"github.com/ca-x/nekode/internal/ent/agentrunevent"
 	"github.com/ca-x/nekode/internal/ent/channel"
+	"github.com/ca-x/nekode/internal/ent/channeldecision"
+	"github.com/ca-x/nekode/internal/ent/channeldecisionvote"
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
@@ -37,7 +41,11 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAgentRun            = "AgentRun"
+	TypeAgentRunEvent       = "AgentRunEvent"
 	TypeChannel             = "Channel"
+	TypeChannelDecision     = "ChannelDecision"
+	TypeChannelDecisionVote = "ChannelDecisionVote"
 	TypeChannelMember       = "ChannelMember"
 	TypeCollaborationEvent  = "CollaborationEvent"
 	TypeIdempotencyRecord   = "IdempotencyRecord"
@@ -53,6 +61,1576 @@ const (
 	TypeThreadReadState     = "ThreadReadState"
 	TypeUser                = "User"
 )
+
+// AgentRunMutation represents an operation that mutates the AgentRun nodes in the graph.
+type AgentRunMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *string
+	agent_id        *string
+	computer_id     *string
+	started_unix    *int64
+	addstarted_unix *int64
+	ended_unix      *int64
+	addended_unix   *int64
+	exit_code       *int32
+	addexit_code    *int32
+	summary         *string
+	error           *string
+	event_count     *uint32
+	addevent_count  *int32
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*AgentRun, error)
+	predicates      []predicate.AgentRun
+}
+
+var _ ent.Mutation = (*AgentRunMutation)(nil)
+
+// agentrunOption allows management of the mutation configuration using functional options.
+type agentrunOption func(*AgentRunMutation)
+
+// newAgentRunMutation creates new mutation for the AgentRun entity.
+func newAgentRunMutation(c config, op Op, opts ...agentrunOption) *AgentRunMutation {
+	m := &AgentRunMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAgentRun,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAgentRunID sets the ID field of the mutation.
+func withAgentRunID(id string) agentrunOption {
+	return func(m *AgentRunMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AgentRun
+		)
+		m.oldValue = func(ctx context.Context) (*AgentRun, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AgentRun.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAgentRun sets the old AgentRun of the mutation.
+func withAgentRun(node *AgentRun) agentrunOption {
+	return func(m *AgentRunMutation) {
+		m.oldValue = func(context.Context) (*AgentRun, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AgentRunMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AgentRunMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AgentRun entities.
+func (m *AgentRunMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AgentRunMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AgentRunMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AgentRun.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetAgentID sets the "agent_id" field.
+func (m *AgentRunMutation) SetAgentID(s string) {
+	m.agent_id = &s
+}
+
+// AgentID returns the value of the "agent_id" field in the mutation.
+func (m *AgentRunMutation) AgentID() (r string, exists bool) {
+	v := m.agent_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAgentID returns the old "agent_id" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldAgentID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAgentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAgentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAgentID: %w", err)
+	}
+	return oldValue.AgentID, nil
+}
+
+// ResetAgentID resets all changes to the "agent_id" field.
+func (m *AgentRunMutation) ResetAgentID() {
+	m.agent_id = nil
+}
+
+// SetComputerID sets the "computer_id" field.
+func (m *AgentRunMutation) SetComputerID(s string) {
+	m.computer_id = &s
+}
+
+// ComputerID returns the value of the "computer_id" field in the mutation.
+func (m *AgentRunMutation) ComputerID() (r string, exists bool) {
+	v := m.computer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldComputerID returns the old "computer_id" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldComputerID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldComputerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldComputerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldComputerID: %w", err)
+	}
+	return oldValue.ComputerID, nil
+}
+
+// ResetComputerID resets all changes to the "computer_id" field.
+func (m *AgentRunMutation) ResetComputerID() {
+	m.computer_id = nil
+}
+
+// SetStartedUnix sets the "started_unix" field.
+func (m *AgentRunMutation) SetStartedUnix(i int64) {
+	m.started_unix = &i
+	m.addstarted_unix = nil
+}
+
+// StartedUnix returns the value of the "started_unix" field in the mutation.
+func (m *AgentRunMutation) StartedUnix() (r int64, exists bool) {
+	v := m.started_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedUnix returns the old "started_unix" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldStartedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedUnix: %w", err)
+	}
+	return oldValue.StartedUnix, nil
+}
+
+// AddStartedUnix adds i to the "started_unix" field.
+func (m *AgentRunMutation) AddStartedUnix(i int64) {
+	if m.addstarted_unix != nil {
+		*m.addstarted_unix += i
+	} else {
+		m.addstarted_unix = &i
+	}
+}
+
+// AddedStartedUnix returns the value that was added to the "started_unix" field in this mutation.
+func (m *AgentRunMutation) AddedStartedUnix() (r int64, exists bool) {
+	v := m.addstarted_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStartedUnix resets all changes to the "started_unix" field.
+func (m *AgentRunMutation) ResetStartedUnix() {
+	m.started_unix = nil
+	m.addstarted_unix = nil
+}
+
+// SetEndedUnix sets the "ended_unix" field.
+func (m *AgentRunMutation) SetEndedUnix(i int64) {
+	m.ended_unix = &i
+	m.addended_unix = nil
+}
+
+// EndedUnix returns the value of the "ended_unix" field in the mutation.
+func (m *AgentRunMutation) EndedUnix() (r int64, exists bool) {
+	v := m.ended_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndedUnix returns the old "ended_unix" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldEndedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndedUnix: %w", err)
+	}
+	return oldValue.EndedUnix, nil
+}
+
+// AddEndedUnix adds i to the "ended_unix" field.
+func (m *AgentRunMutation) AddEndedUnix(i int64) {
+	if m.addended_unix != nil {
+		*m.addended_unix += i
+	} else {
+		m.addended_unix = &i
+	}
+}
+
+// AddedEndedUnix returns the value that was added to the "ended_unix" field in this mutation.
+func (m *AgentRunMutation) AddedEndedUnix() (r int64, exists bool) {
+	v := m.addended_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetEndedUnix resets all changes to the "ended_unix" field.
+func (m *AgentRunMutation) ResetEndedUnix() {
+	m.ended_unix = nil
+	m.addended_unix = nil
+}
+
+// SetExitCode sets the "exit_code" field.
+func (m *AgentRunMutation) SetExitCode(i int32) {
+	m.exit_code = &i
+	m.addexit_code = nil
+}
+
+// ExitCode returns the value of the "exit_code" field in the mutation.
+func (m *AgentRunMutation) ExitCode() (r int32, exists bool) {
+	v := m.exit_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExitCode returns the old "exit_code" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldExitCode(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExitCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExitCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExitCode: %w", err)
+	}
+	return oldValue.ExitCode, nil
+}
+
+// AddExitCode adds i to the "exit_code" field.
+func (m *AgentRunMutation) AddExitCode(i int32) {
+	if m.addexit_code != nil {
+		*m.addexit_code += i
+	} else {
+		m.addexit_code = &i
+	}
+}
+
+// AddedExitCode returns the value that was added to the "exit_code" field in this mutation.
+func (m *AgentRunMutation) AddedExitCode() (r int32, exists bool) {
+	v := m.addexit_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetExitCode resets all changes to the "exit_code" field.
+func (m *AgentRunMutation) ResetExitCode() {
+	m.exit_code = nil
+	m.addexit_code = nil
+}
+
+// SetSummary sets the "summary" field.
+func (m *AgentRunMutation) SetSummary(s string) {
+	m.summary = &s
+}
+
+// Summary returns the value of the "summary" field in the mutation.
+func (m *AgentRunMutation) Summary() (r string, exists bool) {
+	v := m.summary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSummary returns the old "summary" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldSummary(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSummary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSummary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSummary: %w", err)
+	}
+	return oldValue.Summary, nil
+}
+
+// ResetSummary resets all changes to the "summary" field.
+func (m *AgentRunMutation) ResetSummary() {
+	m.summary = nil
+}
+
+// SetError sets the "error" field.
+func (m *AgentRunMutation) SetError(s string) {
+	m.error = &s
+}
+
+// Error returns the value of the "error" field in the mutation.
+func (m *AgentRunMutation) Error() (r string, exists bool) {
+	v := m.error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldError returns the old "error" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldError: %w", err)
+	}
+	return oldValue.Error, nil
+}
+
+// ResetError resets all changes to the "error" field.
+func (m *AgentRunMutation) ResetError() {
+	m.error = nil
+}
+
+// SetEventCount sets the "event_count" field.
+func (m *AgentRunMutation) SetEventCount(u uint32) {
+	m.event_count = &u
+	m.addevent_count = nil
+}
+
+// EventCount returns the value of the "event_count" field in the mutation.
+func (m *AgentRunMutation) EventCount() (r uint32, exists bool) {
+	v := m.event_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEventCount returns the old "event_count" field's value of the AgentRun entity.
+// If the AgentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunMutation) OldEventCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEventCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEventCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEventCount: %w", err)
+	}
+	return oldValue.EventCount, nil
+}
+
+// AddEventCount adds u to the "event_count" field.
+func (m *AgentRunMutation) AddEventCount(u int32) {
+	if m.addevent_count != nil {
+		*m.addevent_count += u
+	} else {
+		m.addevent_count = &u
+	}
+}
+
+// AddedEventCount returns the value that was added to the "event_count" field in this mutation.
+func (m *AgentRunMutation) AddedEventCount() (r int32, exists bool) {
+	v := m.addevent_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetEventCount resets all changes to the "event_count" field.
+func (m *AgentRunMutation) ResetEventCount() {
+	m.event_count = nil
+	m.addevent_count = nil
+}
+
+// Where appends a list predicates to the AgentRunMutation builder.
+func (m *AgentRunMutation) Where(ps ...predicate.AgentRun) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AgentRunMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AgentRunMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AgentRun, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AgentRunMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AgentRunMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AgentRun).
+func (m *AgentRunMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AgentRunMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.agent_id != nil {
+		fields = append(fields, agentrun.FieldAgentID)
+	}
+	if m.computer_id != nil {
+		fields = append(fields, agentrun.FieldComputerID)
+	}
+	if m.started_unix != nil {
+		fields = append(fields, agentrun.FieldStartedUnix)
+	}
+	if m.ended_unix != nil {
+		fields = append(fields, agentrun.FieldEndedUnix)
+	}
+	if m.exit_code != nil {
+		fields = append(fields, agentrun.FieldExitCode)
+	}
+	if m.summary != nil {
+		fields = append(fields, agentrun.FieldSummary)
+	}
+	if m.error != nil {
+		fields = append(fields, agentrun.FieldError)
+	}
+	if m.event_count != nil {
+		fields = append(fields, agentrun.FieldEventCount)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AgentRunMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case agentrun.FieldAgentID:
+		return m.AgentID()
+	case agentrun.FieldComputerID:
+		return m.ComputerID()
+	case agentrun.FieldStartedUnix:
+		return m.StartedUnix()
+	case agentrun.FieldEndedUnix:
+		return m.EndedUnix()
+	case agentrun.FieldExitCode:
+		return m.ExitCode()
+	case agentrun.FieldSummary:
+		return m.Summary()
+	case agentrun.FieldError:
+		return m.Error()
+	case agentrun.FieldEventCount:
+		return m.EventCount()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AgentRunMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case agentrun.FieldAgentID:
+		return m.OldAgentID(ctx)
+	case agentrun.FieldComputerID:
+		return m.OldComputerID(ctx)
+	case agentrun.FieldStartedUnix:
+		return m.OldStartedUnix(ctx)
+	case agentrun.FieldEndedUnix:
+		return m.OldEndedUnix(ctx)
+	case agentrun.FieldExitCode:
+		return m.OldExitCode(ctx)
+	case agentrun.FieldSummary:
+		return m.OldSummary(ctx)
+	case agentrun.FieldError:
+		return m.OldError(ctx)
+	case agentrun.FieldEventCount:
+		return m.OldEventCount(ctx)
+	}
+	return nil, fmt.Errorf("unknown AgentRun field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AgentRunMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case agentrun.FieldAgentID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAgentID(v)
+		return nil
+	case agentrun.FieldComputerID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetComputerID(v)
+		return nil
+	case agentrun.FieldStartedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedUnix(v)
+		return nil
+	case agentrun.FieldEndedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndedUnix(v)
+		return nil
+	case agentrun.FieldExitCode:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExitCode(v)
+		return nil
+	case agentrun.FieldSummary:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSummary(v)
+		return nil
+	case agentrun.FieldError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetError(v)
+		return nil
+	case agentrun.FieldEventCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEventCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AgentRun field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AgentRunMutation) AddedFields() []string {
+	var fields []string
+	if m.addstarted_unix != nil {
+		fields = append(fields, agentrun.FieldStartedUnix)
+	}
+	if m.addended_unix != nil {
+		fields = append(fields, agentrun.FieldEndedUnix)
+	}
+	if m.addexit_code != nil {
+		fields = append(fields, agentrun.FieldExitCode)
+	}
+	if m.addevent_count != nil {
+		fields = append(fields, agentrun.FieldEventCount)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AgentRunMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case agentrun.FieldStartedUnix:
+		return m.AddedStartedUnix()
+	case agentrun.FieldEndedUnix:
+		return m.AddedEndedUnix()
+	case agentrun.FieldExitCode:
+		return m.AddedExitCode()
+	case agentrun.FieldEventCount:
+		return m.AddedEventCount()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AgentRunMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case agentrun.FieldStartedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStartedUnix(v)
+		return nil
+	case agentrun.FieldEndedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEndedUnix(v)
+		return nil
+	case agentrun.FieldExitCode:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddExitCode(v)
+		return nil
+	case agentrun.FieldEventCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddEventCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AgentRun numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AgentRunMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AgentRunMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AgentRunMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown AgentRun nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AgentRunMutation) ResetField(name string) error {
+	switch name {
+	case agentrun.FieldAgentID:
+		m.ResetAgentID()
+		return nil
+	case agentrun.FieldComputerID:
+		m.ResetComputerID()
+		return nil
+	case agentrun.FieldStartedUnix:
+		m.ResetStartedUnix()
+		return nil
+	case agentrun.FieldEndedUnix:
+		m.ResetEndedUnix()
+		return nil
+	case agentrun.FieldExitCode:
+		m.ResetExitCode()
+		return nil
+	case agentrun.FieldSummary:
+		m.ResetSummary()
+		return nil
+	case agentrun.FieldError:
+		m.ResetError()
+		return nil
+	case agentrun.FieldEventCount:
+		m.ResetEventCount()
+		return nil
+	}
+	return fmt.Errorf("unknown AgentRun field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AgentRunMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AgentRunMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AgentRunMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AgentRunMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AgentRunMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AgentRunMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AgentRunMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown AgentRun unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AgentRunMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown AgentRun edge %s", name)
+}
+
+// AgentRunEventMutation represents an operation that mutates the AgentRunEvent nodes in the graph.
+type AgentRunEventMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *string
+	run_id          *string
+	at_unix_nano    *int64
+	addat_unix_nano *int64
+	phase           *string
+	summary         *string
+	payload_json    *string
+	exit_code       *int32
+	addexit_code    *int32
+	error_message   *string
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*AgentRunEvent, error)
+	predicates      []predicate.AgentRunEvent
+}
+
+var _ ent.Mutation = (*AgentRunEventMutation)(nil)
+
+// agentruneventOption allows management of the mutation configuration using functional options.
+type agentruneventOption func(*AgentRunEventMutation)
+
+// newAgentRunEventMutation creates new mutation for the AgentRunEvent entity.
+func newAgentRunEventMutation(c config, op Op, opts ...agentruneventOption) *AgentRunEventMutation {
+	m := &AgentRunEventMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAgentRunEvent,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAgentRunEventID sets the ID field of the mutation.
+func withAgentRunEventID(id string) agentruneventOption {
+	return func(m *AgentRunEventMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AgentRunEvent
+		)
+		m.oldValue = func(ctx context.Context) (*AgentRunEvent, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AgentRunEvent.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAgentRunEvent sets the old AgentRunEvent of the mutation.
+func withAgentRunEvent(node *AgentRunEvent) agentruneventOption {
+	return func(m *AgentRunEventMutation) {
+		m.oldValue = func(context.Context) (*AgentRunEvent, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AgentRunEventMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AgentRunEventMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AgentRunEvent entities.
+func (m *AgentRunEventMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AgentRunEventMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AgentRunEventMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AgentRunEvent.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetRunID sets the "run_id" field.
+func (m *AgentRunEventMutation) SetRunID(s string) {
+	m.run_id = &s
+}
+
+// RunID returns the value of the "run_id" field in the mutation.
+func (m *AgentRunEventMutation) RunID() (r string, exists bool) {
+	v := m.run_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRunID returns the old "run_id" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldRunID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRunID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRunID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRunID: %w", err)
+	}
+	return oldValue.RunID, nil
+}
+
+// ResetRunID resets all changes to the "run_id" field.
+func (m *AgentRunEventMutation) ResetRunID() {
+	m.run_id = nil
+}
+
+// SetAtUnixNano sets the "at_unix_nano" field.
+func (m *AgentRunEventMutation) SetAtUnixNano(i int64) {
+	m.at_unix_nano = &i
+	m.addat_unix_nano = nil
+}
+
+// AtUnixNano returns the value of the "at_unix_nano" field in the mutation.
+func (m *AgentRunEventMutation) AtUnixNano() (r int64, exists bool) {
+	v := m.at_unix_nano
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAtUnixNano returns the old "at_unix_nano" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldAtUnixNano(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAtUnixNano is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAtUnixNano requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAtUnixNano: %w", err)
+	}
+	return oldValue.AtUnixNano, nil
+}
+
+// AddAtUnixNano adds i to the "at_unix_nano" field.
+func (m *AgentRunEventMutation) AddAtUnixNano(i int64) {
+	if m.addat_unix_nano != nil {
+		*m.addat_unix_nano += i
+	} else {
+		m.addat_unix_nano = &i
+	}
+}
+
+// AddedAtUnixNano returns the value that was added to the "at_unix_nano" field in this mutation.
+func (m *AgentRunEventMutation) AddedAtUnixNano() (r int64, exists bool) {
+	v := m.addat_unix_nano
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAtUnixNano resets all changes to the "at_unix_nano" field.
+func (m *AgentRunEventMutation) ResetAtUnixNano() {
+	m.at_unix_nano = nil
+	m.addat_unix_nano = nil
+}
+
+// SetPhase sets the "phase" field.
+func (m *AgentRunEventMutation) SetPhase(s string) {
+	m.phase = &s
+}
+
+// Phase returns the value of the "phase" field in the mutation.
+func (m *AgentRunEventMutation) Phase() (r string, exists bool) {
+	v := m.phase
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPhase returns the old "phase" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldPhase(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPhase is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPhase requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPhase: %w", err)
+	}
+	return oldValue.Phase, nil
+}
+
+// ResetPhase resets all changes to the "phase" field.
+func (m *AgentRunEventMutation) ResetPhase() {
+	m.phase = nil
+}
+
+// SetSummary sets the "summary" field.
+func (m *AgentRunEventMutation) SetSummary(s string) {
+	m.summary = &s
+}
+
+// Summary returns the value of the "summary" field in the mutation.
+func (m *AgentRunEventMutation) Summary() (r string, exists bool) {
+	v := m.summary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSummary returns the old "summary" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldSummary(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSummary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSummary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSummary: %w", err)
+	}
+	return oldValue.Summary, nil
+}
+
+// ResetSummary resets all changes to the "summary" field.
+func (m *AgentRunEventMutation) ResetSummary() {
+	m.summary = nil
+}
+
+// SetPayloadJSON sets the "payload_json" field.
+func (m *AgentRunEventMutation) SetPayloadJSON(s string) {
+	m.payload_json = &s
+}
+
+// PayloadJSON returns the value of the "payload_json" field in the mutation.
+func (m *AgentRunEventMutation) PayloadJSON() (r string, exists bool) {
+	v := m.payload_json
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayloadJSON returns the old "payload_json" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldPayloadJSON(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayloadJSON is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayloadJSON requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayloadJSON: %w", err)
+	}
+	return oldValue.PayloadJSON, nil
+}
+
+// ResetPayloadJSON resets all changes to the "payload_json" field.
+func (m *AgentRunEventMutation) ResetPayloadJSON() {
+	m.payload_json = nil
+}
+
+// SetExitCode sets the "exit_code" field.
+func (m *AgentRunEventMutation) SetExitCode(i int32) {
+	m.exit_code = &i
+	m.addexit_code = nil
+}
+
+// ExitCode returns the value of the "exit_code" field in the mutation.
+func (m *AgentRunEventMutation) ExitCode() (r int32, exists bool) {
+	v := m.exit_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExitCode returns the old "exit_code" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldExitCode(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExitCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExitCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExitCode: %w", err)
+	}
+	return oldValue.ExitCode, nil
+}
+
+// AddExitCode adds i to the "exit_code" field.
+func (m *AgentRunEventMutation) AddExitCode(i int32) {
+	if m.addexit_code != nil {
+		*m.addexit_code += i
+	} else {
+		m.addexit_code = &i
+	}
+}
+
+// AddedExitCode returns the value that was added to the "exit_code" field in this mutation.
+func (m *AgentRunEventMutation) AddedExitCode() (r int32, exists bool) {
+	v := m.addexit_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetExitCode resets all changes to the "exit_code" field.
+func (m *AgentRunEventMutation) ResetExitCode() {
+	m.exit_code = nil
+	m.addexit_code = nil
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *AgentRunEventMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *AgentRunEventMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the AgentRunEvent entity.
+// If the AgentRunEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AgentRunEventMutation) OldErrorMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *AgentRunEventMutation) ResetErrorMessage() {
+	m.error_message = nil
+}
+
+// Where appends a list predicates to the AgentRunEventMutation builder.
+func (m *AgentRunEventMutation) Where(ps ...predicate.AgentRunEvent) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AgentRunEventMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AgentRunEventMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AgentRunEvent, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AgentRunEventMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AgentRunEventMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AgentRunEvent).
+func (m *AgentRunEventMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AgentRunEventMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.run_id != nil {
+		fields = append(fields, agentrunevent.FieldRunID)
+	}
+	if m.at_unix_nano != nil {
+		fields = append(fields, agentrunevent.FieldAtUnixNano)
+	}
+	if m.phase != nil {
+		fields = append(fields, agentrunevent.FieldPhase)
+	}
+	if m.summary != nil {
+		fields = append(fields, agentrunevent.FieldSummary)
+	}
+	if m.payload_json != nil {
+		fields = append(fields, agentrunevent.FieldPayloadJSON)
+	}
+	if m.exit_code != nil {
+		fields = append(fields, agentrunevent.FieldExitCode)
+	}
+	if m.error_message != nil {
+		fields = append(fields, agentrunevent.FieldErrorMessage)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AgentRunEventMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case agentrunevent.FieldRunID:
+		return m.RunID()
+	case agentrunevent.FieldAtUnixNano:
+		return m.AtUnixNano()
+	case agentrunevent.FieldPhase:
+		return m.Phase()
+	case agentrunevent.FieldSummary:
+		return m.Summary()
+	case agentrunevent.FieldPayloadJSON:
+		return m.PayloadJSON()
+	case agentrunevent.FieldExitCode:
+		return m.ExitCode()
+	case agentrunevent.FieldErrorMessage:
+		return m.ErrorMessage()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AgentRunEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case agentrunevent.FieldRunID:
+		return m.OldRunID(ctx)
+	case agentrunevent.FieldAtUnixNano:
+		return m.OldAtUnixNano(ctx)
+	case agentrunevent.FieldPhase:
+		return m.OldPhase(ctx)
+	case agentrunevent.FieldSummary:
+		return m.OldSummary(ctx)
+	case agentrunevent.FieldPayloadJSON:
+		return m.OldPayloadJSON(ctx)
+	case agentrunevent.FieldExitCode:
+		return m.OldExitCode(ctx)
+	case agentrunevent.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	}
+	return nil, fmt.Errorf("unknown AgentRunEvent field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AgentRunEventMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case agentrunevent.FieldRunID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRunID(v)
+		return nil
+	case agentrunevent.FieldAtUnixNano:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAtUnixNano(v)
+		return nil
+	case agentrunevent.FieldPhase:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPhase(v)
+		return nil
+	case agentrunevent.FieldSummary:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSummary(v)
+		return nil
+	case agentrunevent.FieldPayloadJSON:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayloadJSON(v)
+		return nil
+	case agentrunevent.FieldExitCode:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExitCode(v)
+		return nil
+	case agentrunevent.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AgentRunEvent field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AgentRunEventMutation) AddedFields() []string {
+	var fields []string
+	if m.addat_unix_nano != nil {
+		fields = append(fields, agentrunevent.FieldAtUnixNano)
+	}
+	if m.addexit_code != nil {
+		fields = append(fields, agentrunevent.FieldExitCode)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AgentRunEventMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case agentrunevent.FieldAtUnixNano:
+		return m.AddedAtUnixNano()
+	case agentrunevent.FieldExitCode:
+		return m.AddedExitCode()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AgentRunEventMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case agentrunevent.FieldAtUnixNano:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAtUnixNano(v)
+		return nil
+	case agentrunevent.FieldExitCode:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddExitCode(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AgentRunEvent numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AgentRunEventMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AgentRunEventMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AgentRunEventMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown AgentRunEvent nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AgentRunEventMutation) ResetField(name string) error {
+	switch name {
+	case agentrunevent.FieldRunID:
+		m.ResetRunID()
+		return nil
+	case agentrunevent.FieldAtUnixNano:
+		m.ResetAtUnixNano()
+		return nil
+	case agentrunevent.FieldPhase:
+		m.ResetPhase()
+		return nil
+	case agentrunevent.FieldSummary:
+		m.ResetSummary()
+		return nil
+	case agentrunevent.FieldPayloadJSON:
+		m.ResetPayloadJSON()
+		return nil
+	case agentrunevent.FieldExitCode:
+		m.ResetExitCode()
+		return nil
+	case agentrunevent.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	}
+	return fmt.Errorf("unknown AgentRunEvent field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AgentRunEventMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AgentRunEventMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AgentRunEventMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AgentRunEventMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AgentRunEventMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AgentRunEventMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AgentRunEventMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown AgentRunEvent unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AgentRunEventMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown AgentRunEvent edge %s", name)
+}
 
 // ChannelMutation represents an operation that mutates the Channel nodes in the graph.
 type ChannelMutation struct {
@@ -777,6 +2355,1933 @@ func (m *ChannelMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ChannelMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Channel edge %s", name)
+}
+
+// ChannelDecisionMutation represents an operation that mutates the ChannelDecision nodes in the graph.
+type ChannelDecisionMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *string
+	target                 *string
+	title                  *string
+	body                   *string
+	status                 *string
+	proposer_id            *string
+	proposer_kind          *string
+	created_unix           *int64
+	addcreated_unix        *int64
+	ratified_unix          *int64
+	addratified_unix       *int64
+	retired_unix           *int64
+	addretired_unix        *int64
+	retired_by             *string
+	retire_reason          *string
+	supersedes_decision_id *string
+	approve_count          *uint32
+	addapprove_count       *int32
+	reject_count           *uint32
+	addreject_count        *int32
+	abstain_count          *uint32
+	addabstain_count       *int32
+	clearedFields          map[string]struct{}
+	done                   bool
+	oldValue               func(context.Context) (*ChannelDecision, error)
+	predicates             []predicate.ChannelDecision
+}
+
+var _ ent.Mutation = (*ChannelDecisionMutation)(nil)
+
+// channeldecisionOption allows management of the mutation configuration using functional options.
+type channeldecisionOption func(*ChannelDecisionMutation)
+
+// newChannelDecisionMutation creates new mutation for the ChannelDecision entity.
+func newChannelDecisionMutation(c config, op Op, opts ...channeldecisionOption) *ChannelDecisionMutation {
+	m := &ChannelDecisionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeChannelDecision,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withChannelDecisionID sets the ID field of the mutation.
+func withChannelDecisionID(id string) channeldecisionOption {
+	return func(m *ChannelDecisionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ChannelDecision
+		)
+		m.oldValue = func(ctx context.Context) (*ChannelDecision, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ChannelDecision.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withChannelDecision sets the old ChannelDecision of the mutation.
+func withChannelDecision(node *ChannelDecision) channeldecisionOption {
+	return func(m *ChannelDecisionMutation) {
+		m.oldValue = func(context.Context) (*ChannelDecision, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ChannelDecisionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ChannelDecisionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ChannelDecision entities.
+func (m *ChannelDecisionMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ChannelDecisionMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ChannelDecisionMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ChannelDecision.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTarget sets the "target" field.
+func (m *ChannelDecisionMutation) SetTarget(s string) {
+	m.target = &s
+}
+
+// Target returns the value of the "target" field in the mutation.
+func (m *ChannelDecisionMutation) Target() (r string, exists bool) {
+	v := m.target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTarget returns the old "target" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldTarget(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTarget: %w", err)
+	}
+	return oldValue.Target, nil
+}
+
+// ResetTarget resets all changes to the "target" field.
+func (m *ChannelDecisionMutation) ResetTarget() {
+	m.target = nil
+}
+
+// SetTitle sets the "title" field.
+func (m *ChannelDecisionMutation) SetTitle(s string) {
+	m.title = &s
+}
+
+// Title returns the value of the "title" field in the mutation.
+func (m *ChannelDecisionMutation) Title() (r string, exists bool) {
+	v := m.title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitle returns the old "title" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
+	}
+	return oldValue.Title, nil
+}
+
+// ResetTitle resets all changes to the "title" field.
+func (m *ChannelDecisionMutation) ResetTitle() {
+	m.title = nil
+}
+
+// SetBody sets the "body" field.
+func (m *ChannelDecisionMutation) SetBody(s string) {
+	m.body = &s
+}
+
+// Body returns the value of the "body" field in the mutation.
+func (m *ChannelDecisionMutation) Body() (r string, exists bool) {
+	v := m.body
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBody returns the old "body" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldBody(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBody is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBody requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBody: %w", err)
+	}
+	return oldValue.Body, nil
+}
+
+// ResetBody resets all changes to the "body" field.
+func (m *ChannelDecisionMutation) ResetBody() {
+	m.body = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *ChannelDecisionMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *ChannelDecisionMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *ChannelDecisionMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetProposerID sets the "proposer_id" field.
+func (m *ChannelDecisionMutation) SetProposerID(s string) {
+	m.proposer_id = &s
+}
+
+// ProposerID returns the value of the "proposer_id" field in the mutation.
+func (m *ChannelDecisionMutation) ProposerID() (r string, exists bool) {
+	v := m.proposer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProposerID returns the old "proposer_id" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldProposerID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProposerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProposerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProposerID: %w", err)
+	}
+	return oldValue.ProposerID, nil
+}
+
+// ResetProposerID resets all changes to the "proposer_id" field.
+func (m *ChannelDecisionMutation) ResetProposerID() {
+	m.proposer_id = nil
+}
+
+// SetProposerKind sets the "proposer_kind" field.
+func (m *ChannelDecisionMutation) SetProposerKind(s string) {
+	m.proposer_kind = &s
+}
+
+// ProposerKind returns the value of the "proposer_kind" field in the mutation.
+func (m *ChannelDecisionMutation) ProposerKind() (r string, exists bool) {
+	v := m.proposer_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProposerKind returns the old "proposer_kind" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldProposerKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProposerKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProposerKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProposerKind: %w", err)
+	}
+	return oldValue.ProposerKind, nil
+}
+
+// ResetProposerKind resets all changes to the "proposer_kind" field.
+func (m *ChannelDecisionMutation) ResetProposerKind() {
+	m.proposer_kind = nil
+}
+
+// SetCreatedUnix sets the "created_unix" field.
+func (m *ChannelDecisionMutation) SetCreatedUnix(i int64) {
+	m.created_unix = &i
+	m.addcreated_unix = nil
+}
+
+// CreatedUnix returns the value of the "created_unix" field in the mutation.
+func (m *ChannelDecisionMutation) CreatedUnix() (r int64, exists bool) {
+	v := m.created_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedUnix returns the old "created_unix" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldCreatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedUnix: %w", err)
+	}
+	return oldValue.CreatedUnix, nil
+}
+
+// AddCreatedUnix adds i to the "created_unix" field.
+func (m *ChannelDecisionMutation) AddCreatedUnix(i int64) {
+	if m.addcreated_unix != nil {
+		*m.addcreated_unix += i
+	} else {
+		m.addcreated_unix = &i
+	}
+}
+
+// AddedCreatedUnix returns the value that was added to the "created_unix" field in this mutation.
+func (m *ChannelDecisionMutation) AddedCreatedUnix() (r int64, exists bool) {
+	v := m.addcreated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedUnix resets all changes to the "created_unix" field.
+func (m *ChannelDecisionMutation) ResetCreatedUnix() {
+	m.created_unix = nil
+	m.addcreated_unix = nil
+}
+
+// SetRatifiedUnix sets the "ratified_unix" field.
+func (m *ChannelDecisionMutation) SetRatifiedUnix(i int64) {
+	m.ratified_unix = &i
+	m.addratified_unix = nil
+}
+
+// RatifiedUnix returns the value of the "ratified_unix" field in the mutation.
+func (m *ChannelDecisionMutation) RatifiedUnix() (r int64, exists bool) {
+	v := m.ratified_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRatifiedUnix returns the old "ratified_unix" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldRatifiedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRatifiedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRatifiedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRatifiedUnix: %w", err)
+	}
+	return oldValue.RatifiedUnix, nil
+}
+
+// AddRatifiedUnix adds i to the "ratified_unix" field.
+func (m *ChannelDecisionMutation) AddRatifiedUnix(i int64) {
+	if m.addratified_unix != nil {
+		*m.addratified_unix += i
+	} else {
+		m.addratified_unix = &i
+	}
+}
+
+// AddedRatifiedUnix returns the value that was added to the "ratified_unix" field in this mutation.
+func (m *ChannelDecisionMutation) AddedRatifiedUnix() (r int64, exists bool) {
+	v := m.addratified_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRatifiedUnix resets all changes to the "ratified_unix" field.
+func (m *ChannelDecisionMutation) ResetRatifiedUnix() {
+	m.ratified_unix = nil
+	m.addratified_unix = nil
+}
+
+// SetRetiredUnix sets the "retired_unix" field.
+func (m *ChannelDecisionMutation) SetRetiredUnix(i int64) {
+	m.retired_unix = &i
+	m.addretired_unix = nil
+}
+
+// RetiredUnix returns the value of the "retired_unix" field in the mutation.
+func (m *ChannelDecisionMutation) RetiredUnix() (r int64, exists bool) {
+	v := m.retired_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRetiredUnix returns the old "retired_unix" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldRetiredUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRetiredUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRetiredUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRetiredUnix: %w", err)
+	}
+	return oldValue.RetiredUnix, nil
+}
+
+// AddRetiredUnix adds i to the "retired_unix" field.
+func (m *ChannelDecisionMutation) AddRetiredUnix(i int64) {
+	if m.addretired_unix != nil {
+		*m.addretired_unix += i
+	} else {
+		m.addretired_unix = &i
+	}
+}
+
+// AddedRetiredUnix returns the value that was added to the "retired_unix" field in this mutation.
+func (m *ChannelDecisionMutation) AddedRetiredUnix() (r int64, exists bool) {
+	v := m.addretired_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRetiredUnix resets all changes to the "retired_unix" field.
+func (m *ChannelDecisionMutation) ResetRetiredUnix() {
+	m.retired_unix = nil
+	m.addretired_unix = nil
+}
+
+// SetRetiredBy sets the "retired_by" field.
+func (m *ChannelDecisionMutation) SetRetiredBy(s string) {
+	m.retired_by = &s
+}
+
+// RetiredBy returns the value of the "retired_by" field in the mutation.
+func (m *ChannelDecisionMutation) RetiredBy() (r string, exists bool) {
+	v := m.retired_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRetiredBy returns the old "retired_by" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldRetiredBy(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRetiredBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRetiredBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRetiredBy: %w", err)
+	}
+	return oldValue.RetiredBy, nil
+}
+
+// ResetRetiredBy resets all changes to the "retired_by" field.
+func (m *ChannelDecisionMutation) ResetRetiredBy() {
+	m.retired_by = nil
+}
+
+// SetRetireReason sets the "retire_reason" field.
+func (m *ChannelDecisionMutation) SetRetireReason(s string) {
+	m.retire_reason = &s
+}
+
+// RetireReason returns the value of the "retire_reason" field in the mutation.
+func (m *ChannelDecisionMutation) RetireReason() (r string, exists bool) {
+	v := m.retire_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRetireReason returns the old "retire_reason" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldRetireReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRetireReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRetireReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRetireReason: %w", err)
+	}
+	return oldValue.RetireReason, nil
+}
+
+// ResetRetireReason resets all changes to the "retire_reason" field.
+func (m *ChannelDecisionMutation) ResetRetireReason() {
+	m.retire_reason = nil
+}
+
+// SetSupersedesDecisionID sets the "supersedes_decision_id" field.
+func (m *ChannelDecisionMutation) SetSupersedesDecisionID(s string) {
+	m.supersedes_decision_id = &s
+}
+
+// SupersedesDecisionID returns the value of the "supersedes_decision_id" field in the mutation.
+func (m *ChannelDecisionMutation) SupersedesDecisionID() (r string, exists bool) {
+	v := m.supersedes_decision_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSupersedesDecisionID returns the old "supersedes_decision_id" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldSupersedesDecisionID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSupersedesDecisionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSupersedesDecisionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSupersedesDecisionID: %w", err)
+	}
+	return oldValue.SupersedesDecisionID, nil
+}
+
+// ResetSupersedesDecisionID resets all changes to the "supersedes_decision_id" field.
+func (m *ChannelDecisionMutation) ResetSupersedesDecisionID() {
+	m.supersedes_decision_id = nil
+}
+
+// SetApproveCount sets the "approve_count" field.
+func (m *ChannelDecisionMutation) SetApproveCount(u uint32) {
+	m.approve_count = &u
+	m.addapprove_count = nil
+}
+
+// ApproveCount returns the value of the "approve_count" field in the mutation.
+func (m *ChannelDecisionMutation) ApproveCount() (r uint32, exists bool) {
+	v := m.approve_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApproveCount returns the old "approve_count" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldApproveCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApproveCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApproveCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApproveCount: %w", err)
+	}
+	return oldValue.ApproveCount, nil
+}
+
+// AddApproveCount adds u to the "approve_count" field.
+func (m *ChannelDecisionMutation) AddApproveCount(u int32) {
+	if m.addapprove_count != nil {
+		*m.addapprove_count += u
+	} else {
+		m.addapprove_count = &u
+	}
+}
+
+// AddedApproveCount returns the value that was added to the "approve_count" field in this mutation.
+func (m *ChannelDecisionMutation) AddedApproveCount() (r int32, exists bool) {
+	v := m.addapprove_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetApproveCount resets all changes to the "approve_count" field.
+func (m *ChannelDecisionMutation) ResetApproveCount() {
+	m.approve_count = nil
+	m.addapprove_count = nil
+}
+
+// SetRejectCount sets the "reject_count" field.
+func (m *ChannelDecisionMutation) SetRejectCount(u uint32) {
+	m.reject_count = &u
+	m.addreject_count = nil
+}
+
+// RejectCount returns the value of the "reject_count" field in the mutation.
+func (m *ChannelDecisionMutation) RejectCount() (r uint32, exists bool) {
+	v := m.reject_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRejectCount returns the old "reject_count" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldRejectCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRejectCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRejectCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRejectCount: %w", err)
+	}
+	return oldValue.RejectCount, nil
+}
+
+// AddRejectCount adds u to the "reject_count" field.
+func (m *ChannelDecisionMutation) AddRejectCount(u int32) {
+	if m.addreject_count != nil {
+		*m.addreject_count += u
+	} else {
+		m.addreject_count = &u
+	}
+}
+
+// AddedRejectCount returns the value that was added to the "reject_count" field in this mutation.
+func (m *ChannelDecisionMutation) AddedRejectCount() (r int32, exists bool) {
+	v := m.addreject_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRejectCount resets all changes to the "reject_count" field.
+func (m *ChannelDecisionMutation) ResetRejectCount() {
+	m.reject_count = nil
+	m.addreject_count = nil
+}
+
+// SetAbstainCount sets the "abstain_count" field.
+func (m *ChannelDecisionMutation) SetAbstainCount(u uint32) {
+	m.abstain_count = &u
+	m.addabstain_count = nil
+}
+
+// AbstainCount returns the value of the "abstain_count" field in the mutation.
+func (m *ChannelDecisionMutation) AbstainCount() (r uint32, exists bool) {
+	v := m.abstain_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAbstainCount returns the old "abstain_count" field's value of the ChannelDecision entity.
+// If the ChannelDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionMutation) OldAbstainCount(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAbstainCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAbstainCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAbstainCount: %w", err)
+	}
+	return oldValue.AbstainCount, nil
+}
+
+// AddAbstainCount adds u to the "abstain_count" field.
+func (m *ChannelDecisionMutation) AddAbstainCount(u int32) {
+	if m.addabstain_count != nil {
+		*m.addabstain_count += u
+	} else {
+		m.addabstain_count = &u
+	}
+}
+
+// AddedAbstainCount returns the value that was added to the "abstain_count" field in this mutation.
+func (m *ChannelDecisionMutation) AddedAbstainCount() (r int32, exists bool) {
+	v := m.addabstain_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAbstainCount resets all changes to the "abstain_count" field.
+func (m *ChannelDecisionMutation) ResetAbstainCount() {
+	m.abstain_count = nil
+	m.addabstain_count = nil
+}
+
+// Where appends a list predicates to the ChannelDecisionMutation builder.
+func (m *ChannelDecisionMutation) Where(ps ...predicate.ChannelDecision) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ChannelDecisionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ChannelDecisionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ChannelDecision, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ChannelDecisionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ChannelDecisionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ChannelDecision).
+func (m *ChannelDecisionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ChannelDecisionMutation) Fields() []string {
+	fields := make([]string, 0, 15)
+	if m.target != nil {
+		fields = append(fields, channeldecision.FieldTarget)
+	}
+	if m.title != nil {
+		fields = append(fields, channeldecision.FieldTitle)
+	}
+	if m.body != nil {
+		fields = append(fields, channeldecision.FieldBody)
+	}
+	if m.status != nil {
+		fields = append(fields, channeldecision.FieldStatus)
+	}
+	if m.proposer_id != nil {
+		fields = append(fields, channeldecision.FieldProposerID)
+	}
+	if m.proposer_kind != nil {
+		fields = append(fields, channeldecision.FieldProposerKind)
+	}
+	if m.created_unix != nil {
+		fields = append(fields, channeldecision.FieldCreatedUnix)
+	}
+	if m.ratified_unix != nil {
+		fields = append(fields, channeldecision.FieldRatifiedUnix)
+	}
+	if m.retired_unix != nil {
+		fields = append(fields, channeldecision.FieldRetiredUnix)
+	}
+	if m.retired_by != nil {
+		fields = append(fields, channeldecision.FieldRetiredBy)
+	}
+	if m.retire_reason != nil {
+		fields = append(fields, channeldecision.FieldRetireReason)
+	}
+	if m.supersedes_decision_id != nil {
+		fields = append(fields, channeldecision.FieldSupersedesDecisionID)
+	}
+	if m.approve_count != nil {
+		fields = append(fields, channeldecision.FieldApproveCount)
+	}
+	if m.reject_count != nil {
+		fields = append(fields, channeldecision.FieldRejectCount)
+	}
+	if m.abstain_count != nil {
+		fields = append(fields, channeldecision.FieldAbstainCount)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ChannelDecisionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case channeldecision.FieldTarget:
+		return m.Target()
+	case channeldecision.FieldTitle:
+		return m.Title()
+	case channeldecision.FieldBody:
+		return m.Body()
+	case channeldecision.FieldStatus:
+		return m.Status()
+	case channeldecision.FieldProposerID:
+		return m.ProposerID()
+	case channeldecision.FieldProposerKind:
+		return m.ProposerKind()
+	case channeldecision.FieldCreatedUnix:
+		return m.CreatedUnix()
+	case channeldecision.FieldRatifiedUnix:
+		return m.RatifiedUnix()
+	case channeldecision.FieldRetiredUnix:
+		return m.RetiredUnix()
+	case channeldecision.FieldRetiredBy:
+		return m.RetiredBy()
+	case channeldecision.FieldRetireReason:
+		return m.RetireReason()
+	case channeldecision.FieldSupersedesDecisionID:
+		return m.SupersedesDecisionID()
+	case channeldecision.FieldApproveCount:
+		return m.ApproveCount()
+	case channeldecision.FieldRejectCount:
+		return m.RejectCount()
+	case channeldecision.FieldAbstainCount:
+		return m.AbstainCount()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ChannelDecisionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case channeldecision.FieldTarget:
+		return m.OldTarget(ctx)
+	case channeldecision.FieldTitle:
+		return m.OldTitle(ctx)
+	case channeldecision.FieldBody:
+		return m.OldBody(ctx)
+	case channeldecision.FieldStatus:
+		return m.OldStatus(ctx)
+	case channeldecision.FieldProposerID:
+		return m.OldProposerID(ctx)
+	case channeldecision.FieldProposerKind:
+		return m.OldProposerKind(ctx)
+	case channeldecision.FieldCreatedUnix:
+		return m.OldCreatedUnix(ctx)
+	case channeldecision.FieldRatifiedUnix:
+		return m.OldRatifiedUnix(ctx)
+	case channeldecision.FieldRetiredUnix:
+		return m.OldRetiredUnix(ctx)
+	case channeldecision.FieldRetiredBy:
+		return m.OldRetiredBy(ctx)
+	case channeldecision.FieldRetireReason:
+		return m.OldRetireReason(ctx)
+	case channeldecision.FieldSupersedesDecisionID:
+		return m.OldSupersedesDecisionID(ctx)
+	case channeldecision.FieldApproveCount:
+		return m.OldApproveCount(ctx)
+	case channeldecision.FieldRejectCount:
+		return m.OldRejectCount(ctx)
+	case channeldecision.FieldAbstainCount:
+		return m.OldAbstainCount(ctx)
+	}
+	return nil, fmt.Errorf("unknown ChannelDecision field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelDecisionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case channeldecision.FieldTarget:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTarget(v)
+		return nil
+	case channeldecision.FieldTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitle(v)
+		return nil
+	case channeldecision.FieldBody:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBody(v)
+		return nil
+	case channeldecision.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case channeldecision.FieldProposerID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProposerID(v)
+		return nil
+	case channeldecision.FieldProposerKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProposerKind(v)
+		return nil
+	case channeldecision.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedUnix(v)
+		return nil
+	case channeldecision.FieldRatifiedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRatifiedUnix(v)
+		return nil
+	case channeldecision.FieldRetiredUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRetiredUnix(v)
+		return nil
+	case channeldecision.FieldRetiredBy:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRetiredBy(v)
+		return nil
+	case channeldecision.FieldRetireReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRetireReason(v)
+		return nil
+	case channeldecision.FieldSupersedesDecisionID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSupersedesDecisionID(v)
+		return nil
+	case channeldecision.FieldApproveCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApproveCount(v)
+		return nil
+	case channeldecision.FieldRejectCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRejectCount(v)
+		return nil
+	case channeldecision.FieldAbstainCount:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAbstainCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelDecision field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ChannelDecisionMutation) AddedFields() []string {
+	var fields []string
+	if m.addcreated_unix != nil {
+		fields = append(fields, channeldecision.FieldCreatedUnix)
+	}
+	if m.addratified_unix != nil {
+		fields = append(fields, channeldecision.FieldRatifiedUnix)
+	}
+	if m.addretired_unix != nil {
+		fields = append(fields, channeldecision.FieldRetiredUnix)
+	}
+	if m.addapprove_count != nil {
+		fields = append(fields, channeldecision.FieldApproveCount)
+	}
+	if m.addreject_count != nil {
+		fields = append(fields, channeldecision.FieldRejectCount)
+	}
+	if m.addabstain_count != nil {
+		fields = append(fields, channeldecision.FieldAbstainCount)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ChannelDecisionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case channeldecision.FieldCreatedUnix:
+		return m.AddedCreatedUnix()
+	case channeldecision.FieldRatifiedUnix:
+		return m.AddedRatifiedUnix()
+	case channeldecision.FieldRetiredUnix:
+		return m.AddedRetiredUnix()
+	case channeldecision.FieldApproveCount:
+		return m.AddedApproveCount()
+	case channeldecision.FieldRejectCount:
+		return m.AddedRejectCount()
+	case channeldecision.FieldAbstainCount:
+		return m.AddedAbstainCount()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelDecisionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case channeldecision.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedUnix(v)
+		return nil
+	case channeldecision.FieldRatifiedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRatifiedUnix(v)
+		return nil
+	case channeldecision.FieldRetiredUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRetiredUnix(v)
+		return nil
+	case channeldecision.FieldApproveCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddApproveCount(v)
+		return nil
+	case channeldecision.FieldRejectCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRejectCount(v)
+		return nil
+	case channeldecision.FieldAbstainCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAbstainCount(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelDecision numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ChannelDecisionMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ChannelDecisionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ChannelDecisionMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ChannelDecision nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ChannelDecisionMutation) ResetField(name string) error {
+	switch name {
+	case channeldecision.FieldTarget:
+		m.ResetTarget()
+		return nil
+	case channeldecision.FieldTitle:
+		m.ResetTitle()
+		return nil
+	case channeldecision.FieldBody:
+		m.ResetBody()
+		return nil
+	case channeldecision.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case channeldecision.FieldProposerID:
+		m.ResetProposerID()
+		return nil
+	case channeldecision.FieldProposerKind:
+		m.ResetProposerKind()
+		return nil
+	case channeldecision.FieldCreatedUnix:
+		m.ResetCreatedUnix()
+		return nil
+	case channeldecision.FieldRatifiedUnix:
+		m.ResetRatifiedUnix()
+		return nil
+	case channeldecision.FieldRetiredUnix:
+		m.ResetRetiredUnix()
+		return nil
+	case channeldecision.FieldRetiredBy:
+		m.ResetRetiredBy()
+		return nil
+	case channeldecision.FieldRetireReason:
+		m.ResetRetireReason()
+		return nil
+	case channeldecision.FieldSupersedesDecisionID:
+		m.ResetSupersedesDecisionID()
+		return nil
+	case channeldecision.FieldApproveCount:
+		m.ResetApproveCount()
+		return nil
+	case channeldecision.FieldRejectCount:
+		m.ResetRejectCount()
+		return nil
+	case channeldecision.FieldAbstainCount:
+		m.ResetAbstainCount()
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelDecision field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ChannelDecisionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ChannelDecisionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ChannelDecisionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ChannelDecisionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ChannelDecisionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ChannelDecisionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ChannelDecisionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ChannelDecision unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ChannelDecisionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ChannelDecision edge %s", name)
+}
+
+// ChannelDecisionVoteMutation represents an operation that mutates the ChannelDecisionVote nodes in the graph.
+type ChannelDecisionVoteMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *string
+	decision_id   *string
+	voter_id      *string
+	voter_kind    *string
+	decision      *string
+	voted_unix    *int64
+	addvoted_unix *int64
+	reason        *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*ChannelDecisionVote, error)
+	predicates    []predicate.ChannelDecisionVote
+}
+
+var _ ent.Mutation = (*ChannelDecisionVoteMutation)(nil)
+
+// channeldecisionvoteOption allows management of the mutation configuration using functional options.
+type channeldecisionvoteOption func(*ChannelDecisionVoteMutation)
+
+// newChannelDecisionVoteMutation creates new mutation for the ChannelDecisionVote entity.
+func newChannelDecisionVoteMutation(c config, op Op, opts ...channeldecisionvoteOption) *ChannelDecisionVoteMutation {
+	m := &ChannelDecisionVoteMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeChannelDecisionVote,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withChannelDecisionVoteID sets the ID field of the mutation.
+func withChannelDecisionVoteID(id string) channeldecisionvoteOption {
+	return func(m *ChannelDecisionVoteMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ChannelDecisionVote
+		)
+		m.oldValue = func(ctx context.Context) (*ChannelDecisionVote, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ChannelDecisionVote.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withChannelDecisionVote sets the old ChannelDecisionVote of the mutation.
+func withChannelDecisionVote(node *ChannelDecisionVote) channeldecisionvoteOption {
+	return func(m *ChannelDecisionVoteMutation) {
+		m.oldValue = func(context.Context) (*ChannelDecisionVote, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ChannelDecisionVoteMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ChannelDecisionVoteMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ChannelDecisionVote entities.
+func (m *ChannelDecisionVoteMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ChannelDecisionVoteMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ChannelDecisionVoteMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ChannelDecisionVote.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetDecisionID sets the "decision_id" field.
+func (m *ChannelDecisionVoteMutation) SetDecisionID(s string) {
+	m.decision_id = &s
+}
+
+// DecisionID returns the value of the "decision_id" field in the mutation.
+func (m *ChannelDecisionVoteMutation) DecisionID() (r string, exists bool) {
+	v := m.decision_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDecisionID returns the old "decision_id" field's value of the ChannelDecisionVote entity.
+// If the ChannelDecisionVote object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionVoteMutation) OldDecisionID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDecisionID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDecisionID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDecisionID: %w", err)
+	}
+	return oldValue.DecisionID, nil
+}
+
+// ResetDecisionID resets all changes to the "decision_id" field.
+func (m *ChannelDecisionVoteMutation) ResetDecisionID() {
+	m.decision_id = nil
+}
+
+// SetVoterID sets the "voter_id" field.
+func (m *ChannelDecisionVoteMutation) SetVoterID(s string) {
+	m.voter_id = &s
+}
+
+// VoterID returns the value of the "voter_id" field in the mutation.
+func (m *ChannelDecisionVoteMutation) VoterID() (r string, exists bool) {
+	v := m.voter_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVoterID returns the old "voter_id" field's value of the ChannelDecisionVote entity.
+// If the ChannelDecisionVote object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionVoteMutation) OldVoterID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVoterID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVoterID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVoterID: %w", err)
+	}
+	return oldValue.VoterID, nil
+}
+
+// ResetVoterID resets all changes to the "voter_id" field.
+func (m *ChannelDecisionVoteMutation) ResetVoterID() {
+	m.voter_id = nil
+}
+
+// SetVoterKind sets the "voter_kind" field.
+func (m *ChannelDecisionVoteMutation) SetVoterKind(s string) {
+	m.voter_kind = &s
+}
+
+// VoterKind returns the value of the "voter_kind" field in the mutation.
+func (m *ChannelDecisionVoteMutation) VoterKind() (r string, exists bool) {
+	v := m.voter_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVoterKind returns the old "voter_kind" field's value of the ChannelDecisionVote entity.
+// If the ChannelDecisionVote object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionVoteMutation) OldVoterKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVoterKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVoterKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVoterKind: %w", err)
+	}
+	return oldValue.VoterKind, nil
+}
+
+// ResetVoterKind resets all changes to the "voter_kind" field.
+func (m *ChannelDecisionVoteMutation) ResetVoterKind() {
+	m.voter_kind = nil
+}
+
+// SetDecision sets the "decision" field.
+func (m *ChannelDecisionVoteMutation) SetDecision(s string) {
+	m.decision = &s
+}
+
+// Decision returns the value of the "decision" field in the mutation.
+func (m *ChannelDecisionVoteMutation) Decision() (r string, exists bool) {
+	v := m.decision
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDecision returns the old "decision" field's value of the ChannelDecisionVote entity.
+// If the ChannelDecisionVote object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionVoteMutation) OldDecision(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDecision is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDecision requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDecision: %w", err)
+	}
+	return oldValue.Decision, nil
+}
+
+// ResetDecision resets all changes to the "decision" field.
+func (m *ChannelDecisionVoteMutation) ResetDecision() {
+	m.decision = nil
+}
+
+// SetVotedUnix sets the "voted_unix" field.
+func (m *ChannelDecisionVoteMutation) SetVotedUnix(i int64) {
+	m.voted_unix = &i
+	m.addvoted_unix = nil
+}
+
+// VotedUnix returns the value of the "voted_unix" field in the mutation.
+func (m *ChannelDecisionVoteMutation) VotedUnix() (r int64, exists bool) {
+	v := m.voted_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVotedUnix returns the old "voted_unix" field's value of the ChannelDecisionVote entity.
+// If the ChannelDecisionVote object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionVoteMutation) OldVotedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVotedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVotedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVotedUnix: %w", err)
+	}
+	return oldValue.VotedUnix, nil
+}
+
+// AddVotedUnix adds i to the "voted_unix" field.
+func (m *ChannelDecisionVoteMutation) AddVotedUnix(i int64) {
+	if m.addvoted_unix != nil {
+		*m.addvoted_unix += i
+	} else {
+		m.addvoted_unix = &i
+	}
+}
+
+// AddedVotedUnix returns the value that was added to the "voted_unix" field in this mutation.
+func (m *ChannelDecisionVoteMutation) AddedVotedUnix() (r int64, exists bool) {
+	v := m.addvoted_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetVotedUnix resets all changes to the "voted_unix" field.
+func (m *ChannelDecisionVoteMutation) ResetVotedUnix() {
+	m.voted_unix = nil
+	m.addvoted_unix = nil
+}
+
+// SetReason sets the "reason" field.
+func (m *ChannelDecisionVoteMutation) SetReason(s string) {
+	m.reason = &s
+}
+
+// Reason returns the value of the "reason" field in the mutation.
+func (m *ChannelDecisionVoteMutation) Reason() (r string, exists bool) {
+	v := m.reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReason returns the old "reason" field's value of the ChannelDecisionVote entity.
+// If the ChannelDecisionVote object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelDecisionVoteMutation) OldReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReason: %w", err)
+	}
+	return oldValue.Reason, nil
+}
+
+// ResetReason resets all changes to the "reason" field.
+func (m *ChannelDecisionVoteMutation) ResetReason() {
+	m.reason = nil
+}
+
+// Where appends a list predicates to the ChannelDecisionVoteMutation builder.
+func (m *ChannelDecisionVoteMutation) Where(ps ...predicate.ChannelDecisionVote) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ChannelDecisionVoteMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ChannelDecisionVoteMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ChannelDecisionVote, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ChannelDecisionVoteMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ChannelDecisionVoteMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ChannelDecisionVote).
+func (m *ChannelDecisionVoteMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ChannelDecisionVoteMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.decision_id != nil {
+		fields = append(fields, channeldecisionvote.FieldDecisionID)
+	}
+	if m.voter_id != nil {
+		fields = append(fields, channeldecisionvote.FieldVoterID)
+	}
+	if m.voter_kind != nil {
+		fields = append(fields, channeldecisionvote.FieldVoterKind)
+	}
+	if m.decision != nil {
+		fields = append(fields, channeldecisionvote.FieldDecision)
+	}
+	if m.voted_unix != nil {
+		fields = append(fields, channeldecisionvote.FieldVotedUnix)
+	}
+	if m.reason != nil {
+		fields = append(fields, channeldecisionvote.FieldReason)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ChannelDecisionVoteMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case channeldecisionvote.FieldDecisionID:
+		return m.DecisionID()
+	case channeldecisionvote.FieldVoterID:
+		return m.VoterID()
+	case channeldecisionvote.FieldVoterKind:
+		return m.VoterKind()
+	case channeldecisionvote.FieldDecision:
+		return m.Decision()
+	case channeldecisionvote.FieldVotedUnix:
+		return m.VotedUnix()
+	case channeldecisionvote.FieldReason:
+		return m.Reason()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ChannelDecisionVoteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case channeldecisionvote.FieldDecisionID:
+		return m.OldDecisionID(ctx)
+	case channeldecisionvote.FieldVoterID:
+		return m.OldVoterID(ctx)
+	case channeldecisionvote.FieldVoterKind:
+		return m.OldVoterKind(ctx)
+	case channeldecisionvote.FieldDecision:
+		return m.OldDecision(ctx)
+	case channeldecisionvote.FieldVotedUnix:
+		return m.OldVotedUnix(ctx)
+	case channeldecisionvote.FieldReason:
+		return m.OldReason(ctx)
+	}
+	return nil, fmt.Errorf("unknown ChannelDecisionVote field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelDecisionVoteMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case channeldecisionvote.FieldDecisionID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDecisionID(v)
+		return nil
+	case channeldecisionvote.FieldVoterID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVoterID(v)
+		return nil
+	case channeldecisionvote.FieldVoterKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVoterKind(v)
+		return nil
+	case channeldecisionvote.FieldDecision:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDecision(v)
+		return nil
+	case channeldecisionvote.FieldVotedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVotedUnix(v)
+		return nil
+	case channeldecisionvote.FieldReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReason(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelDecisionVote field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ChannelDecisionVoteMutation) AddedFields() []string {
+	var fields []string
+	if m.addvoted_unix != nil {
+		fields = append(fields, channeldecisionvote.FieldVotedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ChannelDecisionVoteMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case channeldecisionvote.FieldVotedUnix:
+		return m.AddedVotedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelDecisionVoteMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case channeldecisionvote.FieldVotedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVotedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelDecisionVote numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ChannelDecisionVoteMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ChannelDecisionVoteMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ChannelDecisionVoteMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ChannelDecisionVote nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ChannelDecisionVoteMutation) ResetField(name string) error {
+	switch name {
+	case channeldecisionvote.FieldDecisionID:
+		m.ResetDecisionID()
+		return nil
+	case channeldecisionvote.FieldVoterID:
+		m.ResetVoterID()
+		return nil
+	case channeldecisionvote.FieldVoterKind:
+		m.ResetVoterKind()
+		return nil
+	case channeldecisionvote.FieldDecision:
+		m.ResetDecision()
+		return nil
+	case channeldecisionvote.FieldVotedUnix:
+		m.ResetVotedUnix()
+		return nil
+	case channeldecisionvote.FieldReason:
+		m.ResetReason()
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelDecisionVote field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ChannelDecisionVoteMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ChannelDecisionVoteMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ChannelDecisionVoteMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ChannelDecisionVoteMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ChannelDecisionVoteMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ChannelDecisionVoteMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ChannelDecisionVoteMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ChannelDecisionVote unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ChannelDecisionVoteMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ChannelDecisionVote edge %s", name)
 }
 
 // ChannelMemberMutation represents an operation that mutates the ChannelMember nodes in the graph.
@@ -4598,6 +8103,7 @@ type MessageMutation struct {
 	request_id          *string
 	created_unix        *int64
 	addcreated_unix     *int64
+	kind                *string
 	clearedFields       map[string]struct{}
 	done                bool
 	oldValue            func(context.Context) (*Message, error)
@@ -5268,6 +8774,42 @@ func (m *MessageMutation) ResetCreatedUnix() {
 	m.addcreated_unix = nil
 }
 
+// SetKind sets the "kind" field.
+func (m *MessageMutation) SetKind(s string) {
+	m.kind = &s
+}
+
+// Kind returns the value of the "kind" field in the mutation.
+func (m *MessageMutation) Kind() (r string, exists bool) {
+	v := m.kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKind returns the old "kind" field's value of the Message entity.
+// If the Message object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MessageMutation) OldKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKind: %w", err)
+	}
+	return oldValue.Kind, nil
+}
+
+// ResetKind resets all changes to the "kind" field.
+func (m *MessageMutation) ResetKind() {
+	m.kind = nil
+}
+
 // Where appends a list predicates to the MessageMutation builder.
 func (m *MessageMutation) Where(ps ...predicate.Message) {
 	m.predicates = append(m.predicates, ps...)
@@ -5302,7 +8844,7 @@ func (m *MessageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MessageMutation) Fields() []string {
-	fields := make([]string, 0, 15)
+	fields := make([]string, 0, 16)
 	if m.target != nil {
 		fields = append(fields, message.FieldTarget)
 	}
@@ -5348,6 +8890,9 @@ func (m *MessageMutation) Fields() []string {
 	if m.created_unix != nil {
 		fields = append(fields, message.FieldCreatedUnix)
 	}
+	if m.kind != nil {
+		fields = append(fields, message.FieldKind)
+	}
 	return fields
 }
 
@@ -5386,6 +8931,8 @@ func (m *MessageMutation) Field(name string) (ent.Value, bool) {
 		return m.RequestID()
 	case message.FieldCreatedUnix:
 		return m.CreatedUnix()
+	case message.FieldKind:
+		return m.Kind()
 	}
 	return nil, false
 }
@@ -5425,6 +8972,8 @@ func (m *MessageMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldRequestID(ctx)
 	case message.FieldCreatedUnix:
 		return m.OldCreatedUnix(ctx)
+	case message.FieldKind:
+		return m.OldKind(ctx)
 	}
 	return nil, fmt.Errorf("unknown Message field %s", name)
 }
@@ -5539,6 +9088,13 @@ func (m *MessageMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCreatedUnix(v)
 		return nil
+	case message.FieldKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKind(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Message field %s", name)
 }
@@ -5647,6 +9203,9 @@ func (m *MessageMutation) ResetField(name string) error {
 		return nil
 	case message.FieldCreatedUnix:
 		m.ResetCreatedUnix()
+		return nil
+	case message.FieldKind:
+		m.ResetKind()
 		return nil
 	}
 	return fmt.Errorf("unknown Message field %s", name)

@@ -28,6 +28,10 @@ func (Message) Fields() []ent.Field {
 		field.String("attachments_json").Default("[]"),
 		field.String("request_id").Default(""),
 		field.Int64("created_unix"),
+		// Semantic classification: note (default), decision, blocker, status.
+		// Empty string is treated as "note" on the server side for rows
+		// written before this field existed.
+		field.String("kind").Default(""),
 	}
 }
 
@@ -37,5 +41,6 @@ func (Message) Indexes() []ent.Index {
 		index.Fields("thread_id", "created_unix", "id"),
 		index.Fields("reply_to_message_id"),
 		index.Fields("request_id"),
+		index.Fields("target", "kind", "created_unix"),
 	}
 }

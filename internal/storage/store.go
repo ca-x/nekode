@@ -698,7 +698,8 @@ func (s *Store) CreateMessage(ctx context.Context, messageModel Message) (Messag
 		SetMetadataJSON(messageModel.MetadataJSON).
 		SetAttachmentsJSON(attachmentsJSON).
 		SetRequestID(messageModel.RequestID).
-		SetCreatedUnix(messageModel.CreatedUnix)
+		SetCreatedUnix(messageModel.CreatedUnix).
+		SetKind(normalizeMessageKind(messageModel.Kind))
 	if messageModel.ID != "" {
 		create.SetID(messageModel.ID)
 	}
@@ -2020,6 +2021,7 @@ func messageFromEnt(row *ent.Message) Message {
 		Attachments:       unmarshalAttachments(row.AttachmentsJSON),
 		RequestID:         row.RequestID,
 		CreatedUnix:       row.CreatedUnix,
+		Kind:              row.Kind,
 	}
 }
 

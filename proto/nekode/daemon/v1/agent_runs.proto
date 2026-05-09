@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+// AgentRunPhase tracks the lifecycle of a single agent session.
+enum AgentRunPhase {
+  AGENT_RUN_PHASE_UNSPECIFIED = 0;
+  // Agent session opened on the daemon. Must be first event of a run.
+  AGENT_RUN_PHASE_START = 1;
+  // Runtime invoked a tool / subprocess.
+  AGENT_RUN_PHASE_TOOL_CALL = 2;
+  // Tool/subprocess returned a result (success or non-fatal error).
+  AGENT_RUN_PHASE_TOOL_RESULT = 3;
+  // Fatal error during the session; usually followed by END.
+  AGENT_RUN_PHASE_ERROR = 4;
+  // Message emitted to a channel / DM as agent output.
+  AGENT_RUN_PHASE_OUTPUT = 5;
+  // Agent session closed. Must be last event of a run.
+  AGENT_RUN_PHASE_END = 6;
+}
+
+// AgentRunEvent is the unit of agent run reporting. Daemons stream a
+// sequence of these starting with START and ending with END. The server
+// persists them into the agent_run_events table and updates the
+// agent_runs row lifecycle columns on END.
+message AgentRunEvent {
+  string run_id = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  AgentRunPhase phase = 4;
+  // Monotonic wall-clock time on the daemon, nanoseconds since epoch.
+  int64 at_unix_nano = 5;
+  // Short, FTS-friendly one-line summary of the event.
+  string summary = 6;
+  // Structured extra data; free-form JSON bytes so the server can index
+  // into agent_run_events_fts without tight coupling to runtime shape.
+  bytes payload_json = 7;
+  // Populated only on AGENT_RUN_PHASE_END.
+  int32 exit_code = 8;
+  // Populated only on AGENT_RUN_PHASE_END / ERROR.
+  string error_message = 9;
+}
+
+message ReportAgentRunResponse {
+  int64 persisted_count = 1;
+  // Events the server rejected or de-duplicated.
+  int64 dropped_count = 2;
+}
+
+// AgentRunSummary is the short record returned by listing endpoints.
+message AgentRunSummary {
+  string run_id = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  int64 started_time_unix = 4;
+  int64 ended_time_unix = 5;
+  int32 exit_code = 6;
+  string summary = 7;
+  string error_message = 8;
+  uint32 event_count = 9;
+}
+
+message ListAgentRunsRequest {
+  // Filter by agent, computer, or both. Providing neither returns
+  // recent runs across the workspace (admin only).
+  string agent_id = 1;
+  string computer_id = 2;
+  uint32 limit = 3;
+  EventCursor cursor = 4;
+}
+
+message ListAgentRunsResponse {
+  repeated AgentRunSummary runs = 1;
+  EventCursor next_cursor = 2;
+}
+
+message GetAgentRunRequest {
+  string run_id = 1;
+  bool include_events = 2;
+}
+
+message GetAgentRunResponse {
+  AgentRunSummary run = 1;
+  repeated AgentRunEvent events = 2;
+}
+
+message SearchAgentRunsRequest {
+  // FTS5 query over agent_run_events_fts.summary + payload.
+  string query = 1;
+  string agent_id = 2;
+  string computer_id = 3;
+  uint32 limit = 4;
+}
+
+message SearchAgentRunsResponse {
+  message Hit {
+    AgentRunSummary run = 1;
+    AgentRunEvent matching_event = 2;
+    // HTML-safe excerpt of the matching event with query terms marked.
+    string highlight = 3;
+  }
+  repeated Hit hits = 1;
+}

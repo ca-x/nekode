@@ -3,7 +3,11 @@
 package ent
 
 import (
+	"github.com/ca-x/nekode/internal/ent/agentrun"
+	"github.com/ca-x/nekode/internal/ent/agentrunevent"
 	"github.com/ca-x/nekode/internal/ent/channel"
+	"github.com/ca-x/nekode/internal/ent/channeldecision"
+	"github.com/ca-x/nekode/internal/ent/channeldecisionvote"
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
@@ -25,6 +29,70 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	agentrunFields := schema.AgentRun{}.Fields()
+	_ = agentrunFields
+	// agentrunDescAgentID is the schema descriptor for agent_id field.
+	agentrunDescAgentID := agentrunFields[1].Descriptor()
+	// agentrun.AgentIDValidator is a validator for the "agent_id" field. It is called by the builders before save.
+	agentrun.AgentIDValidator = agentrunDescAgentID.Validators[0].(func(string) error)
+	// agentrunDescComputerID is the schema descriptor for computer_id field.
+	agentrunDescComputerID := agentrunFields[2].Descriptor()
+	// agentrun.ComputerIDValidator is a validator for the "computer_id" field. It is called by the builders before save.
+	agentrun.ComputerIDValidator = agentrunDescComputerID.Validators[0].(func(string) error)
+	// agentrunDescEndedUnix is the schema descriptor for ended_unix field.
+	agentrunDescEndedUnix := agentrunFields[4].Descriptor()
+	// agentrun.DefaultEndedUnix holds the default value on creation for the ended_unix field.
+	agentrun.DefaultEndedUnix = agentrunDescEndedUnix.Default.(int64)
+	// agentrunDescExitCode is the schema descriptor for exit_code field.
+	agentrunDescExitCode := agentrunFields[5].Descriptor()
+	// agentrun.DefaultExitCode holds the default value on creation for the exit_code field.
+	agentrun.DefaultExitCode = agentrunDescExitCode.Default.(int32)
+	// agentrunDescSummary is the schema descriptor for summary field.
+	agentrunDescSummary := agentrunFields[6].Descriptor()
+	// agentrun.DefaultSummary holds the default value on creation for the summary field.
+	agentrun.DefaultSummary = agentrunDescSummary.Default.(string)
+	// agentrunDescError is the schema descriptor for error field.
+	agentrunDescError := agentrunFields[7].Descriptor()
+	// agentrun.DefaultError holds the default value on creation for the error field.
+	agentrun.DefaultError = agentrunDescError.Default.(string)
+	// agentrunDescEventCount is the schema descriptor for event_count field.
+	agentrunDescEventCount := agentrunFields[8].Descriptor()
+	// agentrun.DefaultEventCount holds the default value on creation for the event_count field.
+	agentrun.DefaultEventCount = agentrunDescEventCount.Default.(uint32)
+	// agentrunDescID is the schema descriptor for id field.
+	agentrunDescID := agentrunFields[0].Descriptor()
+	// agentrun.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	agentrun.IDValidator = agentrunDescID.Validators[0].(func(string) error)
+	agentruneventFields := schema.AgentRunEvent{}.Fields()
+	_ = agentruneventFields
+	// agentruneventDescRunID is the schema descriptor for run_id field.
+	agentruneventDescRunID := agentruneventFields[1].Descriptor()
+	// agentrunevent.RunIDValidator is a validator for the "run_id" field. It is called by the builders before save.
+	agentrunevent.RunIDValidator = agentruneventDescRunID.Validators[0].(func(string) error)
+	// agentruneventDescPhase is the schema descriptor for phase field.
+	agentruneventDescPhase := agentruneventFields[3].Descriptor()
+	// agentrunevent.PhaseValidator is a validator for the "phase" field. It is called by the builders before save.
+	agentrunevent.PhaseValidator = agentruneventDescPhase.Validators[0].(func(string) error)
+	// agentruneventDescSummary is the schema descriptor for summary field.
+	agentruneventDescSummary := agentruneventFields[4].Descriptor()
+	// agentrunevent.DefaultSummary holds the default value on creation for the summary field.
+	agentrunevent.DefaultSummary = agentruneventDescSummary.Default.(string)
+	// agentruneventDescPayloadJSON is the schema descriptor for payload_json field.
+	agentruneventDescPayloadJSON := agentruneventFields[5].Descriptor()
+	// agentrunevent.DefaultPayloadJSON holds the default value on creation for the payload_json field.
+	agentrunevent.DefaultPayloadJSON = agentruneventDescPayloadJSON.Default.(string)
+	// agentruneventDescExitCode is the schema descriptor for exit_code field.
+	agentruneventDescExitCode := agentruneventFields[6].Descriptor()
+	// agentrunevent.DefaultExitCode holds the default value on creation for the exit_code field.
+	agentrunevent.DefaultExitCode = agentruneventDescExitCode.Default.(int32)
+	// agentruneventDescErrorMessage is the schema descriptor for error_message field.
+	agentruneventDescErrorMessage := agentruneventFields[7].Descriptor()
+	// agentrunevent.DefaultErrorMessage holds the default value on creation for the error_message field.
+	agentrunevent.DefaultErrorMessage = agentruneventDescErrorMessage.Default.(string)
+	// agentruneventDescID is the schema descriptor for id field.
+	agentruneventDescID := agentruneventFields[0].Descriptor()
+	// agentrunevent.DefaultID holds the default value on creation for the id field.
+	agentrunevent.DefaultID = agentruneventDescID.Default.(func() string)
 	channelFields := schema.Channel{}.Fields()
 	_ = channelFields
 	// channelDescTarget is the schema descriptor for target field.
@@ -51,6 +119,94 @@ func init() {
 	channelDescID := channelFields[0].Descriptor()
 	// channel.DefaultID holds the default value on creation for the id field.
 	channel.DefaultID = channelDescID.Default.(func() string)
+	channeldecisionFields := schema.ChannelDecision{}.Fields()
+	_ = channeldecisionFields
+	// channeldecisionDescTarget is the schema descriptor for target field.
+	channeldecisionDescTarget := channeldecisionFields[1].Descriptor()
+	// channeldecision.TargetValidator is a validator for the "target" field. It is called by the builders before save.
+	channeldecision.TargetValidator = channeldecisionDescTarget.Validators[0].(func(string) error)
+	// channeldecisionDescTitle is the schema descriptor for title field.
+	channeldecisionDescTitle := channeldecisionFields[2].Descriptor()
+	// channeldecision.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	channeldecision.TitleValidator = channeldecisionDescTitle.Validators[0].(func(string) error)
+	// channeldecisionDescBody is the schema descriptor for body field.
+	channeldecisionDescBody := channeldecisionFields[3].Descriptor()
+	// channeldecision.BodyValidator is a validator for the "body" field. It is called by the builders before save.
+	channeldecision.BodyValidator = channeldecisionDescBody.Validators[0].(func(string) error)
+	// channeldecisionDescStatus is the schema descriptor for status field.
+	channeldecisionDescStatus := channeldecisionFields[4].Descriptor()
+	// channeldecision.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	channeldecision.StatusValidator = channeldecisionDescStatus.Validators[0].(func(string) error)
+	// channeldecisionDescProposerID is the schema descriptor for proposer_id field.
+	channeldecisionDescProposerID := channeldecisionFields[5].Descriptor()
+	// channeldecision.ProposerIDValidator is a validator for the "proposer_id" field. It is called by the builders before save.
+	channeldecision.ProposerIDValidator = channeldecisionDescProposerID.Validators[0].(func(string) error)
+	// channeldecisionDescProposerKind is the schema descriptor for proposer_kind field.
+	channeldecisionDescProposerKind := channeldecisionFields[6].Descriptor()
+	// channeldecision.ProposerKindValidator is a validator for the "proposer_kind" field. It is called by the builders before save.
+	channeldecision.ProposerKindValidator = channeldecisionDescProposerKind.Validators[0].(func(string) error)
+	// channeldecisionDescRatifiedUnix is the schema descriptor for ratified_unix field.
+	channeldecisionDescRatifiedUnix := channeldecisionFields[8].Descriptor()
+	// channeldecision.DefaultRatifiedUnix holds the default value on creation for the ratified_unix field.
+	channeldecision.DefaultRatifiedUnix = channeldecisionDescRatifiedUnix.Default.(int64)
+	// channeldecisionDescRetiredUnix is the schema descriptor for retired_unix field.
+	channeldecisionDescRetiredUnix := channeldecisionFields[9].Descriptor()
+	// channeldecision.DefaultRetiredUnix holds the default value on creation for the retired_unix field.
+	channeldecision.DefaultRetiredUnix = channeldecisionDescRetiredUnix.Default.(int64)
+	// channeldecisionDescRetiredBy is the schema descriptor for retired_by field.
+	channeldecisionDescRetiredBy := channeldecisionFields[10].Descriptor()
+	// channeldecision.DefaultRetiredBy holds the default value on creation for the retired_by field.
+	channeldecision.DefaultRetiredBy = channeldecisionDescRetiredBy.Default.(string)
+	// channeldecisionDescRetireReason is the schema descriptor for retire_reason field.
+	channeldecisionDescRetireReason := channeldecisionFields[11].Descriptor()
+	// channeldecision.DefaultRetireReason holds the default value on creation for the retire_reason field.
+	channeldecision.DefaultRetireReason = channeldecisionDescRetireReason.Default.(string)
+	// channeldecisionDescSupersedesDecisionID is the schema descriptor for supersedes_decision_id field.
+	channeldecisionDescSupersedesDecisionID := channeldecisionFields[12].Descriptor()
+	// channeldecision.DefaultSupersedesDecisionID holds the default value on creation for the supersedes_decision_id field.
+	channeldecision.DefaultSupersedesDecisionID = channeldecisionDescSupersedesDecisionID.Default.(string)
+	// channeldecisionDescApproveCount is the schema descriptor for approve_count field.
+	channeldecisionDescApproveCount := channeldecisionFields[13].Descriptor()
+	// channeldecision.DefaultApproveCount holds the default value on creation for the approve_count field.
+	channeldecision.DefaultApproveCount = channeldecisionDescApproveCount.Default.(uint32)
+	// channeldecisionDescRejectCount is the schema descriptor for reject_count field.
+	channeldecisionDescRejectCount := channeldecisionFields[14].Descriptor()
+	// channeldecision.DefaultRejectCount holds the default value on creation for the reject_count field.
+	channeldecision.DefaultRejectCount = channeldecisionDescRejectCount.Default.(uint32)
+	// channeldecisionDescAbstainCount is the schema descriptor for abstain_count field.
+	channeldecisionDescAbstainCount := channeldecisionFields[15].Descriptor()
+	// channeldecision.DefaultAbstainCount holds the default value on creation for the abstain_count field.
+	channeldecision.DefaultAbstainCount = channeldecisionDescAbstainCount.Default.(uint32)
+	// channeldecisionDescID is the schema descriptor for id field.
+	channeldecisionDescID := channeldecisionFields[0].Descriptor()
+	// channeldecision.DefaultID holds the default value on creation for the id field.
+	channeldecision.DefaultID = channeldecisionDescID.Default.(func() string)
+	channeldecisionvoteFields := schema.ChannelDecisionVote{}.Fields()
+	_ = channeldecisionvoteFields
+	// channeldecisionvoteDescDecisionID is the schema descriptor for decision_id field.
+	channeldecisionvoteDescDecisionID := channeldecisionvoteFields[1].Descriptor()
+	// channeldecisionvote.DecisionIDValidator is a validator for the "decision_id" field. It is called by the builders before save.
+	channeldecisionvote.DecisionIDValidator = channeldecisionvoteDescDecisionID.Validators[0].(func(string) error)
+	// channeldecisionvoteDescVoterID is the schema descriptor for voter_id field.
+	channeldecisionvoteDescVoterID := channeldecisionvoteFields[2].Descriptor()
+	// channeldecisionvote.VoterIDValidator is a validator for the "voter_id" field. It is called by the builders before save.
+	channeldecisionvote.VoterIDValidator = channeldecisionvoteDescVoterID.Validators[0].(func(string) error)
+	// channeldecisionvoteDescVoterKind is the schema descriptor for voter_kind field.
+	channeldecisionvoteDescVoterKind := channeldecisionvoteFields[3].Descriptor()
+	// channeldecisionvote.VoterKindValidator is a validator for the "voter_kind" field. It is called by the builders before save.
+	channeldecisionvote.VoterKindValidator = channeldecisionvoteDescVoterKind.Validators[0].(func(string) error)
+	// channeldecisionvoteDescDecision is the schema descriptor for decision field.
+	channeldecisionvoteDescDecision := channeldecisionvoteFields[4].Descriptor()
+	// channeldecisionvote.DecisionValidator is a validator for the "decision" field. It is called by the builders before save.
+	channeldecisionvote.DecisionValidator = channeldecisionvoteDescDecision.Validators[0].(func(string) error)
+	// channeldecisionvoteDescReason is the schema descriptor for reason field.
+	channeldecisionvoteDescReason := channeldecisionvoteFields[6].Descriptor()
+	// channeldecisionvote.DefaultReason holds the default value on creation for the reason field.
+	channeldecisionvote.DefaultReason = channeldecisionvoteDescReason.Default.(string)
+	// channeldecisionvoteDescID is the schema descriptor for id field.
+	channeldecisionvoteDescID := channeldecisionvoteFields[0].Descriptor()
+	// channeldecisionvote.DefaultID holds the default value on creation for the id field.
+	channeldecisionvote.DefaultID = channeldecisionvoteDescID.Default.(func() string)
 	channelmemberFields := schema.ChannelMember{}.Fields()
 	_ = channelmemberFields
 	// channelmemberDescTarget is the schema descriptor for target field.
@@ -281,6 +437,10 @@ func init() {
 	messageDescRequestID := messageFields[14].Descriptor()
 	// message.DefaultRequestID holds the default value on creation for the request_id field.
 	message.DefaultRequestID = messageDescRequestID.Default.(string)
+	// messageDescKind is the schema descriptor for kind field.
+	messageDescKind := messageFields[16].Descriptor()
+	// message.DefaultKind holds the default value on creation for the kind field.
+	message.DefaultKind = messageDescKind.Default.(string)
 	// messageDescID is the schema descriptor for id field.
 	messageDescID := messageFields[0].Descriptor()
 	// message.DefaultID holds the default value on creation for the id field.

@@ -244,6 +244,20 @@ func (_u *MessageUpdate) AddCreatedUnix(v int64) *MessageUpdate {
 	return _u
 }
 
+// SetKind sets the "kind" field.
+func (_u *MessageUpdate) SetKind(v string) *MessageUpdate {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillableKind(v *string) *MessageUpdate {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
 // Mutation returns the MessageMutation object of the builder.
 func (_u *MessageUpdate) Mutation() *MessageMutation {
 	return _u.mutation
@@ -360,6 +374,9 @@ func (_u *MessageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedCreatedUnix(); ok {
 		_spec.AddField(message.FieldCreatedUnix, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(message.FieldKind, field.TypeString, value)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -598,6 +615,20 @@ func (_u *MessageUpdateOne) AddCreatedUnix(v int64) *MessageUpdateOne {
 	return _u
 }
 
+// SetKind sets the "kind" field.
+func (_u *MessageUpdateOne) SetKind(v string) *MessageUpdateOne {
+	_u.mutation.SetKind(v)
+	return _u
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillableKind(v *string) *MessageUpdateOne {
+	if v != nil {
+		_u.SetKind(*v)
+	}
+	return _u
+}
+
 // Mutation returns the MessageMutation object of the builder.
 func (_u *MessageUpdateOne) Mutation() *MessageMutation {
 	return _u.mutation
@@ -744,6 +775,9 @@ func (_u *MessageUpdateOne) sqlSave(ctx context.Context) (_node *Message, err er
 	}
 	if value, ok := _u.mutation.AddedCreatedUnix(); ok {
 		_spec.AddField(message.FieldCreatedUnix, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.Kind(); ok {
+		_spec.SetField(message.FieldKind, field.TypeString, value)
 	}
 	_node = &Message{config: _u.config}
 	_spec.Assign = _node.assignValues

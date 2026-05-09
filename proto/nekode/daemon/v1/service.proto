@@ -4,10 +4,12 @@ package nekode.daemon.v1;
 
 import "nekode/daemon/v1/activity.proto";
 import "nekode/daemon/v1/agent.proto";
+import "nekode/daemon/v1/agent_runs.proto";
 import "nekode/daemon/v1/attachment.proto";
 import "nekode/daemon/v1/collaboration.proto";
 import "nekode/daemon/v1/common.proto";
 import "nekode/daemon/v1/coordination.proto";
+import "nekode/daemon/v1/decisions.proto";
 import "nekode/daemon/v1/memory.proto";
 import "nekode/daemon/v1/reminder.proto";
 import "nekode/daemon/v1/runtime.proto";
@@ -331,4 +333,20 @@ service DaemonControlService {
   rpc CancelMcpResourceSubscription(CancelMcpResourceSubscriptionRequest) returns (CancelMcpResourceSubscriptionResponse);
   // List MCP resource updates after a cursor.
   rpc ListMcpResourceUpdates(ListMcpResourceUpdatesRequest) returns (ListMcpResourceUpdatesResponse);
+
+  // Channel decisions (with voting). Agents + humans alike propose, vote
+  // on, and ratify architectural decisions inside a channel.
+  rpc ListChannelDecisions(ListChannelDecisionsRequest) returns (ListChannelDecisionsResponse);
+  rpc ProposeChannelDecision(ProposeChannelDecisionRequest) returns (ProposeChannelDecisionResponse);
+  rpc VoteChannelDecision(VoteChannelDecisionRequest) returns (VoteChannelDecisionResponse);
+  rpc RatifyChannelDecision(RatifyChannelDecisionRequest) returns (RatifyChannelDecisionResponse);
+  rpc RetireChannelDecision(RetireChannelDecisionRequest) returns (RetireChannelDecisionResponse);
+  rpc ListDecisionVotes(ListDecisionVotesRequest) returns (ListDecisionVotesResponse);
+
+  // Agent run archive. Daemons stream run events via ReportAgentRun;
+  // clients read runs via the listing/search RPCs.
+  rpc ReportAgentRun(stream AgentRunEvent) returns (ReportAgentRunResponse);
+  rpc ListAgentRuns(ListAgentRunsRequest) returns (ListAgentRunsResponse);
+  rpc GetAgentRun(GetAgentRunRequest) returns (GetAgentRunResponse);
+  rpc SearchAgentRuns(SearchAgentRunsRequest) returns (SearchAgentRunsResponse);
 }

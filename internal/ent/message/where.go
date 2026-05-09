@@ -137,6 +137,11 @@ func CreatedUnix(v int64) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldCreatedUnix, v))
 }
 
+// Kind applies equality check predicate on the "kind" field. It's identical to KindEQ.
+func Kind(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldKind, v))
+}
+
 // TargetEQ applies the EQ predicate on the "target" field.
 func TargetEQ(v string) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldTarget, v))
@@ -1085,6 +1090,71 @@ func CreatedUnixLT(v int64) predicate.Message {
 // CreatedUnixLTE applies the LTE predicate on the "created_unix" field.
 func CreatedUnixLTE(v int64) predicate.Message {
 	return predicate.Message(sql.FieldLTE(FieldCreatedUnix, v))
+}
+
+// KindEQ applies the EQ predicate on the "kind" field.
+func KindEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldKind, v))
+}
+
+// KindNEQ applies the NEQ predicate on the "kind" field.
+func KindNEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldKind, v))
+}
+
+// KindIn applies the In predicate on the "kind" field.
+func KindIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldKind, vs...))
+}
+
+// KindNotIn applies the NotIn predicate on the "kind" field.
+func KindNotIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldKind, vs...))
+}
+
+// KindGT applies the GT predicate on the "kind" field.
+func KindGT(v string) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldKind, v))
+}
+
+// KindGTE applies the GTE predicate on the "kind" field.
+func KindGTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldKind, v))
+}
+
+// KindLT applies the LT predicate on the "kind" field.
+func KindLT(v string) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldKind, v))
+}
+
+// KindLTE applies the LTE predicate on the "kind" field.
+func KindLTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldKind, v))
+}
+
+// KindContains applies the Contains predicate on the "kind" field.
+func KindContains(v string) predicate.Message {
+	return predicate.Message(sql.FieldContains(FieldKind, v))
+}
+
+// KindHasPrefix applies the HasPrefix predicate on the "kind" field.
+func KindHasPrefix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasPrefix(FieldKind, v))
+}
+
+// KindHasSuffix applies the HasSuffix predicate on the "kind" field.
+func KindHasSuffix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasSuffix(FieldKind, v))
+}
+
+// KindEqualFold applies the EqualFold predicate on the "kind" field.
+func KindEqualFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldEqualFold(FieldKind, v))
+}
+
+// KindContainsFold applies the ContainsFold predicate on the "kind" field.
+func KindContainsFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldContainsFold(FieldKind, v))
 }
 
 // And groups predicates with the AND operator between them.

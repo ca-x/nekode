@@ -182,6 +182,20 @@ message ListThreadsResponse {
   repeated ThreadRecord threads = 1;
   EventCursor next_cursor = 2;
 }
+// MessageKind classifies the semantic purpose of a message.
+// - NOTE: regular chat text (default).
+// - DECISION: proposes or references a channel-level decision.
+// - BLOCKER: the sender is stuck and needs help.
+// - STATUS: progress update / heartbeat-style message.
+// Values other than these five are invalid at the API boundary.
+enum MessageKind {
+  MESSAGE_KIND_UNSPECIFIED = 0;
+  MESSAGE_KIND_NOTE = 1;
+  MESSAGE_KIND_DECISION = 2;
+  MESSAGE_KIND_BLOCKER = 3;
+  MESSAGE_KIND_STATUS = 4;
+}
+
 message GetThreadRequest {
   string target = 1;
 }
@@ -212,6 +226,7 @@ message CollaborationMessage {
   Actor sender = 18;
   int64 sequence = 19;
   string aggregate_id = 20;
+  MessageKind kind = 21;
 }
 message ReadMessagesRequest {
   reserved 4 to 6;
@@ -264,6 +279,7 @@ message SendMessageRequest {
   RequestContext context = 16;
   OutboundPolicy outbound_policy = 17;
   Actor sender = 18;
+  MessageKind kind = 19;
 }
 message SendMessageResponse {
   bool accepted = 1;

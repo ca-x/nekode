@@ -12,7 +12,11 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/ca-x/nekode/internal/ent/agentrun"
+	"github.com/ca-x/nekode/internal/ent/agentrunevent"
 	"github.com/ca-x/nekode/internal/ent/channel"
+	"github.com/ca-x/nekode/internal/ent/channeldecision"
+	"github.com/ca-x/nekode/internal/ent/channeldecisionvote"
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
@@ -87,7 +91,11 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			agentrun.Table:            agentrun.ValidColumn,
+			agentrunevent.Table:       agentrunevent.ValidColumn,
 			channel.Table:             channel.ValidColumn,
+			channeldecision.Table:     channeldecision.ValidColumn,
+			channeldecisionvote.Table: channeldecisionvote.ValidColumn,
 			channelmember.Table:       channelmember.ValidColumn,
 			collaborationevent.Table:  collaborationevent.ValidColumn,
 			idempotencyrecord.Table:   idempotencyrecord.ValidColumn,

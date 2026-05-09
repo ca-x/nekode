@@ -9,6 +9,30 @@ import (
 	"github.com/ca-x/nekode/internal/ent"
 )
 
+// The AgentRunFunc type is an adapter to allow the use of ordinary
+// function as AgentRun mutator.
+type AgentRunFunc func(context.Context, *ent.AgentRunMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentRunFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentRunMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentRunMutation", m)
+}
+
+// The AgentRunEventFunc type is an adapter to allow the use of ordinary
+// function as AgentRunEvent mutator.
+type AgentRunEventFunc func(context.Context, *ent.AgentRunEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AgentRunEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AgentRunEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AgentRunEventMutation", m)
+}
+
 // The ChannelFunc type is an adapter to allow the use of ordinary
 // function as Channel mutator.
 type ChannelFunc func(context.Context, *ent.ChannelMutation) (ent.Value, error)
@@ -19,6 +43,30 @@ func (f ChannelFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChannelMutation", m)
+}
+
+// The ChannelDecisionFunc type is an adapter to allow the use of ordinary
+// function as ChannelDecision mutator.
+type ChannelDecisionFunc func(context.Context, *ent.ChannelDecisionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChannelDecisionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ChannelDecisionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChannelDecisionMutation", m)
+}
+
+// The ChannelDecisionVoteFunc type is an adapter to allow the use of ordinary
+// function as ChannelDecisionVote mutator.
+type ChannelDecisionVoteFunc func(context.Context, *ent.ChannelDecisionVoteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChannelDecisionVoteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ChannelDecisionVoteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChannelDecisionVoteMutation", m)
 }
 
 // The ChannelMemberFunc type is an adapter to allow the use of ordinary

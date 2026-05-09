@@ -14,7 +14,11 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"github.com/ca-x/nekode/internal/ent/agentrun"
+	"github.com/ca-x/nekode/internal/ent/agentrunevent"
 	"github.com/ca-x/nekode/internal/ent/channel"
+	"github.com/ca-x/nekode/internal/ent/channeldecision"
+	"github.com/ca-x/nekode/internal/ent/channeldecisionvote"
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
@@ -36,8 +40,16 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// AgentRun is the client for interacting with the AgentRun builders.
+	AgentRun *AgentRunClient
+	// AgentRunEvent is the client for interacting with the AgentRunEvent builders.
+	AgentRunEvent *AgentRunEventClient
 	// Channel is the client for interacting with the Channel builders.
 	Channel *ChannelClient
+	// ChannelDecision is the client for interacting with the ChannelDecision builders.
+	ChannelDecision *ChannelDecisionClient
+	// ChannelDecisionVote is the client for interacting with the ChannelDecisionVote builders.
+	ChannelDecisionVote *ChannelDecisionVoteClient
 	// ChannelMember is the client for interacting with the ChannelMember builders.
 	ChannelMember *ChannelMemberClient
 	// CollaborationEvent is the client for interacting with the CollaborationEvent builders.
@@ -77,7 +89,11 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.AgentRun = NewAgentRunClient(c.config)
+	c.AgentRunEvent = NewAgentRunEventClient(c.config)
 	c.Channel = NewChannelClient(c.config)
+	c.ChannelDecision = NewChannelDecisionClient(c.config)
+	c.ChannelDecisionVote = NewChannelDecisionVoteClient(c.config)
 	c.ChannelMember = NewChannelMemberClient(c.config)
 	c.CollaborationEvent = NewCollaborationEventClient(c.config)
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
@@ -184,7 +200,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:                 ctx,
 		config:              cfg,
+		AgentRun:            NewAgentRunClient(cfg),
+		AgentRunEvent:       NewAgentRunEventClient(cfg),
 		Channel:             NewChannelClient(cfg),
+		ChannelDecision:     NewChannelDecisionClient(cfg),
+		ChannelDecisionVote: NewChannelDecisionVoteClient(cfg),
 		ChannelMember:       NewChannelMemberClient(cfg),
 		CollaborationEvent:  NewCollaborationEventClient(cfg),
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
@@ -218,7 +238,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:                 ctx,
 		config:              cfg,
+		AgentRun:            NewAgentRunClient(cfg),
+		AgentRunEvent:       NewAgentRunEventClient(cfg),
 		Channel:             NewChannelClient(cfg),
+		ChannelDecision:     NewChannelDecisionClient(cfg),
+		ChannelDecisionVote: NewChannelDecisionVoteClient(cfg),
 		ChannelMember:       NewChannelMemberClient(cfg),
 		CollaborationEvent:  NewCollaborationEventClient(cfg),
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
@@ -239,7 +263,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Channel.
+//		AgentRun.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -262,10 +286,11 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Channel, c.ChannelMember, c.CollaborationEvent, c.IdempotencyRecord,
-		c.InteractionEndpoint, c.Message, c.NotificationRoute, c.OutboundDelivery,
-		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
-		c.ThreadReadState, c.User,
+		c.AgentRun, c.AgentRunEvent, c.Channel, c.ChannelDecision,
+		c.ChannelDecisionVote, c.ChannelMember, c.CollaborationEvent,
+		c.IdempotencyRecord, c.InteractionEndpoint, c.Message, c.NotificationRoute,
+		c.OutboundDelivery, c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session,
+		c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -275,10 +300,11 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Channel, c.ChannelMember, c.CollaborationEvent, c.IdempotencyRecord,
-		c.InteractionEndpoint, c.Message, c.NotificationRoute, c.OutboundDelivery,
-		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
-		c.ThreadReadState, c.User,
+		c.AgentRun, c.AgentRunEvent, c.Channel, c.ChannelDecision,
+		c.ChannelDecisionVote, c.ChannelMember, c.CollaborationEvent,
+		c.IdempotencyRecord, c.InteractionEndpoint, c.Message, c.NotificationRoute,
+		c.OutboundDelivery, c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session,
+		c.Task, c.ThreadReadState, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -287,8 +313,16 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AgentRunMutation:
+		return c.AgentRun.mutate(ctx, m)
+	case *AgentRunEventMutation:
+		return c.AgentRunEvent.mutate(ctx, m)
 	case *ChannelMutation:
 		return c.Channel.mutate(ctx, m)
+	case *ChannelDecisionMutation:
+		return c.ChannelDecision.mutate(ctx, m)
+	case *ChannelDecisionVoteMutation:
+		return c.ChannelDecisionVote.mutate(ctx, m)
 	case *ChannelMemberMutation:
 		return c.ChannelMember.mutate(ctx, m)
 	case *CollaborationEventMutation:
@@ -319,6 +353,272 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.User.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AgentRunClient is a client for the AgentRun schema.
+type AgentRunClient struct {
+	config
+}
+
+// NewAgentRunClient returns a client for the AgentRun from the given config.
+func NewAgentRunClient(c config) *AgentRunClient {
+	return &AgentRunClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `agentrun.Hooks(f(g(h())))`.
+func (c *AgentRunClient) Use(hooks ...Hook) {
+	c.hooks.AgentRun = append(c.hooks.AgentRun, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `agentrun.Intercept(f(g(h())))`.
+func (c *AgentRunClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AgentRun = append(c.inters.AgentRun, interceptors...)
+}
+
+// Create returns a builder for creating a AgentRun entity.
+func (c *AgentRunClient) Create() *AgentRunCreate {
+	mutation := newAgentRunMutation(c.config, OpCreate)
+	return &AgentRunCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AgentRun entities.
+func (c *AgentRunClient) CreateBulk(builders ...*AgentRunCreate) *AgentRunCreateBulk {
+	return &AgentRunCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AgentRunClient) MapCreateBulk(slice any, setFunc func(*AgentRunCreate, int)) *AgentRunCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AgentRunCreateBulk{err: fmt.Errorf("calling to AgentRunClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AgentRunCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AgentRunCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AgentRun.
+func (c *AgentRunClient) Update() *AgentRunUpdate {
+	mutation := newAgentRunMutation(c.config, OpUpdate)
+	return &AgentRunUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AgentRunClient) UpdateOne(_m *AgentRun) *AgentRunUpdateOne {
+	mutation := newAgentRunMutation(c.config, OpUpdateOne, withAgentRun(_m))
+	return &AgentRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AgentRunClient) UpdateOneID(id string) *AgentRunUpdateOne {
+	mutation := newAgentRunMutation(c.config, OpUpdateOne, withAgentRunID(id))
+	return &AgentRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AgentRun.
+func (c *AgentRunClient) Delete() *AgentRunDelete {
+	mutation := newAgentRunMutation(c.config, OpDelete)
+	return &AgentRunDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AgentRunClient) DeleteOne(_m *AgentRun) *AgentRunDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AgentRunClient) DeleteOneID(id string) *AgentRunDeleteOne {
+	builder := c.Delete().Where(agentrun.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AgentRunDeleteOne{builder}
+}
+
+// Query returns a query builder for AgentRun.
+func (c *AgentRunClient) Query() *AgentRunQuery {
+	return &AgentRunQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAgentRun},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AgentRun entity by its id.
+func (c *AgentRunClient) Get(ctx context.Context, id string) (*AgentRun, error) {
+	return c.Query().Where(agentrun.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AgentRunClient) GetX(ctx context.Context, id string) *AgentRun {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AgentRunClient) Hooks() []Hook {
+	return c.hooks.AgentRun
+}
+
+// Interceptors returns the client interceptors.
+func (c *AgentRunClient) Interceptors() []Interceptor {
+	return c.inters.AgentRun
+}
+
+func (c *AgentRunClient) mutate(ctx context.Context, m *AgentRunMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AgentRunCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AgentRunUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AgentRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AgentRunDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AgentRun mutation op: %q", m.Op())
+	}
+}
+
+// AgentRunEventClient is a client for the AgentRunEvent schema.
+type AgentRunEventClient struct {
+	config
+}
+
+// NewAgentRunEventClient returns a client for the AgentRunEvent from the given config.
+func NewAgentRunEventClient(c config) *AgentRunEventClient {
+	return &AgentRunEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `agentrunevent.Hooks(f(g(h())))`.
+func (c *AgentRunEventClient) Use(hooks ...Hook) {
+	c.hooks.AgentRunEvent = append(c.hooks.AgentRunEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `agentrunevent.Intercept(f(g(h())))`.
+func (c *AgentRunEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AgentRunEvent = append(c.inters.AgentRunEvent, interceptors...)
+}
+
+// Create returns a builder for creating a AgentRunEvent entity.
+func (c *AgentRunEventClient) Create() *AgentRunEventCreate {
+	mutation := newAgentRunEventMutation(c.config, OpCreate)
+	return &AgentRunEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AgentRunEvent entities.
+func (c *AgentRunEventClient) CreateBulk(builders ...*AgentRunEventCreate) *AgentRunEventCreateBulk {
+	return &AgentRunEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AgentRunEventClient) MapCreateBulk(slice any, setFunc func(*AgentRunEventCreate, int)) *AgentRunEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AgentRunEventCreateBulk{err: fmt.Errorf("calling to AgentRunEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AgentRunEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AgentRunEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AgentRunEvent.
+func (c *AgentRunEventClient) Update() *AgentRunEventUpdate {
+	mutation := newAgentRunEventMutation(c.config, OpUpdate)
+	return &AgentRunEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AgentRunEventClient) UpdateOne(_m *AgentRunEvent) *AgentRunEventUpdateOne {
+	mutation := newAgentRunEventMutation(c.config, OpUpdateOne, withAgentRunEvent(_m))
+	return &AgentRunEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AgentRunEventClient) UpdateOneID(id string) *AgentRunEventUpdateOne {
+	mutation := newAgentRunEventMutation(c.config, OpUpdateOne, withAgentRunEventID(id))
+	return &AgentRunEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AgentRunEvent.
+func (c *AgentRunEventClient) Delete() *AgentRunEventDelete {
+	mutation := newAgentRunEventMutation(c.config, OpDelete)
+	return &AgentRunEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AgentRunEventClient) DeleteOne(_m *AgentRunEvent) *AgentRunEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AgentRunEventClient) DeleteOneID(id string) *AgentRunEventDeleteOne {
+	builder := c.Delete().Where(agentrunevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AgentRunEventDeleteOne{builder}
+}
+
+// Query returns a query builder for AgentRunEvent.
+func (c *AgentRunEventClient) Query() *AgentRunEventQuery {
+	return &AgentRunEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAgentRunEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AgentRunEvent entity by its id.
+func (c *AgentRunEventClient) Get(ctx context.Context, id string) (*AgentRunEvent, error) {
+	return c.Query().Where(agentrunevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AgentRunEventClient) GetX(ctx context.Context, id string) *AgentRunEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AgentRunEventClient) Hooks() []Hook {
+	return c.hooks.AgentRunEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *AgentRunEventClient) Interceptors() []Interceptor {
+	return c.inters.AgentRunEvent
+}
+
+func (c *AgentRunEventClient) mutate(ctx context.Context, m *AgentRunEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AgentRunEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AgentRunEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AgentRunEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AgentRunEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AgentRunEvent mutation op: %q", m.Op())
 	}
 }
 
@@ -452,6 +752,272 @@ func (c *ChannelClient) mutate(ctx context.Context, m *ChannelMutation) (Value, 
 		return (&ChannelDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Channel mutation op: %q", m.Op())
+	}
+}
+
+// ChannelDecisionClient is a client for the ChannelDecision schema.
+type ChannelDecisionClient struct {
+	config
+}
+
+// NewChannelDecisionClient returns a client for the ChannelDecision from the given config.
+func NewChannelDecisionClient(c config) *ChannelDecisionClient {
+	return &ChannelDecisionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `channeldecision.Hooks(f(g(h())))`.
+func (c *ChannelDecisionClient) Use(hooks ...Hook) {
+	c.hooks.ChannelDecision = append(c.hooks.ChannelDecision, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `channeldecision.Intercept(f(g(h())))`.
+func (c *ChannelDecisionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ChannelDecision = append(c.inters.ChannelDecision, interceptors...)
+}
+
+// Create returns a builder for creating a ChannelDecision entity.
+func (c *ChannelDecisionClient) Create() *ChannelDecisionCreate {
+	mutation := newChannelDecisionMutation(c.config, OpCreate)
+	return &ChannelDecisionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ChannelDecision entities.
+func (c *ChannelDecisionClient) CreateBulk(builders ...*ChannelDecisionCreate) *ChannelDecisionCreateBulk {
+	return &ChannelDecisionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ChannelDecisionClient) MapCreateBulk(slice any, setFunc func(*ChannelDecisionCreate, int)) *ChannelDecisionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ChannelDecisionCreateBulk{err: fmt.Errorf("calling to ChannelDecisionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ChannelDecisionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ChannelDecisionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ChannelDecision.
+func (c *ChannelDecisionClient) Update() *ChannelDecisionUpdate {
+	mutation := newChannelDecisionMutation(c.config, OpUpdate)
+	return &ChannelDecisionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ChannelDecisionClient) UpdateOne(_m *ChannelDecision) *ChannelDecisionUpdateOne {
+	mutation := newChannelDecisionMutation(c.config, OpUpdateOne, withChannelDecision(_m))
+	return &ChannelDecisionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ChannelDecisionClient) UpdateOneID(id string) *ChannelDecisionUpdateOne {
+	mutation := newChannelDecisionMutation(c.config, OpUpdateOne, withChannelDecisionID(id))
+	return &ChannelDecisionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ChannelDecision.
+func (c *ChannelDecisionClient) Delete() *ChannelDecisionDelete {
+	mutation := newChannelDecisionMutation(c.config, OpDelete)
+	return &ChannelDecisionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ChannelDecisionClient) DeleteOne(_m *ChannelDecision) *ChannelDecisionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ChannelDecisionClient) DeleteOneID(id string) *ChannelDecisionDeleteOne {
+	builder := c.Delete().Where(channeldecision.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ChannelDecisionDeleteOne{builder}
+}
+
+// Query returns a query builder for ChannelDecision.
+func (c *ChannelDecisionClient) Query() *ChannelDecisionQuery {
+	return &ChannelDecisionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeChannelDecision},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ChannelDecision entity by its id.
+func (c *ChannelDecisionClient) Get(ctx context.Context, id string) (*ChannelDecision, error) {
+	return c.Query().Where(channeldecision.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ChannelDecisionClient) GetX(ctx context.Context, id string) *ChannelDecision {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ChannelDecisionClient) Hooks() []Hook {
+	return c.hooks.ChannelDecision
+}
+
+// Interceptors returns the client interceptors.
+func (c *ChannelDecisionClient) Interceptors() []Interceptor {
+	return c.inters.ChannelDecision
+}
+
+func (c *ChannelDecisionClient) mutate(ctx context.Context, m *ChannelDecisionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ChannelDecisionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ChannelDecisionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ChannelDecisionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ChannelDecisionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ChannelDecision mutation op: %q", m.Op())
+	}
+}
+
+// ChannelDecisionVoteClient is a client for the ChannelDecisionVote schema.
+type ChannelDecisionVoteClient struct {
+	config
+}
+
+// NewChannelDecisionVoteClient returns a client for the ChannelDecisionVote from the given config.
+func NewChannelDecisionVoteClient(c config) *ChannelDecisionVoteClient {
+	return &ChannelDecisionVoteClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `channeldecisionvote.Hooks(f(g(h())))`.
+func (c *ChannelDecisionVoteClient) Use(hooks ...Hook) {
+	c.hooks.ChannelDecisionVote = append(c.hooks.ChannelDecisionVote, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `channeldecisionvote.Intercept(f(g(h())))`.
+func (c *ChannelDecisionVoteClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ChannelDecisionVote = append(c.inters.ChannelDecisionVote, interceptors...)
+}
+
+// Create returns a builder for creating a ChannelDecisionVote entity.
+func (c *ChannelDecisionVoteClient) Create() *ChannelDecisionVoteCreate {
+	mutation := newChannelDecisionVoteMutation(c.config, OpCreate)
+	return &ChannelDecisionVoteCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ChannelDecisionVote entities.
+func (c *ChannelDecisionVoteClient) CreateBulk(builders ...*ChannelDecisionVoteCreate) *ChannelDecisionVoteCreateBulk {
+	return &ChannelDecisionVoteCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ChannelDecisionVoteClient) MapCreateBulk(slice any, setFunc func(*ChannelDecisionVoteCreate, int)) *ChannelDecisionVoteCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ChannelDecisionVoteCreateBulk{err: fmt.Errorf("calling to ChannelDecisionVoteClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ChannelDecisionVoteCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ChannelDecisionVoteCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ChannelDecisionVote.
+func (c *ChannelDecisionVoteClient) Update() *ChannelDecisionVoteUpdate {
+	mutation := newChannelDecisionVoteMutation(c.config, OpUpdate)
+	return &ChannelDecisionVoteUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ChannelDecisionVoteClient) UpdateOne(_m *ChannelDecisionVote) *ChannelDecisionVoteUpdateOne {
+	mutation := newChannelDecisionVoteMutation(c.config, OpUpdateOne, withChannelDecisionVote(_m))
+	return &ChannelDecisionVoteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ChannelDecisionVoteClient) UpdateOneID(id string) *ChannelDecisionVoteUpdateOne {
+	mutation := newChannelDecisionVoteMutation(c.config, OpUpdateOne, withChannelDecisionVoteID(id))
+	return &ChannelDecisionVoteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ChannelDecisionVote.
+func (c *ChannelDecisionVoteClient) Delete() *ChannelDecisionVoteDelete {
+	mutation := newChannelDecisionVoteMutation(c.config, OpDelete)
+	return &ChannelDecisionVoteDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ChannelDecisionVoteClient) DeleteOne(_m *ChannelDecisionVote) *ChannelDecisionVoteDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ChannelDecisionVoteClient) DeleteOneID(id string) *ChannelDecisionVoteDeleteOne {
+	builder := c.Delete().Where(channeldecisionvote.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ChannelDecisionVoteDeleteOne{builder}
+}
+
+// Query returns a query builder for ChannelDecisionVote.
+func (c *ChannelDecisionVoteClient) Query() *ChannelDecisionVoteQuery {
+	return &ChannelDecisionVoteQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeChannelDecisionVote},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ChannelDecisionVote entity by its id.
+func (c *ChannelDecisionVoteClient) Get(ctx context.Context, id string) (*ChannelDecisionVote, error) {
+	return c.Query().Where(channeldecisionvote.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ChannelDecisionVoteClient) GetX(ctx context.Context, id string) *ChannelDecisionVote {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ChannelDecisionVoteClient) Hooks() []Hook {
+	return c.hooks.ChannelDecisionVote
+}
+
+// Interceptors returns the client interceptors.
+func (c *ChannelDecisionVoteClient) Interceptors() []Interceptor {
+	return c.inters.ChannelDecisionVote
+}
+
+func (c *ChannelDecisionVoteClient) mutate(ctx context.Context, m *ChannelDecisionVoteMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ChannelDecisionVoteCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ChannelDecisionVoteUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ChannelDecisionVoteUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ChannelDecisionVoteDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ChannelDecisionVote mutation op: %q", m.Op())
 	}
 }
 
@@ -2320,14 +2886,15 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Channel, ChannelMember, CollaborationEvent, IdempotencyRecord,
-		InteractionEndpoint, Message, NotificationRoute, OutboundDelivery, Reminder,
-		ReminderEvent, SavedMessage, Session, Task, ThreadReadState, User []ent.Hook
+		AgentRun, AgentRunEvent, Channel, ChannelDecision, ChannelDecisionVote,
+		ChannelMember, CollaborationEvent, IdempotencyRecord, InteractionEndpoint,
+		Message, NotificationRoute, OutboundDelivery, Reminder, ReminderEvent,
+		SavedMessage, Session, Task, ThreadReadState, User []ent.Hook
 	}
 	inters struct {
-		Channel, ChannelMember, CollaborationEvent, IdempotencyRecord,
-		InteractionEndpoint, Message, NotificationRoute, OutboundDelivery, Reminder,
-		ReminderEvent, SavedMessage, Session, Task, ThreadReadState,
-		User []ent.Interceptor
+		AgentRun, AgentRunEvent, Channel, ChannelDecision, ChannelDecisionVote,
+		ChannelMember, CollaborationEvent, IdempotencyRecord, InteractionEndpoint,
+		Message, NotificationRoute, OutboundDelivery, Reminder, ReminderEvent,
+		SavedMessage, Session, Task, ThreadReadState, User []ent.Interceptor
 	}
 )

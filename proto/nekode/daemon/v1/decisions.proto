@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+// DecisionStatus tracks a channel decision through its lifecycle.
+enum DecisionStatus {
+  DECISION_STATUS_UNSPECIFIED = 0;
+  DECISION_STATUS_PROPOSED = 1;
+  DECISION_STATUS_RATIFIED = 2;
+  DECISION_STATUS_REJECTED = 3;
+  DECISION_STATUS_RETIRED = 4;
+}
+
+// DecisionVote is how a voter weighs in.
+enum DecisionVote {
+  DECISION_VOTE_UNSPECIFIED = 0;
+  DECISION_VOTE_APPROVE = 1;
+  DECISION_VOTE_REJECT = 2;
+  DECISION_VOTE_ABSTAIN = 3;
+}
+
+// ChannelDecision is an architectural decision attached to a channel. It
+// may be proposed, voted on, ratified, and later retired. Retired or
+// rejected decisions remain in history for auditability.
+message ChannelDecision {
+  string decision_id = 1;
+  string target = 2;
+  string title = 3;
+  string body = 4;
+  DecisionStatus status = 5;
+  string proposer_id = 6;
+  ActorKind proposer_kind = 7;
+  int64 created_time_unix = 8;
+  int64 ratified_time_unix = 9;
+  int64 retired_time_unix = 10;
+  string retired_by = 11;
+  string retire_reason = 12;
+  string supersedes_decision_id = 13;
+  uint32 approve_count = 14;
+  uint32 reject_count = 15;
+  uint32 abstain_count = 16;
+}
+
+message DecisionVoteRecord {
+  string decision_id = 1;
+  string voter_id = 2;
+  ActorKind voter_kind = 3;
+  DecisionVote decision = 4;
+  int64 voted_time_unix = 5;
+  string reason = 6;
+}
+
+message ListChannelDecisionsRequest {
+  string target = 1;
+  // Optional status filter. Empty list means "all statuses".
+  repeated DecisionStatus status_filter = 2;
+  uint32 limit = 3;
+  EventCursor cursor = 4;
+}
+
+message ListChannelDecisionsResponse {
+  repeated ChannelDecision decisions = 1;
+  EventCursor next_cursor = 2;
+}
+
+message ProposeChannelDecisionRequest {
+  string target = 1;
+  string title = 2;
+  string body = 3;
+  string supersedes_decision_id = 4;
+  string idempotency_key = 5;
+  RequestContext context = 6;
+}
+
+message ProposeChannelDecisionResponse {
+  ChannelDecision decision = 1;
+}
+
+message VoteChannelDecisionRequest {
+  string decision_id = 1;
+  DecisionVote decision = 2;
+  string reason = 3;
+  RequestContext context = 4;
+}
+
+message VoteChannelDecisionResponse {
+  // Full up-to-date decision record (reflects new counts + possible
+  // auto-ratification if quorum was met by this vote).
+  ChannelDecision decision = 1;
+  DecisionVoteRecord vote = 2;
+}
+
+message RatifyChannelDecisionRequest {
+  string decision_id = 1;
+  // Admin override; when absent the server evaluates quorum normally.
+  bool force = 2;
+  RequestContext context = 3;
+}
+
+message RatifyChannelDecisionResponse {
+  ChannelDecision decision = 1;
+}
+
+message RetireChannelDecisionRequest {
+  string decision_id = 1;
+  string reason = 2;
+  RequestContext context = 3;
+}
+
+message RetireChannelDecisionResponse {
+  ChannelDecision decision = 1;
+}
+
+message ListDecisionVotesRequest {
+  string decision_id = 1;
+}
+
+message ListDecisionVotesResponse {
+  repeated DecisionVoteRecord votes = 1;
+}

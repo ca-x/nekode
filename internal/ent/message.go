@@ -45,7 +45,9 @@ type Message struct {
 	// RequestID holds the value of the "request_id" field.
 	RequestID string `json:"request_id,omitempty"`
 	// CreatedUnix holds the value of the "created_unix" field.
-	CreatedUnix  int64 `json:"created_unix,omitempty"`
+	CreatedUnix int64 `json:"created_unix,omitempty"`
+	// Kind holds the value of the "kind" field.
+	Kind         string `json:"kind,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -56,7 +58,7 @@ func (*Message) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case message.FieldCreatedUnix:
 			values[i] = new(sql.NullInt64)
-		case message.FieldID, message.FieldTarget, message.FieldThreadID, message.FieldRole, message.FieldContent, message.FieldReplyToMessageID, message.FieldSenderUserID, message.FieldSenderAgentID, message.FieldSenderDisplayName, message.FieldSenderKind, message.FieldSourceEndpointID, message.FieldExternalMessageID, message.FieldMetadataJSON, message.FieldAttachmentsJSON, message.FieldRequestID:
+		case message.FieldID, message.FieldTarget, message.FieldThreadID, message.FieldRole, message.FieldContent, message.FieldReplyToMessageID, message.FieldSenderUserID, message.FieldSenderAgentID, message.FieldSenderDisplayName, message.FieldSenderKind, message.FieldSourceEndpointID, message.FieldExternalMessageID, message.FieldMetadataJSON, message.FieldAttachmentsJSON, message.FieldRequestID, message.FieldKind:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -169,6 +171,12 @@ func (_m *Message) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreatedUnix = value.Int64
 			}
+		case message.FieldKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field kind", values[i])
+			} else if value.Valid {
+				_m.Kind = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -249,6 +257,9 @@ func (_m *Message) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_unix=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CreatedUnix))
+	builder.WriteString(", ")
+	builder.WriteString("kind=")
+	builder.WriteString(_m.Kind)
 	builder.WriteByte(')')
 	return builder.String()
 }

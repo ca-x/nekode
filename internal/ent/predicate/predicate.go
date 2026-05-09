@@ -6,8 +6,20 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AgentRun is the predicate function for agentrun builders.
+type AgentRun func(*sql.Selector)
+
+// AgentRunEvent is the predicate function for agentrunevent builders.
+type AgentRunEvent func(*sql.Selector)
+
 // Channel is the predicate function for channel builders.
 type Channel func(*sql.Selector)
+
+// ChannelDecision is the predicate function for channeldecision builders.
+type ChannelDecision func(*sql.Selector)
+
+// ChannelDecisionVote is the predicate function for channeldecisionvote builders.
+type ChannelDecisionVote func(*sql.Selector)
 
 // ChannelMember is the predicate function for channelmember builders.
 type ChannelMember func(*sql.Selector)

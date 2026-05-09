@@ -8,6 +8,60 @@ import (
 )
 
 var (
+	// AgentRunsColumns holds the columns for the "agent_runs" table.
+	AgentRunsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "agent_id", Type: field.TypeString},
+		{Name: "computer_id", Type: field.TypeString},
+		{Name: "started_unix", Type: field.TypeInt64},
+		{Name: "ended_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "exit_code", Type: field.TypeInt32, Default: 0},
+		{Name: "summary", Type: field.TypeString, Default: ""},
+		{Name: "error", Type: field.TypeString, Default: ""},
+		{Name: "event_count", Type: field.TypeUint32, Default: 0},
+	}
+	// AgentRunsTable holds the schema information for the "agent_runs" table.
+	AgentRunsTable = &schema.Table{
+		Name:       "agent_runs",
+		Columns:    AgentRunsColumns,
+		PrimaryKey: []*schema.Column{AgentRunsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "agentrun_agent_id_started_unix",
+				Unique:  false,
+				Columns: []*schema.Column{AgentRunsColumns[1], AgentRunsColumns[3]},
+			},
+			{
+				Name:    "agentrun_computer_id_started_unix",
+				Unique:  false,
+				Columns: []*schema.Column{AgentRunsColumns[2], AgentRunsColumns[3]},
+			},
+		},
+	}
+	// AgentRunEventsColumns holds the columns for the "agent_run_events" table.
+	AgentRunEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "run_id", Type: field.TypeString},
+		{Name: "at_unix_nano", Type: field.TypeInt64},
+		{Name: "phase", Type: field.TypeString},
+		{Name: "summary", Type: field.TypeString, Default: ""},
+		{Name: "payload_json", Type: field.TypeString, Default: "{}"},
+		{Name: "exit_code", Type: field.TypeInt32, Default: 0},
+		{Name: "error_message", Type: field.TypeString, Default: ""},
+	}
+	// AgentRunEventsTable holds the schema information for the "agent_run_events" table.
+	AgentRunEventsTable = &schema.Table{
+		Name:       "agent_run_events",
+		Columns:    AgentRunEventsColumns,
+		PrimaryKey: []*schema.Column{AgentRunEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "agentrunevent_run_id_at_unix_nano",
+				Unique:  false,
+				Columns: []*schema.Column{AgentRunEventsColumns[1], AgentRunEventsColumns[2]},
+			},
+		},
+	}
 	// ChannelsColumns holds the columns for the "channels" table.
 	ChannelsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -34,6 +88,71 @@ var (
 				Name:    "channel_visibility",
 				Unique:  false,
 				Columns: []*schema.Column{ChannelsColumns[4]},
+			},
+		},
+	}
+	// ChannelDecisionsColumns holds the columns for the "channel_decisions" table.
+	ChannelDecisionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "target", Type: field.TypeString},
+		{Name: "title", Type: field.TypeString},
+		{Name: "body", Type: field.TypeString},
+		{Name: "status", Type: field.TypeString},
+		{Name: "proposer_id", Type: field.TypeString},
+		{Name: "proposer_kind", Type: field.TypeString},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "ratified_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "retired_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "retired_by", Type: field.TypeString, Default: ""},
+		{Name: "retire_reason", Type: field.TypeString, Default: ""},
+		{Name: "supersedes_decision_id", Type: field.TypeString, Default: ""},
+		{Name: "approve_count", Type: field.TypeUint32, Default: 0},
+		{Name: "reject_count", Type: field.TypeUint32, Default: 0},
+		{Name: "abstain_count", Type: field.TypeUint32, Default: 0},
+	}
+	// ChannelDecisionsTable holds the schema information for the "channel_decisions" table.
+	ChannelDecisionsTable = &schema.Table{
+		Name:       "channel_decisions",
+		Columns:    ChannelDecisionsColumns,
+		PrimaryKey: []*schema.Column{ChannelDecisionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "channeldecision_target_status_created_unix",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelDecisionsColumns[1], ChannelDecisionsColumns[4], ChannelDecisionsColumns[7]},
+			},
+			{
+				Name:    "channeldecision_supersedes_decision_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelDecisionsColumns[12]},
+			},
+		},
+	}
+	// ChannelDecisionVotesColumns holds the columns for the "channel_decision_votes" table.
+	ChannelDecisionVotesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "decision_id", Type: field.TypeString},
+		{Name: "voter_id", Type: field.TypeString},
+		{Name: "voter_kind", Type: field.TypeString},
+		{Name: "decision", Type: field.TypeString},
+		{Name: "voted_unix", Type: field.TypeInt64},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+	}
+	// ChannelDecisionVotesTable holds the schema information for the "channel_decision_votes" table.
+	ChannelDecisionVotesTable = &schema.Table{
+		Name:       "channel_decision_votes",
+		Columns:    ChannelDecisionVotesColumns,
+		PrimaryKey: []*schema.Column{ChannelDecisionVotesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "channeldecisionvote_decision_id_voter_id",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelDecisionVotesColumns[1], ChannelDecisionVotesColumns[2]},
+			},
+			{
+				Name:    "channeldecisionvote_voter_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelDecisionVotesColumns[2]},
 			},
 		},
 	}
@@ -217,6 +336,7 @@ var (
 		{Name: "attachments_json", Type: field.TypeString, Default: "[]"},
 		{Name: "request_id", Type: field.TypeString, Default: ""},
 		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "kind", Type: field.TypeString, Default: ""},
 	}
 	// MessagesTable holds the schema information for the "messages" table.
 	MessagesTable = &schema.Table{
@@ -243,6 +363,11 @@ var (
 				Name:    "message_request_id",
 				Unique:  false,
 				Columns: []*schema.Column{MessagesColumns[14]},
+			},
+			{
+				Name:    "message_target_kind_created_unix",
+				Unique:  false,
+				Columns: []*schema.Column{MessagesColumns[1], MessagesColumns[16], MessagesColumns[15]},
 			},
 		},
 	}
@@ -575,7 +700,11 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AgentRunsTable,
+		AgentRunEventsTable,
 		ChannelsTable,
+		ChannelDecisionsTable,
+		ChannelDecisionVotesTable,
 		ChannelMembersTable,
 		CollaborationEventsTable,
 		IdempotencyRecordsTable,

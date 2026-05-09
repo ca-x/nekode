@@ -189,6 +189,20 @@ func (_c *MessageCreate) SetCreatedUnix(v int64) *MessageCreate {
 	return _c
 }
 
+// SetKind sets the "kind" field.
+func (_c *MessageCreate) SetKind(v string) *MessageCreate {
+	_c.mutation.SetKind(v)
+	return _c
+}
+
+// SetNillableKind sets the "kind" field if the given value is not nil.
+func (_c *MessageCreate) SetNillableKind(v *string) *MessageCreate {
+	if v != nil {
+		_c.SetKind(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *MessageCreate) SetID(v string) *MessageCreate {
 	_c.mutation.SetID(v)
@@ -278,6 +292,10 @@ func (_c *MessageCreate) defaults() {
 		v := message.DefaultRequestID
 		_c.mutation.SetRequestID(v)
 	}
+	if _, ok := _c.mutation.Kind(); !ok {
+		v := message.DefaultKind
+		_c.mutation.SetKind(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := message.DefaultID()
 		_c.mutation.SetID(v)
@@ -350,6 +368,9 @@ func (_c *MessageCreate) check() error {
 	}
 	if _, ok := _c.mutation.CreatedUnix(); !ok {
 		return &ValidationError{Name: "created_unix", err: errors.New(`ent: missing required field "Message.created_unix"`)}
+	}
+	if _, ok := _c.mutation.Kind(); !ok {
+		return &ValidationError{Name: "kind", err: errors.New(`ent: missing required field "Message.kind"`)}
 	}
 	return nil
 }
@@ -445,6 +466,10 @@ func (_c *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedUnix(); ok {
 		_spec.SetField(message.FieldCreatedUnix, field.TypeInt64, value)
 		_node.CreatedUnix = value
+	}
+	if value, ok := _c.mutation.Kind(); ok {
+		_spec.SetField(message.FieldKind, field.TypeString, value)
+		_node.Kind = value
 	}
 	return _node, _spec
 }

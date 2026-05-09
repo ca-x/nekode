@@ -12,8 +12,16 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AgentRun is the client for interacting with the AgentRun builders.
+	AgentRun *AgentRunClient
+	// AgentRunEvent is the client for interacting with the AgentRunEvent builders.
+	AgentRunEvent *AgentRunEventClient
 	// Channel is the client for interacting with the Channel builders.
 	Channel *ChannelClient
+	// ChannelDecision is the client for interacting with the ChannelDecision builders.
+	ChannelDecision *ChannelDecisionClient
+	// ChannelDecisionVote is the client for interacting with the ChannelDecisionVote builders.
+	ChannelDecisionVote *ChannelDecisionVoteClient
 	// ChannelMember is the client for interacting with the ChannelMember builders.
 	ChannelMember *ChannelMemberClient
 	// CollaborationEvent is the client for interacting with the CollaborationEvent builders.
@@ -173,7 +181,11 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AgentRun = NewAgentRunClient(tx.config)
+	tx.AgentRunEvent = NewAgentRunEventClient(tx.config)
 	tx.Channel = NewChannelClient(tx.config)
+	tx.ChannelDecision = NewChannelDecisionClient(tx.config)
+	tx.ChannelDecisionVote = NewChannelDecisionVoteClient(tx.config)
 	tx.ChannelMember = NewChannelMemberClient(tx.config)
 	tx.CollaborationEvent = NewCollaborationEventClient(tx.config)
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
@@ -197,7 +209,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Channel.QueryXXX(), the query will be executed
+// applies a query, for example: AgentRun.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

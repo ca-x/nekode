@@ -108,6 +108,9 @@ type Message struct {
 	Attachments       []Attachment `json:"attachments,omitempty"`
 	RequestID         string       `json:"requestId,omitempty"`
 	CreatedUnix       int64        `json:"createdUnix"`
+	// Kind classifies the message for filtering and promotion. Valid values:
+	// note (default), decision, blocker, status.
+	Kind string `json:"kind,omitempty"`
 }
 
 type OutboundDelivery struct {
@@ -282,6 +285,97 @@ type ReminderPatch struct {
 	RecurrenceRule        *string
 	RecurrenceDescription *string
 	RecurrenceTimezone    *string
+}
+
+// ChannelDecision is a governance record attached to a channel. Status is
+// one of: proposed, ratified, rejected, retired.
+type ChannelDecision struct {
+	ID                   string `json:"id"`
+	Target               string `json:"target"`
+	Title                string `json:"title"`
+	Body                 string `json:"body"`
+	Status               string `json:"status"`
+	ProposerID           string `json:"proposerId"`
+	ProposerKind         string `json:"proposerKind"`
+	CreatedUnix          int64  `json:"createdUnix"`
+	RatifiedUnix         int64  `json:"ratifiedUnix,omitempty"`
+	RetiredUnix          int64  `json:"retiredUnix,omitempty"`
+	RetiredBy            string `json:"retiredBy,omitempty"`
+	RetireReason         string `json:"retireReason,omitempty"`
+	SupersedesDecisionID string `json:"supersedesDecisionId,omitempty"`
+	ApproveCount         uint32 `json:"approveCount"`
+	RejectCount          uint32 `json:"rejectCount"`
+	AbstainCount         uint32 `json:"abstainCount"`
+}
+
+// ChannelDecisionListOptions filters the list of decisions.
+type ChannelDecisionListOptions struct {
+	Target        string
+	StatusFilter  []string // empty means all
+	Limit         int
+	AfterCreated  int64
+}
+
+// ChannelDecisionVote is one voter's stance. Decision is one of:
+// approve, reject, abstain.
+type ChannelDecisionVote struct {
+	ID         string `json:"id"`
+	DecisionID string `json:"decisionId"`
+	VoterID    string `json:"voterId"`
+	VoterKind  string `json:"voterKind"`
+	Decision   string `json:"decision"`
+	VotedUnix  int64  `json:"votedUnix"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+// AgentRun is one agent session. EventCount is maintained by the server as
+// it ingests events.
+type AgentRun struct {
+	ID           string `json:"id"`
+	AgentID      string `json:"agentId"`
+	ComputerID   string `json:"computerId"`
+	StartedUnix  int64  `json:"startedUnix"`
+	EndedUnix    int64  `json:"endedUnix,omitempty"`
+	ExitCode     int32  `json:"exitCode"`
+	Summary      string `json:"summary,omitempty"`
+	Error        string `json:"error,omitempty"`
+	EventCount   uint32 `json:"eventCount"`
+}
+
+// AgentRunListOptions filters agent run listings.
+type AgentRunListOptions struct {
+	AgentID       string
+	ComputerID    string
+	Limit         int
+	BeforeStarted int64
+}
+
+// AgentRunEvent is one lifecycle event inside a run. Phase is one of:
+// start, tool_call, tool_result, error, output, end.
+type AgentRunEvent struct {
+	ID           string `json:"id"`
+	RunID        string `json:"runId"`
+	AtUnixNano   int64  `json:"atUnixNano"`
+	Phase        string `json:"phase"`
+	Summary      string `json:"summary,omitempty"`
+	PayloadJSON  string `json:"payloadJson,omitempty"`
+	ExitCode     int32  `json:"exitCode,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+}
+
+// AgentRunSearchOptions queries agent_run_events_fts.
+type AgentRunSearchOptions struct {
+	Query      string
+	AgentID    string
+	ComputerID string
+	Limit      int
+}
+
+// AgentRunSearchHit pairs a matching event with its run + a highlight excerpt.
+type AgentRunSearchHit struct {
+	Run       AgentRun      `json:"run"`
+	Event     AgentRunEvent `json:"event"`
+	Highlight string        `json:"highlight,omitempty"`
 }
 
 type ReminderEvent struct {

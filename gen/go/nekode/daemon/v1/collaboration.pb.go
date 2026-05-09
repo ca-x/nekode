@@ -378,6 +378,67 @@ func (MessageSearchSort) EnumDescriptor() ([]byte, []int) {
 	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{5}
 }
 
+// MessageKind classifies the semantic purpose of a message.
+// - NOTE: regular chat text (default).
+// - DECISION: proposes or references a channel-level decision.
+// - BLOCKER: the sender is stuck and needs help.
+// - STATUS: progress update / heartbeat-style message.
+// Values other than these five are invalid at the API boundary.
+type MessageKind int32
+
+const (
+	MessageKind_MESSAGE_KIND_UNSPECIFIED MessageKind = 0
+	MessageKind_MESSAGE_KIND_NOTE        MessageKind = 1
+	MessageKind_MESSAGE_KIND_DECISION    MessageKind = 2
+	MessageKind_MESSAGE_KIND_BLOCKER     MessageKind = 3
+	MessageKind_MESSAGE_KIND_STATUS      MessageKind = 4
+)
+
+// Enum value maps for MessageKind.
+var (
+	MessageKind_name = map[int32]string{
+		0: "MESSAGE_KIND_UNSPECIFIED",
+		1: "MESSAGE_KIND_NOTE",
+		2: "MESSAGE_KIND_DECISION",
+		3: "MESSAGE_KIND_BLOCKER",
+		4: "MESSAGE_KIND_STATUS",
+	}
+	MessageKind_value = map[string]int32{
+		"MESSAGE_KIND_UNSPECIFIED": 0,
+		"MESSAGE_KIND_NOTE":        1,
+		"MESSAGE_KIND_DECISION":    2,
+		"MESSAGE_KIND_BLOCKER":     3,
+		"MESSAGE_KIND_STATUS":      4,
+	}
+)
+
+func (x MessageKind) Enum() *MessageKind {
+	p := new(MessageKind)
+	*p = x
+	return p
+}
+
+func (x MessageKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MessageKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_nekode_daemon_v1_collaboration_proto_enumTypes[6].Descriptor()
+}
+
+func (MessageKind) Type() protoreflect.EnumType {
+	return &file_nekode_daemon_v1_collaboration_proto_enumTypes[6]
+}
+
+func (x MessageKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MessageKind.Descriptor instead.
+func (MessageKind) EnumDescriptor() ([]byte, []int) {
+	return file_nekode_daemon_v1_collaboration_proto_rawDescGZIP(), []int{6}
+}
+
 type ChannelRecord struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Target      string                 `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
@@ -1366,6 +1427,7 @@ type CollaborationMessage struct {
 	Sender               *Actor              `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
 	Sequence             int64               `protobuf:"varint,19,opt,name=sequence,proto3" json:"sequence,omitempty"`
 	AggregateId          string              `protobuf:"bytes,20,opt,name=aggregate_id,json=aggregateId,proto3" json:"aggregate_id,omitempty"`
+	Kind                 MessageKind         `protobuf:"varint,21,opt,name=kind,proto3,enum=nekode.daemon.v1.MessageKind" json:"kind,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1517,6 +1579,13 @@ func (x *CollaborationMessage) GetAggregateId() string {
 		return x.AggregateId
 	}
 	return ""
+}
+
+func (x *CollaborationMessage) GetKind() MessageKind {
+	if x != nil {
+		return x.Kind
+	}
+	return MessageKind_MESSAGE_KIND_UNSPECIFIED
 }
 
 type ReadMessagesRequest struct {
@@ -1796,6 +1865,7 @@ type SendMessageRequest struct {
 	Context              *RequestContext `protobuf:"bytes,16,opt,name=context,proto3" json:"context,omitempty"`
 	OutboundPolicy       OutboundPolicy  `protobuf:"varint,17,opt,name=outbound_policy,json=outboundPolicy,proto3,enum=nekode.daemon.v1.OutboundPolicy" json:"outbound_policy,omitempty"`
 	Sender               *Actor          `protobuf:"bytes,18,opt,name=sender,proto3" json:"sender,omitempty"`
+	Kind                 MessageKind     `protobuf:"varint,19,opt,name=kind,proto3,enum=nekode.daemon.v1.MessageKind" json:"kind,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1933,6 +2003,13 @@ func (x *SendMessageRequest) GetSender() *Actor {
 		return x.Sender
 	}
 	return nil
+}
+
+func (x *SendMessageRequest) GetKind() MessageKind {
+	if x != nil {
+		return x.Kind
+	}
+	return MessageKind_MESSAGE_KIND_UNSPECIFIED
 }
 
 type SendMessageResponse struct {
@@ -3215,7 +3292,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x10GetThreadRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\"K\n" +
 	"\x11GetThreadResponse\x126\n" +
-	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xf8\x05\n" +
+	"\x06thread\x18\x01 \x01(\v2\x1e.nekode.daemon.v1.ThreadRecordR\x06thread\"\xab\x06\n" +
 	"\x14CollaborationMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
@@ -3235,7 +3312,8 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x10memory_record_id\x18\x11 \x01(\tR\x0ememoryRecordId\x12/\n" +
 	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06sender\x12\x1a\n" +
 	"\bsequence\x18\x13 \x01(\x03R\bsequence\x12!\n" +
-	"\faggregate_id\x18\x14 \x01(\tR\vaggregateIdJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\n" +
+	"\faggregate_id\x18\x14 \x01(\tR\vaggregateId\x121\n" +
+	"\x04kind\x18\x15 \x01(\x0e2\x1d.nekode.daemon.v1.MessageKindR\x04kindJ\x06\b\xe8\a\x10\xd0\x0fJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\n" +
 	"\x10\vR\x0fsender_agent_idR\x13sender_display_nameR\vsender_kind\"\xa7\x01\n" +
 	"\x13ReadMessagesRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x14\n" +
@@ -3257,7 +3335,7 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x16SearchMessagesResponse\x12B\n" +
 	"\bmessages\x18\x01 \x03(\v2&.nekode.daemon.v1.CollaborationMessageR\bmessages\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"\xd0\x05\n" +
+	"nextCursor\"\x83\x06\n" +
 	"\x12SendMessageRequest\x12\x16\n" +
 	"\x06target\x18\x01 \x01(\tR\x06target\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
@@ -3275,7 +3353,8 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\x0f \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\x10 \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12I\n" +
 	"\x0foutbound_policy\x18\x11 \x01(\x0e2 .nekode.daemon.v1.OutboundPolicyR\x0eoutboundPolicy\x12/\n" +
-	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06senderJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\v\x10\fR\x0fsender_agent_idR\x13sender_display_nameR\x0esender_user_id\"s\n" +
+	"\x06sender\x18\x12 \x01(\v2\x17.nekode.daemon.v1.ActorR\x06sender\x121\n" +
+	"\x04kind\x18\x13 \x01(\x0e2\x1d.nekode.daemon.v1.MessageKindR\x04kindJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\v\x10\fR\x0fsender_agent_idR\x13sender_display_nameR\x0esender_user_id\"s\n" +
 	"\x13SendMessageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12@\n" +
 	"\amessage\x18\x02 \x01(\v2&.nekode.daemon.v1.CollaborationMessageR\amessage\"\xd0\x02\n" +
@@ -3418,7 +3497,13 @@ const file_nekode_daemon_v1_collaboration_proto_rawDesc = "" +
 	"\x11MessageSearchSort\x12#\n" +
 	"\x1fMESSAGE_SEARCH_SORT_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dMESSAGE_SEARCH_SORT_RELEVANCE\x10\x01\x12\x1e\n" +
-	"\x1aMESSAGE_SEARCH_SORT_RECENT\x10\x02B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
+	"\x1aMESSAGE_SEARCH_SORT_RECENT\x10\x02*\x90\x01\n" +
+	"\vMessageKind\x12\x1c\n" +
+	"\x18MESSAGE_KIND_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11MESSAGE_KIND_NOTE\x10\x01\x12\x19\n" +
+	"\x15MESSAGE_KIND_DECISION\x10\x02\x12\x18\n" +
+	"\x14MESSAGE_KIND_BLOCKER\x10\x03\x12\x17\n" +
+	"\x13MESSAGE_KIND_STATUS\x10\x04B9Z7github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1b\x06proto3"
 
 var (
 	file_nekode_daemon_v1_collaboration_proto_rawDescOnce sync.Once
@@ -3432,7 +3517,7 @@ func file_nekode_daemon_v1_collaboration_proto_rawDescGZIP() []byte {
 	return file_nekode_daemon_v1_collaboration_proto_rawDescData
 }
 
-var file_nekode_daemon_v1_collaboration_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_nekode_daemon_v1_collaboration_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
 var file_nekode_daemon_v1_collaboration_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
 	(EndpointAuthMode)(0),                    // 0: nekode.daemon.v1.EndpointAuthMode
@@ -3441,105 +3526,108 @@ var file_nekode_daemon_v1_collaboration_proto_goTypes = []any{
 	(ChannelVisibility)(0),                   // 3: nekode.daemon.v1.ChannelVisibility
 	(ChannelMemberRole)(0),                   // 4: nekode.daemon.v1.ChannelMemberRole
 	(MessageSearchSort)(0),                   // 5: nekode.daemon.v1.MessageSearchSort
-	(*ChannelRecord)(nil),                    // 6: nekode.daemon.v1.ChannelRecord
-	(*ChannelMemberRecord)(nil),              // 7: nekode.daemon.v1.ChannelMemberRecord
-	(*InteractionEndpoint)(nil),              // 8: nekode.daemon.v1.InteractionEndpoint
-	(*ListInteractionEndpointsRequest)(nil),  // 9: nekode.daemon.v1.ListInteractionEndpointsRequest
-	(*ListInteractionEndpointsResponse)(nil), // 10: nekode.daemon.v1.ListInteractionEndpointsResponse
-	(*ListChannelsRequest)(nil),              // 11: nekode.daemon.v1.ListChannelsRequest
-	(*ListChannelsResponse)(nil),             // 12: nekode.daemon.v1.ListChannelsResponse
-	(*ListChannelMembersRequest)(nil),        // 13: nekode.daemon.v1.ListChannelMembersRequest
-	(*ListChannelMembersResponse)(nil),       // 14: nekode.daemon.v1.ListChannelMembersResponse
-	(*ThreadRecord)(nil),                     // 15: nekode.daemon.v1.ThreadRecord
-	(*ListThreadsRequest)(nil),               // 16: nekode.daemon.v1.ListThreadsRequest
-	(*ListThreadsResponse)(nil),              // 17: nekode.daemon.v1.ListThreadsResponse
-	(*GetThreadRequest)(nil),                 // 18: nekode.daemon.v1.GetThreadRequest
-	(*GetThreadResponse)(nil),                // 19: nekode.daemon.v1.GetThreadResponse
-	(*CollaborationMessage)(nil),             // 20: nekode.daemon.v1.CollaborationMessage
-	(*ReadMessagesRequest)(nil),              // 21: nekode.daemon.v1.ReadMessagesRequest
-	(*ReadMessagesResponse)(nil),             // 22: nekode.daemon.v1.ReadMessagesResponse
-	(*SearchMessagesRequest)(nil),            // 23: nekode.daemon.v1.SearchMessagesRequest
-	(*SearchMessagesResponse)(nil),           // 24: nekode.daemon.v1.SearchMessagesResponse
-	(*SendMessageRequest)(nil),               // 25: nekode.daemon.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),              // 26: nekode.daemon.v1.SendMessageResponse
-	(*SavedMessageRecord)(nil),               // 27: nekode.daemon.v1.SavedMessageRecord
-	(*SaveMessageRequest)(nil),               // 28: nekode.daemon.v1.SaveMessageRequest
-	(*SaveMessageResponse)(nil),              // 29: nekode.daemon.v1.SaveMessageResponse
-	(*UnsaveMessageRequest)(nil),             // 30: nekode.daemon.v1.UnsaveMessageRequest
-	(*UnsaveMessageResponse)(nil),            // 31: nekode.daemon.v1.UnsaveMessageResponse
-	(*ListSavedMessagesRequest)(nil),         // 32: nekode.daemon.v1.ListSavedMessagesRequest
-	(*ListSavedMessagesResponse)(nil),        // 33: nekode.daemon.v1.ListSavedMessagesResponse
-	(*FollowThreadRequest)(nil),              // 34: nekode.daemon.v1.FollowThreadRequest
-	(*FollowThreadResponse)(nil),             // 35: nekode.daemon.v1.FollowThreadResponse
-	(*UnfollowThreadRequest)(nil),            // 36: nekode.daemon.v1.UnfollowThreadRequest
-	(*UnfollowThreadResponse)(nil),           // 37: nekode.daemon.v1.UnfollowThreadResponse
-	(*OutboundDeliveryRecord)(nil),           // 38: nekode.daemon.v1.OutboundDeliveryRecord
-	(*ListOutboundDeliveriesRequest)(nil),    // 39: nekode.daemon.v1.ListOutboundDeliveriesRequest
-	(*ListOutboundDeliveriesResponse)(nil),   // 40: nekode.daemon.v1.ListOutboundDeliveriesResponse
-	(*RetryOutboundDeliveryRequest)(nil),     // 41: nekode.daemon.v1.RetryOutboundDeliveryRequest
-	(*RetryOutboundDeliveryResponse)(nil),    // 42: nekode.daemon.v1.RetryOutboundDeliveryResponse
-	(*Capability)(nil),                       // 43: nekode.daemon.v1.Capability
-	(*Actor)(nil),                            // 44: nekode.daemon.v1.Actor
-	(*EventCursor)(nil),                      // 45: nekode.daemon.v1.EventCursor
-	(*AttachmentRecord)(nil),                 // 46: nekode.daemon.v1.AttachmentRecord
-	(*RequestContext)(nil),                   // 47: nekode.daemon.v1.RequestContext
+	(MessageKind)(0),                         // 6: nekode.daemon.v1.MessageKind
+	(*ChannelRecord)(nil),                    // 7: nekode.daemon.v1.ChannelRecord
+	(*ChannelMemberRecord)(nil),              // 8: nekode.daemon.v1.ChannelMemberRecord
+	(*InteractionEndpoint)(nil),              // 9: nekode.daemon.v1.InteractionEndpoint
+	(*ListInteractionEndpointsRequest)(nil),  // 10: nekode.daemon.v1.ListInteractionEndpointsRequest
+	(*ListInteractionEndpointsResponse)(nil), // 11: nekode.daemon.v1.ListInteractionEndpointsResponse
+	(*ListChannelsRequest)(nil),              // 12: nekode.daemon.v1.ListChannelsRequest
+	(*ListChannelsResponse)(nil),             // 13: nekode.daemon.v1.ListChannelsResponse
+	(*ListChannelMembersRequest)(nil),        // 14: nekode.daemon.v1.ListChannelMembersRequest
+	(*ListChannelMembersResponse)(nil),       // 15: nekode.daemon.v1.ListChannelMembersResponse
+	(*ThreadRecord)(nil),                     // 16: nekode.daemon.v1.ThreadRecord
+	(*ListThreadsRequest)(nil),               // 17: nekode.daemon.v1.ListThreadsRequest
+	(*ListThreadsResponse)(nil),              // 18: nekode.daemon.v1.ListThreadsResponse
+	(*GetThreadRequest)(nil),                 // 19: nekode.daemon.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),                // 20: nekode.daemon.v1.GetThreadResponse
+	(*CollaborationMessage)(nil),             // 21: nekode.daemon.v1.CollaborationMessage
+	(*ReadMessagesRequest)(nil),              // 22: nekode.daemon.v1.ReadMessagesRequest
+	(*ReadMessagesResponse)(nil),             // 23: nekode.daemon.v1.ReadMessagesResponse
+	(*SearchMessagesRequest)(nil),            // 24: nekode.daemon.v1.SearchMessagesRequest
+	(*SearchMessagesResponse)(nil),           // 25: nekode.daemon.v1.SearchMessagesResponse
+	(*SendMessageRequest)(nil),               // 26: nekode.daemon.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),              // 27: nekode.daemon.v1.SendMessageResponse
+	(*SavedMessageRecord)(nil),               // 28: nekode.daemon.v1.SavedMessageRecord
+	(*SaveMessageRequest)(nil),               // 29: nekode.daemon.v1.SaveMessageRequest
+	(*SaveMessageResponse)(nil),              // 30: nekode.daemon.v1.SaveMessageResponse
+	(*UnsaveMessageRequest)(nil),             // 31: nekode.daemon.v1.UnsaveMessageRequest
+	(*UnsaveMessageResponse)(nil),            // 32: nekode.daemon.v1.UnsaveMessageResponse
+	(*ListSavedMessagesRequest)(nil),         // 33: nekode.daemon.v1.ListSavedMessagesRequest
+	(*ListSavedMessagesResponse)(nil),        // 34: nekode.daemon.v1.ListSavedMessagesResponse
+	(*FollowThreadRequest)(nil),              // 35: nekode.daemon.v1.FollowThreadRequest
+	(*FollowThreadResponse)(nil),             // 36: nekode.daemon.v1.FollowThreadResponse
+	(*UnfollowThreadRequest)(nil),            // 37: nekode.daemon.v1.UnfollowThreadRequest
+	(*UnfollowThreadResponse)(nil),           // 38: nekode.daemon.v1.UnfollowThreadResponse
+	(*OutboundDeliveryRecord)(nil),           // 39: nekode.daemon.v1.OutboundDeliveryRecord
+	(*ListOutboundDeliveriesRequest)(nil),    // 40: nekode.daemon.v1.ListOutboundDeliveriesRequest
+	(*ListOutboundDeliveriesResponse)(nil),   // 41: nekode.daemon.v1.ListOutboundDeliveriesResponse
+	(*RetryOutboundDeliveryRequest)(nil),     // 42: nekode.daemon.v1.RetryOutboundDeliveryRequest
+	(*RetryOutboundDeliveryResponse)(nil),    // 43: nekode.daemon.v1.RetryOutboundDeliveryResponse
+	(*Capability)(nil),                       // 44: nekode.daemon.v1.Capability
+	(*Actor)(nil),                            // 45: nekode.daemon.v1.Actor
+	(*EventCursor)(nil),                      // 46: nekode.daemon.v1.EventCursor
+	(*AttachmentRecord)(nil),                 // 47: nekode.daemon.v1.AttachmentRecord
+	(*RequestContext)(nil),                   // 48: nekode.daemon.v1.RequestContext
 }
 var file_nekode_daemon_v1_collaboration_proto_depIdxs = []int32{
-	43, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
+	44, // 0: nekode.daemon.v1.ChannelRecord.capabilities:type_name -> nekode.daemon.v1.Capability
 	3,  // 1: nekode.daemon.v1.ChannelRecord.visibility:type_name -> nekode.daemon.v1.ChannelVisibility
-	44, // 2: nekode.daemon.v1.ChannelMemberRecord.member:type_name -> nekode.daemon.v1.Actor
+	45, // 2: nekode.daemon.v1.ChannelMemberRecord.member:type_name -> nekode.daemon.v1.Actor
 	4,  // 3: nekode.daemon.v1.ChannelMemberRecord.role:type_name -> nekode.daemon.v1.ChannelMemberRole
 	0,  // 4: nekode.daemon.v1.InteractionEndpoint.auth_mode:type_name -> nekode.daemon.v1.EndpointAuthMode
-	43, // 5: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
-	45, // 6: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	8,  // 7: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
-	45, // 8: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	45, // 9: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	6,  // 10: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
-	45, // 11: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	45, // 12: nekode.daemon.v1.ListChannelMembersRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	7,  // 13: nekode.daemon.v1.ListChannelMembersResponse.members:type_name -> nekode.daemon.v1.ChannelMemberRecord
-	45, // 14: nekode.daemon.v1.ListChannelMembersResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	45, // 15: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	15, // 16: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
-	45, // 17: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	15, // 18: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
-	46, // 19: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
-	44, // 20: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
-	45, // 21: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	20, // 22: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	45, // 23: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	44, // 24: nekode.daemon.v1.SearchMessagesRequest.sender:type_name -> nekode.daemon.v1.Actor
-	5,  // 25: nekode.daemon.v1.SearchMessagesRequest.sort:type_name -> nekode.daemon.v1.MessageSearchSort
-	45, // 26: nekode.daemon.v1.SearchMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	20, // 27: nekode.daemon.v1.SearchMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
-	45, // 28: nekode.daemon.v1.SearchMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	47, // 29: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	1,  // 30: nekode.daemon.v1.SendMessageRequest.outbound_policy:type_name -> nekode.daemon.v1.OutboundPolicy
-	44, // 31: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
-	20, // 32: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	20, // 33: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
-	47, // 34: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	27, // 35: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	47, // 36: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	27, // 37: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
-	45, // 38: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	27, // 39: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
-	45, // 40: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	47, // 41: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	47, // 42: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	2,  // 43: nekode.daemon.v1.OutboundDeliveryRecord.status:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
-	2,  // 44: nekode.daemon.v1.ListOutboundDeliveriesRequest.statuses:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
-	45, // 45: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
-	38, // 46: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	45, // 47: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
-	47, // 48: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
-	38, // 49: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
-	50, // [50:50] is the sub-list for method output_type
-	50, // [50:50] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	44, // 5: nekode.daemon.v1.InteractionEndpoint.capabilities:type_name -> nekode.daemon.v1.Capability
+	46, // 6: nekode.daemon.v1.ListInteractionEndpointsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	9,  // 7: nekode.daemon.v1.ListInteractionEndpointsResponse.endpoints:type_name -> nekode.daemon.v1.InteractionEndpoint
+	46, // 8: nekode.daemon.v1.ListInteractionEndpointsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	46, // 9: nekode.daemon.v1.ListChannelsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	7,  // 10: nekode.daemon.v1.ListChannelsResponse.channels:type_name -> nekode.daemon.v1.ChannelRecord
+	46, // 11: nekode.daemon.v1.ListChannelsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	46, // 12: nekode.daemon.v1.ListChannelMembersRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	8,  // 13: nekode.daemon.v1.ListChannelMembersResponse.members:type_name -> nekode.daemon.v1.ChannelMemberRecord
+	46, // 14: nekode.daemon.v1.ListChannelMembersResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	46, // 15: nekode.daemon.v1.ListThreadsRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	16, // 16: nekode.daemon.v1.ListThreadsResponse.threads:type_name -> nekode.daemon.v1.ThreadRecord
+	46, // 17: nekode.daemon.v1.ListThreadsResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	16, // 18: nekode.daemon.v1.GetThreadResponse.thread:type_name -> nekode.daemon.v1.ThreadRecord
+	47, // 19: nekode.daemon.v1.CollaborationMessage.attachments:type_name -> nekode.daemon.v1.AttachmentRecord
+	45, // 20: nekode.daemon.v1.CollaborationMessage.sender:type_name -> nekode.daemon.v1.Actor
+	6,  // 21: nekode.daemon.v1.CollaborationMessage.kind:type_name -> nekode.daemon.v1.MessageKind
+	46, // 22: nekode.daemon.v1.ReadMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	21, // 23: nekode.daemon.v1.ReadMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	46, // 24: nekode.daemon.v1.ReadMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	45, // 25: nekode.daemon.v1.SearchMessagesRequest.sender:type_name -> nekode.daemon.v1.Actor
+	5,  // 26: nekode.daemon.v1.SearchMessagesRequest.sort:type_name -> nekode.daemon.v1.MessageSearchSort
+	46, // 27: nekode.daemon.v1.SearchMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	21, // 28: nekode.daemon.v1.SearchMessagesResponse.messages:type_name -> nekode.daemon.v1.CollaborationMessage
+	46, // 29: nekode.daemon.v1.SearchMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	48, // 30: nekode.daemon.v1.SendMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	1,  // 31: nekode.daemon.v1.SendMessageRequest.outbound_policy:type_name -> nekode.daemon.v1.OutboundPolicy
+	45, // 32: nekode.daemon.v1.SendMessageRequest.sender:type_name -> nekode.daemon.v1.Actor
+	6,  // 33: nekode.daemon.v1.SendMessageRequest.kind:type_name -> nekode.daemon.v1.MessageKind
+	21, // 34: nekode.daemon.v1.SendMessageResponse.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	21, // 35: nekode.daemon.v1.SavedMessageRecord.message:type_name -> nekode.daemon.v1.CollaborationMessage
+	48, // 36: nekode.daemon.v1.SaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	28, // 37: nekode.daemon.v1.SaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	48, // 38: nekode.daemon.v1.UnsaveMessageRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	28, // 39: nekode.daemon.v1.UnsaveMessageResponse.saved_message:type_name -> nekode.daemon.v1.SavedMessageRecord
+	46, // 40: nekode.daemon.v1.ListSavedMessagesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	28, // 41: nekode.daemon.v1.ListSavedMessagesResponse.saved_messages:type_name -> nekode.daemon.v1.SavedMessageRecord
+	46, // 42: nekode.daemon.v1.ListSavedMessagesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	48, // 43: nekode.daemon.v1.FollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	48, // 44: nekode.daemon.v1.UnfollowThreadRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	2,  // 45: nekode.daemon.v1.OutboundDeliveryRecord.status:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
+	2,  // 46: nekode.daemon.v1.ListOutboundDeliveriesRequest.statuses:type_name -> nekode.daemon.v1.OutboundDeliveryStatus
+	46, // 47: nekode.daemon.v1.ListOutboundDeliveriesRequest.cursor:type_name -> nekode.daemon.v1.EventCursor
+	39, // 48: nekode.daemon.v1.ListOutboundDeliveriesResponse.deliveries:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	46, // 49: nekode.daemon.v1.ListOutboundDeliveriesResponse.next_cursor:type_name -> nekode.daemon.v1.EventCursor
+	48, // 50: nekode.daemon.v1.RetryOutboundDeliveryRequest.context:type_name -> nekode.daemon.v1.RequestContext
+	39, // 51: nekode.daemon.v1.RetryOutboundDeliveryResponse.delivery:type_name -> nekode.daemon.v1.OutboundDeliveryRecord
+	52, // [52:52] is the sub-list for method output_type
+	52, // [52:52] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_nekode_daemon_v1_collaboration_proto_init() }
@@ -3554,7 +3642,7 @@ func file_nekode_daemon_v1_collaboration_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nekode_daemon_v1_collaboration_proto_rawDesc), len(file_nekode_daemon_v1_collaboration_proto_rawDesc)),
-			NumEnums:      6,
+			NumEnums:      7,
 			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   0,
