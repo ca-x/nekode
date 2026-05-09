@@ -15,6 +15,23 @@
     "daemon": "守护进程",
     "signOut": "退出登录"
   },
+  "primary": {
+    "people": "人员",
+    "computers": "计算机",
+    "newChannel": "新建频道",
+    "newComputer": "添加计算机",
+    "section.channels": "频道",
+    "section.directMessages": "私信",
+    "section.threads": "会话线程",
+    "section.tasksViews": "视图",
+    "section.people": "成员",
+    "section.agents": "Agent",
+    "section.computers": "计算机",
+    "tasksAll": "全部任务",
+    "tasksMine": "我的",
+    "tasksActive": "进行中",
+    "openSettings": "打开设置"
+  },
   "sidebar": {
     "channels": "频道",
     "agents": "Agent",

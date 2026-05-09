@@ -15,6 +15,23 @@
     "daemon": "Daemon",
     "signOut": "Sign out"
   },
+  "primary": {
+    "people": "People",
+    "computers": "Computers",
+    "newChannel": "New channel",
+    "newComputer": "Add computer",
+    "section.channels": "Channels",
+    "section.directMessages": "Direct messages",
+    "section.threads": "Threads",
+    "section.tasksViews": "Views",
+    "section.people": "People",
+    "section.agents": "Agents",
+    "section.computers": "Computers",
+    "tasksAll": "All tasks",
+    "tasksMine": "Mine",
+    "tasksActive": "Active",
+    "openSettings": "Open settings"
+  },
   "sidebar": {
     "channels": "Channels",
     "agents": "Agents",

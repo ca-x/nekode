@@ -105,6 +105,69 @@ type ViewKey =
   | "settings"
   | "endpoints"
   | "daemon";
+
+type PrimarySlot = "messages" | "tasks" | "people" | "computers" | "settings";
+
+type PrimarySlotDescriptor = {
+  slot: PrimarySlot;
+  labelKey: MessageKey;
+  icon: typeof Activity;
+  /** Views that belong to this slot. The first entry is the slot default. */
+  views: ViewKey[];
+  /** Optional hash path for deep linking. */
+  hash: string;
+};
+
+const PRIMARY_SLOTS: readonly PrimarySlotDescriptor[] = [
+  { slot: "messages", labelKey: "nav.messages", icon: MessageSquare, views: ["messages", "inbox", "overview", "reminders", "activity"], hash: "#/messages" },
+  { slot: "tasks", labelKey: "nav.tasks", icon: Columns3, views: ["tasks"], hash: "#/tasks" },
+  { slot: "people", labelKey: "primary.people", icon: Bot, views: [], hash: "#/people" },
+  { slot: "computers", labelKey: "primary.computers", icon: Server, views: ["daemon", "endpoints"], hash: "#/computers" },
+  { slot: "settings", labelKey: "nav.settings", icon: Settings, views: ["settings"], hash: "#/settings" }
+];
+
+function slotForView(view: ViewKey): PrimarySlot {
+  for (const entry of PRIMARY_SLOTS) {
+    if (entry.views.includes(view)) return entry.slot;
+  }
+  return "messages";
+}
+
+function viewForSlot(slot: PrimarySlot, preferred?: ViewKey): ViewKey {
+  const entry = PRIMARY_SLOTS.find((candidate) => candidate.slot === slot);
+  if (!entry) return "messages";
+  if (preferred && entry.views.includes(preferred)) return preferred;
+  return entry.views[0] ?? "messages";
+}
+
+/**
+ * parseRouteHash maps a browser hash like `#/messages/general` or
+ * `#/tasks` to the matching top-level view. Unknown hashes fall back to
+ * the messages slot so deep links from older bookmarks don't error.
+ */
+function parseRouteHash(hash: string): { slot: PrimarySlot; view: ViewKey; rest: string } {
+  const trimmed = hash.replace(/^#\/?/, "");
+  const [headRaw, ...tail] = trimmed.split("/");
+  const head = (headRaw || "messages").toLowerCase();
+  const rest = tail.join("/");
+  const slotMatch = PRIMARY_SLOTS.find((entry) => entry.slot === head);
+  if (slotMatch) {
+    return { slot: slotMatch.slot, view: slotMatch.views[0] ?? "messages", rest };
+  }
+  // Accept direct view hashes too (#/inbox, #/reminders, #/activity, #/endpoints)
+  // so links from older sessions keep working.
+  const viewMatch = PRIMARY_SLOTS.flatMap((entry) => entry.views).find((candidate) => candidate === head);
+  if (viewMatch) {
+    return { slot: slotForView(viewMatch), view: viewMatch, rest };
+  }
+  return { slot: "messages", view: "messages", rest: "" };
+}
+
+function hashForView(view: ViewKey, rest?: string): string {
+  const slot = slotForView(view);
+  const tail = rest ? `/${rest.replace(/^\/+/, "")}` : "";
+  return `#/${slot}${tail}`;
+}
 type LoadState = "idle" | "loading" | "ready" | "error";
 type RealtimeStatus = "disabled" | "connecting" | "connected" | "error";
 type ThemePreference = "light" | "dark" | "system";
@@ -639,7 +702,8 @@ function App() {
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => readThemePreference());
   const [theme, setTheme] = useState<ThemeName>(() => resolvedTheme(themePreference));
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<ViewKey>("overview");
+  const [view, setView] = useState<ViewKey>(() => parseRouteHash(window.location.hash).view);
+  const primarySlot = slotForView(view);
   const [status, setStatus] = useState<LoadState>("idle");
   const [error, setError] = useState("");
   const [sectionIssues, setSectionIssues] = useState<SectionIssue[]>([]);
@@ -840,6 +904,25 @@ function App() {
     if (token) void loadData();
   }, [loadData, token]);
 
+  // Keep window.location.hash and the active view in sync so deep links
+  // work (e.g. copy-paste a URL pointing at #/computers) and the browser
+  // back button walks the navigation history instead of leaving the app.
+  useEffect(() => {
+    const desired = hashForView(view);
+    if (window.location.hash !== desired) {
+      window.history.replaceState(null, "", desired);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const parsed = parseRouteHash(window.location.hash);
+      setView((current) => (current === parsed.view ? current : parsed.view));
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   useEffect(() => {
     if (!token || !daemonInfo) {
       setRealtimeStatus("disabled");
@@ -948,35 +1031,82 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="Primary navigation">
+    <div className="app-shell with-primary-rail">
+      <nav className="primary-rail" aria-label="Primary navigation">
+        <img src={brandMarkUrl} alt="" className="primary-rail-brand" />
+        <div className="primary-rail-slots">
+          {PRIMARY_SLOTS.filter((entry) => entry.slot !== "settings").map((entry) => {
+            const Icon = entry.icon;
+            const label = t(entry.labelKey);
+            const active = primarySlot === entry.slot;
+            return (
+              <button
+                key={entry.slot}
+                className={active ? "primary-rail-slot is-active" : "primary-rail-slot"}
+                type="button"
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
+                title={label}
+                onClick={() => setView(viewForSlot(entry.slot, view))}
+              >
+                <Icon size={20} aria-hidden="true" />
+                <span className="primary-rail-slot-label">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="primary-rail-footer">
+          <button
+            className={primarySlot === "settings" ? "primary-rail-slot is-active" : "primary-rail-slot"}
+            type="button"
+            aria-label={t("primary.openSettings")}
+            aria-current={primarySlot === "settings" ? "page" : undefined}
+            title={t("primary.openSettings")}
+            onClick={() => setView("settings")}
+          >
+            <Settings size={20} aria-hidden="true" />
+            <span className="primary-rail-slot-label">{t("nav.settings")}</span>
+          </button>
+        </div>
+      </nav>
+
+      <aside className="sidebar" aria-label="Secondary navigation">
         <div className="brand">
           <img src={brandMarkUrl} alt="" className="brand-mark" />
           <div>
             <strong>Nekode</strong>
-            <span>Control Console</span>
+            <span>{t(PRIMARY_SLOTS.find((entry) => entry.slot === primarySlot)?.labelKey ?? "nav.messages")}</span>
           </div>
         </div>
-        <nav className="nav-list">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const label = t(item.labelKey);
-            return (
-              <button
-                key={item.key}
-                className={view === item.key ? "nav-item is-active" : "nav-item"}
-                type="button"
-                aria-label={label}
-                aria-current={view === item.key ? "page" : undefined}
-                title={label}
-                onClick={() => setView(item.key)}
-              >
-                <Icon size={18} aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        {(() => {
+          const slotEntry = PRIMARY_SLOTS.find((entry) => entry.slot === primarySlot);
+          if (!slotEntry || slotEntry.views.length <= 1) return null;
+          return (
+            <nav className="nav-list" aria-label="Sub-navigation">
+              {slotEntry.views.map((viewKey) => {
+                const item = navItems.find((candidate) => candidate.key === viewKey);
+                if (!item) return null;
+                const Icon = item.icon;
+                const label = t(item.labelKey);
+                return (
+                  <button
+                    key={item.key}
+                    className={view === item.key ? "nav-item is-active" : "nav-item"}
+                    type="button"
+                    aria-label={label}
+                    aria-current={view === item.key ? "page" : undefined}
+                    title={label}
+                    onClick={() => setView(item.key)}
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          );
+        })()}
+        {primarySlot === "messages" ? (
         <SidebarSection title={t("sidebar.channels")} actionLabel="Create channel">
           {channels.length === 0 ? (
             <p className="sidebar-empty">{t("sidebar.noChannelsYet")}</p>
@@ -998,6 +1128,8 @@ function App() {
             </button>
           ))}
         </SidebarSection>
+        ) : null}
+        {primarySlot === "messages" || primarySlot === "people" ? (
         <SidebarSection title={t("sidebar.agents")} actionLabel={t("sidebar.createAgent")}>
           {sidebarAgents.length === 0 ? (
             <p className="sidebar-empty">{t("sidebar.noAgentsYet")}</p>
@@ -1019,6 +1151,8 @@ function App() {
             </button>
           ))}
         </SidebarSection>
+        ) : null}
+        {primarySlot === "computers" || primarySlot === "people" ? (
         <SidebarSection title={t("sidebar.machines")}>
           {daemonInventory.length === 0 ? (
             <p className="sidebar-empty">{t("sidebar.noMachinesYet")}</p>
@@ -1040,6 +1174,7 @@ function App() {
             );
           })}
         </SidebarSection>
+        ) : null}
         <div className="user-panel">
           <div>
             <strong>{user?.displayName || user?.username || "Signed in"}</strong>
