@@ -1,0 +1,229 @@
+/*
+ * Design tokens for the rewritten shell. These layer on top of the existing
+ * palette in styles.css (we keep brand hues) and only add structural primitives:
+ * spacing, radii, durations, semantic roles, and layout metrics.
+ *
+ * Rules:
+ *   - Never hardcode color/spacing/radius in components — always reference a token.
+ *   - Light/dark variants are defined in :root and :root[data-theme="dark"].
+ *   - Follow-system is the default; :root[data-theme="system"] inherits from
+ *     prefers-color-scheme via the @media block below.
+ */
+
+:root {
+  /* Spacing scale (4pt rhythm). */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius scale. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 999px;
+
+  /* Typography scale. */
+  --font-size-11: 11px;
+  --font-size-12: 12px;
+  --font-size-13: 13px;
+  --font-size-14: 14px;
+  --font-size-15: 15px;
+  --font-size-16: 16px;
+  --font-size-18: 18px;
+  --font-size-20: 20px;
+  --font-size-24: 24px;
+  --font-size-28: 28px;
+
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.4;
+  --line-height-normal: 1.55;
+  --line-height-relaxed: 1.7;
+
+  /* Motion. Respect prefers-reduced-motion below. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout metrics. */
+  --rail-primary-width: 64px;
+  --rail-context-width: 272px;
+  --rail-detail-width: 320px;
+  --app-bar-height: 52px;
+  --mobile-tab-bar-height: 60px;
+  --content-max-width: 1080px;
+
+  /* Elevation. */
+  --elevation-1: 0 1px 2px rgba(23, 32, 29, 0.04);
+  --elevation-2: 0 4px 12px rgba(23, 32, 29, 0.06);
+  --elevation-3: 0 12px 32px rgba(23, 32, 29, 0.08);
+  --elevation-4: 0 24px 48px rgba(23, 32, 29, 0.12);
+
+  /* Semantic roles layered on the palette in styles.css. */
+  --agent-accent: var(--primary);
+  --agent-accent-soft: var(--primary-soft);
+  --alert-critical-bg: var(--notice-danger-bg);
+  --alert-critical-border: var(--notice-danger-border);
+  --alert-critical-text: var(--danger);
+  --alert-warning-bg: var(--notice-warning-bg);
+  --alert-warning-border: var(--notice-warning-border);
+  --alert-warning-text: var(--warning);
+  --alert-info-bg: var(--primary-soft);
+  --alert-info-border: var(--active-border);
+  --alert-info-text: var(--primary-strong);
+
+  /* Focus ring — 2px solid + 2px offset, same tone across light/dark. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--focus-ring);
+}
+
+:root[data-theme="dark"] {
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --elevation-4: 0 24px 48px rgba(0, 0, 0, 0.7);
+}
+
+/* Follow system when theme is "system" (set by the theme switcher in App). */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.6);
+    --elevation-4: 0 24px 48px rgba(0, 0, 0, 0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
+
+/*
+ * Three-pane shell that drives the rewrite. Older panels keep rendering
+ * under their existing classes; the shell only kicks in where components
+ * explicitly opt in by using .layout-shell / .rail-* classes.
+ */
+.layout-shell {
+  display: grid;
+  grid-template-columns: var(--rail-primary-width) var(--rail-context-width) 1fr;
+  grid-template-rows: 100%;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.layout-shell[data-with-detail="true"] {
+  grid-template-columns:
+    var(--rail-primary-width) var(--rail-context-width) minmax(0, 1fr) var(--rail-detail-width);
+}
+
+.rail-primary,
+.rail-context,
+.rail-detail {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rail-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tablet: collapse the context rail behind a toggle. */
+@media (max-width: 1023px) {
+  .layout-shell {
+    grid-template-columns: var(--rail-primary-width) 1fr;
+  }
+  .layout-shell[data-with-detail="true"] {
+    grid-template-columns: var(--rail-primary-width) 1fr;
+  }
+  .rail-context {
+    position: fixed;
+    inset: 0 auto 0 var(--rail-primary-width);
+    width: var(--rail-context-width);
+    z-index: 40;
+    transform: translateX(-100%);
+    transition: transform var(--duration-base) var(--ease-out);
+    box-shadow: var(--elevation-3);
+    background: var(--surface);
+  }
+  .layout-shell[data-context-open="true"] .rail-context {
+    transform: translateX(0);
+  }
+  .rail-detail {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(var(--rail-detail-width), 92vw);
+    z-index: 50;
+    transform: translateX(100%);
+    transition: transform var(--duration-base) var(--ease-out);
+    box-shadow: var(--elevation-3);
+    background: var(--surface);
+  }
+  .layout-shell[data-detail-open="true"] .rail-detail {
+    transform: translateX(0);
+  }
+}
+
+/* Phone: hide primary rail, switch to bottom tab bar. */
+@media (max-width: 767px) {
+  .layout-shell {
+    grid-template-columns: 1fr;
+    padding-bottom: calc(var(--mobile-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+  }
+  .layout-shell[data-with-detail="true"] {
+    grid-template-columns: 1fr;
+  }
+  .rail-primary {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--mobile-tab-bar-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 60;
+    display: flex;
+    flex-direction: row;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .rail-context {
+    inset: var(--app-bar-height) 0 var(--mobile-tab-bar-height) 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  .rail-detail {
+    inset: 0;
+    width: 100%;
+  }
+}
+
+/* Reset focus rings on interactive surfaces opted into the shell design. */
+.shell-focusable:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Utility: tabular numerals for metrics, timestamps, badge counts. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}

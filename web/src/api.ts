@@ -1146,8 +1146,6 @@ function normalizeRuntimePreset(raw: unknown): RuntimePreset {
     envVarNames: asStringArray(row.envVarNames ?? row.env_var_names),
     installHint: asStringArray(row.installHint ?? row.install_hint),
     capabilities,
-    slockSupported: Boolean(row.slockSupported ?? row.slock_supported),
-    multicaSupported: Boolean(row.multicaSupported ?? row.multica_supported),
     recommended: Boolean(row.recommended),
     description: asOptionalString(row.description)
   };

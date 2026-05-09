@@ -481,8 +481,6 @@ export type RuntimePreset = {
   envVarNames: string[];
   installHint: string[];
   capabilities: string[];
-  slockSupported: boolean;
-  multicaSupported: boolean;
   recommended: boolean;
   description?: string;
 };

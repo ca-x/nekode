@@ -99,7 +99,6 @@ type ViewKey =
   | "tasks"
   | "reminders"
   | "activity"
-  | "skills"
   | "settings"
   | "endpoints"
   | "daemon";
@@ -223,17 +222,9 @@ const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = 
   { key: "tasks", label: "Tasks", icon: Columns3 },
   { key: "reminders", label: "Reminders", icon: Bell },
   { key: "activity", label: "Activity", icon: Activity },
-  { key: "skills", label: "Skills", icon: Sparkles },
   { key: "settings", label: "Settings", icon: Settings },
   { key: "endpoints", label: "Endpoints", icon: Server },
   { key: "daemon", label: "Daemon", icon: Bot }
-];
-
-const demoAgents = [
-  { id: "qa", name: "QA", role: "Verifier", status: "online", color: "#b46b2b" },
-  { id: "architect", name: "Architect", role: "System design", status: "online", color: "#7b4ee6" },
-  { id: "developer", name: "Developer", role: "Implementation", status: "busy", color: "#2b79b4" },
-  { id: "reviewer", name: "Reviewer", role: "Code review", status: "idle", color: "#b4432b" }
 ];
 
 const fallbackRuntimePresets: RuntimePreset[] = [
@@ -247,8 +238,6 @@ const fallbackRuntimePresets: RuntimePreset[] = [
     envVarNames: [],
     installHint: [],
     capabilities: ["code_execution", "file_write", "shell"],
-    slockSupported: true,
-    multicaSupported: true,
     recommended: true
   },
   {
@@ -261,8 +250,6 @@ const fallbackRuntimePresets: RuntimePreset[] = [
     envVarNames: [],
     installHint: [],
     capabilities: ["code_execution", "file_write", "shell"],
-    slockSupported: true,
-    multicaSupported: true,
     recommended: true
   },
   {
@@ -275,30 +262,7 @@ const fallbackRuntimePresets: RuntimePreset[] = [
     envVarNames: [],
     installHint: [],
     capabilities: ["code_execution", "file_write", "shell"],
-    slockSupported: true,
-    multicaSupported: true,
     recommended: true
-  }
-];
-
-const skillItems = [
-  {
-    name: "Review discipline",
-    tag: "quality",
-    usedBy: "Reviewer",
-    detail: "Findings first, concrete evidence, residual risk."
-  },
-  {
-    name: "Bridge integration",
-    tag: "daemon",
-    usedBy: "Developer",
-    detail: "HTTP/SSE bridge contracts, cursor replay, typed client boundaries."
-  },
-  {
-    name: "Frontend polish",
-    tag: "ux",
-    usedBy: "Designer",
-    detail: "Responsive layouts, accessible controls, production density."
   }
 ];
 
@@ -633,25 +597,15 @@ function roleClass(value?: string) {
   return "is-warn";
 }
 
-function fallbackChannels(): Channel[] {
-  return ["#general", "#ops", "#release"].map((target) => ({
-    target,
-    displayName: target.replace("#", ""),
-    channelType: "channel",
-    visibility: "public",
-    joined: true,
-    memberCount: 1,
-    currentUserRole: "member"
-  }));
-}
+type AgentSidebarItem = {
+  agentId: string;
+  label: string;
+  detail: string;
+  presence: string;
+};
 
-function realAgentSidebarItems(inventory: DaemonInventoryComputer[], statuses: AgentStatusSnapshot[]) {
-  const byID = new Map<string, {
-    agentId: string;
-    label: string;
-    detail: string;
-    presence: string;
-  }>();
+function realAgentSidebarItems(inventory: DaemonInventoryComputer[], statuses: AgentStatusSnapshot[]): AgentSidebarItem[] {
+  const byID = new Map<string, AgentSidebarItem>();
   for (const computer of inventory) {
     for (const agent of computer.agents) {
       if (!agent.agentId) continue;
@@ -810,7 +764,7 @@ function App() {
       setEndpoints(endpointList.items);
       setNotificationRoutes(notificationRouteList.items);
       setIMProviders(imProviderList.items);
-      setChannels(channelList.items.length ? channelList.items : fallbackChannels());
+      setChannels(channelList.items);
       setChannelMembers(channelMemberList.items);
       setMessages(messageList.items);
       setSavedMessages(savedMessageList.items);
@@ -992,7 +946,9 @@ function App() {
           })}
         </nav>
         <SidebarSection title="Channels" actionLabel="Create channel">
-          {(channels.length ? channels : fallbackChannels()).map((channel) => (
+          {channels.length === 0 ? (
+            <p className="sidebar-empty">No channels yet. Create one to get started.</p>
+          ) : channels.map((channel) => (
             <button
               key={channel.target}
               className={target === channel.target ? "side-link is-active" : "side-link"}
@@ -1011,7 +967,9 @@ function App() {
           ))}
         </SidebarSection>
         <SidebarSection title="Agents" actionLabel="Create agent">
-          {sidebarAgents.length ? sidebarAgents.map((agent) => (
+          {sidebarAgents.length === 0 ? (
+            <p className="sidebar-empty">No agents provisioned. Enroll a daemon to register one.</p>
+          ) : sidebarAgents.map((agent) => (
             <button
               key={agent.agentId}
               className="agent-link"
@@ -1027,26 +985,28 @@ function App() {
               <span>{agent.label}</span>
               <span className={`presence ${presenceClass(agent.presence)}`} aria-label={agent.presence} />
             </button>
-          )) : demoAgents.map((agent) => (
-            <button
-              key={agent.id}
-              className="agent-link"
-              type="button"
-              aria-label={`Open ${agent.name} daemon details`}
-              onClick={() => setView("daemon")}
-            >
-              <AvatarBadge label={agent.name} color={agent.color} />
-              <span>{agent.name}</span>
-              <span className="machine-state">demo</span>
-            </button>
           ))}
         </SidebarSection>
         <SidebarSection title="Machines">
-          <button className="side-link" type="button" aria-label="Open daemon bridge details" onClick={() => setView("daemon")}>
-            <Monitor size={15} aria-hidden="true" />
-            <span>Local bridge</span>
-            <span className="machine-state">pending</span>
-          </button>
+          {daemonInventory.length === 0 ? (
+            <p className="sidebar-empty">No machines enrolled. Install the daemon on a host to see it here.</p>
+          ) : daemonInventory.map((computer) => {
+            const heartbeatAt = computer.lastHeartbeatUnix ?? 0;
+            const isOnline = heartbeatAt > 0 && Date.now() / 1000 - heartbeatAt < 120;
+            return (
+              <button
+                key={computer.computerId}
+                className="side-link"
+                type="button"
+                aria-label={`Open daemon details for ${computer.displayName || computer.hostname || computer.computerId}`}
+                onClick={() => setView("daemon")}
+              >
+                <Monitor size={15} aria-hidden="true" />
+                <span>{computer.displayName || computer.hostname || computer.computerId}</span>
+                <span className="machine-state">{isOnline ? "online" : "offline"}</span>
+              </button>
+            );
+          })}
         </SidebarSection>
         <div className="user-panel">
           <div>
@@ -1130,6 +1090,7 @@ function App() {
             onMarkThreadRead={activeThread ? () => markThreadRead(activeThread) : undefined}
             channel={channels.find((item) => item.target === (activeThread?.target ?? target)) ?? null}
             channelMembers={channelMembers}
+            sidebarAgents={sidebarAgents}
             onCreated={loadData}
             issues={sectionIssueGroups.messages}
             loading={status === "loading" && messages.length === 0}
@@ -1170,7 +1131,6 @@ function App() {
             loading={status === "loading" && events.length === 0}
           />
         ) : null}
-        {view === "skills" ? <SkillsPanel runtimePresets={runtimePresets} /> : null}
         {view === "settings" ? (
           <SettingsPanel
             user={user}
@@ -1752,6 +1712,7 @@ function MessagesPanel({
   onMarkThreadRead,
   channel,
   channelMembers,
+  sidebarAgents,
   onCreated,
   issues,
   loading,
@@ -1766,6 +1727,7 @@ function MessagesPanel({
   onMarkThreadRead?: () => Promise<void>;
   channel: Channel | null;
   channelMembers: ChannelMember[];
+  sidebarAgents: AgentSidebarItem[];
   onCreated: () => Promise<void>;
   issues: SectionIssue[];
   loading: boolean;
@@ -1804,9 +1766,12 @@ function MessagesPanel({
       const name = message.senderDisplayName || message.senderAgentId || message.senderUserId;
       if (name) names.add(name.replace(/^@/, ""));
     }
-    for (const agent of demoAgents) names.add(agent.name);
+    for (const agent of sidebarAgents) {
+      const label = agent.label || agent.agentId;
+      if (label) names.add(label.replace(/^@/, ""));
+    }
     return [...names].sort((left, right) => left.localeCompare(right));
-  }, [messages]);
+  }, [messages, sidebarAgents]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -4359,6 +4324,19 @@ function endpointSupportsBindingMethod(endpoint: InteractionEndpoint | null, sch
   return true;
 }
 
+// providerSupportsBindingMethod is the create-form equivalent of
+// endpointSupportsBindingMethod: it consults the schema plus the live form
+// values so chips like "QR code" disappear when the current selection (e.g.
+// WeChat official_account mode) would not actually expose that binding method.
+function providerSupportsBindingMethod(schema: IMProviderSchema | null, configValues: Record<string, unknown>, method: string) {
+  if (!schema?.bindingMethods?.some((bindingMethod) => bindingMethod.method === method)) return false;
+  if ((schema.provider === "weixin" || schema.provider === "wechat") && method === "qr_code") {
+    const mode = String(configValues.mode ?? "official_account").trim().toLowerCase();
+    return mode === "ilink";
+  }
+  return true;
+}
+
 function targetLabel(target: string) {
   return target
     .replace(/_/g, " ")
@@ -5071,17 +5049,23 @@ function EndpointsPanel({
                   </p>
                 </div>
 
-                {selectedProvider.bindingMethods?.length ? (
-                  <div className="endpoint-form-section">
-                    <strong>Binding capabilities</strong>
-                    <div className="endpoint-config-chips">
-                      {selectedProvider.bindingMethods.map((method) => (
-                        <span key={method.method}>{method.displayName}</span>
-                      ))}
+                {(() => {
+                  const visibleBindingMethods = (selectedProvider.bindingMethods ?? []).filter((method) =>
+                    providerSupportsBindingMethod(selectedProvider, imConfigValues, method.method),
+                  );
+                  if (!visibleBindingMethods.length) return null;
+                  return (
+                    <div className="endpoint-form-section">
+                      <strong>Binding capabilities</strong>
+                      <div className="endpoint-config-chips">
+                        {visibleBindingMethods.map((method) => (
+                          <span key={method.method}>{method.displayName}</span>
+                        ))}
+                      </div>
+                      <p>Binding sessions are started after the endpoint is created.</p>
                     </div>
-                    <p>Binding sessions are started after the endpoint is created.</p>
-                  </div>
-                ) : null}
+                  );
+                })()}
 
                 {selectedProvider.setupHints.length ? (
                   <div className="setup-hints">
@@ -5460,84 +5444,6 @@ function EndpointsPanel({
           ) : null}
         </form>
       </div>
-    </section>
-  );
-}
-
-function SkillsPanel({ runtimePresets }: { runtimePresets: RuntimePreset[] }) {
-  return (
-    <section className="two-column">
-      <div className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Skill Center</p>
-            <h2>Reusable workspace instructions</h2>
-          </div>
-          <button className="primary-button" type="button">
-            <Plus size={16} aria-hidden="true" />
-            Create Skill
-          </button>
-        </div>
-        <div className="skill-tools">
-          <input aria-label="Search skills" placeholder="Search skill name, tag, source, content" />
-          <select aria-label="Filter skills by tag" defaultValue="all">
-            <option value="all">All tags</option>
-            <option value="quality">quality</option>
-            <option value="daemon">daemon</option>
-            <option value="ux">ux</option>
-          </select>
-        </div>
-        <div className="skill-list">
-          {skillItems.map((skill) => (
-            <article className="skill-row" key={skill.name}>
-              <Sparkles size={18} aria-hidden="true" />
-              <div>
-                <strong>{skill.name}</strong>
-                <span>{skill.detail}</span>
-              </div>
-              <span className="skill-tag">#{skill.tag}</span>
-              <span className="skill-used">Used by {skill.usedBy}</span>
-            </article>
-          ))}
-        </div>
-      </div>
-      <aside className="panel compact">
-        <p className="eyebrow">Agent Setup</p>
-        <div className="setup-preview">
-          <label>
-            Runtime
-            <select defaultValue="codex">
-              {runtimePresets.map((preset) => (
-                <option key={preset.kind} value={preset.kind}>
-                  {preset.displayName || preset.kind}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="runtime-preset-list">
-            {runtimePresets.slice(0, 6).map((preset) => (
-              <article className="runtime-preset" key={preset.kind}>
-                <div>
-                  <strong>{preset.displayName || preset.kind}</strong>
-                  <span>{preset.description || `${preset.provider} / ${preset.command || preset.kind}`}</span>
-                </div>
-                <div className="runtime-flags">
-                  {preset.slockSupported ? <span>Slock</span> : null}
-                  {preset.multicaSupported ? <span>Multica</span> : null}
-                </div>
-              </article>
-            ))}
-          </div>
-          <label>
-            Model
-            <input defaultValue="CLI default" />
-          </label>
-          <label>
-            Initial instructions
-            <textarea rows={5} defaultValue={"Review discipline\nPrefer small verified changes."} />
-          </label>
-        </div>
-      </aside>
     </section>
   );
 }
@@ -6277,8 +6183,6 @@ function DaemonPanel({
                 <span>{preset.description || `${preset.provider} / ${preset.command || preset.kind}`}</span>
               </div>
               <div className="runtime-flags">
-                {preset.slockSupported ? <span>Slock</span> : null}
-                {preset.multicaSupported ? <span>Multica</span> : null}
                 {preset.recommended ? <span>preset</span> : null}
               </div>
             </article>
