@@ -50,11 +50,17 @@ export function ChannelDecisionsPanel({
   const [retiringId, setRetiringId] = useState<string>("");
   const [proposeOpen, setProposeOpen] = useState(false);
   const [votesById, setVotesById] = useState<Record<string, ChannelDecisionVote[]>>({});
-  // Separate "fully loaded via listDecisionVotes" from "votesById has my
-  // own vote optimistically merged". Without this, casting a vote before
-  // expanding the card seeded votesById with one row, and ensureVotes
-  // then treated the card as already-loaded and never fetched the real
-  // audit history.
+  // Local-only flag marking a vote row as optimistically written by this
+  // tab's handleVote (not yet confirmed by a server fetch). We can't rely
+  // on votedUnix to tell optimistic rows apart from fetched rows — the
+  // backend stores vote timestamps at second resolution, so a same-second
+  // update from another tab would tie and the fetched fresh row would
+  // lose. This map is keyed by `${decisionID}::${voterId}`.
+  const [optimisticVoteKeys, setOptimisticVoteKeys] = useState<Record<string, true>>({});
+  // Tracks whether votesById[decisionID] already reflects a full fetch
+  // via listDecisionVotes. Without it, casting a vote before expanding
+  // the card would seed votesById with one row and ensureVotes would
+  // treat the card as already-loaded.
   const [votesFullyLoaded, setVotesFullyLoaded] = useState<Record<string, boolean>>({});
 
   const refresh = useCallback(async () => {
@@ -105,12 +111,18 @@ export function ChannelDecisionsPanel({
       );
       // Keep the cached vote history in sync so the selected chip highlights
       // the user's newest vote even before they expand the card. Upsert the
-      // returned vote row into the cache keyed by voter id.
+      // returned vote row into the cache keyed by voter id and mark it
+      // optimistic so a concurrent audit-list fetch won't overwrite it
+      // with a same-second stale row from the server.
       setVotesById((current) => {
         const existing = current[decisionID] ?? [];
         const filtered = existing.filter((entry) => entry.voterId !== result.vote.voterId);
         return { ...current, [decisionID]: [...filtered, result.vote] };
       });
+      setOptimisticVoteKeys((current) => ({
+        ...current,
+        [`${decisionID}::${result.vote.voterId}`]: true
+      }));
       // If auto-ratification flipped the decision off the proposed tab,
       // refresh so the UI reflects the new bucket.
       if (result.decision.status !== "proposed") {
@@ -149,26 +161,36 @@ export function ChannelDecisionsPanel({
     const fetched = result.items ?? [];
     // Merge the fetched audit list with whatever optimistic rows the
     // cache holds *right now* — the user might have cast a new vote
-    // while the fetch was in flight. Reading from `current` inside the
-    // functional updater guarantees we see the post-fetch cache state,
-    // so a race between "fetch audit list" and "cast vote" can't roll
-    // the user's chip back to the stale server value.
+    // while the fetch was in flight. An explicit optimisticVoteKeys
+    // flag keeps optimistic rows immune from being overwritten by a
+    // same-second stale row returned by the server; once the caller
+    // reconciles (next fetch after another vote, or a full refresh)
+    // the optimistic flag is cleared.
     setVotesById((current) => {
       const optimistic = current[decisionID] ?? [];
       const byVoter = new Map<string, ChannelDecisionVote>();
       for (const entry of fetched) byVoter.set(entry.voterId, entry);
       for (const entry of optimistic) {
-        const existing = byVoter.get(entry.voterId);
-        // Keep the newest votedUnix. Optimistic rows written from
-        // handleVote always carry a fresh timestamp, so this prefers
-        // them over stale fetched rows for the same voter.
-        if (!existing || entry.votedUnix >= existing.votedUnix) {
-          byVoter.set(entry.voterId, entry);
-        }
+        const isOptimistic = optimisticVoteKeys[`${decisionID}::${entry.voterId}`];
+        if (isOptimistic) byVoter.set(entry.voterId, entry);
+        else if (!byVoter.has(entry.voterId)) byVoter.set(entry.voterId, entry);
       }
       return { ...current, [decisionID]: [...byVoter.values()] };
     });
     setVotesFullyLoaded((current) => ({ ...current, [decisionID]: true }));
+    // Clear optimistic flags for voters the fetch actually returned —
+    // the server row is now authoritative for anyone present in both.
+    setOptimisticVoteKeys((current) => {
+      const next = { ...current };
+      for (const row of fetched) {
+        const key = `${decisionID}::${row.voterId}`;
+        // Only clear flags for voters whose current cache row equals
+        // the optimistic one (i.e. no newer local vote happened
+        // between cache write and this cleanup).
+        if (next[key]) delete next[key];
+      }
+      return next;
+    });
     return fetched;
   }
 
