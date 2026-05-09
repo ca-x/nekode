@@ -73,6 +73,119 @@
     "setupSubtitle": "选择首位管理员，之后可以再添加其他用户。",
     "createAdmin": "创建管理员账号"
   },
+  "computer": {
+    "title": "计算机",
+    "emptyTitle": "未选择计算机",
+    "emptyBody": "从左侧选择一台计算机，或者添加一台新的并安装守护进程。",
+    "listEmpty": "还没有接入任何计算机。",
+    "addComputer": "添加计算机",
+    "online": "在线",
+    "offline": "离线",
+    "tabs": {
+      "overview": "概览",
+      "agents": "Agent",
+      "runs": "运行记录",
+      "settings": "设置"
+    },
+    "info": {
+      "os": "操作系统",
+      "daemonVersion": "守护进程版本",
+      "updateAvailable": "有新版本可升级",
+      "detectedRuntimes": "已检测运行时",
+      "runtimesNotInstalled": "（未安装）",
+      "runtimesEmpty": "该守护进程还未上报运行时信息。",
+      "lastHeartbeat": "最近心跳",
+      "noHeartbeat": "从未",
+      "created": "接入时间"
+    },
+    "connect": {
+      "title": "接入命令",
+      "description": "在目标主机上运行，并保持该进程不退出以维持连接。",
+      "copy": "复制",
+      "copied": "已复制",
+      "copyFailed": "复制失败"
+    },
+    "agents": {
+      "heading": "该计算机上的 Agent",
+      "empty": "这台计算机上还没有 Agent。",
+      "startAll": "全部启动",
+      "create": "创建 Agent"
+    },
+    "actions": {
+      "heading": "操作",
+      "delete": "删除计算机",
+      "deleteBlocked": "请先删除该计算机上的所有 Agent。"
+    },
+    "wizard": {
+      "title": "添加新计算机",
+      "step1Title": "为计算机命名",
+      "step1Hint": "一个简短的标签方便后续识别。",
+      "step2Title": "安装守护进程",
+      "step2Hint": "在目标主机执行下面的命令，并保持进程运行。",
+      "step3Title": "等待连接",
+      "waiting": "正在等待守护进程上线…",
+      "connected": "已连接，可以关闭该向导。",
+      "next": "下一步",
+      "back": "上一步",
+      "create": "创建",
+      "regenerate": "重新生成",
+      "finish": "完成",
+      "close": "关闭"
+    }
+  },
+  "agent": {
+    "title": "Agent",
+    "emptyTitle": "未选择 Agent",
+    "emptyBody": "从人员栏选择一个 Agent，或者进入某台计算机查看其 Agent。",
+    "tabs": {
+      "profile": "资料",
+      "dms": "私信",
+      "reminders": "提醒",
+      "workspace": "工作区",
+      "activity": "活动"
+    },
+    "info": {
+      "computer": "所在计算机",
+      "created": "创建时间",
+      "creator": "创建者",
+      "noCreator": "无",
+      "runtime": "运行时",
+      "model": "模型",
+      "envVars": "环境变量",
+      "envEmpty": "未配置环境变量。",
+      "createdAgents": "衍生 Agent",
+      "offlineBanner": "这台计算机当前离线，改动会在重新连接后生效。"
+    },
+    "actions": {
+      "start": "启动",
+      "restart": "重启",
+      "delete": "删除"
+    },
+    "reminders": {
+      "empty": "该 Agent 暂未调度任何提醒。当它调度时会实时出现在这里。"
+    },
+    "workspace": {
+      "empty": "工作区浏览功能暂未开放。"
+    },
+    "activity": {
+      "empty": "该 Agent 暂无活动记录。"
+    }
+  },
+  "alerts": {
+    "heading": "提醒",
+    "computerOffline": "计算机已离线",
+    "daemonOutOfDate": "守护进程有新版本"
+  },
+  "settings": {
+    "tabs": {
+      "account": "账户",
+      "users": "用户",
+      "imProviders": "IM 提供方",
+      "runtimes": "运行时",
+      "notifications": "通知",
+      "system": "系统"
+    }
+  },
   "locale": {
     "english": "English",
     "chineseSimplified": "简体中文"

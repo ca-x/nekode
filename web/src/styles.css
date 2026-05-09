@@ -237,11 +237,20 @@ textarea:focus-visible {
 @media (max-width: 767px) {
   .app-shell.with-primary-rail {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     padding-bottom: 0;
   }
-  .primary-rail {
+  .app-shell.with-primary-rail > .sidebar {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .app-shell.with-primary-rail > .main {
     grid-row: 2;
+    grid-column: 1;
+  }
+  .primary-rail {
+    grid-row: 3;
+    grid-column: 1;
     flex-direction: row;
     height: var(--mobile-tab-bar-height);
     padding: 4px env(safe-area-inset-right, 0px) calc(4px + env(safe-area-inset-bottom, 0px)) env(safe-area-inset-left, 0px);
@@ -271,9 +280,6 @@ textarea:focus-visible {
   }
   .primary-rail-slot.is-active {
     box-shadow: inset 0 -2px 0 var(--primary);
-  }
-  .sidebar {
-    grid-row: 1;
   }
 }
 

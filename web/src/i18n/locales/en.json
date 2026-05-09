@@ -73,6 +73,119 @@
     "setupSubtitle": "Choose the first administrator. You can add more users later.",
     "createAdmin": "Create admin account"
   },
+  "computer": {
+    "title": "Computers",
+    "emptyTitle": "No computer selected",
+    "emptyBody": "Pick a computer from the list, or add a new one to install the daemon.",
+    "listEmpty": "No computers enrolled yet.",
+    "addComputer": "Add computer",
+    "online": "Online",
+    "offline": "Offline",
+    "tabs": {
+      "overview": "Overview",
+      "agents": "Agents",
+      "runs": "Runs",
+      "settings": "Settings"
+    },
+    "info": {
+      "os": "Operating system",
+      "daemonVersion": "Daemon version",
+      "updateAvailable": "Update available",
+      "detectedRuntimes": "Detected runtimes",
+      "runtimesNotInstalled": "(not installed)",
+      "runtimesEmpty": "No runtime information from this daemon yet.",
+      "lastHeartbeat": "Last heartbeat",
+      "noHeartbeat": "Never",
+      "created": "Enrolled"
+    },
+    "connect": {
+      "title": "Connect command",
+      "description": "Run this on the target host. Keep it running — it maintains the connection.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Copy failed"
+    },
+    "agents": {
+      "heading": "Agents on this computer",
+      "empty": "No agents on this computer yet.",
+      "startAll": "Start all",
+      "create": "Create agent"
+    },
+    "actions": {
+      "heading": "Actions",
+      "delete": "Delete computer",
+      "deleteBlocked": "All agents must be deleted first."
+    },
+    "wizard": {
+      "title": "Add a new computer",
+      "step1Title": "Name your computer",
+      "step1Hint": "A short label helps you identify it later.",
+      "step2Title": "Install the daemon",
+      "step2Hint": "Run the command on the host. Leave it running.",
+      "step3Title": "Waiting for connection",
+      "waiting": "Waiting for the daemon to check in…",
+      "connected": "Connected. You can close this now.",
+      "next": "Next",
+      "back": "Back",
+      "create": "Create",
+      "regenerate": "Regenerate",
+      "finish": "Finish",
+      "close": "Close"
+    }
+  },
+  "agent": {
+    "title": "Agents",
+    "emptyTitle": "No agent selected",
+    "emptyBody": "Pick an agent from People, or open a computer to inspect its agents.",
+    "tabs": {
+      "profile": "Profile",
+      "dms": "DMs",
+      "reminders": "Reminders",
+      "workspace": "Workspace",
+      "activity": "Activity"
+    },
+    "info": {
+      "computer": "Computer",
+      "created": "Created",
+      "creator": "Creator",
+      "noCreator": "No creator assigned",
+      "runtime": "Runtime",
+      "model": "Model",
+      "envVars": "Environment variables",
+      "envEmpty": "No environment variables set.",
+      "createdAgents": "Sub-agents spawned",
+      "offlineBanner": "This agent's computer is offline. Changes will apply once it reconnects."
+    },
+    "actions": {
+      "start": "Start",
+      "restart": "Restart",
+      "delete": "Delete"
+    },
+    "reminders": {
+      "empty": "This agent hasn't scheduled anything. Reminders appear here in real time as soon as the agent schedules them."
+    },
+    "workspace": {
+      "empty": "Workspace browsing isn't available yet."
+    },
+    "activity": {
+      "empty": "No activity for this agent yet."
+    }
+  },
+  "alerts": {
+    "heading": "Alerts",
+    "computerOffline": "Computer offline",
+    "daemonOutOfDate": "Daemon update available"
+  },
+  "settings": {
+    "tabs": {
+      "account": "Account",
+      "users": "Users",
+      "imProviders": "IM providers",
+      "runtimes": "Runtimes",
+      "notifications": "Notifications",
+      "system": "System"
+    }
+  },
   "locale": {
     "english": "English",
     "chineseSimplified": "简体中文"

@@ -49,6 +49,12 @@ import { ApiClient, ApiError, makeRequestId } from "./api";
 import { useT } from "./i18n/use-t";
 import type { MessageKey } from "./i18n/types";
 import { LocaleSwitcher } from "./i18n/switcher";
+import { ComputerDetailPanel } from "./panels/computers/ComputerDetailPanel";
+import { ComputersListPanel } from "./panels/computers/ComputersListPanel";
+import { NewComputerModal } from "./panels/computers/NewComputerModal";
+import { AgentDetailPanel } from "./panels/agents/AgentDetailPanel";
+import { AlertPill } from "./panels/_shared/alert-pill";
+import { isComputerOnline } from "./panels/computers/computer-utils";
 import brandMarkUrl from "./assets-brand.png";
 import type {
   AgentControlAction,
@@ -121,12 +127,19 @@ type PrimarySlotDescriptor = {
 const PRIMARY_SLOTS: readonly PrimarySlotDescriptor[] = [
   { slot: "messages", labelKey: "nav.messages", icon: MessageSquare, views: ["messages", "inbox", "overview", "reminders", "activity"], hash: "#/messages" },
   { slot: "tasks", labelKey: "nav.tasks", icon: Columns3, views: ["tasks"], hash: "#/tasks" },
-  { slot: "people", labelKey: "primary.people", icon: Bot, views: [], hash: "#/people" },
+  // People slot currently reuses the daemon view to reach the agents list;
+  // M3b will add a dedicated people landing view. It still registers daemon
+  // so the rail highlights correctly when an agent detail URL is active.
+  { slot: "people", labelKey: "primary.people", icon: Bot, views: ["daemon"], hash: "#/people" },
   { slot: "computers", labelKey: "primary.computers", icon: Server, views: ["daemon", "endpoints"], hash: "#/computers" },
   { slot: "settings", labelKey: "nav.settings", icon: Settings, views: ["settings"], hash: "#/settings" }
 ];
 
 function slotForView(view: ViewKey): PrimarySlot {
+  // `daemon` belongs to both People and Computers slots. Prefer Computers
+  // when nothing else disambiguates — People selection is driven by the
+  // primary rail click, not the view key alone.
+  if (view === "daemon") return "computers";
   for (const entry of PRIMARY_SLOTS) {
     if (entry.views.includes(view)) return entry.slot;
   }
@@ -141,30 +154,53 @@ function viewForSlot(slot: PrimarySlot, preferred?: ViewKey): ViewKey {
 }
 
 /**
- * parseRouteHash maps a browser hash like `#/messages/general` or
- * `#/tasks` to the matching top-level view. Unknown hashes fall back to
- * the messages slot so deep links from older bookmarks don't error.
+ * parseRouteHash maps a browser hash like `#/computers/abc123` to the
+ * matching primary slot, inner view, and any remaining path segment.
+ * Unknown slots fall back to messages so deep links from older bookmarks
+ * don't error. The `rest` field carries the object id portion, used by
+ * the Computer/Agent detail routers.
  */
 function parseRouteHash(hash: string): { slot: PrimarySlot; view: ViewKey; rest: string } {
   const trimmed = hash.replace(/^#\/?/, "");
   const [headRaw, ...tail] = trimmed.split("/");
   const head = (headRaw || "messages").toLowerCase();
-  const rest = tail.join("/");
   const slotMatch = PRIMARY_SLOTS.find((entry) => entry.slot === head);
   if (slotMatch) {
-    return { slot: slotMatch.slot, view: slotMatch.views[0] ?? "messages", rest };
+    // #/messages/inbox → slot=messages, view=inbox, rest=""
+    // #/messages/inbox/foo → slot=messages, view=inbox, rest="foo"
+    const possibleViewRaw = tail[0]?.toLowerCase();
+    const viewInSlot = possibleViewRaw
+      ? (slotMatch.views.find((candidate) => candidate === possibleViewRaw) as ViewKey | undefined)
+      : undefined;
+    if (viewInSlot) {
+      return { slot: slotMatch.slot, view: viewInSlot, rest: tail.slice(1).join("/") };
+    }
+    return { slot: slotMatch.slot, view: slotMatch.views[0] ?? "messages", rest: tail.join("/") };
   }
   // Accept direct view hashes too (#/inbox, #/reminders, #/activity, #/endpoints)
   // so links from older sessions keep working.
   const viewMatch = PRIMARY_SLOTS.flatMap((entry) => entry.views).find((candidate) => candidate === head);
   if (viewMatch) {
-    return { slot: slotForView(viewMatch), view: viewMatch, rest };
+    return { slot: slotForView(viewMatch), view: viewMatch, rest: tail.join("/") };
   }
   return { slot: "messages", view: "messages", rest: "" };
 }
 
 function hashForView(view: ViewKey, rest?: string): string {
   const slot = slotForView(view);
+  const slotEntry = PRIMARY_SLOTS.find((entry) => entry.slot === slot);
+  const defaultView = slotEntry?.views[0];
+  // When the active view is the slot's default, emit the slot-scoped hash.
+  // Otherwise append the view id so refresh / deep-linking preserves the
+  // exact sub-nav entry (e.g. Inbox, Reminders).
+  const parts: string[] = [slot];
+  if (view !== defaultView) parts.push(view);
+  if (rest) parts.push(rest.replace(/^\/+/, ""));
+  return `#/${parts.join("/")}`;
+}
+
+/** Build the object-scoped hash for the Computer or Agent detail routers. */
+function hashForSlot(slot: PrimarySlot, rest?: string): string {
   const tail = rest ? `/${rest.replace(/^\/+/, "")}` : "";
   return `#/${slot}${tail}`;
 }
@@ -703,7 +739,9 @@ function App() {
   const [theme, setTheme] = useState<ThemeName>(() => resolvedTheme(themePreference));
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewKey>(() => parseRouteHash(window.location.hash).view);
-  const primarySlot = slotForView(view);
+  const [routeRest, setRouteRest] = useState<string>(() => parseRouteHash(window.location.hash).rest);
+  const [primarySlotOverride, setPrimarySlotOverride] = useState<PrimarySlot | null>(() => parseRouteHash(window.location.hash).slot === "people" ? "people" : null);
+  const primarySlot: PrimarySlot = primarySlotOverride ?? slotForView(view);
   const [status, setStatus] = useState<LoadState>("idle");
   const [error, setError] = useState("");
   const [sectionIssues, setSectionIssues] = useState<SectionIssue[]>([]);
@@ -908,19 +946,35 @@ function App() {
   // work (e.g. copy-paste a URL pointing at #/computers) and the browser
   // back button walks the navigation history instead of leaving the app.
   useEffect(() => {
-    const desired = hashForView(view);
+    const desired = primarySlotOverride
+      ? hashForSlot(primarySlotOverride, routeRest)
+      : routeRest
+        ? hashForSlot(primarySlot, routeRest)
+        : hashForView(view);
     if (window.location.hash !== desired) {
-      window.history.replaceState(null, "", desired);
+      window.history.pushState(null, "", desired);
     }
-  }, [view]);
+  }, [primarySlot, primarySlotOverride, routeRest, view]);
+
+  useEffect(() => {
+    if (primarySlotOverride && slotForView(view) !== "computers") {
+      setPrimarySlotOverride(null);
+    }
+  }, [primarySlotOverride, view]);
 
   useEffect(() => {
     const onHashChange = () => {
       const parsed = parseRouteHash(window.location.hash);
       setView((current) => (current === parsed.view ? current : parsed.view));
+      setRouteRest((current) => (current === parsed.rest ? current : parsed.rest));
+      setPrimarySlotOverride(parsed.slot === "people" ? "people" : null);
     };
     window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    window.addEventListener("popstate", onHashChange);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("popstate", onHashChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -1047,7 +1101,11 @@ function App() {
                 aria-label={label}
                 aria-current={active ? "page" : undefined}
                 title={label}
-                onClick={() => setView(viewForSlot(entry.slot, view))}
+                onClick={() => {
+                  setView(viewForSlot(entry.slot, view));
+                  setRouteRest("");
+                  setPrimarySlotOverride(entry.slot === "people" ? "people" : null);
+                }}
               >
                 <Icon size={20} aria-hidden="true" />
                 <span className="primary-rail-slot-label">{label}</span>
@@ -1159,13 +1217,18 @@ function App() {
           ) : daemonInventory.map((computer) => {
             const heartbeatAt = computer.lastHeartbeatUnix ?? 0;
             const isOnline = heartbeatAt > 0 && Date.now() / 1000 - heartbeatAt < 120;
+            const active = view === "daemon" && routeRest === computer.computerId;
             return (
               <button
                 key={computer.computerId}
-                className="side-link"
+                className={active ? "side-link is-active" : "side-link"}
                 type="button"
                 aria-label={`Open daemon details for ${computer.displayName || computer.hostname || computer.computerId}`}
-                onClick={() => setView("daemon")}
+                aria-current={active ? "page" : undefined}
+                onClick={() => {
+                  setView("daemon");
+                  setRouteRest(computer.computerId);
+                }}
               >
                 <Monitor size={15} aria-hidden="true" />
                 <span>{computer.displayName || computer.hostname || computer.computerId}</span>
@@ -1175,6 +1238,35 @@ function App() {
           })}
         </SidebarSection>
         ) : null}
+        {(() => {
+          const offlineCount = daemonInventory.filter((entry) => !isComputerOnline(entry)).length;
+          const outdatedCount = 0; // wired once /api/system/info lands
+          if (offlineCount === 0 && outdatedCount === 0) return null;
+          return (
+            <section className="sidebar-alerts" aria-label={t("alerts.heading")}>
+              {offlineCount > 0 ? (
+                <AlertPill
+                  tone="warning"
+                  label={`${t("alerts.computerOffline")} · ${offlineCount}`}
+                  onClick={() => {
+                    setView("daemon");
+                    setRouteRest("");
+                  }}
+                />
+              ) : null}
+              {outdatedCount > 0 ? (
+                <AlertPill
+                  tone="info"
+                  label={`${t("alerts.daemonOutOfDate")} · ${outdatedCount}`}
+                  onClick={() => {
+                    setView("daemon");
+                    setRouteRest("");
+                  }}
+                />
+              ) : null}
+            </section>
+          );
+        })()}
         <div className="user-panel">
           <div>
             <strong>{user?.displayName || user?.username || "Signed in"}</strong>
@@ -1332,21 +1424,66 @@ function App() {
           />
         ) : null}
         {view === "daemon" ? (
-          <DaemonPanel
-            protocol={protocol}
-            daemonInfo={daemonInfo}
-            realtimeStatus={realtimeStatus}
-            latestEvent={latestEvent}
-            agentStatuses={agentStatuses}
-            daemonInventory={daemonInventory}
-            daemonRuns={daemonRuns}
-            daemonActivity={daemonActivity}
-            runtimePresets={runtimePresets}
-            onAgentCreated={reloadDaemonInventory}
-            issues={sectionIssueGroups.daemon}
-            loading={status === "loading" && !daemonInfo}
-            onRetry={loadData}
-          />
+          (() => {
+            // If a specific computer id is routed, render the new detail panel.
+            // Otherwise fall back to the legacy DaemonPanel while M3 finishes
+            // swapping the list chrome over.
+            const selectedComputer = routeRest
+              ? daemonInventory.find((entry) => entry.computerId === routeRest) ?? null
+              : null;
+            if (selectedComputer) {
+              return (
+                <ComputerDetailPanel
+                  computer={selectedComputer}
+                  runtimeCatalog={runtimePresets}
+                  connectCommand={""}
+                  daemonVersion={undefined}
+                  targetDaemonVersion={undefined}
+                  onOpenAgent={(agentId) => {
+                    setView("daemon");
+                    setRouteRest(`agent/${agentId}`);
+                  }}
+                  onCreateAgent={undefined}
+                  onStartAll={undefined}
+                  onDeleteComputer={undefined}
+                />
+              );
+            }
+            // Agent detail route: #/computers/agent/<id>
+            if (routeRest.startsWith("agent/")) {
+              const agentId = routeRest.slice("agent/".length);
+              const host = daemonInventory.find((entry) => entry.agents?.some((agent) => agent.agentId === agentId)) ?? null;
+              const agent = host?.agents?.find((entry) => entry.agentId === agentId) ?? null;
+              if (agent) {
+                return (
+                  <AgentDetailPanel
+                    agent={agent}
+                    computer={host}
+                    dmPanel={null}
+                    reminders={reminders}
+                    activityPanel={null}
+                  />
+                );
+              }
+            }
+            return (
+              <DaemonPanel
+                protocol={protocol}
+                daemonInfo={daemonInfo}
+                realtimeStatus={realtimeStatus}
+                latestEvent={latestEvent}
+                agentStatuses={agentStatuses}
+                daemonInventory={daemonInventory}
+                daemonRuns={daemonRuns}
+                daemonActivity={daemonActivity}
+                runtimePresets={runtimePresets}
+                onAgentCreated={reloadDaemonInventory}
+                issues={sectionIssueGroups.daemon}
+                loading={status === "loading" && !daemonInfo}
+                onRetry={loadData}
+              />
+            );
+          })()
         ) : null}
       </main>
     </div>
