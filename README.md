@@ -18,6 +18,10 @@ Slock behavior, while keeping the codebase independent from Nekobot.
   `docs/im-channel-integration.md`
 - Real IM provider runtime plan:
   `docs/im-real-provider-runtime-plan.md`
+- Next milestone IM capability plan:
+  `docs/im-capability-next-milestone-plan.md`
+- Next milestone Stella-style plugin architecture plan:
+  `docs/stella-plugin-architecture-plan.md`
 - Web console assets: `web/src/assets-brand.png` and `web/public/*`
 - Container and binary build: `Dockerfile`, `docker-compose.yml`, and
   `build.sh`
@@ -72,6 +76,17 @@ fake SDK boundaries, but external providers are still not production-connected
 until operator-owned credentials and public callback or polling environments
 pass live smoke. See `docs/im-real-provider-runtime-plan.md` for the task #205
 live-smoke matrix and `Not-tested` provider caveats.
+
+Next milestone IM work is tracked separately in
+`docs/im-capability-next-milestone-plan.md`. That plan covers provider
+interaction capabilities, weak-channel fallback policy, and Telegram rich
+interactions. It does not change the current release gate.
+
+The medium-term plugin architecture direction is tracked in
+`docs/stella-plugin-architecture-plan.md`. That plan evaluates Stella-style
+built-in plugin registration for agent runtimes, IM channels, and structured
+server-dispatched daemon probes. It is a post-release architecture migration
+plan, not current release scope.
 
 ## Run Locally
 

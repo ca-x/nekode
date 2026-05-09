@@ -16,6 +16,13 @@ iLink fork boundary for QR binding work. ServerChan uses the Nekobot bot-go
 polling/send shape. External providers still need operator-owned credential
 smoke before being described as production connected.
 
+Next milestone IM capability enhancement is planned in
+`docs/im-capability-next-milestone-plan.md`. That work should add an interaction
+capability matrix, a planner/fallback policy, and Telegram rich interactions
+without blocking the current release. Stella-style plugin migration for agent
+runtimes, IM channels, and daemon-side structured probes is planned separately
+in `docs/stella-plugin-architecture-plan.md`.
+
 ## Design Boundary
 
 IM is an `InteractionEndpoint` ingress and egress layer for Nekode. It is not a
