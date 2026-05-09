@@ -1,4 +1,8 @@
 import type {
+  AgentRun,
+  AgentRunEvent,
+  AgentRunPhase,
+  AgentRunSearchHit,
   Attachment,
   AuthResponse,
   AgentControlAction,
@@ -6,6 +10,8 @@ import type {
   AgentDirectMessageResult,
   AgentStatusSnapshot,
   Channel,
+  ChannelDecision,
+  ChannelDecisionVote,
   ChannelMember,
   ChannelMemberRole,
   ChannelVisibility,
@@ -20,6 +26,9 @@ import type {
   DaemonInventoryComputer,
   DaemonInventoryRuntime,
   DaemonRun,
+  DecisionActorKind,
+  DecisionStatus,
+  DecisionVote,
   EventCursor,
   EventOperation,
   EventScope,
@@ -29,6 +38,7 @@ import type {
   IMBindingSession,
   JsonObject,
   Message,
+  MessageKind,
   NotificationRoute,
   InteractionEndpointTestResult,
   ProtocolInfo,
@@ -154,6 +164,7 @@ type RawMessage = {
   createdUnix?: unknown;
   created_time_unix?: unknown;
   createdTimeUnix?: unknown;
+  kind?: unknown;
 };
 
 type RawDaemonEnrollment = {
@@ -528,7 +539,8 @@ function normalizeMessage(raw: unknown): Message {
     metadataJson: asOptionalString(row.metadataJson ?? row.metadata_json),
     attachments: Array.isArray(row.attachments) ? row.attachments.map(normalizeAttachment) : undefined,
     requestId: asOptionalString(row.requestId ?? row.request_id),
-    createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix)
+    createdUnix: asNumber(row.createdUnix ?? row.created_time_unix ?? row.createdTimeUnix),
+    kind: (asString(row.kind) || "") as MessageKind
   };
 }
 
@@ -606,6 +618,79 @@ function normalizeReminderScheduleKind(value: unknown): ReminderScheduleKind | s
   }
   const label = enumLabel(value).replace(/^reminder_schedule_kind_/, "") || "unspecified";
   return reminderScheduleKindValues.has(label as ReminderScheduleKind) ? (label as ReminderScheduleKind) : label;
+}
+
+function normalizeDecision(raw: unknown): ChannelDecision {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id ?? row.decisionId),
+    target: asString(row.target),
+    title: asString(row.title),
+    body: asString(row.body),
+    status: (asString(row.status) || "proposed") as DecisionStatus,
+    proposerId: asString(row.proposerId ?? row.proposer_id),
+    proposerKind: (asString(row.proposerKind ?? row.proposer_kind) || "human") as DecisionActorKind,
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+    ratifiedUnix: asNumber(row.ratifiedUnix ?? row.ratified_unix),
+    retiredUnix: asNumber(row.retiredUnix ?? row.retired_unix),
+    retiredBy: asOptionalString(row.retiredBy ?? row.retired_by),
+    retireReason: asOptionalString(row.retireReason ?? row.retire_reason),
+    supersedesDecisionId: asOptionalString(row.supersedesDecisionId ?? row.supersedes_decision_id),
+    approveCount: asNumber(row.approveCount ?? row.approve_count),
+    rejectCount: asNumber(row.rejectCount ?? row.reject_count),
+    abstainCount: asNumber(row.abstainCount ?? row.abstain_count)
+  };
+}
+
+function normalizeDecisionVote(raw: unknown): ChannelDecisionVote {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id),
+    decisionId: asString(row.decisionId ?? row.decision_id),
+    voterId: asString(row.voterId ?? row.voter_id),
+    voterKind: (asString(row.voterKind ?? row.voter_kind) || "human") as DecisionActorKind,
+    decision: (asString(row.decision) || "abstain") as DecisionVote,
+    votedUnix: asNumber(row.votedUnix ?? row.voted_unix),
+    reason: asOptionalString(row.reason)
+  };
+}
+
+function normalizeAgentRun(raw: unknown): AgentRun {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id ?? row.runId ?? row.run_id),
+    agentId: asString(row.agentId ?? row.agent_id),
+    computerId: asString(row.computerId ?? row.computer_id),
+    startedUnix: asNumber(row.startedUnix ?? row.started_unix),
+    endedUnix: asNumber(row.endedUnix ?? row.ended_unix),
+    exitCode: asNumber(row.exitCode ?? row.exit_code),
+    summary: asOptionalString(row.summary) ?? "",
+    error: asOptionalString(row.error) ?? "",
+    eventCount: asNumber(row.eventCount ?? row.event_count)
+  };
+}
+
+function normalizeAgentRunEvent(raw: unknown): AgentRunEvent {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id),
+    runId: asString(row.runId ?? row.run_id),
+    atUnixNano: asNumber(row.atUnixNano ?? row.at_unix_nano),
+    phase: (asString(row.phase) || "output") as AgentRunPhase,
+    summary: asOptionalString(row.summary) ?? "",
+    payloadJson: asOptionalString(row.payloadJson ?? row.payload_json) ?? "",
+    exitCode: asNumber(row.exitCode ?? row.exit_code),
+    errorMessage: asOptionalString(row.errorMessage ?? row.error_message) ?? ""
+  };
+}
+
+function normalizeAgentRunHit(raw: unknown): AgentRunSearchHit {
+  const row = asRecord(raw);
+  return {
+    run: normalizeAgentRun(row.run),
+    event: normalizeAgentRunEvent(row.event),
+    highlight: asOptionalString(row.highlight) ?? ""
+  };
 }
 
 function normalizeReminder(raw: unknown): Reminder {
@@ -1625,6 +1710,7 @@ export class ApiClient {
     target: string;
     content: string;
     role?: string;
+    kind?: MessageKind | string;
     threadId?: string;
     attachmentIds?: string[];
     replyToMessageId?: string;
@@ -1860,6 +1946,100 @@ export class ApiClient {
     };
 
     return source;
+  }
+
+  // --- Channel decisions (governance records with voting) ---------------
+
+  async listChannelDecisions(target: string, filters: { status?: DecisionStatus[]; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.status && filters.status.length > 0) params.set("status", filters.status.join(","));
+    params.set("limit", String(filters.limit ?? 100));
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/channels/${encodeURIComponent(target)}/decisions?${params}`),
+      normalizeDecision
+    );
+  }
+
+  async proposeChannelDecision(target: string, body: { title: string; body: string; supersedesDecisionId?: string }) {
+    return normalizeDecision(
+      await this.request<unknown>(`/api/channels/${encodeURIComponent(target)}/decisions`, {
+        method: "POST",
+        body: JSON.stringify(body)
+      })
+    );
+  }
+
+  async voteChannelDecision(id: string, vote: { decision: DecisionVote; reason?: string }) {
+    const raw = (await this.request<{ decision: unknown; vote: unknown }>(`/api/decisions/${encodeURIComponent(id)}/vote`, {
+      method: "POST",
+      body: JSON.stringify(vote)
+    })) ?? { decision: {}, vote: {} };
+    return {
+      decision: normalizeDecision(raw.decision),
+      vote: normalizeDecisionVote(raw.vote)
+    };
+  }
+
+  async ratifyChannelDecision(id: string, opts: { force?: boolean } = {}) {
+    return normalizeDecision(
+      await this.request<unknown>(`/api/decisions/${encodeURIComponent(id)}/ratify`, {
+        method: "POST",
+        body: JSON.stringify(opts)
+      })
+    );
+  }
+
+  async retireChannelDecision(id: string, opts: { reason?: string } = {}) {
+    return normalizeDecision(
+      await this.request<unknown>(`/api/decisions/${encodeURIComponent(id)}/retire`, {
+        method: "POST",
+        body: JSON.stringify(opts)
+      })
+    );
+  }
+
+  async listDecisionVotes(id: string) {
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/decisions/${encodeURIComponent(id)}/votes`),
+      normalizeDecisionVote
+    );
+  }
+
+  // --- Agent run archive ------------------------------------------------
+
+  async listAgentRuns(filters: { agentId?: string; computerId?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "agentId", filters.agentId);
+    appendIfPresent(params, "computerId", filters.computerId);
+    params.set("limit", String(filters.limit ?? 50));
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/agent-runs?${params}`),
+      normalizeAgentRun
+    );
+  }
+
+  async getAgentRun(id: string, includeEvents = false) {
+    const params = new URLSearchParams();
+    if (includeEvents) params.set("events", "1");
+    const raw = (await this.request<{ run: unknown; events: unknown[] }>(
+      `/api/agent-runs/${encodeURIComponent(id)}?${params}`
+    )) ?? { run: {}, events: [] };
+    return {
+      run: normalizeAgentRun(raw.run),
+      events: (Array.isArray(raw.events) ? raw.events : []).map(normalizeAgentRunEvent)
+    };
+  }
+
+  async searchAgentRuns(filters: { q: string; agentId?: string; computerId?: string; limit?: number }) {
+    const params = new URLSearchParams();
+    params.set("q", filters.q);
+    appendIfPresent(params, "agentId", filters.agentId);
+    appendIfPresent(params, "computerId", filters.computerId);
+    params.set("limit", String(filters.limit ?? 50));
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/agent-runs/search?${params}`),
+      normalizeAgentRunHit
+    );
   }
 }
 

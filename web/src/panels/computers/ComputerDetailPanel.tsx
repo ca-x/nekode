@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { ApiClient } from "../../api";
 import type { DaemonInventoryComputer, RuntimePreset } from "../../types";
 import { useT } from "../../i18n/use-t";
 import type { MessageKey } from "../../i18n/types";
@@ -11,6 +12,7 @@ import { StatusDot, heartbeatTone } from "../_shared/status-dot";
 import { AlertPill } from "../_shared/alert-pill";
 import { DangerZone } from "../_shared/danger-zone";
 import { detectedRuntimeKinds, isComputerOnline } from "./computer-utils";
+import { AgentRunsPanel } from "../agents/AgentRunsPanel";
 
 type ComputerDetailTab = "overview" | "agents" | "runs" | "settings";
 
@@ -27,6 +29,7 @@ export function ComputerDetailPanel({
   connectCommand,
   daemonVersion,
   targetDaemonVersion,
+  api,
   onOpenAgent,
   onCreateAgent,
   onStartAll,
@@ -37,6 +40,7 @@ export function ComputerDetailPanel({
   connectCommand: string;
   daemonVersion?: string;
   targetDaemonVersion?: string;
+  api?: ApiClient;
   onOpenAgent?: (agentId: string) => void;
   onCreateAgent?: () => void;
   onStartAll?: () => void;
@@ -187,7 +191,13 @@ export function ComputerDetailPanel({
           )}
         </DetailSection>
       ) : null}
-      {activeTab === "runs" ? <EmptyState title={t("computer.tabs.runs")} body={t("agent.activity.empty")} /> : null}
+      {activeTab === "runs" ? (
+        api ? (
+          <AgentRunsPanel api={api} computerId={computer.computerId} />
+        ) : (
+          <EmptyState title={t("computer.tabs.runs")} body={t("agent.activity.empty")} />
+        )
+      ) : null}
       {activeTab === "settings" ? (
         <DangerZone
           title={t("computer.actions.heading")}

@@ -170,6 +170,7 @@ export type Message = {
   attachments?: Attachment[];
   requestId?: string;
   createdUnix: number;
+  kind?: MessageKind;
 };
 
 export type ThreadInboxItem = {
@@ -562,4 +563,78 @@ export type CollaborationEvent = {
   sourceEndpointId?: string;
   createdTimeUnix?: number;
   payload?: JsonObject;
+};
+
+// --- B-UI: channel decisions + agent runs --------------------------------
+
+export type DecisionStatus = "proposed" | "ratified" | "rejected" | "retired";
+export type DecisionVote = "approve" | "reject" | "abstain";
+export type DecisionActorKind = "human" | "agent";
+
+export type MessageKind = "" | "note" | "decision" | "blocker" | "status";
+
+export type ChannelDecision = {
+  id: string;
+  target: string;
+  title: string;
+  body: string;
+  status: DecisionStatus;
+  proposerId: string;
+  proposerKind: DecisionActorKind;
+  createdUnix: number;
+  ratifiedUnix: number;
+  retiredUnix: number;
+  retiredBy?: string;
+  retireReason?: string;
+  supersedesDecisionId?: string;
+  approveCount: number;
+  rejectCount: number;
+  abstainCount: number;
+};
+
+export type ChannelDecisionVote = {
+  id: string;
+  decisionId: string;
+  voterId: string;
+  voterKind: DecisionActorKind;
+  decision: DecisionVote;
+  votedUnix: number;
+  reason?: string;
+};
+
+export type AgentRunPhase =
+  | "start"
+  | "tool_call"
+  | "tool_result"
+  | "error"
+  | "output"
+  | "end";
+
+export type AgentRun = {
+  id: string;
+  agentId: string;
+  computerId: string;
+  startedUnix: number;
+  endedUnix: number;
+  exitCode: number;
+  summary: string;
+  error: string;
+  eventCount: number;
+};
+
+export type AgentRunEvent = {
+  id: string;
+  runId: string;
+  atUnixNano: number;
+  phase: AgentRunPhase;
+  summary: string;
+  payloadJson: string;
+  exitCode: number;
+  errorMessage: string;
+};
+
+export type AgentRunSearchHit = {
+  run: AgentRun;
+  event: AgentRunEvent;
+  highlight: string;
 };

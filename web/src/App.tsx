@@ -47,12 +47,14 @@ import {
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiClient, ApiError, makeRequestId } from "./api";
 import { useT } from "./i18n/use-t";
+import { t as imperativeT } from "./i18n";
 import type { MessageKey } from "./i18n/types";
 import { LocaleSwitcher } from "./i18n/switcher";
 import { ComputerDetailPanel } from "./panels/computers/ComputerDetailPanel";
 import { ComputersListPanel } from "./panels/computers/ComputersListPanel";
 import { NewComputerModal } from "./panels/computers/NewComputerModal";
 import { AgentDetailPanel } from "./panels/agents/AgentDetailPanel";
+import { ChannelDecisionsPanel } from "./panels/decisions/ChannelDecisionsPanel";
 import { AlertPill } from "./panels/_shared/alert-pill";
 import { TabBar } from "./panels/_shared/tab-bar";
 import { isComputerOnline } from "./panels/computers/computer-utils";
@@ -61,10 +63,14 @@ import type {
   AgentControlAction,
   AgentControlResult,
   AgentDirectMessageResult,
+  AgentRun,
+  AgentRunEvent,
   AgentStatusSnapshot,
   Attachment,
   AuthResponse,
   Channel,
+  ChannelDecision,
+  ChannelDecisionVote,
   ChannelMember,
   CollaborationEvent,
   CreateDaemonAgentResult,
@@ -80,6 +86,7 @@ import type {
   InteractionEndpoint,
   InteractionEndpointTestResult,
   Message,
+  MessageKind,
   NotificationRoute,
   ProtocolInfo,
   Reminder,
@@ -152,6 +159,33 @@ function viewForSlot(slot: PrimarySlot, preferred?: ViewKey): ViewKey {
   if (!entry) return "messages";
   if (preferred && entry.views.includes(preferred)) return preferred;
   return entry.views[0] ?? "messages";
+}
+
+// messageKindLabelKey maps an internal kind value to a human-facing i18n
+// key. The blank kind is treated as "note" so the UI can stay a single
+// four-chip radio group without a separate "none" sentinel.
+function messageKindLabelKey(kind: MessageKind | "all"): MessageKey {
+  switch (kind) {
+    case "decision":
+      return "messageKind.decision";
+    case "blocker":
+      return "messageKind.blocker";
+    case "status":
+      return "messageKind.status";
+    case "all":
+      return "messageKind.all";
+    case "":
+    case "note":
+    default:
+      return "messageKind.note";
+  }
+}
+
+// messageKindBadgeLabel returns the localised badge text for a kind chip
+// rendered next to a message author. Kept outside React hooks so static
+// components like MessageBubble (no useT access) can still call it.
+function messageKindBadgeLabel(kind: MessageKind): string {
+  return imperativeT(messageKindLabelKey(kind));
 }
 
 type SettingsTabKey = "account" | "users" | "imProviders" | "runtimes" | "notifications" | "system";
@@ -1390,6 +1424,9 @@ function App() {
             channel={channels.find((item) => item.target === (activeThread?.target ?? target)) ?? null}
             channelMembers={channelMembers}
             sidebarAgents={sidebarAgents}
+            api={api}
+            currentUserId={user?.id ?? ""}
+            currentUserIsAdmin={(user?.role ?? "").toLowerCase() === "admin"}
             onCreated={loadData}
             issues={sectionIssueGroups.messages}
             loading={status === "loading" && messages.length === 0}
@@ -1478,6 +1515,7 @@ function App() {
                   connectCommand={""}
                   daemonVersion={undefined}
                   targetDaemonVersion={undefined}
+                  api={api}
                   onOpenAgent={(agentId) => {
                     setView("daemon");
                     setRouteRest(`agent/${agentId}`);
@@ -1504,6 +1542,7 @@ function App() {
                     agent={agent}
                     computer={host}
                     reminders={reminders}
+                    api={api}
                     onOpenDms={() => {
                       setActiveThread(null);
                       setTarget(`dm:${agent.agentId}`);
@@ -2062,6 +2101,9 @@ function MessagesPanel({
   channel,
   channelMembers,
   sidebarAgents,
+  api,
+  currentUserId,
+  currentUserIsAdmin,
   onCreated,
   issues,
   loading,
@@ -2077,6 +2119,9 @@ function MessagesPanel({
   channel: Channel | null;
   channelMembers: ChannelMember[];
   sidebarAgents: AgentSidebarItem[];
+  api: ApiClient;
+  currentUserId: string;
+  currentUserIsAdmin: boolean;
   onCreated: () => Promise<void>;
   issues: SectionIssue[];
   loading: boolean;
@@ -2100,10 +2145,24 @@ function MessagesPanel({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [actionError, setActionError] = useState("");
+  // Composer kind + inline-filter state for the message stream. Composer
+  // defaults to "" (treated server-side as note) so unmarked messages
+  // behave as before; filters live in the panel header.
+  const [composerKind, setComposerKind] = useState<MessageKind>("");
+  const [messageFilterKind, setMessageFilterKind] = useState<MessageKind | "all">("all");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ordered = useMemo(() => [...messages].reverse(), [messages]);
-  const feed = useMemo(() => buildMessageFeed(ordered), [ordered]);
+  const filteredOrdered = useMemo(() => {
+    if (messageFilterKind === "all") return ordered;
+    // Treat the "note" filter as matching both explicit "note" kinds and
+    // the empty / legacy value so older messages aren't hidden.
+    if (messageFilterKind === "note") {
+      return ordered.filter((message) => !message.kind || message.kind === "note");
+    }
+    return ordered.filter((message) => message.kind === messageFilterKind);
+  }, [messageFilterKind, ordered]);
+  const feed = useMemo(() => buildMessageFeed(filteredOrdered), [filteredOrdered]);
   const selectedMessages = useMemo(
     () => ordered.filter((message) => selectedMessageIds.has(message.id)),
     [ordered, selectedMessageIds]
@@ -2133,6 +2192,7 @@ function MessagesPanel({
         target,
         threadId: thread?.threadId,
         content: content.trim() || "(attachment)",
+        kind: composerKind || undefined,
         attachmentIds: draftAttachments.map((attachment) => attachment.id),
         replyToMessageId: replyTo?.id,
         sourceEndpointId,
@@ -2425,6 +2485,25 @@ function MessagesPanel({
             ))}
           </div>
         ) : null}
+        <div className="message-filter-row" role="radiogroup" aria-label={t("messageKind.labels.filter")}>
+          <span className="composer-kind-label">{t("messageKind.labels.filter")}</span>
+          {(["all", "note", "decision", "blocker", "status"] as (MessageKind | "all")[]).map((kind) => {
+            const active = messageFilterKind === kind;
+            return (
+              <button
+                key={kind}
+                type="button"
+                className={active ? "kind-chip is-active" : "kind-chip"}
+                role="radio"
+                aria-checked={active}
+                data-kind={kind === "" ? "note" : kind}
+                onClick={() => setMessageFilterKind(kind)}
+              >
+                {t(messageKindLabelKey(kind))}
+              </button>
+            );
+          })}
+        </div>
         <div className="message-list" role="log" aria-label="Messages">
           {feed.length ? (
             feed.map((item) => {
@@ -2499,6 +2578,25 @@ function MessagesPanel({
             placeholder="Message this target"
             rows={3}
           />
+          <div className="composer-kind-row" role="radiogroup" aria-label={t("messageKind.labels.composer")}>
+            <span className="composer-kind-label">{t("messageKind.labels.selector")}</span>
+            {(["", "decision", "blocker", "status"] as MessageKind[]).map((kind) => {
+              const active = composerKind === kind;
+              return (
+                <button
+                  key={kind || "note"}
+                  type="button"
+                  className={active ? "kind-chip is-active" : "kind-chip"}
+                  role="radio"
+                  aria-checked={active}
+                  data-kind={kind || "note"}
+                  onClick={() => setComposerKind(active ? "" : kind)}
+                >
+                  {t(messageKindLabelKey(kind || "note"))}
+                </button>
+              );
+            })}
+          </div>
           {draftAttachments.length ? (
             <div className="draft-attachments" aria-label="Draft attachments">
               {draftAttachments.map((attachment) => (
@@ -2559,6 +2657,14 @@ function MessagesPanel({
         savedMessages={savedMessages}
         onSavedSelect={(message) => setReplyTo(message)}
       />
+      {target.startsWith("#") ? (
+        <ChannelDecisionsPanel
+          api={api}
+          target={target}
+          currentUserId={currentUserId}
+          userIsAdmin={currentUserIsAdmin}
+        />
+      ) : null}
     </section>
   );
 }
@@ -2723,6 +2829,9 @@ function MessageBubble({
           </button>
         ) : null}
         <strong>{message.senderDisplayName || message.senderKind}</strong>
+        {message.kind && message.kind !== "note" ? (
+          <span className="message-kind-chip" data-kind={message.kind}>{messageKindBadgeLabel(message.kind)}</span>
+        ) : null}
         <span>
           <a href={messagePermalink(message)} title="Message permalink">
             <Link2 size={13} aria-hidden="true" />

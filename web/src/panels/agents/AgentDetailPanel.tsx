@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import type { ApiClient } from "../../api";
 import type { DaemonAgentInstance, DaemonInventoryComputer, Reminder } from "../../types";
 import { useT } from "../../i18n/use-t";
 import type { MessageKey } from "../../i18n/types";
@@ -10,6 +11,7 @@ import { AlertPill } from "../_shared/alert-pill";
 import { DangerZone } from "../_shared/danger-zone";
 import { StatusDot } from "../_shared/status-dot";
 import { isComputerOnline } from "../computers/computer-utils";
+import { AgentRunsPanel } from "./AgentRunsPanel";
 
 type AgentDetailTab = "profile" | "dms" | "reminders" | "workspace" | "activity";
 
@@ -27,6 +29,7 @@ export function AgentDetailPanel({
   dmPanel,
   reminders,
   activityPanel,
+  api,
   onStart,
   onRestart,
   onDelete,
@@ -38,6 +41,7 @@ export function AgentDetailPanel({
   dmPanel?: ReactNode;
   reminders: readonly Reminder[];
   activityPanel?: ReactNode;
+  api?: ApiClient;
   onStart?: () => void;
   onRestart?: () => void;
   onDelete?: () => void;
@@ -156,17 +160,21 @@ export function AgentDetailPanel({
       ) : null}
       {activeTab === "activity" ? (
         activityPanel ?? (
-          <EmptyState
-            title={t("agent.tabs.activity")}
-            body={t("agent.activity.empty")}
-            action={
-              onOpenActivity ? (
-                <button className="ghost-button" type="button" onClick={onOpenActivity}>
-                  {t("agent.tabs.activity")}
-                </button>
-              ) : undefined
-            }
-          />
+          api ? (
+            <AgentRunsPanel api={api} agentId={agent.agentId} />
+          ) : (
+            <EmptyState
+              title={t("agent.tabs.activity")}
+              body={t("agent.activity.empty")}
+              action={
+                onOpenActivity ? (
+                  <button className="ghost-button" type="button" onClick={onOpenActivity}>
+                    {t("agent.tabs.activity")}
+                  </button>
+                ) : undefined
+              }
+            />
+          )
         )
       ) : null}
     </DetailShell>

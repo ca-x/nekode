@@ -176,6 +176,81 @@
     "computerOffline": "Computer offline",
     "daemonOutOfDate": "Daemon update available"
   },
+  "messageKind": {
+    "all": "All",
+    "note": "Note",
+    "decision": "Decision",
+    "blocker": "Blocker",
+    "status": "Status",
+    "labels": {
+      "selector": "Tag as",
+      "composer": "Message kind",
+      "filter": "Filter"
+    }
+  },
+  "decisions": {
+    "panelTitle": "Decisions",
+    "tabProposed": "Proposed",
+    "tabRatified": "Ratified",
+    "tabClosed": "Closed",
+    "emptyProposed": "No active proposals. Tag a message as a decision to propose one.",
+    "emptyRatified": "No ratified decisions yet.",
+    "emptyClosed": "Nothing retired or rejected.",
+    "actions": {
+      "propose": "Propose",
+      "approve": "Approve",
+      "reject": "Reject",
+      "abstain": "Abstain",
+      "ratify": "Ratify",
+      "forceRatify": "Force ratify",
+      "retire": "Retire"
+    },
+    "proposeModal": {
+      "title": "Propose a decision",
+      "titleLabel": "Title",
+      "bodyLabel": "Body",
+      "submit": "Propose"
+    },
+    "retireModal": {
+      "title": "Retire this decision",
+      "reasonLabel": "Reason (optional)",
+      "confirm": "Retire"
+    },
+    "status": {
+      "proposed": "Proposed",
+      "ratified": "Ratified",
+      "rejected": "Rejected",
+      "retired": "Retired"
+    },
+    "quorumHint": "Quorum: 2 approvals with no reject ratifies automatically.",
+    "supersedes": "Supersedes {id}",
+    "retiredBanner": "Retired{reason}"
+  },
+  "runs": {
+    "title": "Runs",
+    "empty": "No runs yet. Agents populate this timeline when they work.",
+    "searchPlaceholder": "Search runs",
+    "loading": "Loading runs…",
+    "columns": {
+      "agent": "Agent",
+      "started": "Started",
+      "duration": "Duration",
+      "status": "Status"
+    },
+    "status": {
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "failed": "Failed"
+    },
+    "eventPhases": {
+      "start": "Started",
+      "tool_call": "Tool call",
+      "tool_result": "Tool result",
+      "error": "Error",
+      "output": "Output",
+      "end": "Ended"
+    }
+  },
   "settings": {
     "tabs": {
       "account": "Account",

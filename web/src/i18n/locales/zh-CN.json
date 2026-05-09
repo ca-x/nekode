@@ -176,6 +176,81 @@
     "computerOffline": "计算机已离线",
     "daemonOutOfDate": "守护进程有新版本"
   },
+  "messageKind": {
+    "all": "全部",
+    "note": "笔记",
+    "decision": "决策",
+    "blocker": "阻塞",
+    "status": "进展",
+    "labels": {
+      "selector": "标记为",
+      "composer": "消息类型",
+      "filter": "筛选"
+    }
+  },
+  "decisions": {
+    "panelTitle": "决策",
+    "tabProposed": "提议中",
+    "tabRatified": "已批准",
+    "tabClosed": "已关闭",
+    "emptyProposed": "暂无待投票的提议。把消息标记为“决策”即可发起一条。",
+    "emptyRatified": "还没有已批准的决策。",
+    "emptyClosed": "没有已驳回或撤销的条目。",
+    "actions": {
+      "propose": "发起",
+      "approve": "赞成",
+      "reject": "反对",
+      "abstain": "弃权",
+      "ratify": "批准",
+      "forceRatify": "强制批准",
+      "retire": "撤销"
+    },
+    "proposeModal": {
+      "title": "发起一条决策",
+      "titleLabel": "标题",
+      "bodyLabel": "内容",
+      "submit": "发起"
+    },
+    "retireModal": {
+      "title": "撤销这条决策",
+      "reasonLabel": "原因（可选）",
+      "confirm": "撤销"
+    },
+    "status": {
+      "proposed": "提议中",
+      "ratified": "已批准",
+      "rejected": "已驳回",
+      "retired": "已撤销"
+    },
+    "quorumHint": "仲裁规则：2 人赞成且无人反对即自动批准。",
+    "supersedes": "替代 {id}",
+    "retiredBanner": "已撤销{reason}"
+  },
+  "runs": {
+    "title": "运行记录",
+    "empty": "还没有运行记录。Agent 工作时会自动填充这里。",
+    "searchPlaceholder": "搜索运行记录",
+    "loading": "正在加载…",
+    "columns": {
+      "agent": "Agent",
+      "started": "开始时间",
+      "duration": "耗时",
+      "status": "状态"
+    },
+    "status": {
+      "running": "运行中",
+      "succeeded": "成功",
+      "failed": "失败"
+    },
+    "eventPhases": {
+      "start": "开始",
+      "tool_call": "工具调用",
+      "tool_result": "工具结果",
+      "error": "错误",
+      "output": "输出",
+      "end": "结束"
+    }
+  },
   "settings": {
     "tabs": {
       "account": "账户",
