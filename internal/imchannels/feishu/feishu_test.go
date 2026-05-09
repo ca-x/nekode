@@ -135,6 +135,7 @@ func TestRuntimeSendsPendingFeishuDeliveryAndMarksDelivered(t *testing.T) {
 			if err := json.NewDecoder(r.Body).Decode(&tokenRequest); err != nil {
 				t.Fatalf("decode token request: %v", err)
 			}
+			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":0,"tenant_access_token":"tenant-token","expire":7200}`))
 		case "/open-apis/im/v1/messages":
 			if auth := r.Header.Get("Authorization"); auth != "Bearer tenant-token" {
@@ -146,6 +147,7 @@ func TestRuntimeSendsPendingFeishuDeliveryAndMarksDelivered(t *testing.T) {
 			if err := json.NewDecoder(r.Body).Decode(&sendRequest); err != nil {
 				t.Fatalf("decode send request: %v", err)
 			}
+			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"code":0,"data":{"message_id":"om_sent_1"}}`))
 		default:
 			t.Fatalf("unexpected Feishu API path = %q", r.URL.Path)

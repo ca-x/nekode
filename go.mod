@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/go-sql-driver/mysql v1.9.3
+	github.com/larksuite/oapi-sdk-go/v3 v3.5.3
 	github.com/lib-x/entsqlite v0.1.9
 	github.com/lib/pq v1.12.3
 	github.com/redis/go-redis/v9 v9.18.0
@@ -14,6 +15,7 @@ require (
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
+	gopkg.in/telebot.v4 v4.0.0-beta.7
 )
 
 require (

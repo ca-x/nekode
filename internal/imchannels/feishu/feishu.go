@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -16,6 +14,9 @@ import (
 	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/iminbound"
 	"github.com/ca-x/nekode/internal/storage"
+	lark "github.com/larksuite/oapi-sdk-go/v3"
+	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 )
 
 var (
@@ -56,6 +57,7 @@ type Runtime struct {
 	Config     Config
 	Store      *storage.Store
 	HTTPClient *http.Client
+	Client     FeishuClient
 }
 
 type SendResult struct {
@@ -65,6 +67,10 @@ type SendResult struct {
 
 type Message struct {
 	MessageID string `json:"message_id"`
+}
+
+type FeishuClient interface {
+	CreateMessage(ctx context.Context, receiveType, receiveID, text string) (Message, error)
 }
 
 func ConfigFromEndpoint(endpoint storage.InteractionEndpoint) (Config, error) {
@@ -199,12 +205,12 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	if receiveType == "" {
 		receiveType = inferReceiveIDType(receiveID)
 	}
-	token, err := r.tenantAccessToken(ctx, cfg)
+	client, err := r.feishuClient(cfg)
 	if err != nil {
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
 		return SendResult{Delivery: failed}, err
 	}
-	sent, err := r.sendText(ctx, cfg, token, receiveType, receiveID, message.Content)
+	sent, err := client.CreateMessage(ctx, receiveType, receiveID, message.Content)
 	if err != nil {
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
 		return SendResult{Delivery: failed}, err
@@ -216,89 +222,50 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	return SendResult{Delivery: updated, Messages: []Message{sent}}, nil
 }
 
-func (r Runtime) tenantAccessToken(ctx context.Context, cfg Config) (string, error) {
+func (r Runtime) feishuClient(cfg Config) (FeishuClient, error) {
 	if cfg.AppID == "" || cfg.AppSecret == "" {
-		return "", errors.New("feishu app_id and app_secret are required")
+		return nil, errors.New("feishu app_id and app_secret are required")
 	}
-	payload := map[string]string{"app_id": cfg.AppID, "app_secret": cfg.AppSecret}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", err
+	if r.Client != nil {
+		return r.Client, nil
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiBaseURL(cfg)+"/open-apis/auth/v3/tenant_access_token/internal", bytes.NewReader(body))
-	if err != nil {
-		return "", err
+	opts := []lark.ClientOptionFunc{
+		lark.WithHttpClient(r.httpClient()),
 	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := r.httpClient().Do(req)
-	if err != nil {
-		return "", err
+	if cfg.APIBaseURL != "" {
+		opts = append(opts, lark.WithOpenBaseUrl(apiBaseURL(cfg)))
 	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("feishu tenant_access_token HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-	var out struct {
-		Code              int    `json:"code"`
-		Msg               string `json:"msg"`
-		TenantAccessToken string `json:"tenant_access_token"`
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return "", err
-	}
-	if out.Code != 0 || out.TenantAccessToken == "" {
-		return "", fmt.Errorf("feishu tenant_access_token rejected: %s", firstNonEmpty(out.Msg, fmt.Sprintf("code %d", out.Code)))
-	}
-	return out.TenantAccessToken, nil
+	return feishuSDKClient{client: lark.NewClient(cfg.AppID, cfg.AppSecret, opts...)}, nil
 }
 
-func (r Runtime) sendText(ctx context.Context, cfg Config, token, receiveType, receiveID, text string) (Message, error) {
+type feishuSDKClient struct {
+	client *lark.Client
+}
+
+func (c feishuSDKClient) CreateMessage(ctx context.Context, receiveType, receiveID, text string) (Message, error) {
 	content, err := json.Marshal(map[string]string{"text": text})
 	if err != nil {
 		return Message{}, err
 	}
-	payload := map[string]any{
-		"receive_id": receiveID,
-		"msg_type":   "text",
-		"content":    string(content),
-	}
-	body, err := json.Marshal(payload)
+	req := larkim.NewCreateMessageReqBuilder().
+		ReceiveIdType(receiveType).
+		Body(&larkim.CreateMessageReqBody{
+			ReceiveId: larkcore.StringPtr(receiveID),
+			MsgType:   larkcore.StringPtr(larkim.MsgTypeText),
+			Content:   larkcore.StringPtr(string(content)),
+		}).
+		Build()
+	resp, err := c.client.Im.V1.Message.Create(ctx, req)
 	if err != nil {
 		return Message{}, err
 	}
-	endpoint := apiBaseURL(cfg) + "/open-apis/im/v1/messages"
-	values := url.Values{}
-	values.Set("receive_id_type", receiveType)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"?"+values.Encode(), bytes.NewReader(body))
-	if err != nil {
-		return Message{}, err
+	if !resp.Success() {
+		return Message{}, fmt.Errorf("feishu message create rejected: %s", firstNonEmpty(resp.Msg, fmt.Sprintf("code %d", resp.Code)))
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := r.httpClient().Do(req)
-	if err != nil {
-		return Message{}, err
+	if resp.Data == nil || resp.Data.MessageId == nil || *resp.Data.MessageId == "" {
+		return Message{}, errors.New("feishu message create returned empty message_id")
 	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Message{}, fmt.Errorf("feishu message create HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-	var out struct {
-		Code int    `json:"code"`
-		Msg  string `json:"msg"`
-		Data struct {
-			MessageID string `json:"message_id"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return Message{}, err
-	}
-	if out.Code != 0 {
-		return Message{}, fmt.Errorf("feishu message create rejected: %s", firstNonEmpty(out.Msg, fmt.Sprintf("code %d", out.Code)))
-	}
-	return Message{MessageID: out.Data.MessageID}, nil
+	return Message{MessageID: *resp.Data.MessageId}, nil
 }
 
 type envelope struct {

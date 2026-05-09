@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/iminbound"
 	"github.com/ca-x/nekode/internal/storage"
+	tele "gopkg.in/telebot.v4"
 )
 
 const SecretTokenHeader = "X-Telegram-Bot-Api-Secret-Token"
@@ -54,6 +54,7 @@ type Runtime struct {
 	Config     Config
 	Store      *storage.Store
 	HTTPClient *http.Client
+	Bot        TelegramBot
 }
 
 type SendResult struct {
@@ -63,6 +64,10 @@ type SendResult struct {
 
 type TelegramMessage struct {
 	MessageID int64 `json:"message_id"`
+}
+
+type TelegramBot interface {
+	Send(to tele.Recipient, what interface{}, opts ...interface{}) (*tele.Message, error)
 }
 
 func ConfigFromEndpoint(endpoint storage.InteractionEndpoint) (Config, error) {
@@ -192,50 +197,25 @@ func (r Runtime) sendFrame(ctx context.Context, cfg Config, frame imadapter.Outb
 	if cfg.Token == "" {
 		return TelegramMessage{}, errors.New("telegram bot token is required")
 	}
-	payload := map[string]any{
-		"chat_id": frame.TargetID,
-		"text":    frame.Text,
+	bot, err := r.telegramBot(cfg)
+	if err != nil {
+		return TelegramMessage{}, err
 	}
+	opts := &tele.SendOptions{}
 	if frame.ParseMode != "" {
-		payload["parse_mode"] = frame.ParseMode
+		opts.ParseMode = tele.ParseMode(frame.ParseMode)
 	}
 	if frame.Silent {
-		payload["disable_notification"] = true
+		opts.DisableNotification = true
 	}
 	if id, ok := parseTelegramMessageID(frame.ReplyToExternalMessageID); ok {
-		payload["reply_parameters"] = map[string]any{"message_id": id}
+		opts.ReplyParams = &tele.ReplyParams{MessageID: int(id), AllowWithoutReply: true}
 	}
-	body, err := json.Marshal(payload)
+	msg, err := bot.Send(telegramRecipient(frame.TargetID), frame.Text, opts)
 	if err != nil {
 		return TelegramMessage{}, err
 	}
-	url := strings.TrimRight(firstNonEmpty(cfg.APIBaseURL, "https://api.telegram.org"), "/") + "/bot" + cfg.Token + "/sendMessage"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return TelegramMessage{}, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := r.httpClient().Do(req)
-	if err != nil {
-		return TelegramMessage{}, err
-	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return TelegramMessage{}, fmt.Errorf("telegram sendMessage HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-	var out struct {
-		OK          bool            `json:"ok"`
-		Description string          `json:"description"`
-		Result      TelegramMessage `json:"result"`
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return TelegramMessage{}, err
-	}
-	if !out.OK {
-		return TelegramMessage{}, fmt.Errorf("telegram sendMessage rejected: %s", out.Description)
-	}
-	return out.Result, nil
+	return TelegramMessage{MessageID: int64(msg.ID)}, nil
 }
 
 func applyConfig(msg iminbound.Message, cfg Config) iminbound.Message {
@@ -342,6 +322,24 @@ func (r Runtime) httpClient() *http.Client {
 		return r.HTTPClient
 	}
 	return http.DefaultClient
+}
+
+func (r Runtime) telegramBot(cfg Config) (TelegramBot, error) {
+	if r.Bot != nil {
+		return r.Bot, nil
+	}
+	return tele.NewBot(tele.Settings{
+		Token:   cfg.Token,
+		URL:     strings.TrimRight(firstNonEmpty(cfg.APIBaseURL, tele.DefaultApiURL), "/"),
+		Client:  r.httpClient(),
+		Offline: true,
+	})
+}
+
+type telegramRecipient string
+
+func (r telegramRecipient) Recipient() string {
+	return string(r)
 }
 
 func parseTelegramMessageID(value string) (int64, bool) {
