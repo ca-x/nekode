@@ -65,12 +65,13 @@ system:
    tool policy overrides.
 
 Current status: the repository has provider schemas, normalizers, outbound
-delivery lifecycle, frame/render helpers, UI configuration, and mock fixtures.
-Real Telegram, QQ, Feishu, and WeChat provider SDK/API runtimes are separate
-follow-up work. Do not describe mock fixtures or frame/render boundaries as
-live provider connectivity until the provider runtime task has webhook/callback
-or polling receive, provider auth verification, real send API delivery, and
-live smoke evidence. See `docs/im-real-provider-runtime-plan.md`.
+delivery lifecycle, frame/render helpers, UI configuration, mock fixtures, and
+thin provider runtimes for Terminal, Telegram, Feishu, QQ, Weixin, and
+ServerChan. These runtimes are locally verified with mocked provider APIs or
+fake SDK boundaries, but external providers are still not production-connected
+until operator-owned credentials and public callback or polling environments
+pass live smoke. See `docs/im-real-provider-runtime-plan.md` for the task #205
+live-smoke matrix and `Not-tested` provider caveats.
 
 ## Run Locally
 

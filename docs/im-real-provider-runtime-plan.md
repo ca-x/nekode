@@ -1,6 +1,6 @@
 # IM Real Provider Runtime Plan
 
-Status: task #177 SDK/API selection and integration boundary
+Status: task #205 live smoke/docs gate
 Reference baseline: CherryHQ/stella at `120eced`
 
 ## Current Truth
@@ -32,6 +32,48 @@ operator-owned credentials.
 | QQ | Schema/config validation, normalizer, BotGo token/OpenAPI/WebSocket boundary, group/C2C send calls, and mocked send/storage tests are implemented. | QQ sandbox/live smoke still requires operator-owned bot credentials; BotGo webhook-vs-WebSocket compliance should stay visible in release notes. |
 | WeChat/Weixin | Canonical provider id is `weixin`; `wechat` is accepted as an alias. Official-account callback/signature handling, customer-service send, and Stella iLink client fork boundary are implemented. | Generic QR binding API/Web panel is task #206; Weixin QR binding adapter/openid send gating is task #207; live public-account/iLink smoke requires operator-owned credentials and callback/QR environment. |
 | ServerChan | Schema/config validation, Nekobot-derived bot-go polling receive, sendMessage delivery, normalizer, and mocked send/storage tests are implemented. | Live ServerChan send/poll smoke requires operator-owned bot token and chat ID. |
+
+## Task #205 Live Smoke Gate Matrix
+
+Gate baseline: `main@b5d31c9`.
+
+This gate separates deterministic local evidence from real external-provider
+smoke evidence. The local test suite proves that each thin runtime can validate
+provider-shaped input, normalize into Nekode, consume source-only outbound
+deliveries, and mark delivery status when the provider API is represented by
+`httptest` or a fake SDK boundary. It does not prove production connectivity to
+Telegram, Feishu, QQ, Weixin, or ServerChan.
+
+No operator-owned external provider credentials, public callback URL, QQ
+sandbox account, Weixin public-account/iLink account, or ServerChan bot token
+were available in this environment. Therefore every external-provider live
+smoke below is explicitly `Not-tested`. Release notes, Web copy, and final
+regression reports must not describe those providers as production connected or
+release green until the corresponding live smoke is rerun with real credentials.
+
+Local verification commands run for this gate:
+
+- `go test ./internal/imadapter ./internal/imbinding ./internal/imchannels/terminal ./internal/imchannels/telegram ./internal/imchannels/feishu ./internal/imchannels/qq ./internal/imchannels/weixin ./internal/imchannels/serverchan ./internal/server -count=1`
+- `go test ./... -count=1 -timeout=180s`
+- `go build ./...`
+- `npm --prefix web run typecheck -- --pretty false`
+- `npm --prefix web run build`
+- `git diff --check`
+
+| Provider | Local verification result | Real external credentials/callback status | Release gate judgment |
+| --- | --- | --- | --- |
+| Terminal | `Passed`: local channel input normalizes into the shared IM DTO shape, drafts keep endpoint/target/thread metadata, and outbound rendering includes delivery status. Evidence: `go test ./internal/imchannels/terminal ./internal/imadapter ./internal/imbinding ./internal/server -count=1`. | Not applicable: Terminal is local-only and has no external provider account or callback. | `Green for local-dev provider only`. It may be used as the local IM smoke path in task #199, but it does not prove any external provider. |
+| Telegram | `Passed locally`: webhook secret-token validation, group mention filtering, inbound storage, source-only outbound delivery, Bot API `sendMessage` request shape, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned bot token, configured `setWebhook` URL, reachable public HTTPS callback, and a real chat/channel ID. | `Implemented, not live-smoked`. Keep `runtimeStatus=implemented_not_live_smoked`; do not mark Telegram production-ready until live bot receive/send smoke passes. |
+| Feishu | `Passed locally`: URL verification challenge, plain callback verification-token auth, encrypted-payload rejection, group mention filtering, tenant-token fetch shape, OpenAPI `im/v1/messages` send shape, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned Feishu app credentials, event subscription, verification token, public callback URL, tenant access, and real chat/open/union ID. Encrypted callbacks are intentionally unsupported in this thin runtime. | `Implemented, not live-smoked`. Plain callbacks can remain available with explicit encrypted-callback caveat; do not mark Feishu production-ready until tenant live smoke passes. |
+| QQ | `Passed locally`: BotGo DTO group receive, normalized storage, source-only outbound delivery, group/C2C send boundary, and delivered status are covered with a fake QQ OpenAPI boundary. | `Not-tested`: requires operator-owned QQ bot app ID/secret, sandbox or live bot access, event delivery mode validation, and real group/C2C target. | `Implemented, not live-smoked`. QQ must remain live-gated; BotGo WebSocket-vs-webhook delivery-mode caveat stays visible in release notes. |
+| Weixin official account | `Passed locally`: callback signature URL verification, XML text callback normalization/storage, customer-service access-token fetch shape, send request shape, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned WeChat public account or test account, app credentials, callback token, public callback URL, user openid, and a valid customer-service reply window. | `Implemented, not live-smoked`. Official-account mode must not be called production connected until public-account live receive/send smoke passes. |
+| Weixin iLink QR | `Passed locally`: generic QR binding session contract from task #206 is consumed, Stella-style iLink QR ticket/status calls are represented by `httptest`, bound bot config is persisted, send fails before binding, and bound `sendmessage` marks delivery delivered. | `Not-tested`: requires operator-owned Stella-compatible iLink/Weixin environment, QR scan by a real account, bound bot token/user ID, and live send path. | `Implemented, not live-smoked`. Web may show QR binding only through the `bindingMethods=qr_code` capability, but iLink remains not production green until live QR bind/send smoke passes. |
+| ServerChan | `Passed locally`: Nekobot-derived polling update shape, allow-list rejection, inbound storage, source-only outbound delivery, `sendMessage` request shape, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned ServerChan bot token, real chat ID, and live poll/send confirmation. | `Implemented, not live-smoked`. ServerChan is a product-level provider in the schema, but not release green until live bot token smoke passes. |
+
+The task #205 gate is considered complete only for documentation/review
+purposes: the implementation is locally verified and the live-smoke gaps are
+explicit. It does not upgrade any external provider from
+`implemented_not_live_smoked` to production-ready.
 
 ## Stella Reference Matrix
 
