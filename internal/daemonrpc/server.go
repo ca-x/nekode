@@ -315,12 +315,8 @@ func (s *Server) ListChannels(ctx context.Context, req *daemonv1.ListChannelsReq
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list task channels: %v", err)
 	}
-	messages, err := s.store.ListMessages(ctx, "#general", "", int(req.GetLimit()))
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "list messages: %v", err)
-	}
-	seen := map[string]bool{"#general": true}
-	channels := []*daemonv1.ChannelRecord{channelRecord("#general", "General")}
+	seen := map[string]bool{}
+	channels := []*daemonv1.ChannelRecord{}
 	for _, taskModel := range tasks {
 		if taskModel.Target == "" || seen[taskModel.Target] {
 			continue
@@ -328,12 +324,16 @@ func (s *Server) ListChannels(ctx context.Context, req *daemonv1.ListChannelsReq
 		seen[taskModel.Target] = true
 		channels = append(channels, channelRecord(taskModel.Target, strings.TrimPrefix(taskModel.Target, "#")))
 	}
-	for _, msg := range messages {
-		if msg.Target == "" || seen[msg.Target] {
+	messageTargets, err := s.store.ListMessageTargets(ctx, int(req.GetLimit()))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list message targets: %v", err)
+	}
+	for _, target := range messageTargets {
+		if target == "" || seen[target] {
 			continue
 		}
-		seen[msg.Target] = true
-		channels = append(channels, channelRecord(msg.Target, strings.TrimPrefix(msg.Target, "#")))
+		seen[target] = true
+		channels = append(channels, channelRecord(target, strings.TrimPrefix(target, "#")))
 	}
 	return &daemonv1.ListChannelsResponse{Channels: channels, NextCursor: cursorFromCount(len(channels), "", s.serverID)}, nil
 }

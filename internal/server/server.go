@@ -1416,13 +1416,9 @@ func (s *Server) channelSummaries(ctx context.Context, user storage.User, joined
 	if err != nil {
 		return nil, err
 	}
-	seen := map[string]struct{}{
-		"#general": {},
-		"#ops":     {},
-		"#release": {},
-	}
-	targets := []string{"#general", "#ops", "#release"}
-	out := make([]storage.ChannelSummary, 0, len(persisted)+len(targets))
+	seen := make(map[string]struct{}, len(persisted))
+	var targets []string
+	out := make([]storage.ChannelSummary, 0, len(persisted))
 	for _, channel := range persisted {
 		seen[channel.Target] = struct{}{}
 		s.decorateChannelSummary(ctx, user, &channel)
@@ -1513,16 +1509,6 @@ func (s *Server) channelMembers(ctx context.Context, user storage.User, target s
 			Role:           firstNonEmptyString(s.channelRoleFor(ctx, user, target), "viewer"),
 			JoinedTimeUnix: user.CreatedUnix,
 		},
-	}
-	if target == "#general" || target == "#release" {
-		members = append(members, storage.ChannelMember{
-			Target:         target,
-			MemberID:       "agent:onboarding",
-			DisplayName:    "Onboarding Agent",
-			Kind:           "agent",
-			Role:           "member",
-			JoinedTimeUnix: user.CreatedUnix,
-		})
 	}
 	return members, nil
 }

@@ -315,3 +315,9 @@ Each milestone is done when:
   `frontend: M<n> — <scope>` message summarizing the milestone, push to the
   current branch. This turns each milestone into a reviewable Git checkpoint
   so regressions can be bisected per milestone.
+- **Live-browser UI verification is delegated to codex.** Claude handles the
+  code and diff-level review; for each UI-facing milestone, spawn a codex
+  agent that drives `agent-browser --engine chrome` against a local server,
+  exercises the golden paths (login, create admin, add computer, add agent,
+  send message, delete guard, theme switch, i18n switch), and reports any
+  regressions. This preserves Claude's context for design and code work.

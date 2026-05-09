@@ -1295,7 +1295,7 @@ function AuthScreen({
           <h1>
             {isSetupMode
               ? "Create the first administrator."
-              : "Run a self-hosted Slock-style team surface."}
+              : "Your team's collaboration and AI agent control plane."}
           </h1>
           <p>
             {isSetupMode
@@ -1545,10 +1545,6 @@ function Overview({
           <ReferenceItem
             title="Task chat affordance"
             detail="Task cards reserve room for owner/review metadata and quick jump back to conversation."
-          />
-          <ReferenceItem
-            title="Reusable skill shelf"
-            detail="Skill Center stays separate from settings so agent setup can attach proven instructions."
           />
         </div>
       </section>
@@ -6187,7 +6183,7 @@ function DaemonPanel({
         <div className="panel-heading compact-heading">
           <div>
             <p className="eyebrow">Runtime Catalog</p>
-            <h2>Slock.ai and Multica presets</h2>
+            <h2>Runtime presets</h2>
           </div>
         </div>
         <div className="runtime-preset-grid">
