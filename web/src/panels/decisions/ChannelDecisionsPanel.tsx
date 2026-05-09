@@ -50,6 +50,12 @@ export function ChannelDecisionsPanel({
   const [retiringId, setRetiringId] = useState<string>("");
   const [proposeOpen, setProposeOpen] = useState(false);
   const [votesById, setVotesById] = useState<Record<string, ChannelDecisionVote[]>>({});
+  // Separate "fully loaded via listDecisionVotes" from "votesById has my
+  // own vote optimistically merged". Without this, casting a vote before
+  // expanding the card seeded votesById with one row, and ensureVotes
+  // then treated the card as already-loaded and never fetched the real
+  // audit history.
+  const [votesFullyLoaded, setVotesFullyLoaded] = useState<Record<string, boolean>>({});
 
   const refresh = useCallback(async () => {
     if (!target) return;
@@ -138,10 +144,18 @@ export function ChannelDecisionsPanel({
   }
 
   async function ensureVotes(decisionID: string) {
-    if (votesById[decisionID]) return votesById[decisionID];
+    if (votesFullyLoaded[decisionID]) return votesById[decisionID] ?? [];
     const result = await api.listDecisionVotes(decisionID);
-    setVotesById((current) => ({ ...current, [decisionID]: result.items ?? [] }));
-    return result.items ?? [];
+    const items = result.items ?? [];
+    // Merge any optimistic local rows (from an earlier vote) with the
+    // fetched history, preferring the freshly fetched record for any
+    // voter present in both.
+    const optimistic = votesById[decisionID] ?? [];
+    const fetchedVoterIDs = new Set(items.map((entry) => entry.voterId));
+    const merged = [...items, ...optimistic.filter((entry) => !fetchedVoterIDs.has(entry.voterId))];
+    setVotesById((current) => ({ ...current, [decisionID]: merged }));
+    setVotesFullyLoaded((current) => ({ ...current, [decisionID]: true }));
+    return merged;
   }
 
   return (
