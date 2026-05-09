@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package nekode.daemon.v1;
+
+import "nekode/daemon/v1/common.proto";
+
+option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
+
+// TunnelState tracks a preview tunnel through its short-lived lifecycle.
+// Agent-initiated tunnels start PENDING_APPROVAL; human-initiated ones
+// start ACTIVE directly. CLOSED is terminal (manual close, TTL expiry, or
+// daemon disconnect).
+enum TunnelState {
+  TUNNEL_STATE_UNSPECIFIED = 0;
+  TUNNEL_STATE_PENDING_APPROVAL = 1;
+  TUNNEL_STATE_ACTIVE = 2;
+  TUNNEL_STATE_REJECTED = 3;
+  TUNNEL_STATE_CLOSED = 4;
+}
+
+// TunnelAccessPolicy controls who can reach the tunnel URL.
+//   PRIVATE  — only channel members with the same identity as the
+//              creator can reach it (requires login + allow-list).
+//   MEMBERS  — any authenticated workspace member.
+//   PUBLIC   — anyone with the URL; tokens are cryptographically random.
+enum TunnelAccessPolicy {
+  TUNNEL_ACCESS_POLICY_UNSPECIFIED = 0;
+  TUNNEL_ACCESS_POLICY_PRIVATE = 1;
+  TUNNEL_ACCESS_POLICY_MEMBERS = 2;
+  TUNNEL_ACCESS_POLICY_PUBLIC = 3;
+}
+
+// Tunnel describes one active or historical reverse-proxy binding.
+message Tunnel {
+  string tunnel_id = 1;
+  string token = 2;              // only populated for the creator
+  string computer_id = 3;
+  string daemon_id = 4;
+  uint32 local_port = 5;
+  string label = 6;              // operator-facing name, e.g. "dev server"
+  string public_url = 7;         // https://<server>/preview/<token>/
+  TunnelState state = 8;
+  TunnelAccessPolicy access_policy = 9;
+  string creator_id = 10;
+  ActorKind creator_kind = 11;
+  int64 created_time_unix = 12;
+  int64 expires_time_unix = 13;
+  int64 approved_time_unix = 14;
+  string approved_by = 15;
+  int64 closed_time_unix = 16;
+  string close_reason = 17;
+}
+
+message CreateTunnelRequest {
+  string computer_id = 1;
+  uint32 local_port = 2;
+  string label = 3;
+  TunnelAccessPolicy access_policy = 4;
+  uint32 ttl_seconds = 5;         // capped at 86400 server-side
+  RequestContext context = 6;
+}
+
+message CreateTunnelResponse {
+  Tunnel tunnel = 1;
+}
+
+message ListTunnelsRequest {
+  string computer_id = 1;
+  TunnelState state_filter = 2;   // TUNNEL_STATE_UNSPECIFIED = all
+  uint32 limit = 3;
+}
+
+message ListTunnelsResponse {
+  repeated Tunnel tunnels = 1;
+}
+
+message ApproveTunnelRequest {
+  string tunnel_id = 1;
+  RequestContext context = 2;
+}
+
+message ApproveTunnelResponse {
+  Tunnel tunnel = 1;
+}
+
+message RejectTunnelRequest {
+  string tunnel_id = 1;
+  string reason = 2;
+  RequestContext context = 3;
+}
+
+message RejectTunnelResponse {
+  Tunnel tunnel = 1;
+}
+
+message CloseTunnelRequest {
+  string tunnel_id = 1;
+  string reason = 2;
+  RequestContext context = 3;
+}
+
+message CloseTunnelResponse {
+  Tunnel tunnel = 1;
+}
+
+// ProxyEnvelope is the bidi payload between server and daemon for
+// forwarded HTTP traffic. Each envelope carries one of a small set of
+// well-known messages identified by `kind` so a single stream can host
+// many in-flight requests.
+//
+// HTTP request → REQUEST_START (head + trailers) → zero or more
+// REQUEST_BODY chunks → REQUEST_END.
+// Daemon response → RESPONSE_START (head) → zero or more RESPONSE_BODY
+// chunks → RESPONSE_END.
+enum ProxyFrameKind {
+  PROXY_FRAME_KIND_UNSPECIFIED = 0;
+  PROXY_FRAME_KIND_REQUEST_START = 1;
+  PROXY_FRAME_KIND_REQUEST_BODY = 2;
+  PROXY_FRAME_KIND_REQUEST_END = 3;
+  PROXY_FRAME_KIND_RESPONSE_START = 4;
+  PROXY_FRAME_KIND_RESPONSE_BODY = 5;
+  PROXY_FRAME_KIND_RESPONSE_END = 6;
+  PROXY_FRAME_KIND_CANCEL = 7;
+}
+
+// ProxyHeader mirrors HTTP header semantics. Repeated values are kept
+// because HTTP allows multi-valued headers (Set-Cookie, etc.).
+message ProxyHeader {
+  string name = 1;
+  repeated string value = 2;
+}
+
+// ProxyFrame is a single bidi stream unit.
+message ProxyFrame {
+  string tunnel_id = 1;
+  string request_id = 2;          // uuid, scopes one HTTP round-trip
+  ProxyFrameKind kind = 3;
+  // REQUEST_START fields
+  string method = 10;
+  string path = 11;               // includes query string
+  repeated ProxyHeader request_headers = 12;
+  string remote_addr = 13;
+  // RESPONSE_START fields
+  uint32 status_code = 20;
+  repeated ProxyHeader response_headers = 21;
+  // BODY fields
+  bytes body_chunk = 30;
+  // END / CANCEL fields
+  string error = 40;               // non-empty when request aborted
+}
+
+message ProxyExchangeResponse {
+  int64 persisted_count = 1;
+  int64 dropped_count = 2;
+}
+
+// ProxyExchange and the other tunnel RPCs are registered on the main
+// DaemonControlService — see service.proto.
+

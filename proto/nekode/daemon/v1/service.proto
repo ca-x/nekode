@@ -14,6 +14,7 @@ import "nekode/daemon/v1/memory.proto";
 import "nekode/daemon/v1/reminder.proto";
 import "nekode/daemon/v1/runtime.proto";
 import "nekode/daemon/v1/task.proto";
+import "nekode/daemon/v1/tunnels.proto";
 
 option go_package = "github.com/ca-x/nekode/gen/go/nekode/daemon/v1;daemonv1";
 
@@ -349,4 +350,16 @@ service DaemonControlService {
   rpc ListAgentRuns(ListAgentRunsRequest) returns (ListAgentRunsResponse);
   rpc GetAgentRun(GetAgentRunRequest) returns (GetAgentRunResponse);
   rpc SearchAgentRuns(SearchAgentRunsRequest) returns (SearchAgentRunsResponse);
+
+  // Preview tunnels (reverse HTTP proxy from server to daemon-local
+  // services). Agent-initiated tunnels require approval; human-created
+  // tunnels activate immediately.
+  rpc CreateTunnel(CreateTunnelRequest) returns (CreateTunnelResponse);
+  rpc ListTunnels(ListTunnelsRequest) returns (ListTunnelsResponse);
+  rpc ApproveTunnel(ApproveTunnelRequest) returns (ApproveTunnelResponse);
+  rpc RejectTunnel(RejectTunnelRequest) returns (RejectTunnelResponse);
+  rpc CloseTunnel(CloseTunnelRequest) returns (CloseTunnelResponse);
+  // ProxyExchange is the long-lived bidi stream per daemon; HTTP traffic
+  // for every active tunnel rides on top of it keyed by request_id.
+  rpc ProxyExchange(stream ProxyFrame) returns (stream ProxyFrame);
 }

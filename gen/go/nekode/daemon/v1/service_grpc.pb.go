@@ -108,6 +108,12 @@ const (
 	DaemonControlService_ListAgentRuns_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ListAgentRuns"
 	DaemonControlService_GetAgentRun_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/GetAgentRun"
 	DaemonControlService_SearchAgentRuns_FullMethodName               = "/nekode.daemon.v1.DaemonControlService/SearchAgentRuns"
+	DaemonControlService_CreateTunnel_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/CreateTunnel"
+	DaemonControlService_ListTunnels_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/ListTunnels"
+	DaemonControlService_ApproveTunnel_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ApproveTunnel"
+	DaemonControlService_RejectTunnel_FullMethodName                  = "/nekode.daemon.v1.DaemonControlService/RejectTunnel"
+	DaemonControlService_CloseTunnel_FullMethodName                   = "/nekode.daemon.v1.DaemonControlService/CloseTunnel"
+	DaemonControlService_ProxyExchange_FullMethodName                 = "/nekode.daemon.v1.DaemonControlService/ProxyExchange"
 )
 
 // DaemonControlServiceClient is the client API for DaemonControlService service.
@@ -295,6 +301,17 @@ type DaemonControlServiceClient interface {
 	ListAgentRuns(ctx context.Context, in *ListAgentRunsRequest, opts ...grpc.CallOption) (*ListAgentRunsResponse, error)
 	GetAgentRun(ctx context.Context, in *GetAgentRunRequest, opts ...grpc.CallOption) (*GetAgentRunResponse, error)
 	SearchAgentRuns(ctx context.Context, in *SearchAgentRunsRequest, opts ...grpc.CallOption) (*SearchAgentRunsResponse, error)
+	// Preview tunnels (reverse HTTP proxy from server to daemon-local
+	// services). Agent-initiated tunnels require approval; human-created
+	// tunnels activate immediately.
+	CreateTunnel(ctx context.Context, in *CreateTunnelRequest, opts ...grpc.CallOption) (*CreateTunnelResponse, error)
+	ListTunnels(ctx context.Context, in *ListTunnelsRequest, opts ...grpc.CallOption) (*ListTunnelsResponse, error)
+	ApproveTunnel(ctx context.Context, in *ApproveTunnelRequest, opts ...grpc.CallOption) (*ApproveTunnelResponse, error)
+	RejectTunnel(ctx context.Context, in *RejectTunnelRequest, opts ...grpc.CallOption) (*RejectTunnelResponse, error)
+	CloseTunnel(ctx context.Context, in *CloseTunnelRequest, opts ...grpc.CallOption) (*CloseTunnelResponse, error)
+	// ProxyExchange is the long-lived bidi stream per daemon; HTTP traffic
+	// for every active tunnel rides on top of it keyed by request_id.
+	ProxyExchange(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ProxyFrame, ProxyFrame], error)
 }
 
 type daemonControlServiceClient struct {
@@ -1216,6 +1233,69 @@ func (c *daemonControlServiceClient) SearchAgentRuns(ctx context.Context, in *Se
 	return out, nil
 }
 
+func (c *daemonControlServiceClient) CreateTunnel(ctx context.Context, in *CreateTunnelRequest, opts ...grpc.CallOption) (*CreateTunnelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateTunnelResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_CreateTunnel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ListTunnels(ctx context.Context, in *ListTunnelsRequest, opts ...grpc.CallOption) (*ListTunnelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTunnelsResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ListTunnels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ApproveTunnel(ctx context.Context, in *ApproveTunnelRequest, opts ...grpc.CallOption) (*ApproveTunnelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApproveTunnelResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_ApproveTunnel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) RejectTunnel(ctx context.Context, in *RejectTunnelRequest, opts ...grpc.CallOption) (*RejectTunnelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RejectTunnelResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_RejectTunnel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) CloseTunnel(ctx context.Context, in *CloseTunnelRequest, opts ...grpc.CallOption) (*CloseTunnelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CloseTunnelResponse)
+	err := c.cc.Invoke(ctx, DaemonControlService_CloseTunnel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daemonControlServiceClient) ProxyExchange(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ProxyFrame, ProxyFrame], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &DaemonControlService_ServiceDesc.Streams[3], DaemonControlService_ProxyExchange_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ProxyFrame, ProxyFrame]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DaemonControlService_ProxyExchangeClient = grpc.BidiStreamingClient[ProxyFrame, ProxyFrame]
+
 // DaemonControlServiceServer is the server API for DaemonControlService service.
 // All implementations must embed UnimplementedDaemonControlServiceServer
 // for forward compatibility.
@@ -1401,6 +1481,17 @@ type DaemonControlServiceServer interface {
 	ListAgentRuns(context.Context, *ListAgentRunsRequest) (*ListAgentRunsResponse, error)
 	GetAgentRun(context.Context, *GetAgentRunRequest) (*GetAgentRunResponse, error)
 	SearchAgentRuns(context.Context, *SearchAgentRunsRequest) (*SearchAgentRunsResponse, error)
+	// Preview tunnels (reverse HTTP proxy from server to daemon-local
+	// services). Agent-initiated tunnels require approval; human-created
+	// tunnels activate immediately.
+	CreateTunnel(context.Context, *CreateTunnelRequest) (*CreateTunnelResponse, error)
+	ListTunnels(context.Context, *ListTunnelsRequest) (*ListTunnelsResponse, error)
+	ApproveTunnel(context.Context, *ApproveTunnelRequest) (*ApproveTunnelResponse, error)
+	RejectTunnel(context.Context, *RejectTunnelRequest) (*RejectTunnelResponse, error)
+	CloseTunnel(context.Context, *CloseTunnelRequest) (*CloseTunnelResponse, error)
+	// ProxyExchange is the long-lived bidi stream per daemon; HTTP traffic
+	// for every active tunnel rides on top of it keyed by request_id.
+	ProxyExchange(grpc.BidiStreamingServer[ProxyFrame, ProxyFrame]) error
 	mustEmbedUnimplementedDaemonControlServiceServer()
 }
 
@@ -1677,6 +1768,24 @@ func (UnimplementedDaemonControlServiceServer) GetAgentRun(context.Context, *Get
 }
 func (UnimplementedDaemonControlServiceServer) SearchAgentRuns(context.Context, *SearchAgentRunsRequest) (*SearchAgentRunsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SearchAgentRuns not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) CreateTunnel(context.Context, *CreateTunnelRequest) (*CreateTunnelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateTunnel not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ListTunnels(context.Context, *ListTunnelsRequest) (*ListTunnelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTunnels not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ApproveTunnel(context.Context, *ApproveTunnelRequest) (*ApproveTunnelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveTunnel not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) RejectTunnel(context.Context, *RejectTunnelRequest) (*RejectTunnelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectTunnel not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) CloseTunnel(context.Context, *CloseTunnelRequest) (*CloseTunnelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CloseTunnel not implemented")
+}
+func (UnimplementedDaemonControlServiceServer) ProxyExchange(grpc.BidiStreamingServer[ProxyFrame, ProxyFrame]) error {
+	return status.Error(codes.Unimplemented, "method ProxyExchange not implemented")
 }
 func (UnimplementedDaemonControlServiceServer) mustEmbedUnimplementedDaemonControlServiceServer() {}
 func (UnimplementedDaemonControlServiceServer) testEmbeddedByValue()                              {}
@@ -3276,6 +3385,103 @@ func _DaemonControlService_SearchAgentRuns_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaemonControlService_CreateTunnel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTunnelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).CreateTunnel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_CreateTunnel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).CreateTunnel(ctx, req.(*CreateTunnelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ListTunnels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTunnelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ListTunnels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ListTunnels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ListTunnels(ctx, req.(*ListTunnelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ApproveTunnel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveTunnelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).ApproveTunnel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_ApproveTunnel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).ApproveTunnel(ctx, req.(*ApproveTunnelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_RejectTunnel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectTunnelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).RejectTunnel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_RejectTunnel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).RejectTunnel(ctx, req.(*RejectTunnelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_CloseTunnel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseTunnelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaemonControlServiceServer).CloseTunnel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaemonControlService_CloseTunnel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaemonControlServiceServer).CloseTunnel(ctx, req.(*CloseTunnelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaemonControlService_ProxyExchange_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DaemonControlServiceServer).ProxyExchange(&grpc.GenericServerStream[ProxyFrame, ProxyFrame]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DaemonControlService_ProxyExchangeServer = grpc.BidiStreamingServer[ProxyFrame, ProxyFrame]
+
 // DaemonControlService_ServiceDesc is the grpc.ServiceDesc for DaemonControlService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3627,6 +3833,26 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "SearchAgentRuns",
 			Handler:    _DaemonControlService_SearchAgentRuns_Handler,
 		},
+		{
+			MethodName: "CreateTunnel",
+			Handler:    _DaemonControlService_CreateTunnel_Handler,
+		},
+		{
+			MethodName: "ListTunnels",
+			Handler:    _DaemonControlService_ListTunnels_Handler,
+		},
+		{
+			MethodName: "ApproveTunnel",
+			Handler:    _DaemonControlService_ApproveTunnel_Handler,
+		},
+		{
+			MethodName: "RejectTunnel",
+			Handler:    _DaemonControlService_RejectTunnel_Handler,
+		},
+		{
+			MethodName: "CloseTunnel",
+			Handler:    _DaemonControlService_CloseTunnel_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -3642,6 +3868,12 @@ var DaemonControlService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ReportAgentRun",
 			Handler:       _DaemonControlService_ReportAgentRun_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "ProxyExchange",
+			Handler:       _DaemonControlService_ProxyExchange_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},

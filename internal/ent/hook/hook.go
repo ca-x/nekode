@@ -225,6 +225,18 @@ func (f ThreadReadStateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ThreadReadStateMutation", m)
 }
 
+// The TunnelFunc type is an adapter to allow the use of ordinary
+// function as Tunnel mutator.
+type TunnelFunc func(context.Context, *ent.TunnelMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TunnelFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TunnelMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TunnelMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

@@ -22,6 +22,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
+	"github.com/ca-x/nekode/internal/ent/tunnel"
 	"github.com/ca-x/nekode/internal/ent/user"
 )
 
@@ -733,6 +734,64 @@ func init() {
 	threadreadstateDescID := threadreadstateFields[0].Descriptor()
 	// threadreadstate.DefaultID holds the default value on creation for the id field.
 	threadreadstate.DefaultID = threadreadstateDescID.Default.(func() string)
+	tunnelFields := schema.Tunnel{}.Fields()
+	_ = tunnelFields
+	// tunnelDescToken is the schema descriptor for token field.
+	tunnelDescToken := tunnelFields[1].Descriptor()
+	// tunnel.TokenValidator is a validator for the "token" field. It is called by the builders before save.
+	tunnel.TokenValidator = tunnelDescToken.Validators[0].(func(string) error)
+	// tunnelDescComputerID is the schema descriptor for computer_id field.
+	tunnelDescComputerID := tunnelFields[2].Descriptor()
+	// tunnel.ComputerIDValidator is a validator for the "computer_id" field. It is called by the builders before save.
+	tunnel.ComputerIDValidator = tunnelDescComputerID.Validators[0].(func(string) error)
+	// tunnelDescDaemonID is the schema descriptor for daemon_id field.
+	tunnelDescDaemonID := tunnelFields[3].Descriptor()
+	// tunnel.DefaultDaemonID holds the default value on creation for the daemon_id field.
+	tunnel.DefaultDaemonID = tunnelDescDaemonID.Default.(string)
+	// tunnelDescLabel is the schema descriptor for label field.
+	tunnelDescLabel := tunnelFields[5].Descriptor()
+	// tunnel.DefaultLabel holds the default value on creation for the label field.
+	tunnel.DefaultLabel = tunnelDescLabel.Default.(string)
+	// tunnelDescState is the schema descriptor for state field.
+	tunnelDescState := tunnelFields[6].Descriptor()
+	// tunnel.StateValidator is a validator for the "state" field. It is called by the builders before save.
+	tunnel.StateValidator = tunnelDescState.Validators[0].(func(string) error)
+	// tunnelDescAccessPolicy is the schema descriptor for access_policy field.
+	tunnelDescAccessPolicy := tunnelFields[7].Descriptor()
+	// tunnel.AccessPolicyValidator is a validator for the "access_policy" field. It is called by the builders before save.
+	tunnel.AccessPolicyValidator = tunnelDescAccessPolicy.Validators[0].(func(string) error)
+	// tunnelDescCreatorID is the schema descriptor for creator_id field.
+	tunnelDescCreatorID := tunnelFields[8].Descriptor()
+	// tunnel.CreatorIDValidator is a validator for the "creator_id" field. It is called by the builders before save.
+	tunnel.CreatorIDValidator = tunnelDescCreatorID.Validators[0].(func(string) error)
+	// tunnelDescCreatorKind is the schema descriptor for creator_kind field.
+	tunnelDescCreatorKind := tunnelFields[9].Descriptor()
+	// tunnel.CreatorKindValidator is a validator for the "creator_kind" field. It is called by the builders before save.
+	tunnel.CreatorKindValidator = tunnelDescCreatorKind.Validators[0].(func(string) error)
+	// tunnelDescExpiresUnix is the schema descriptor for expires_unix field.
+	tunnelDescExpiresUnix := tunnelFields[11].Descriptor()
+	// tunnel.DefaultExpiresUnix holds the default value on creation for the expires_unix field.
+	tunnel.DefaultExpiresUnix = tunnelDescExpiresUnix.Default.(int64)
+	// tunnelDescApprovedUnix is the schema descriptor for approved_unix field.
+	tunnelDescApprovedUnix := tunnelFields[12].Descriptor()
+	// tunnel.DefaultApprovedUnix holds the default value on creation for the approved_unix field.
+	tunnel.DefaultApprovedUnix = tunnelDescApprovedUnix.Default.(int64)
+	// tunnelDescApprovedBy is the schema descriptor for approved_by field.
+	tunnelDescApprovedBy := tunnelFields[13].Descriptor()
+	// tunnel.DefaultApprovedBy holds the default value on creation for the approved_by field.
+	tunnel.DefaultApprovedBy = tunnelDescApprovedBy.Default.(string)
+	// tunnelDescClosedUnix is the schema descriptor for closed_unix field.
+	tunnelDescClosedUnix := tunnelFields[14].Descriptor()
+	// tunnel.DefaultClosedUnix holds the default value on creation for the closed_unix field.
+	tunnel.DefaultClosedUnix = tunnelDescClosedUnix.Default.(int64)
+	// tunnelDescCloseReason is the schema descriptor for close_reason field.
+	tunnelDescCloseReason := tunnelFields[15].Descriptor()
+	// tunnel.DefaultCloseReason holds the default value on creation for the close_reason field.
+	tunnel.DefaultCloseReason = tunnelDescCloseReason.Default.(string)
+	// tunnelDescID is the schema descriptor for id field.
+	tunnelDescID := tunnelFields[0].Descriptor()
+	// tunnel.DefaultID holds the default value on creation for the id field.
+	tunnel.DefaultID = tunnelDescID.Default.(func() string)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescUsername is the schema descriptor for username field.

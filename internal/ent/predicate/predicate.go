@@ -60,5 +60,8 @@ type Task func(*sql.Selector)
 // ThreadReadState is the predicate function for threadreadstate builders.
 type ThreadReadState func(*sql.Selector)
 
+// Tunnel is the predicate function for tunnel builders.
+type Tunnel func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

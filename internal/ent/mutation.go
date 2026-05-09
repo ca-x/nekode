@@ -29,6 +29,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
+	"github.com/ca-x/nekode/internal/ent/tunnel"
 	"github.com/ca-x/nekode/internal/ent/user"
 )
 
@@ -59,6 +60,7 @@ const (
 	TypeSession             = "Session"
 	TypeTask                = "Task"
 	TypeThreadReadState     = "ThreadReadState"
+	TypeTunnel              = "Tunnel"
 	TypeUser                = "User"
 )
 
@@ -16173,6 +16175,1262 @@ func (m *ThreadReadStateMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ThreadReadStateMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ThreadReadState edge %s", name)
+}
+
+// TunnelMutation represents an operation that mutates the Tunnel nodes in the graph.
+type TunnelMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *string
+	token            *string
+	computer_id      *string
+	daemon_id        *string
+	local_port       *uint32
+	addlocal_port    *int32
+	label            *string
+	state            *string
+	access_policy    *string
+	creator_id       *string
+	creator_kind     *string
+	created_unix     *int64
+	addcreated_unix  *int64
+	expires_unix     *int64
+	addexpires_unix  *int64
+	approved_unix    *int64
+	addapproved_unix *int64
+	approved_by      *string
+	closed_unix      *int64
+	addclosed_unix   *int64
+	close_reason     *string
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*Tunnel, error)
+	predicates       []predicate.Tunnel
+}
+
+var _ ent.Mutation = (*TunnelMutation)(nil)
+
+// tunnelOption allows management of the mutation configuration using functional options.
+type tunnelOption func(*TunnelMutation)
+
+// newTunnelMutation creates new mutation for the Tunnel entity.
+func newTunnelMutation(c config, op Op, opts ...tunnelOption) *TunnelMutation {
+	m := &TunnelMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTunnel,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTunnelID sets the ID field of the mutation.
+func withTunnelID(id string) tunnelOption {
+	return func(m *TunnelMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Tunnel
+		)
+		m.oldValue = func(ctx context.Context) (*Tunnel, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Tunnel.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTunnel sets the old Tunnel of the mutation.
+func withTunnel(node *Tunnel) tunnelOption {
+	return func(m *TunnelMutation) {
+		m.oldValue = func(context.Context) (*Tunnel, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TunnelMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TunnelMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Tunnel entities.
+func (m *TunnelMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TunnelMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TunnelMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Tunnel.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetToken sets the "token" field.
+func (m *TunnelMutation) SetToken(s string) {
+	m.token = &s
+}
+
+// Token returns the value of the "token" field in the mutation.
+func (m *TunnelMutation) Token() (r string, exists bool) {
+	v := m.token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldToken returns the old "token" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldToken(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldToken: %w", err)
+	}
+	return oldValue.Token, nil
+}
+
+// ResetToken resets all changes to the "token" field.
+func (m *TunnelMutation) ResetToken() {
+	m.token = nil
+}
+
+// SetComputerID sets the "computer_id" field.
+func (m *TunnelMutation) SetComputerID(s string) {
+	m.computer_id = &s
+}
+
+// ComputerID returns the value of the "computer_id" field in the mutation.
+func (m *TunnelMutation) ComputerID() (r string, exists bool) {
+	v := m.computer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldComputerID returns the old "computer_id" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldComputerID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldComputerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldComputerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldComputerID: %w", err)
+	}
+	return oldValue.ComputerID, nil
+}
+
+// ResetComputerID resets all changes to the "computer_id" field.
+func (m *TunnelMutation) ResetComputerID() {
+	m.computer_id = nil
+}
+
+// SetDaemonID sets the "daemon_id" field.
+func (m *TunnelMutation) SetDaemonID(s string) {
+	m.daemon_id = &s
+}
+
+// DaemonID returns the value of the "daemon_id" field in the mutation.
+func (m *TunnelMutation) DaemonID() (r string, exists bool) {
+	v := m.daemon_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDaemonID returns the old "daemon_id" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldDaemonID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDaemonID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDaemonID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDaemonID: %w", err)
+	}
+	return oldValue.DaemonID, nil
+}
+
+// ResetDaemonID resets all changes to the "daemon_id" field.
+func (m *TunnelMutation) ResetDaemonID() {
+	m.daemon_id = nil
+}
+
+// SetLocalPort sets the "local_port" field.
+func (m *TunnelMutation) SetLocalPort(u uint32) {
+	m.local_port = &u
+	m.addlocal_port = nil
+}
+
+// LocalPort returns the value of the "local_port" field in the mutation.
+func (m *TunnelMutation) LocalPort() (r uint32, exists bool) {
+	v := m.local_port
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLocalPort returns the old "local_port" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldLocalPort(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLocalPort is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLocalPort requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLocalPort: %w", err)
+	}
+	return oldValue.LocalPort, nil
+}
+
+// AddLocalPort adds u to the "local_port" field.
+func (m *TunnelMutation) AddLocalPort(u int32) {
+	if m.addlocal_port != nil {
+		*m.addlocal_port += u
+	} else {
+		m.addlocal_port = &u
+	}
+}
+
+// AddedLocalPort returns the value that was added to the "local_port" field in this mutation.
+func (m *TunnelMutation) AddedLocalPort() (r int32, exists bool) {
+	v := m.addlocal_port
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLocalPort resets all changes to the "local_port" field.
+func (m *TunnelMutation) ResetLocalPort() {
+	m.local_port = nil
+	m.addlocal_port = nil
+}
+
+// SetLabel sets the "label" field.
+func (m *TunnelMutation) SetLabel(s string) {
+	m.label = &s
+}
+
+// Label returns the value of the "label" field in the mutation.
+func (m *TunnelMutation) Label() (r string, exists bool) {
+	v := m.label
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLabel returns the old "label" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldLabel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLabel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLabel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLabel: %w", err)
+	}
+	return oldValue.Label, nil
+}
+
+// ResetLabel resets all changes to the "label" field.
+func (m *TunnelMutation) ResetLabel() {
+	m.label = nil
+}
+
+// SetState sets the "state" field.
+func (m *TunnelMutation) SetState(s string) {
+	m.state = &s
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *TunnelMutation) State() (r string, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldState(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *TunnelMutation) ResetState() {
+	m.state = nil
+}
+
+// SetAccessPolicy sets the "access_policy" field.
+func (m *TunnelMutation) SetAccessPolicy(s string) {
+	m.access_policy = &s
+}
+
+// AccessPolicy returns the value of the "access_policy" field in the mutation.
+func (m *TunnelMutation) AccessPolicy() (r string, exists bool) {
+	v := m.access_policy
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccessPolicy returns the old "access_policy" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldAccessPolicy(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccessPolicy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccessPolicy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccessPolicy: %w", err)
+	}
+	return oldValue.AccessPolicy, nil
+}
+
+// ResetAccessPolicy resets all changes to the "access_policy" field.
+func (m *TunnelMutation) ResetAccessPolicy() {
+	m.access_policy = nil
+}
+
+// SetCreatorID sets the "creator_id" field.
+func (m *TunnelMutation) SetCreatorID(s string) {
+	m.creator_id = &s
+}
+
+// CreatorID returns the value of the "creator_id" field in the mutation.
+func (m *TunnelMutation) CreatorID() (r string, exists bool) {
+	v := m.creator_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatorID returns the old "creator_id" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldCreatorID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatorID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatorID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatorID: %w", err)
+	}
+	return oldValue.CreatorID, nil
+}
+
+// ResetCreatorID resets all changes to the "creator_id" field.
+func (m *TunnelMutation) ResetCreatorID() {
+	m.creator_id = nil
+}
+
+// SetCreatorKind sets the "creator_kind" field.
+func (m *TunnelMutation) SetCreatorKind(s string) {
+	m.creator_kind = &s
+}
+
+// CreatorKind returns the value of the "creator_kind" field in the mutation.
+func (m *TunnelMutation) CreatorKind() (r string, exists bool) {
+	v := m.creator_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatorKind returns the old "creator_kind" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldCreatorKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatorKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatorKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatorKind: %w", err)
+	}
+	return oldValue.CreatorKind, nil
+}
+
+// ResetCreatorKind resets all changes to the "creator_kind" field.
+func (m *TunnelMutation) ResetCreatorKind() {
+	m.creator_kind = nil
+}
+
+// SetCreatedUnix sets the "created_unix" field.
+func (m *TunnelMutation) SetCreatedUnix(i int64) {
+	m.created_unix = &i
+	m.addcreated_unix = nil
+}
+
+// CreatedUnix returns the value of the "created_unix" field in the mutation.
+func (m *TunnelMutation) CreatedUnix() (r int64, exists bool) {
+	v := m.created_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedUnix returns the old "created_unix" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldCreatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedUnix: %w", err)
+	}
+	return oldValue.CreatedUnix, nil
+}
+
+// AddCreatedUnix adds i to the "created_unix" field.
+func (m *TunnelMutation) AddCreatedUnix(i int64) {
+	if m.addcreated_unix != nil {
+		*m.addcreated_unix += i
+	} else {
+		m.addcreated_unix = &i
+	}
+}
+
+// AddedCreatedUnix returns the value that was added to the "created_unix" field in this mutation.
+func (m *TunnelMutation) AddedCreatedUnix() (r int64, exists bool) {
+	v := m.addcreated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedUnix resets all changes to the "created_unix" field.
+func (m *TunnelMutation) ResetCreatedUnix() {
+	m.created_unix = nil
+	m.addcreated_unix = nil
+}
+
+// SetExpiresUnix sets the "expires_unix" field.
+func (m *TunnelMutation) SetExpiresUnix(i int64) {
+	m.expires_unix = &i
+	m.addexpires_unix = nil
+}
+
+// ExpiresUnix returns the value of the "expires_unix" field in the mutation.
+func (m *TunnelMutation) ExpiresUnix() (r int64, exists bool) {
+	v := m.expires_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresUnix returns the old "expires_unix" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldExpiresUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresUnix: %w", err)
+	}
+	return oldValue.ExpiresUnix, nil
+}
+
+// AddExpiresUnix adds i to the "expires_unix" field.
+func (m *TunnelMutation) AddExpiresUnix(i int64) {
+	if m.addexpires_unix != nil {
+		*m.addexpires_unix += i
+	} else {
+		m.addexpires_unix = &i
+	}
+}
+
+// AddedExpiresUnix returns the value that was added to the "expires_unix" field in this mutation.
+func (m *TunnelMutation) AddedExpiresUnix() (r int64, exists bool) {
+	v := m.addexpires_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetExpiresUnix resets all changes to the "expires_unix" field.
+func (m *TunnelMutation) ResetExpiresUnix() {
+	m.expires_unix = nil
+	m.addexpires_unix = nil
+}
+
+// SetApprovedUnix sets the "approved_unix" field.
+func (m *TunnelMutation) SetApprovedUnix(i int64) {
+	m.approved_unix = &i
+	m.addapproved_unix = nil
+}
+
+// ApprovedUnix returns the value of the "approved_unix" field in the mutation.
+func (m *TunnelMutation) ApprovedUnix() (r int64, exists bool) {
+	v := m.approved_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApprovedUnix returns the old "approved_unix" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldApprovedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApprovedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApprovedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApprovedUnix: %w", err)
+	}
+	return oldValue.ApprovedUnix, nil
+}
+
+// AddApprovedUnix adds i to the "approved_unix" field.
+func (m *TunnelMutation) AddApprovedUnix(i int64) {
+	if m.addapproved_unix != nil {
+		*m.addapproved_unix += i
+	} else {
+		m.addapproved_unix = &i
+	}
+}
+
+// AddedApprovedUnix returns the value that was added to the "approved_unix" field in this mutation.
+func (m *TunnelMutation) AddedApprovedUnix() (r int64, exists bool) {
+	v := m.addapproved_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetApprovedUnix resets all changes to the "approved_unix" field.
+func (m *TunnelMutation) ResetApprovedUnix() {
+	m.approved_unix = nil
+	m.addapproved_unix = nil
+}
+
+// SetApprovedBy sets the "approved_by" field.
+func (m *TunnelMutation) SetApprovedBy(s string) {
+	m.approved_by = &s
+}
+
+// ApprovedBy returns the value of the "approved_by" field in the mutation.
+func (m *TunnelMutation) ApprovedBy() (r string, exists bool) {
+	v := m.approved_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldApprovedBy returns the old "approved_by" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldApprovedBy(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldApprovedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldApprovedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldApprovedBy: %w", err)
+	}
+	return oldValue.ApprovedBy, nil
+}
+
+// ResetApprovedBy resets all changes to the "approved_by" field.
+func (m *TunnelMutation) ResetApprovedBy() {
+	m.approved_by = nil
+}
+
+// SetClosedUnix sets the "closed_unix" field.
+func (m *TunnelMutation) SetClosedUnix(i int64) {
+	m.closed_unix = &i
+	m.addclosed_unix = nil
+}
+
+// ClosedUnix returns the value of the "closed_unix" field in the mutation.
+func (m *TunnelMutation) ClosedUnix() (r int64, exists bool) {
+	v := m.closed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClosedUnix returns the old "closed_unix" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldClosedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClosedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClosedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClosedUnix: %w", err)
+	}
+	return oldValue.ClosedUnix, nil
+}
+
+// AddClosedUnix adds i to the "closed_unix" field.
+func (m *TunnelMutation) AddClosedUnix(i int64) {
+	if m.addclosed_unix != nil {
+		*m.addclosed_unix += i
+	} else {
+		m.addclosed_unix = &i
+	}
+}
+
+// AddedClosedUnix returns the value that was added to the "closed_unix" field in this mutation.
+func (m *TunnelMutation) AddedClosedUnix() (r int64, exists bool) {
+	v := m.addclosed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetClosedUnix resets all changes to the "closed_unix" field.
+func (m *TunnelMutation) ResetClosedUnix() {
+	m.closed_unix = nil
+	m.addclosed_unix = nil
+}
+
+// SetCloseReason sets the "close_reason" field.
+func (m *TunnelMutation) SetCloseReason(s string) {
+	m.close_reason = &s
+}
+
+// CloseReason returns the value of the "close_reason" field in the mutation.
+func (m *TunnelMutation) CloseReason() (r string, exists bool) {
+	v := m.close_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCloseReason returns the old "close_reason" field's value of the Tunnel entity.
+// If the Tunnel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TunnelMutation) OldCloseReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCloseReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCloseReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCloseReason: %w", err)
+	}
+	return oldValue.CloseReason, nil
+}
+
+// ResetCloseReason resets all changes to the "close_reason" field.
+func (m *TunnelMutation) ResetCloseReason() {
+	m.close_reason = nil
+}
+
+// Where appends a list predicates to the TunnelMutation builder.
+func (m *TunnelMutation) Where(ps ...predicate.Tunnel) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TunnelMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TunnelMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Tunnel, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TunnelMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TunnelMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (Tunnel).
+func (m *TunnelMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TunnelMutation) Fields() []string {
+	fields := make([]string, 0, 15)
+	if m.token != nil {
+		fields = append(fields, tunnel.FieldToken)
+	}
+	if m.computer_id != nil {
+		fields = append(fields, tunnel.FieldComputerID)
+	}
+	if m.daemon_id != nil {
+		fields = append(fields, tunnel.FieldDaemonID)
+	}
+	if m.local_port != nil {
+		fields = append(fields, tunnel.FieldLocalPort)
+	}
+	if m.label != nil {
+		fields = append(fields, tunnel.FieldLabel)
+	}
+	if m.state != nil {
+		fields = append(fields, tunnel.FieldState)
+	}
+	if m.access_policy != nil {
+		fields = append(fields, tunnel.FieldAccessPolicy)
+	}
+	if m.creator_id != nil {
+		fields = append(fields, tunnel.FieldCreatorID)
+	}
+	if m.creator_kind != nil {
+		fields = append(fields, tunnel.FieldCreatorKind)
+	}
+	if m.created_unix != nil {
+		fields = append(fields, tunnel.FieldCreatedUnix)
+	}
+	if m.expires_unix != nil {
+		fields = append(fields, tunnel.FieldExpiresUnix)
+	}
+	if m.approved_unix != nil {
+		fields = append(fields, tunnel.FieldApprovedUnix)
+	}
+	if m.approved_by != nil {
+		fields = append(fields, tunnel.FieldApprovedBy)
+	}
+	if m.closed_unix != nil {
+		fields = append(fields, tunnel.FieldClosedUnix)
+	}
+	if m.close_reason != nil {
+		fields = append(fields, tunnel.FieldCloseReason)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TunnelMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case tunnel.FieldToken:
+		return m.Token()
+	case tunnel.FieldComputerID:
+		return m.ComputerID()
+	case tunnel.FieldDaemonID:
+		return m.DaemonID()
+	case tunnel.FieldLocalPort:
+		return m.LocalPort()
+	case tunnel.FieldLabel:
+		return m.Label()
+	case tunnel.FieldState:
+		return m.State()
+	case tunnel.FieldAccessPolicy:
+		return m.AccessPolicy()
+	case tunnel.FieldCreatorID:
+		return m.CreatorID()
+	case tunnel.FieldCreatorKind:
+		return m.CreatorKind()
+	case tunnel.FieldCreatedUnix:
+		return m.CreatedUnix()
+	case tunnel.FieldExpiresUnix:
+		return m.ExpiresUnix()
+	case tunnel.FieldApprovedUnix:
+		return m.ApprovedUnix()
+	case tunnel.FieldApprovedBy:
+		return m.ApprovedBy()
+	case tunnel.FieldClosedUnix:
+		return m.ClosedUnix()
+	case tunnel.FieldCloseReason:
+		return m.CloseReason()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TunnelMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case tunnel.FieldToken:
+		return m.OldToken(ctx)
+	case tunnel.FieldComputerID:
+		return m.OldComputerID(ctx)
+	case tunnel.FieldDaemonID:
+		return m.OldDaemonID(ctx)
+	case tunnel.FieldLocalPort:
+		return m.OldLocalPort(ctx)
+	case tunnel.FieldLabel:
+		return m.OldLabel(ctx)
+	case tunnel.FieldState:
+		return m.OldState(ctx)
+	case tunnel.FieldAccessPolicy:
+		return m.OldAccessPolicy(ctx)
+	case tunnel.FieldCreatorID:
+		return m.OldCreatorID(ctx)
+	case tunnel.FieldCreatorKind:
+		return m.OldCreatorKind(ctx)
+	case tunnel.FieldCreatedUnix:
+		return m.OldCreatedUnix(ctx)
+	case tunnel.FieldExpiresUnix:
+		return m.OldExpiresUnix(ctx)
+	case tunnel.FieldApprovedUnix:
+		return m.OldApprovedUnix(ctx)
+	case tunnel.FieldApprovedBy:
+		return m.OldApprovedBy(ctx)
+	case tunnel.FieldClosedUnix:
+		return m.OldClosedUnix(ctx)
+	case tunnel.FieldCloseReason:
+		return m.OldCloseReason(ctx)
+	}
+	return nil, fmt.Errorf("unknown Tunnel field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TunnelMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case tunnel.FieldToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetToken(v)
+		return nil
+	case tunnel.FieldComputerID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetComputerID(v)
+		return nil
+	case tunnel.FieldDaemonID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDaemonID(v)
+		return nil
+	case tunnel.FieldLocalPort:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLocalPort(v)
+		return nil
+	case tunnel.FieldLabel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLabel(v)
+		return nil
+	case tunnel.FieldState:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case tunnel.FieldAccessPolicy:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccessPolicy(v)
+		return nil
+	case tunnel.FieldCreatorID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatorID(v)
+		return nil
+	case tunnel.FieldCreatorKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatorKind(v)
+		return nil
+	case tunnel.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedUnix(v)
+		return nil
+	case tunnel.FieldExpiresUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresUnix(v)
+		return nil
+	case tunnel.FieldApprovedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApprovedUnix(v)
+		return nil
+	case tunnel.FieldApprovedBy:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetApprovedBy(v)
+		return nil
+	case tunnel.FieldClosedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClosedUnix(v)
+		return nil
+	case tunnel.FieldCloseReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCloseReason(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Tunnel field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TunnelMutation) AddedFields() []string {
+	var fields []string
+	if m.addlocal_port != nil {
+		fields = append(fields, tunnel.FieldLocalPort)
+	}
+	if m.addcreated_unix != nil {
+		fields = append(fields, tunnel.FieldCreatedUnix)
+	}
+	if m.addexpires_unix != nil {
+		fields = append(fields, tunnel.FieldExpiresUnix)
+	}
+	if m.addapproved_unix != nil {
+		fields = append(fields, tunnel.FieldApprovedUnix)
+	}
+	if m.addclosed_unix != nil {
+		fields = append(fields, tunnel.FieldClosedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TunnelMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case tunnel.FieldLocalPort:
+		return m.AddedLocalPort()
+	case tunnel.FieldCreatedUnix:
+		return m.AddedCreatedUnix()
+	case tunnel.FieldExpiresUnix:
+		return m.AddedExpiresUnix()
+	case tunnel.FieldApprovedUnix:
+		return m.AddedApprovedUnix()
+	case tunnel.FieldClosedUnix:
+		return m.AddedClosedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TunnelMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case tunnel.FieldLocalPort:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLocalPort(v)
+		return nil
+	case tunnel.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedUnix(v)
+		return nil
+	case tunnel.FieldExpiresUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddExpiresUnix(v)
+		return nil
+	case tunnel.FieldApprovedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddApprovedUnix(v)
+		return nil
+	case tunnel.FieldClosedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddClosedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Tunnel numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TunnelMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TunnelMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TunnelMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Tunnel nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TunnelMutation) ResetField(name string) error {
+	switch name {
+	case tunnel.FieldToken:
+		m.ResetToken()
+		return nil
+	case tunnel.FieldComputerID:
+		m.ResetComputerID()
+		return nil
+	case tunnel.FieldDaemonID:
+		m.ResetDaemonID()
+		return nil
+	case tunnel.FieldLocalPort:
+		m.ResetLocalPort()
+		return nil
+	case tunnel.FieldLabel:
+		m.ResetLabel()
+		return nil
+	case tunnel.FieldState:
+		m.ResetState()
+		return nil
+	case tunnel.FieldAccessPolicy:
+		m.ResetAccessPolicy()
+		return nil
+	case tunnel.FieldCreatorID:
+		m.ResetCreatorID()
+		return nil
+	case tunnel.FieldCreatorKind:
+		m.ResetCreatorKind()
+		return nil
+	case tunnel.FieldCreatedUnix:
+		m.ResetCreatedUnix()
+		return nil
+	case tunnel.FieldExpiresUnix:
+		m.ResetExpiresUnix()
+		return nil
+	case tunnel.FieldApprovedUnix:
+		m.ResetApprovedUnix()
+		return nil
+	case tunnel.FieldApprovedBy:
+		m.ResetApprovedBy()
+		return nil
+	case tunnel.FieldClosedUnix:
+		m.ResetClosedUnix()
+		return nil
+	case tunnel.FieldCloseReason:
+		m.ResetCloseReason()
+		return nil
+	}
+	return fmt.Errorf("unknown Tunnel field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TunnelMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TunnelMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TunnelMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TunnelMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TunnelMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TunnelMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TunnelMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown Tunnel unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TunnelMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown Tunnel edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.

@@ -670,6 +670,43 @@ var (
 			},
 		},
 	}
+	// TunnelsColumns holds the columns for the "tunnels" table.
+	TunnelsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "token", Type: field.TypeString, Unique: true},
+		{Name: "computer_id", Type: field.TypeString},
+		{Name: "daemon_id", Type: field.TypeString, Default: ""},
+		{Name: "local_port", Type: field.TypeUint32},
+		{Name: "label", Type: field.TypeString, Default: ""},
+		{Name: "state", Type: field.TypeString},
+		{Name: "access_policy", Type: field.TypeString},
+		{Name: "creator_id", Type: field.TypeString},
+		{Name: "creator_kind", Type: field.TypeString},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "expires_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "approved_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "approved_by", Type: field.TypeString, Default: ""},
+		{Name: "closed_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "close_reason", Type: field.TypeString, Default: ""},
+	}
+	// TunnelsTable holds the schema information for the "tunnels" table.
+	TunnelsTable = &schema.Table{
+		Name:       "tunnels",
+		Columns:    TunnelsColumns,
+		PrimaryKey: []*schema.Column{TunnelsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tunnel_computer_id_state_created_unix",
+				Unique:  false,
+				Columns: []*schema.Column{TunnelsColumns[2], TunnelsColumns[6], TunnelsColumns[10]},
+			},
+			{
+				Name:    "tunnel_state_expires_unix",
+				Unique:  false,
+				Columns: []*schema.Column{TunnelsColumns[6], TunnelsColumns[11]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -718,6 +755,7 @@ var (
 		SessionsTable,
 		TasksTable,
 		ThreadReadStatesTable,
+		TunnelsTable,
 		UsersTable,
 	}
 )
