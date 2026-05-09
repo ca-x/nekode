@@ -969,7 +969,23 @@ function App() {
         ? hashForSlot(primarySlot, routeRest)
         : hashForView(view);
     if (window.location.hash !== desired) {
-      window.history.pushState(null, "", desired);
+      // If the only change is dropping a stale route-rest on a non-daemon
+      // view (e.g. canonicalising #/settings/<staleId> → #/settings), use
+      // replaceState so the stale hash isn't left sitting in the Back
+      // stack — otherwise Back would restore routeRest via the hashchange
+      // listener and this effect would push the canonical URL again,
+      // trapping the user in a two-step Back loop.
+      const currentHash = window.location.hash;
+      const currentParsed = parseRouteHash(currentHash);
+      const canonicalisingStaleRest =
+        !canCarryRest &&
+        currentParsed.rest !== "" &&
+        !(currentParsed.view === "daemon");
+      if (canonicalisingStaleRest) {
+        window.history.replaceState(null, "", desired);
+      } else {
+        window.history.pushState(null, "", desired);
+      }
     }
   }, [primarySlot, primarySlotOverride, routeRest, view]);
 
