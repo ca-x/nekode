@@ -116,11 +116,53 @@ Proposed development task:
 - Keep server admins able to inspect operational state through explicit admin
   paths if the product requires that role.
 
+Current Nekode gap review:
+
+- HTTP daemon observability endpoints are authenticated but not caller-scoped:
+  `/api/daemon/agent-statuses`, `/api/daemon/runs`, and
+  `/api/daemon/activity` pass user-provided `target`/`agentId` filters directly
+  into the daemon bridge. A caller can omit `target` and receive global
+  projections.
+- `/api/daemon/info` aggregates global agent status, run, and activity counts;
+  those counts can reveal hidden agent or workspace activity even when detail
+  APIs are later filtered.
+- The daemon RPC request messages for `ListAgentStatuses`, `ListRuns`, and
+  `ListActivity` do not carry `RequestContext`, so daemonrpc cannot enforce a
+  caller-specific shared-channel rule by itself. HTTP handlers must either
+  pre-filter query scope or the proto must grow caller context in a later
+  compatibility-aware pass.
+- Workspace file APIs are declared in proto (`ListWorkspaceTree` and
+  `ReadWorkspaceFile`) but are not implemented in the in-process daemonrpc
+  server or exposed over HTTP yet. The first implementation must not ship
+  without the same visibility predicate.
+- Event replay (`/api/daemon/events` -> `ListEventsSince`) can stream global
+  events when `target` is empty. If activity/run/workspace events are included,
+  replay needs the same visibility filtering as list APIs.
+
+Recommended implementation sequence:
+
+1. Add a server-side visibility helper that computes the targets visible to the
+   authenticated principal using channel membership plus explicit admin/owner
+   override.
+2. Require non-admin HTTP callers to either provide a readable target or receive
+   a union of only their visible targets; reject private unreadable targets with
+   403.
+3. Filter `/api/daemon/agent-statuses`, `/api/daemon/runs`,
+   `/api/daemon/activity`, `/api/daemon/events`, and `/api/daemon/info`
+   aggregates through that helper before returning data.
+4. When daemon RPC needs direct non-HTTP callers, add caller context to list
+   requests in a dedicated proto migration rather than relying on Web-only
+   filtering.
+5. Gate any future workspace tree/file endpoints on workspace ownership or a
+   resolved agent-to-visible-target relationship before returning paths or file
+   contents.
+
 Acceptance:
 
 - An agent can view another agent workspace/activity only when they share at
   least one channel or when an explicit admin path is used.
-- Tests cover shared-channel allow, no-shared-channel deny, and admin access.
+- Tests cover shared-channel allow, no-shared-channel deny, admin access, and
+  aggregate count redaction.
 - Web does not leak hidden agent workspace/activity through aggregate counters
   or detail drawers.
 
