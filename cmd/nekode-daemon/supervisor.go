@@ -323,15 +323,29 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 	// Open an agent_runs archive stream for the whole run. Failures are
 	// non-fatal — the supervisor's own RunStep/Activity tracking is the
 	// authoritative record; the archive is a convenience for the UI.
+	//
+	// The deferred close catches early returns that otherwise forget to
+	// close; each early-return below calls closeRunRecorder explicitly
+	// with the real failure state so the archive reflects setup errors
+	// rather than quietly storing a "succeeded, exit 0" row.
 	recorder := newRunRecorder(ctx, s.client, s.withToken, s.cfg.ComputerID, agentID, run.GetRunId(), "run started")
-	defer func() {
-		if recorder != nil {
-			recorder.closeWithEnd("run closed", 0, "")
+	closeRunRecorder := func(summary string, exitCode int32, errMsg string) {
+		if recorder == nil {
+			return
 		}
+		recorder.closeWithEnd(summary, exitCode, errMsg)
+		recorder = nil
+	}
+	defer func() {
+		// Safety net: an unhandled early return writes a protocol-violation
+		// record so the row is obvious in the UI if a new branch forgets to
+		// close explicitly.
+		closeRunRecorder("run recorder closed without explicit end", 1, "no explicit closeRunRecorder call")
 	}()
 	permitLeaseID := ""
 	permit, err := s.acquirePermit(ctx, run, agentID)
 	if err != nil {
+		closeRunRecorder("start permit failed", 1, err.Error())
 		s.failRun(ctx, run, agentID, "", "start permit failed", err)
 		return
 	}
@@ -343,12 +357,14 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 		slog.Warn("daemon supervisor status update failed", "run_id", run.GetRunId(), "error", err)
 	}
 	if err := s.updateRun(ctx, run, agentID, daemonv1.RunState_RUN_STATE_RUNNING, "runtime command started", "", permitLeaseID); err != nil {
+		closeRunRecorder("run status update failed", 1, err.Error())
 		s.failRun(ctx, run, agentID, permitLeaseID, "run status update failed", err)
 		return
 	}
 	startStep := s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_START, daemonv1.RunStepStatus_RUN_STEP_STATUS_COMPLETED, "daemon supervisor started run", "")
 	snapshot, err := s.loadLaunchPromptSnapshot(ctx, run, agentID)
 	if err != nil {
+		closeRunRecorder("load launch prompt snapshot failed", 1, err.Error())
 		s.failRun(ctx, run, agentID, permitLeaseID, "load launch prompt snapshot failed", err)
 		return
 	}
@@ -357,6 +373,7 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 	}
 	cmd, err := s.runtimeCommand(run, agentID, snapshot)
 	if err != nil {
+		closeRunRecorder("build runtime command failed", 1, err.Error())
 		s.failRun(ctx, run, agentID, permitLeaseID, "build runtime command failed", err)
 		return
 	}
@@ -385,8 +402,11 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 		if commandStep != nil {
 			s.appendStep(ctx, run, permitLeaseID, daemonv1.RunStepKind_RUN_STEP_KIND_COMMAND, daemonv1.RunStepStatus_RUN_STEP_STATUS_FAILED, "runtime command failed", errDetail)
 		}
-		recorder.closeWithEnd("runtime command failed", int32(result.ExitCode), result.Err.Error())
-		recorder = nil
+		recorder.recordToolEvent(daemonv1.AgentRunPhase_AGENT_RUN_PHASE_ERROR, "runtime command failed", map[string]any{
+			"exit_code": result.ExitCode,
+			"detail":    errDetail,
+		})
+		closeRunRecorder("runtime command failed", int32(result.ExitCode), result.Err.Error())
 		s.failRun(ctx, run, agentID, permitLeaseID, "runtime command failed", result.Err)
 		s.logActivity(ctx, target, agentID, "run_failed", "runtime command failed", errDetail, run.GetRunId(), commandStepID(commandStep))
 		return
@@ -405,8 +425,7 @@ func (s *runSupervisor) executeRun(ctx context.Context, run *daemonv1.Run) {
 	if err := s.reportRunAgentStatus(ctx, run, agentID, daemonv1.AgentActivityState_AGENT_ACTIVITY_STATE_WAITING, daemonv1.AgentHealth_AGENT_HEALTH_OK, "run completed"); err != nil {
 		slog.Warn("daemon supervisor status update failed", "run_id", run.GetRunId(), "error", err)
 	}
-	recorder.closeWithEnd("run completed", int32(result.ExitCode), "")
-	recorder = nil
+	closeRunRecorder("run completed", int32(result.ExitCode), "")
 	s.logActivity(ctx, target, agentID, "run_completed", "runtime command completed", detail, run.GetRunId(), commandStepID(resultStep))
 }
 

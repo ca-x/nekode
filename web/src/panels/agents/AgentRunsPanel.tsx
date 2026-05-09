@@ -40,7 +40,17 @@ export function AgentRunsPanel({
         if (query.trim()) {
           const result = await api.searchAgentRuns({ q: query.trim(), agentId, computerId, limit: 50 });
           if (signal?.aborted) return;
-          setRuns((result.items ?? []).map((hit) => hit.run));
+          // A single run can produce multiple matching events (e.g. the
+          // tool_call + tool_result pair). Dedupe by run id so React keys
+          // stay unique and the user sees one row per distinct run.
+          const seen = new Set<string>();
+          const unique: AgentRun[] = [];
+          for (const hit of result.items ?? []) {
+            if (seen.has(hit.run.id)) continue;
+            seen.add(hit.run.id);
+            unique.push(hit.run);
+          }
+          setRuns(unique);
         } else {
           const result = await api.listAgentRuns({ agentId, computerId, limit: 50 });
           if (signal?.aborted) return;

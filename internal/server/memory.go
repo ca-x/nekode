@@ -30,14 +30,47 @@ type ratifyDecisionRequest struct {
 	Force bool `json:"force"`
 }
 
+// loadDecisionWithChannelGuard fetches a decision by id and enforces that
+// the caller can at least read the channel the decision belongs to. This
+// prevents id-guessing attacks from reading or mutating decisions that
+// live inside a private channel the caller isn't a member of.
+func (s *Server) loadDecisionWithChannelGuard(
+	w http.ResponseWriter,
+	r *http.Request,
+	id string,
+) (storage.ChannelDecision, bool) {
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "decision id is required")
+		return storage.ChannelDecision{}, false
+	}
+	current, err := s.store.GetDecision(r.Context(), id)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "decision not found")
+		return storage.ChannelDecision{}, false
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "load decision failed")
+		return storage.ChannelDecision{}, false
+	}
+	if !s.canReadChannel(r.Context(), principalFromContext(r.Context()).User, current.Target) {
+		writeError(w, http.StatusForbidden, "channel is private")
+		return storage.ChannelDecision{}, false
+	}
+	return current, true
+}
+
 // --- decision handlers ---------------------------------------------------
 
 // handleListChannelDecisions returns decisions scoped to a channel target.
 // Accepts optional ?status=proposed,ratified filter and ?limit=N.
 func (s *Server) handleListChannelDecisions(w http.ResponseWriter, r *http.Request) {
-	target := strings.TrimSpace(r.PathValue("target"))
+	target := pathChannelTarget(r)
 	if target == "" {
 		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	if !s.canReadChannel(r.Context(), principalFromContext(r.Context()).User, target) {
+		writeError(w, http.StatusForbidden, "channel is private")
 		return
 	}
 	var statusFilter []string
@@ -63,9 +96,14 @@ func (s *Server) handleListChannelDecisions(w http.ResponseWriter, r *http.Reque
 
 // handleProposeChannelDecision creates a decision row in `proposed` state.
 func (s *Server) handleProposeChannelDecision(w http.ResponseWriter, r *http.Request) {
-	target := strings.TrimSpace(r.PathValue("target"))
+	target := pathChannelTarget(r)
 	if target == "" {
 		writeError(w, http.StatusBadRequest, "target is required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	if !s.canReadChannel(r.Context(), principal.User, target) {
+		writeError(w, http.StatusForbidden, "channel is private")
 		return
 	}
 	var req proposeDecisionRequest
@@ -78,7 +116,6 @@ func (s *Server) handleProposeChannelDecision(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "title and body are required")
 		return
 	}
-	principal := principalFromContext(r.Context())
 	decision, err := s.store.CreateDecision(r.Context(), storage.ChannelDecision{
 		Target:               target,
 		Title:                title,
@@ -104,8 +141,8 @@ func (s *Server) handleProposeChannelDecision(w http.ResponseWriter, r *http.Req
 // show the fresh tally (and auto-ratify state) without a second round-trip.
 func (s *Server) handleVoteChannelDecision(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeError(w, http.StatusBadRequest, "decision id is required")
+	_, ok := s.loadDecisionWithChannelGuard(w, r, id)
+	if !ok {
 		return
 	}
 	var req voteDecisionRequest
@@ -139,23 +176,14 @@ func (s *Server) handleVoteChannelDecision(w http.ResponseWriter, r *http.Reques
 // either when quorum is met or when `force` is requested by an admin.
 func (s *Server) handleRatifyChannelDecision(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeError(w, http.StatusBadRequest, "decision id is required")
+	current, ok := s.loadDecisionWithChannelGuard(w, r, id)
+	if !ok {
 		return
 	}
 	req := ratifyDecisionRequest{}
 	// Body is optional; ignore decode errors when the body is empty.
 	if r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&req)
-	}
-	current, err := s.store.GetDecision(r.Context(), id)
-	if errors.Is(err, storage.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "decision not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "load decision failed")
-		return
 	}
 	if current.Status != storage.DecisionStatusProposed {
 		writeError(w, http.StatusConflict, "decision is not proposed")
@@ -184,22 +212,13 @@ func (s *Server) handleRatifyChannelDecision(w http.ResponseWriter, r *http.Requ
 // Anyone who can reach the channel can retire; body carries a reason.
 func (s *Server) handleRetireChannelDecision(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeError(w, http.StatusBadRequest, "decision id is required")
+	current, ok := s.loadDecisionWithChannelGuard(w, r, id)
+	if !ok {
 		return
 	}
 	req := retireDecisionRequest{}
 	if r.ContentLength > 0 {
 		_ = json.NewDecoder(r.Body).Decode(&req)
-	}
-	current, err := s.store.GetDecision(r.Context(), id)
-	if errors.Is(err, storage.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "decision not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "load decision failed")
-		return
 	}
 	if current.Status != storage.DecisionStatusProposed && current.Status != storage.DecisionStatusRatified {
 		writeError(w, http.StatusConflict, "decision is already closed")
@@ -217,8 +236,7 @@ func (s *Server) handleRetireChannelDecision(w http.ResponseWriter, r *http.Requ
 // handleListDecisionVotes returns audit-style vote history for a decision.
 func (s *Server) handleListDecisionVotes(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		writeError(w, http.StatusBadRequest, "decision id is required")
+	if _, ok := s.loadDecisionWithChannelGuard(w, r, id); !ok {
 		return
 	}
 	votes, err := s.store.ListDecisionVotes(r.Context(), id)

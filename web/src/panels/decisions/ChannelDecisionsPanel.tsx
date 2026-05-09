@@ -97,6 +97,14 @@ export function ChannelDecisionsPanel({
       setDecisions((current) =>
         current.map((entry) => (entry.id === decisionID ? result.decision : entry))
       );
+      // Keep the cached vote history in sync so the selected chip highlights
+      // the user's newest vote even before they expand the card. Upsert the
+      // returned vote row into the cache keyed by voter id.
+      setVotesById((current) => {
+        const existing = current[decisionID] ?? [];
+        const filtered = existing.filter((entry) => entry.voterId !== result.vote.voterId);
+        return { ...current, [decisionID]: [...filtered, result.vote] };
+      });
       // If auto-ratification flipped the decision off the proposed tab,
       // refresh so the UI reflects the new bucket.
       if (result.decision.status !== "proposed") {
