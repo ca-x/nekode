@@ -146,16 +146,30 @@ export function ChannelDecisionsPanel({
   async function ensureVotes(decisionID: string) {
     if (votesFullyLoaded[decisionID]) return votesById[decisionID] ?? [];
     const result = await api.listDecisionVotes(decisionID);
-    const items = result.items ?? [];
-    // Merge any optimistic local rows (from an earlier vote) with the
-    // fetched history, preferring the freshly fetched record for any
-    // voter present in both.
-    const optimistic = votesById[decisionID] ?? [];
-    const fetchedVoterIDs = new Set(items.map((entry) => entry.voterId));
-    const merged = [...items, ...optimistic.filter((entry) => !fetchedVoterIDs.has(entry.voterId))];
-    setVotesById((current) => ({ ...current, [decisionID]: merged }));
+    const fetched = result.items ?? [];
+    // Merge the fetched audit list with whatever optimistic rows the
+    // cache holds *right now* — the user might have cast a new vote
+    // while the fetch was in flight. Reading from `current` inside the
+    // functional updater guarantees we see the post-fetch cache state,
+    // so a race between "fetch audit list" and "cast vote" can't roll
+    // the user's chip back to the stale server value.
+    setVotesById((current) => {
+      const optimistic = current[decisionID] ?? [];
+      const byVoter = new Map<string, ChannelDecisionVote>();
+      for (const entry of fetched) byVoter.set(entry.voterId, entry);
+      for (const entry of optimistic) {
+        const existing = byVoter.get(entry.voterId);
+        // Keep the newest votedUnix. Optimistic rows written from
+        // handleVote always carry a fresh timestamp, so this prefers
+        // them over stale fetched rows for the same voter.
+        if (!existing || entry.votedUnix >= existing.votedUnix) {
+          byVoter.set(entry.voterId, entry);
+        }
+      }
+      return { ...current, [decisionID]: [...byVoter.values()] };
+    });
     setVotesFullyLoaded((current) => ({ ...current, [decisionID]: true }));
-    return merged;
+    return fetched;
   }
 
   return (
