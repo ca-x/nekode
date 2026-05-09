@@ -296,6 +296,7 @@ func messagePrompt(msg storage.Message) (string, bool) {
 		"- message_id: "+msg.ID,
 		"- target: "+msg.Target,
 		"- thread_id: "+msg.ThreadID,
+		"- reply_target_hint: "+replyTargetHint(msg.Target, msg.ThreadID),
 		"- role: "+firstNonEmpty(msg.Role, "user"),
 		"- sender: "+firstNonEmpty(msg.SenderDisplayName, msg.SenderAgentID, msg.SenderUserID),
 		"- content: "+truncatePromptText(msg.Content, 1800),
@@ -303,10 +304,20 @@ func messagePrompt(msg storage.Message) (string, bool) {
 	), "\n"), redacted
 }
 
+func replyTargetHint(target, threadID string) string {
+	target = strings.TrimSpace(target)
+	threadID = strings.TrimSpace(threadID)
+	if target == "" || threadID == "" {
+		return target
+	}
+	return target + ":" + threadID
+}
+
 func communicationPrompt() string {
 	return strings.Join([]string{
 		"communication_protocol:",
 		"- Treat the current run objective and input message as the immediate task.",
+		"- When message_context includes reply_target_hint, use that exact target for replies instead of reconstructing a channel, DM, or thread target from message text.",
 		"- Use Nekode task/message/status APIs when reporting progress.",
 		"- Keep task state, direct messages, and channel updates consistent with the server state.",
 		"- Do not mention yourself to ask whether you have started or to create a self-reminder; after an assignment, claim the task and report real progress, claim failure, or a concrete blocker.",

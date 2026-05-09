@@ -328,6 +328,8 @@ func TestGetLaunchPromptSnapshotBuildsRedactedManifest(t *testing.T) {
 		"Prefer concise updates.",
 		"Prompt hardening",
 		"Please finish prompt hardening.",
+		"reply_target_hint: #LightOsClub:thread-1",
+		"use that exact target for replies",
 		"code_execution",
 		"file_write",
 		"Do not mention yourself to ask whether you have started",
@@ -345,6 +347,29 @@ func TestGetLaunchPromptSnapshotBuildsRedactedManifest(t *testing.T) {
 	}
 	if len(snapshot.GetSections()) < 6 {
 		t.Fatalf("snapshot sections = %+v, want layered manifest", snapshot.GetSections())
+	}
+}
+
+func TestReplyTargetHint(t *testing.T) {
+	tests := []struct {
+		name     string
+		target   string
+		threadID string
+		want     string
+	}{
+		{name: "channel", target: "#general", want: "#general"},
+		{name: "channel thread", target: "#general", threadID: "abc123", want: "#general:abc123"},
+		{name: "dm", target: "dm:@alice", want: "dm:@alice"},
+		{name: "dm thread", target: "dm:@alice", threadID: "abc123", want: "dm:@alice:abc123"},
+		{name: "trim", target: " #ops ", threadID: " thread-1 ", want: "#ops:thread-1"},
+		{name: "empty target", threadID: "thread-1", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := replyTargetHint(tt.target, tt.threadID); got != tt.want {
+				t.Fatalf("replyTargetHint(%q, %q) = %q, want %q", tt.target, tt.threadID, got, tt.want)
+			}
+		})
 	}
 }
 

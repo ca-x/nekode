@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -1274,6 +1275,7 @@ func (s *Server) handleUpsertChannelMember(w http.ResponseWriter, r *http.Reques
 	if !decodeJSON(w, r, &req) {
 		return
 	}
+	_, existed := s.findStoredChannelMember(r.Context(), target, req.Kind, req.MemberID)
 	member, err := s.store.UpsertChannelMember(r.Context(), storage.ChannelMember{
 		Target:      target,
 		MemberID:    req.MemberID,
@@ -1285,6 +1287,12 @@ func (s *Server) handleUpsertChannelMember(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		writeStorageError(w, err, "upsert channel member failed")
 		return
+	}
+	if !existed {
+		if err := s.recordChannelMembershipSystemMessage(r.Context(), "member_added", member); err != nil {
+			writeStorageError(w, err, "record channel member system message failed")
+			return
+		}
 	}
 	writeJSON(w, http.StatusCreated, member)
 }
@@ -1319,11 +1327,66 @@ func (s *Server) handleDeleteChannelMember(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusForbidden, "channel admin role required")
 		return
 	}
+	member, _ := s.findStoredChannelMember(r.Context(), target, r.PathValue("kind"), r.PathValue("memberID"))
 	if err := s.store.DeleteChannelMember(r.Context(), target, r.PathValue("kind"), r.PathValue("memberID")); err != nil {
 		writeStorageError(w, err, "delete channel member failed")
 		return
 	}
+	if member.MemberID != "" {
+		if err := s.recordChannelMembershipSystemMessage(r.Context(), "member_removed", member); err != nil {
+			writeStorageError(w, err, "record channel member system message failed")
+			return
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) findStoredChannelMember(ctx context.Context, target, kind, memberID string) (storage.ChannelMember, bool) {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == "" {
+		kind = "human"
+	}
+	memberID = strings.TrimSpace(memberID)
+	members, err := s.store.ListChannelMembers(ctx, target, 200)
+	if err != nil {
+		return storage.ChannelMember{}, false
+	}
+	for _, member := range members {
+		if strings.EqualFold(member.Kind, kind) && member.MemberID == memberID {
+			return member, true
+		}
+	}
+	return storage.ChannelMember{}, false
+}
+
+func (s *Server) recordChannelMembershipSystemMessage(ctx context.Context, operation string, member storage.ChannelMember) error {
+	display := firstNonEmptyString(member.DisplayName, member.Username, member.MemberID)
+	action := "joined"
+	if operation == "member_removed" {
+		action = "left"
+	}
+	metadata, err := json.Marshal(map[string]string{
+		"kind":       "channel_membership",
+		"operation":  operation,
+		"memberId":   member.MemberID,
+		"memberKind": member.Kind,
+		"role":       member.Role,
+	})
+	if err != nil {
+		return err
+	}
+	message, err := s.store.CreateMessage(ctx, storage.Message{
+		Target:            member.Target,
+		Role:              "system",
+		Content:           fmt.Sprintf("%s %s %s as %s.", display, action, member.Target, member.Role),
+		SenderDisplayName: "Nekode",
+		SenderKind:        "system",
+		MetadataJSON:      string(metadata),
+	})
+	if err != nil {
+		return err
+	}
+	return s.daemon.RecordMessageMutation(ctx, message, daemonv1.EventOperation_EVENT_OPERATION_APPENDED)
 }
 
 func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {

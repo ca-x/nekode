@@ -1201,6 +1201,23 @@ func TestChannelManagementEndpoints(t *testing.T) {
 		memberBody.Role != "member" {
 		t.Fatalf("member body = %+v, want agent member", memberBody)
 	}
+	membershipMessages := doGET(t, s, "/api/messages?target=%23private-review", token)
+	if membershipMessages.Code != http.StatusOK {
+		t.Fatalf("list membership messages status = %d body=%s", membershipMessages.Code, membershipMessages.Body.String())
+	}
+	var membershipMessageBody struct {
+		Items []storage.Message `json:"items"`
+	}
+	if err := json.Unmarshal(membershipMessages.Body.Bytes(), &membershipMessageBody); err != nil {
+		t.Fatalf("decode membership messages: %v", err)
+	}
+	if len(membershipMessageBody.Items) != 1 ||
+		membershipMessageBody.Items[0].Role != "system" ||
+		membershipMessageBody.Items[0].SenderKind != "system" ||
+		!strings.Contains(membershipMessageBody.Items[0].Content, "Review Agent joined #private-review as member") ||
+		!strings.Contains(membershipMessageBody.Items[0].MetadataJSON, `"operation":"member_added"`) {
+		t.Fatalf("membership add messages = %+v, want system member_added receipt", membershipMessageBody.Items)
+	}
 
 	updatedMember := doJSON(t, s, http.MethodPatch, "/api/channels/private-review/members/agent/agent%3Areviewer", token, map[string]any{
 		"role": "admin",
@@ -1238,6 +1255,23 @@ func TestChannelManagementEndpoints(t *testing.T) {
 	deleteMember := doJSON(t, s, http.MethodDelete, "/api/channels/private-review/members/agent/agent%3Areviewer", token, map[string]any{})
 	if deleteMember.Code != http.StatusOK {
 		t.Fatalf("delete member status = %d body=%s", deleteMember.Code, deleteMember.Body.String())
+	}
+	membershipMessages = doGET(t, s, "/api/messages?target=%23private-review", token)
+	if membershipMessages.Code != http.StatusOK {
+		t.Fatalf("list membership messages after delete status = %d body=%s", membershipMessages.Code, membershipMessages.Body.String())
+	}
+	if err := json.Unmarshal(membershipMessages.Body.Bytes(), &membershipMessageBody); err != nil {
+		t.Fatalf("decode membership messages after delete: %v", err)
+	}
+	removedReceipt := false
+	for _, item := range membershipMessageBody.Items {
+		if strings.Contains(item.Content, "Review Agent left #private-review as admin") &&
+			strings.Contains(item.MetadataJSON, `"operation":"member_removed"`) {
+			removedReceipt = true
+		}
+	}
+	if len(membershipMessageBody.Items) != 2 || !removedReceipt {
+		t.Fatalf("membership delete messages = %+v, want system member_removed receipt", membershipMessageBody.Items)
 	}
 	deleteChannelBlocked := doJSON(t, s, http.MethodDelete, "/api/channels/private-review", token, map[string]any{})
 	if deleteChannelBlocked.Code != http.StatusConflict {

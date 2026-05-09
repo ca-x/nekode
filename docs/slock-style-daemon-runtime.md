@@ -37,6 +37,12 @@ For a new implementation:
    specific transport. QUIC/WebTransport is a future transport lane for weak
    networks, connection migration, multiplexing, and larger payload flows.
 
+Slock daemon 0.46.1 parity follow-up is tracked separately in
+`docs/slock-daemon-0.46.1-parity-plan.md`. That plan records new upstream
+daemon behaviors worth evaluating for Nekode: reply-target hints, membership
+system events, workspace/activity visibility scoping, Gemini Windows stdin
+launch, and text/plain attachment previews.
+
 ## Goals
 
 - Define a server/daemon/runtime architecture for human-agent collaboration.

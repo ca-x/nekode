@@ -22,6 +22,8 @@ Slock behavior, while keeping the codebase independent from Nekobot.
   `docs/im-capability-next-milestone-plan.md`
 - Next milestone Stella-style plugin architecture plan:
   `docs/stella-plugin-architecture-plan.md`
+- Slock daemon 0.46.1 parity plan:
+  `docs/slock-daemon-0.46.1-parity-plan.md`
 - Web console assets: `web/src/assets-brand.png` and `web/public/*`
 - Container and binary build: `Dockerfile`, `docker-compose.yml`, and
   `build.sh`
@@ -87,6 +89,11 @@ The medium-term plugin architecture direction is tracked in
 built-in plugin registration for agent runtimes, IM channels, and structured
 server-dispatched daemon probes. It is a post-release architecture migration
 plan, not current release scope.
+
+Slock daemon 0.46.1 parity follow-up is tracked in
+`docs/slock-daemon-0.46.1-parity-plan.md`. That plan evaluates reply-target
+hints, membership system events, workspace/activity visibility scoping, Gemini
+Windows stdin launch, and text/plain attachment previews for Nekode.
 
 ## Run Locally
 
