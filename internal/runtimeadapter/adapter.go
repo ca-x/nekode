@@ -485,8 +485,8 @@ func runtimeContractForKind(kind string) runtimeContract {
 		common.Surface = "proto-canonical"
 		common.Command = "gemini"
 		common.VersionArgs = []string{"--help"}
-		common.PromptInjection = "`-p <prompt>` one-shot invocation"
-		common.SystemPromptInjection = "prepended to prompt because Gemini CLI stream-json path has no separate system prompt flag"
+		common.PromptInjection = "stdin one-shot invocation; avoids Windows argv limits for long wake prompts"
+		common.SystemPromptInjection = "prepended to stdin because Gemini CLI stream-json path has no separate system prompt flag"
 		common.WorkspaceMapping = "process cwd"
 		common.ModelMapping = "`-m <model>`"
 		common.ReasoningMapping = "unsupported by CLI contract; ignored"
@@ -622,8 +622,7 @@ func WithRunPrompt(wrap WrapCommand, prompt string) WrapCommand {
 	case "codex":
 		wrap.Stdin = combinePrompt(wrap.Stdin, prompt)
 	case "gemini":
-		wrap.Args = append(wrap.Args, "-p", combinePrompt(wrap.Stdin, prompt))
-		wrap.Stdin = ""
+		wrap.Stdin = combinePrompt(wrap.Stdin, prompt)
 	default:
 		wrap.Args = append(wrap.Args, prompt)
 	}

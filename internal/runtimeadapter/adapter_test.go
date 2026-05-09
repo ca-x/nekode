@@ -3,6 +3,7 @@ package runtimeadapter
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ca-x/nekode/internal/version"
@@ -238,6 +239,30 @@ func TestBuildWrapCommandPerRuntimeContracts(t *testing.T) {
 				t.Fatalf("dir = %q, want %q", cmd.Dir, tt.wantDir)
 			}
 		})
+	}
+}
+
+func TestWithRunPromptKeepsGeminiPromptOutOfArgv(t *testing.T) {
+	template := DefaultInstanceTemplate(RuntimeType{Kind: "gemini", DisplayName: "Gemini CLI", Command: "gemini"})
+	cmd, err := BuildWrapCommand(template, map[string]string{
+		"display_name":   "Gemini Bot",
+		"system_message": "system rules",
+	})
+	if err != nil {
+		t.Fatalf("BuildWrapCommand() error = %v", err)
+	}
+	longPrompt := "run task\n" + strings.Repeat("long wake prompt ", 600)
+	cmd = WithRunPrompt(cmd, longPrompt)
+
+	joinedArgs := strings.Join(cmd.Args, "\x00")
+	if containsValue(cmd.Args, "-p") || strings.Contains(joinedArgs, "long wake prompt") {
+		t.Fatalf("gemini args = %v, want no prompt argv", cmd.Args)
+	}
+	if !strings.Contains(cmd.Stdin, "system rules") || !strings.Contains(cmd.Stdin, "long wake prompt") {
+		t.Fatalf("gemini stdin length=%d missing system/run prompt", len(cmd.Stdin))
+	}
+	if !containsValue(cmd.Args, "--yolo") || !containsPair(cmd.Args, "-o", "stream-json") {
+		t.Fatalf("gemini args = %v, want yolo stream-json contract", cmd.Args)
 	}
 }
 

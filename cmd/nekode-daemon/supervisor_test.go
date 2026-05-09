@@ -143,6 +143,60 @@ func TestRunSupervisorInjectsLaunchPromptSnapshot(t *testing.T) {
 	}
 }
 
+func TestRunSupervisorSendsGeminiPromptViaStdin(t *testing.T) {
+	client := newFakeSupervisorClient(&daemonv1.Run{
+		RunId:            "run-gemini",
+		TaskId:           "task-1",
+		Target:           "#LightOsClub",
+		AgentId:          "agent-1",
+		ComputerId:       "computer-1",
+		RuntimeProfileId: "profile-agent-1",
+		State:            daemonv1.RunState_RUN_STATE_QUEUED,
+		Summary:          "say hello " + strings.Repeat("long wake prompt ", 600),
+	})
+	client.promptSnapshot = &daemonv1.LaunchPromptSnapshot{
+		SnapshotId:       "prompt-run-gemini",
+		RunId:            "run-gemini",
+		AgentId:          "agent-1",
+		RuntimeProfileId: "profile-agent-1",
+		TemplateVersion:  "nekode.launch-prompt.v1",
+		ContentHash:      "abc123",
+		Content:          "Nekode launch prompt\nruntime/profile system_message: stay concise",
+	}
+	runner := &fakeRuntimeRunner{result: runtimeCommandResult{Output: "hello\n"}}
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "agent-1",
+			RuntimeKind:       "gemini",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+		},
+		Client: client,
+		Runner: runner,
+	})
+
+	if err := supervisor.pollOnce(context.Background()); err != nil {
+		t.Fatalf("pollOnce() error = %v", err)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("runner commands = %+v, want one runtime command", runner.commands)
+	}
+	cmd := runner.commands[0]
+	joinedArgs := strings.Join(cmd.Args, "\x00")
+	if containsString(cmd.Args, "-p") || strings.Contains(joinedArgs, "long wake prompt") || strings.Contains(joinedArgs, client.promptSnapshot.GetContent()) {
+		t.Fatalf("gemini args leaked prompt content: %+v", cmd.Args)
+	}
+	if !containsString(cmd.Args, "--yolo") || !containsString(cmd.Args, "stream-json") {
+		t.Fatalf("gemini args = %+v, want yolo stream-json contract", cmd.Args)
+	}
+	if !strings.Contains(cmd.Stdin, client.promptSnapshot.GetContent()) || !strings.Contains(cmd.Stdin, "long wake prompt") {
+		t.Fatalf("gemini stdin length=%d missing launch/run prompt", len(cmd.Stdin))
+	}
+}
+
 func TestRuntimeCommandSummaryRedactsRuntimeInputs(t *testing.T) {
 	summary := runtimeCommandSummary(runtimeCommand{
 		Command: "claude",
