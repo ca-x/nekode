@@ -46,23 +46,24 @@ type BindingMethod struct {
 }
 
 type ProviderSchema struct {
-	Provider          string          `json:"provider"`
-	DisplayName       string          `json:"displayName"`
-	Transport         string          `json:"transport"`
-	Description       string          `json:"description"`
-	Canonical         bool            `json:"canonical"`
-	Availability      string          `json:"availability"`
-	RuntimeStatus     string          `json:"runtimeStatus"`
-	Source            string          `json:"source"`
-	Notes             []string        `json:"notes,omitempty"`
-	SupportsWebhook   bool            `json:"supportsWebhook"`
-	SupportsPolling   bool            `json:"supportsPolling"`
-	SupportsStreaming bool            `json:"supportsStreaming"`
-	SupportsMedia     bool            `json:"supportsMedia"`
-	BindingTargets    []string        `json:"bindingTargets"`
-	BindingMethods    []BindingMethod `json:"bindingMethods,omitempty"`
-	SetupHints        []string        `json:"setupHints"`
-	Fields            []Field         `json:"fields"`
+	Provider                 string                   `json:"provider"`
+	DisplayName              string                   `json:"displayName"`
+	Transport                string                   `json:"transport"`
+	Description              string                   `json:"description"`
+	Canonical                bool                     `json:"canonical"`
+	Availability             string                   `json:"availability"`
+	RuntimeStatus            string                   `json:"runtimeStatus"`
+	Source                   string                   `json:"source"`
+	Notes                    []string                 `json:"notes,omitempty"`
+	SupportsWebhook          bool                     `json:"supportsWebhook"`
+	SupportsPolling          bool                     `json:"supportsPolling"`
+	SupportsStreaming        bool                     `json:"supportsStreaming"`
+	SupportsMedia            bool                     `json:"supportsMedia"`
+	BindingTargets           []string                 `json:"bindingTargets"`
+	BindingMethods           []BindingMethod          `json:"bindingMethods,omitempty"`
+	SetupHints               []string                 `json:"setupHints"`
+	Fields                   []Field                  `json:"fields"`
+	InteractionCapabilities  *InteractionCapabilities `json:"interactionCapabilities,omitempty"`
 }
 
 var providerSchemas = []ProviderSchema{
@@ -96,6 +97,7 @@ var providerSchemas = []ProviderSchema{
 			groupModeField(),
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
+		InteractionCapabilities: TelegramCapabilities(),
 	},
 	{
 		Provider:          ProviderQQ,
@@ -123,6 +125,7 @@ var providerSchemas = []ProviderSchema{
 			groupModeField(),
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
+		InteractionCapabilities: QQCapabilities(),
 	},
 	{
 		Provider:          ProviderFeishu,
@@ -158,6 +161,7 @@ var providerSchemas = []ProviderSchema{
 			{Name: "groups", Label: "Per-group overrides", Type: FieldJSON, Description: "Optional per-chat group mode, prompt, and tool policy overrides."},
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
+		InteractionCapabilities: FeishuCapabilities(),
 	},
 	{
 		Provider:        ProviderWeixin,
@@ -200,6 +204,7 @@ var providerSchemas = []ProviderSchema{
 			{Name: "access_token", Label: "Access token override", Type: FieldString, Sensitive: true, Description: "Optional test-only access_token override; production should use app_id/app_secret refresh."},
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
+		InteractionCapabilities: WeixinCapabilities(),
 	},
 	{
 		Provider:          ProviderTerminal,
@@ -225,6 +230,7 @@ var providerSchemas = []ProviderSchema{
 			{Name: "thread_id", Label: "Default thread ID", Type: FieldString, Description: "Optional Nekode thread hint for terminal input."},
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
+		InteractionCapabilities: TerminalCapabilities(),
 	},
 	{
 		Provider:        ProviderServerChan,
@@ -253,6 +259,7 @@ var providerSchemas = []ProviderSchema{
 			{Name: "api_base_url", Label: "API base URL", Type: FieldString, Description: "Optional ServerChan-compatible API base URL for tests or private gateways."},
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
+		InteractionCapabilities: ServerChanCapabilities(),
 	},
 }
 

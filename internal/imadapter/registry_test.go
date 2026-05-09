@@ -130,3 +130,64 @@ func TestRedactConfigOnlyMasksKnownSensitiveFields(t *testing.T) {
 		t.Fatalf("unknown provider redacted config = %s, want normalized unmasked object", redacted)
 	}
 }
+
+func TestInteractionCapabilitiesExposed(t *testing.T) {
+	providers := ListProviders()
+	if len(providers) == 0 {
+		t.Fatalf("ListProviders() returned empty list")
+	}
+
+	// Verify all providers have interaction capabilities
+	for _, schema := range providers {
+		if schema.InteractionCapabilities == nil {
+			t.Fatalf("provider %q missing interaction capabilities", schema.Provider)
+		}
+		// At minimum, all providers should support text
+		if schema.InteractionCapabilities.Text == nil {
+			t.Fatalf("provider %q missing text capability", schema.Provider)
+		}
+		if schema.InteractionCapabilities.Text.Scope == "" {
+			t.Fatalf("provider %q text capability missing scope", schema.Provider)
+		}
+	}
+
+	// Verify Telegram has rich capabilities
+	telegram, ok := GetProvider(ProviderTelegram)
+	if !ok {
+		t.Fatalf("GetProvider(telegram) failed")
+	}
+	if telegram.InteractionCapabilities.InlineButtons == nil {
+		t.Fatalf("telegram should have inline buttons capability")
+	}
+	if !telegram.InteractionCapabilities.InlineButtons.Callback {
+		t.Fatalf("telegram inline buttons should support callbacks")
+	}
+	if telegram.InteractionCapabilities.Threads == nil {
+		t.Fatalf("telegram should have threads capability")
+	}
+
+	// Verify Weixin has basic capabilities
+	weixin, ok := GetProvider(ProviderWeixin)
+	if !ok {
+		t.Fatalf("GetProvider(weixin) failed")
+	}
+	if weixin.InteractionCapabilities.InlineButtons != nil {
+		t.Fatalf("weixin should not have inline buttons capability")
+	}
+	if weixin.InteractionCapabilities.Formatting == nil {
+		t.Fatalf("weixin should have formatting capability")
+	}
+
+	// Verify capabilities are JSON serializable
+	data, err := json.Marshal(providers)
+	if err != nil {
+		t.Fatalf("failed to marshal providers to JSON: %v", err)
+	}
+	var unmarshaled []ProviderSchema
+	if err := json.Unmarshal(data, &unmarshaled); err != nil {
+		t.Fatalf("failed to unmarshal providers from JSON: %v", err)
+	}
+	if len(unmarshaled) != len(providers) {
+		t.Fatalf("unmarshaled providers count mismatch: got %d, want %d", len(unmarshaled), len(providers))
+	}
+}
