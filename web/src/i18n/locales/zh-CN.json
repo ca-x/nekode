@@ -1,0 +1,63 @@
+{
+  "app": {
+    "title": "Nekode",
+    "tagline": "你的团队协作与 AI Agent 控制台"
+  },
+  "nav": {
+    "overview": "概览",
+    "inbox": "收件箱",
+    "messages": "消息",
+    "tasks": "任务",
+    "reminders": "提醒",
+    "activity": "活动",
+    "settings": "设置",
+    "endpoints": "通道",
+    "daemon": "守护进程",
+    "signOut": "退出登录"
+  },
+  "sidebar": {
+    "channels": "频道",
+    "agents": "Agent",
+    "machines": "计算机",
+    "createAgent": "创建 Agent",
+    "noChannelsYet": "还没有频道，先创建一个开始协作吧。",
+    "noAgentsYet": "还没有 Agent。接入一台计算机即可注册。",
+    "noMachinesYet": "还没有接入计算机。在目标主机上安装守护进程后在此看到。",
+    "privateChannel": "私有频道"
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "delete": "删除",
+    "retry": "重试",
+    "loading": "加载中",
+    "online": "在线",
+    "offline": "离线",
+    "copy": "复制",
+    "close": "关闭",
+    "done": "完成",
+    "edit": "编辑"
+  },
+  "empty": {
+    "noChannelSelected": {
+      "title": "未选择频道",
+      "messagesBody": "你还没有加入任何频道。点击左侧栏创建一个频道，或者选择一个私信开始聊天。",
+      "tasksBody": "任务归属于某个频道。请先到左侧栏创建频道，再回到这里打开看板。",
+      "remindersBody": "提醒是在频道里调度的。先从左侧栏创建一个频道吧。"
+    }
+  },
+  "auth": {
+    "signIn": "登录",
+    "username": "用户名",
+    "password": "密码",
+    "displayName": "显示名",
+    "setupTitle": "创建管理员账号",
+    "setupSubtitle": "选择首位管理员，之后可以再添加其他用户。",
+    "createAdmin": "创建管理员账号"
+  },
+  "locale": {
+    "english": "English",
+    "chineseSimplified": "简体中文"
+  }
+}

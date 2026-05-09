@@ -46,6 +46,9 @@ import {
 } from "lucide-react";
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiClient, ApiError, makeRequestId } from "./api";
+import { useT } from "./i18n/use-t";
+import type { MessageKey } from "./i18n/types";
+import { LocaleSwitcher } from "./i18n/switcher";
 import brandMarkUrl from "./assets-brand.png";
 import type {
   AgentControlAction,
@@ -215,16 +218,16 @@ const themeOptions: Array<{ value: ThemePreference; label: string; detail: strin
   { value: "dark", label: "Dark", detail: "Low-light console" }
 ];
 
-const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = [
-  { key: "overview", label: "Overview", icon: Activity },
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "messages", label: "Messages", icon: MessageSquare },
-  { key: "tasks", label: "Tasks", icon: Columns3 },
-  { key: "reminders", label: "Reminders", icon: Bell },
-  { key: "activity", label: "Activity", icon: Activity },
-  { key: "settings", label: "Settings", icon: Settings },
-  { key: "endpoints", label: "Endpoints", icon: Server },
-  { key: "daemon", label: "Daemon", icon: Bot }
+const navItems: Array<{ key: ViewKey; labelKey: MessageKey; icon: typeof Activity }> = [
+  { key: "overview", labelKey: "nav.overview", icon: Activity },
+  { key: "inbox", labelKey: "nav.inbox", icon: Inbox },
+  { key: "messages", labelKey: "nav.messages", icon: MessageSquare },
+  { key: "tasks", labelKey: "nav.tasks", icon: Columns3 },
+  { key: "reminders", labelKey: "nav.reminders", icon: Bell },
+  { key: "activity", labelKey: "nav.activity", icon: Activity },
+  { key: "settings", labelKey: "nav.settings", icon: Settings },
+  { key: "endpoints", labelKey: "nav.endpoints", icon: Server },
+  { key: "daemon", labelKey: "nav.daemon", icon: Bot }
 ];
 
 const fallbackRuntimePresets: RuntimePreset[] = [
@@ -631,6 +634,7 @@ function realAgentSidebarItems(inventory: DaemonInventoryComputer[], statuses: A
 }
 
 function App() {
+  const { t } = useT();
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
   const [themePreference, setThemePreference] = useState<ThemePreference>(() => readThemePreference());
   const [theme, setTheme] = useState<ThemeName>(() => resolvedTheme(themePreference));
@@ -739,12 +743,6 @@ function App() {
       const savedMessagesPromise = skipTargetScoped
         ? Promise.resolve({ items: [] as SavedMessage[] })
         : capture("savedMessages", api.listSavedMessages(messageTarget), { items: [] as SavedMessage[] });
-      const tasksPromise = !target
-        ? Promise.resolve({ items: [] as Task[] })
-        : capture("tasks", api.listTasks({ target }), { items: [] as Task[] });
-      const remindersPromise = !target
-        ? Promise.resolve({ items: [] as Reminder[] })
-        : capture("reminders", api.listReminders({ target, includeCanceled: true, limit: 100 }), { items: [] as Reminder[] });
       const coreData = await Promise.all([
         api.me(),
         capture<SetupStatus | null>("setup", api.setupStatus(), null),
@@ -758,8 +756,8 @@ function App() {
         messagesPromise,
         savedMessagesPromise,
         capture("inbox", api.listThreadInbox({ limit: 100 }), { items: [] as ThreadInboxItem[] }),
-        tasksPromise,
-        remindersPromise
+        capture("tasks", api.listTasks({ target }), { items: [] as Task[] }),
+        capture("reminders", api.listReminders({ target, includeCanceled: true, limit: 100 }), { items: [] as Reminder[] })
       ]);
       const [
         me,
@@ -962,25 +960,26 @@ function App() {
         <nav className="nav-list">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const label = t(item.labelKey);
             return (
               <button
                 key={item.key}
                 className={view === item.key ? "nav-item is-active" : "nav-item"}
                 type="button"
-                aria-label={item.label}
+                aria-label={label}
                 aria-current={view === item.key ? "page" : undefined}
-                title={item.label}
+                title={label}
                 onClick={() => setView(item.key)}
               >
                 <Icon size={18} aria-hidden="true" />
-                <span>{item.label}</span>
+                <span>{label}</span>
               </button>
             );
           })}
         </nav>
-        <SidebarSection title="Channels" actionLabel="Create channel">
+        <SidebarSection title={t("sidebar.channels")} actionLabel="Create channel">
           {channels.length === 0 ? (
-            <p className="sidebar-empty">No channels yet. Create one to get started.</p>
+            <p className="sidebar-empty">{t("sidebar.noChannelsYet")}</p>
           ) : channels.map((channel) => (
             <button
               key={channel.target}
@@ -995,13 +994,13 @@ function App() {
             >
               <Hash size={15} aria-hidden="true" />
               <span>{channel.displayName || channel.target.replace("#", "")}</span>
-              {channel.visibility === "private" ? <Shield size={14} aria-label="Private channel" /> : null}
+              {channel.visibility === "private" ? <Shield size={14} aria-label={t("sidebar.privateChannel")} /> : null}
             </button>
           ))}
         </SidebarSection>
-        <SidebarSection title="Agents" actionLabel="Create agent">
+        <SidebarSection title={t("sidebar.agents")} actionLabel={t("sidebar.createAgent")}>
           {sidebarAgents.length === 0 ? (
-            <p className="sidebar-empty">No agents provisioned. Enroll a daemon to register one.</p>
+            <p className="sidebar-empty">{t("sidebar.noAgentsYet")}</p>
           ) : sidebarAgents.map((agent) => (
             <button
               key={agent.agentId}
@@ -1020,9 +1019,9 @@ function App() {
             </button>
           ))}
         </SidebarSection>
-        <SidebarSection title="Machines">
+        <SidebarSection title={t("sidebar.machines")}>
           {daemonInventory.length === 0 ? (
-            <p className="sidebar-empty">No machines enrolled. Install the daemon on a host to see it here.</p>
+            <p className="sidebar-empty">{t("sidebar.noMachinesYet")}</p>
           ) : daemonInventory.map((computer) => {
             const heartbeatAt = computer.lastHeartbeatUnix ?? 0;
             const isOnline = heartbeatAt > 0 && Date.now() / 1000 - heartbeatAt < 120;
@@ -1046,7 +1045,8 @@ function App() {
             <strong>{user?.displayName || user?.username || "Signed in"}</strong>
             <span>{user?.role ?? "member"}</span>
           </div>
-          <button className="icon-button" type="button" aria-label="Sign out" onClick={handleLogout}>
+          <LocaleSwitcher className="user-panel-locale" />
+          <button className="icon-button" type="button" aria-label={t("nav.signOut")} onClick={handleLogout}>
             <LogOut size={18} aria-hidden="true" />
           </button>
         </div>
@@ -1762,6 +1762,7 @@ function MessagesPanel({
   loading: boolean;
   onRetry: () => Promise<void>;
 }) {
+  const { t } = useT();
   const [content, setContent] = useState("");
   const [sourceEndpointId, setSourceEndpointId] = useState("");
   const [draftAttachments, setDraftAttachments] = useState<Attachment[]>([]);
@@ -1985,15 +1986,12 @@ function MessagesPanel({
         <div className="panel message-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Messages</p>
-              <h2>No channel selected</h2>
+              <p className="eyebrow">{t("nav.messages")}</p>
+              <h2>{t("empty.noChannelSelected.title")}</h2>
             </div>
           </div>
           <div className="empty-state">
-            <p>
-              You haven't joined any channels yet. Create a channel from the sidebar, or pick a
-              direct message to start a conversation.
-            </p>
+            <p>{t("empty.noChannelSelected.messagesBody")}</p>
           </div>
         </div>
       </section>
@@ -2611,6 +2609,7 @@ function TasksPanel({
   const [sortKey, setSortKey] = useState<TaskSortKey>("updated_desc");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
+  const { t } = useT();
   const [actionError, setActionError] = useState("");
   const [taskReceipt, setTaskReceipt] = useState<TaskReceipt | null>(null);
 
@@ -2710,15 +2709,12 @@ function TasksPanel({
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Tasks</p>
-              <h2>No channel selected</h2>
+              <p className="eyebrow">{t("nav.tasks")}</p>
+              <h2>{t("empty.noChannelSelected.title")}</h2>
             </div>
           </div>
           <div className="empty-state">
-            <p>
-              Tasks belong to a channel. Create a channel from the sidebar first,
-              then come back here to open a board.
-            </p>
+            <p>{t("empty.noChannelSelected.tasksBody")}</p>
           </div>
         </div>
       </section>
@@ -2961,6 +2957,7 @@ function RemindersPanel({
   const [logEvents, setLogEvents] = useState<ReminderEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useT();
 
   const ordered = useMemo(
     () =>
@@ -3089,15 +3086,12 @@ function RemindersPanel({
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Reminders</p>
-              <h2>No channel selected</h2>
+              <p className="eyebrow">{t("nav.reminders")}</p>
+              <h2>{t("empty.noChannelSelected.title")}</h2>
             </div>
           </div>
           <div className="empty-state">
-            <p>
-              Reminders are scheduled inside a channel. Create a channel from the
-              sidebar to start scheduling them.
-            </p>
+            <p>{t("empty.noChannelSelected.remindersBody")}</p>
           </div>
         </div>
       </section>

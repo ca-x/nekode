@@ -1,0 +1,63 @@
+{
+  "app": {
+    "title": "Nekode",
+    "tagline": "Your team's collaboration and AI agent control plane."
+  },
+  "nav": {
+    "overview": "Overview",
+    "inbox": "Inbox",
+    "messages": "Messages",
+    "tasks": "Tasks",
+    "reminders": "Reminders",
+    "activity": "Activity",
+    "settings": "Settings",
+    "endpoints": "Endpoints",
+    "daemon": "Daemon",
+    "signOut": "Sign out"
+  },
+  "sidebar": {
+    "channels": "Channels",
+    "agents": "Agents",
+    "machines": "Machines",
+    "createAgent": "Create agent",
+    "noChannelsYet": "No channels yet. Create one to get started.",
+    "noAgentsYet": "No agents provisioned. Enroll a daemon to register one.",
+    "noMachinesYet": "No machines enrolled. Install the daemon on a host to see it here.",
+    "privateChannel": "Private channel"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "retry": "Retry",
+    "loading": "Loading",
+    "online": "online",
+    "offline": "offline",
+    "copy": "Copy",
+    "close": "Close",
+    "done": "Done",
+    "edit": "Edit"
+  },
+  "empty": {
+    "noChannelSelected": {
+      "title": "No channel selected",
+      "messagesBody": "You haven't joined any channels yet. Create a channel from the sidebar, or pick a direct message to start a conversation.",
+      "tasksBody": "Tasks belong to a channel. Create a channel from the sidebar first, then come back here to open a board.",
+      "remindersBody": "Reminders are scheduled inside a channel. Create a channel from the sidebar to start scheduling them."
+    }
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "displayName": "Display name",
+    "setupTitle": "Create the admin account",
+    "setupSubtitle": "Choose the first administrator. You can add more users later.",
+    "createAdmin": "Create admin account"
+  },
+  "locale": {
+    "english": "English",
+    "chineseSimplified": "简体中文"
+  }
+}
