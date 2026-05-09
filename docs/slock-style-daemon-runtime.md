@@ -623,6 +623,11 @@ Rules:
 - replies reuse the exact `target`;
 - work must be claimed before execution;
 - task claim conflict does not produce a chat apology;
+- agents do not @mention themselves to ask whether they have started or to
+  create self-reminder messages; after an assignment they claim the task and
+  report real progress, claim failure, or a concrete blocker;
+- progress and coordination messages must carry new execution evidence,
+  actionable handoff information, or a specific blocker;
 - mutating command failures are surfaced through exit status and structured
   error output;
 - ordinary channel delivery stops when the agent leaves or loses membership.
@@ -917,6 +922,8 @@ Check in this order:
 - Reuse exact targets.
 - Return structured errors.
 - Avoid chat output for silent task claim conflicts.
+- Avoid self-mention and empty coordination messages; use task board state,
+  claims, run/activity records, and evidence-backed updates instead.
 
 ### Phase 6: Memory
 

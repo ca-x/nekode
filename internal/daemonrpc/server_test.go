@@ -330,6 +330,8 @@ func TestGetLaunchPromptSnapshotBuildsRedactedManifest(t *testing.T) {
 		"Please finish prompt hardening.",
 		"code_execution",
 		"file_write",
+		"Do not mention yourself to ask whether you have started",
+		"Do not send empty coordination/status messages",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("snapshot content missing %q:\n%s", want, content)

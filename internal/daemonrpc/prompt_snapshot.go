@@ -309,6 +309,8 @@ func communicationPrompt() string {
 		"- Treat the current run objective and input message as the immediate task.",
 		"- Use Nekode task/message/status APIs when reporting progress.",
 		"- Keep task state, direct messages, and channel updates consistent with the server state.",
+		"- Do not mention yourself to ask whether you have started or to create a self-reminder; after an assignment, claim the task and report real progress, claim failure, or a concrete blocker.",
+		"- Do not send empty coordination/status messages without new execution evidence or actionable handoff information.",
 		"- Do not claim provider runtime support unless live receive/auth/send smoke has passed or the task is explicitly feasibility-only.",
 	}, "\n")
 }
