@@ -850,6 +850,21 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if download.Code != http.StatusOK || !strings.Contains(download.Body.String(), "<strong>safe</strong>") {
 		t.Fatalf("download attachment status = %d body=%s", download.Code, download.Body.String())
 	}
+	textAttachmentResp := doMultipartAttachment(t, s, token, "#general", "notes.txt", "text/plain; charset=utf-8", "plain preview")
+	if textAttachmentResp.Code != http.StatusCreated {
+		t.Fatalf("upload text attachment status = %d body=%s", textAttachmentResp.Code, textAttachmentResp.Body.String())
+	}
+	var textAttachment storage.Attachment
+	if err := json.Unmarshal(textAttachmentResp.Body.Bytes(), &textAttachment); err != nil {
+		t.Fatalf("decode text attachment: %v", err)
+	}
+	textDownload := doGET(t, s, "/api/attachments/"+textAttachment.ID+"/content", token)
+	if textDownload.Code != http.StatusOK || !strings.Contains(textDownload.Body.String(), "plain preview") {
+		t.Fatalf("download text attachment status = %d body=%s", textDownload.Code, textDownload.Body.String())
+	}
+	if disposition := textDownload.Header().Get("Content-Disposition"); !strings.HasPrefix(disposition, "inline") {
+		t.Fatalf("text attachment content disposition = %q, want inline", disposition)
+	}
 
 	task := doJSON(t, s, http.MethodPost, "/api/tasks", token, map[string]any{
 		"summary":       "wire backend",

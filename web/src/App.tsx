@@ -88,6 +88,8 @@ import type {
 const TOKEN_KEY = "nekode.console.token";
 const EVENT_CURSOR_KEY = "nekode.console.serverEvents.cursorState";
 const DEFAULT_TARGET = "#general";
+const TEXT_ATTACHMENT_PREVIEW_LIMIT = 2000;
+const TEXT_ATTACHMENT_LIGHTBOX_LIMIT = 200000;
 
 type ViewKey =
   | "overview"
@@ -287,9 +289,16 @@ function datetimeLocalValue(value?: number) {
 
 function attachmentPreviewKind(attachment: Attachment) {
   const mimeType = attachment.mimeType.toLowerCase().split(";")[0].trim();
+  const filename = attachment.filename.toLowerCase();
   if (mimeType.startsWith("image/")) return "image";
-  if (mimeType === "text/html" || attachment.filename.toLowerCase().endsWith(".html")) return "html";
+  if (mimeType === "text/html" || filename.endsWith(".html")) return "html";
+  if (mimeType === "text/plain" || filename.endsWith(".txt")) return "text";
   return "file";
+}
+
+function truncateAttachmentText(value: string, limit: number) {
+  if (value.length <= limit) return { text: value, truncated: false };
+  return { text: value.slice(0, limit), truncated: true };
 }
 
 function formatBytes(value: number) {
@@ -2350,16 +2359,25 @@ function AttachmentPreview({
   onPreview: (attachment: Attachment) => void;
 }) {
   const [objectUrl, setObjectUrl] = useState("");
+  const [textPreview, setTextPreview] = useState("");
   const kind = attachmentPreviewKind(attachment);
 
   useEffect(() => {
     let disposed = false;
     let url = "";
+    setObjectUrl("");
+    setTextPreview("");
     if (kind === "image" || kind === "html") {
       api.downloadAttachment(attachment).then((blob) => {
         if (disposed) return;
         url = URL.createObjectURL(blob);
         setObjectUrl(url);
+      }).catch(() => undefined);
+    } else if (kind === "text") {
+      api.downloadAttachment(attachment).then((blob) => blob.text()).then((text) => {
+        if (disposed) return;
+        const preview = truncateAttachmentText(text, TEXT_ATTACHMENT_PREVIEW_LIMIT);
+        setTextPreview(preview.text);
       }).catch(() => undefined);
     }
     return () => {
@@ -2368,7 +2386,7 @@ function AttachmentPreview({
     };
   }, [attachment, kind]);
 
-  const icon = kind === "image" ? Image : kind === "html" ? FileText : File;
+  const icon = kind === "image" ? Image : kind === "html" || kind === "text" ? FileText : File;
   const Icon = icon;
 
   return (
@@ -2378,6 +2396,8 @@ function AttachmentPreview({
           <img src={objectUrl} alt={attachment.filename} />
         ) : kind === "html" && objectUrl ? (
           <iframe title={attachment.filename} src={objectUrl} sandbox="" />
+        ) : kind === "text" && textPreview ? (
+          <pre className="attachment-text-preview">{textPreview}</pre>
         ) : (
           <span className="attachment-file-icon">
             <Icon size={22} aria-hidden="true" />
@@ -2401,13 +2421,26 @@ function messageSearchSummary(message: Message) {
 
 function AttachmentLightbox({ attachment, onClose }: { attachment: Attachment; onClose: () => void }) {
   const [objectUrl, setObjectUrl] = useState("");
+  const [textPreview, setTextPreview] = useState("");
+  const [textTruncated, setTextTruncated] = useState(false);
   const kind = attachmentPreviewKind(attachment);
 
   useEffect(() => {
     let disposed = false;
     let url = "";
+    setObjectUrl("");
+    setTextPreview("");
+    setTextTruncated(false);
     api.downloadAttachment(attachment).then((blob) => {
       if (disposed) return;
+      if (kind === "text") {
+        return blob.text().then((text) => {
+          if (disposed) return;
+          const preview = truncateAttachmentText(text, TEXT_ATTACHMENT_LIGHTBOX_LIMIT);
+          setTextPreview(preview.text);
+          setTextTruncated(preview.truncated);
+        });
+      }
       url = URL.createObjectURL(blob);
       setObjectUrl(url);
     }).catch(() => undefined);
@@ -2415,7 +2448,7 @@ function AttachmentLightbox({ attachment, onClose }: { attachment: Attachment; o
       disposed = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [attachment]);
+  }, [attachment, kind]);
 
   const download = async () => {
     const blob = await api.downloadAttachment(attachment);
@@ -2445,6 +2478,11 @@ function AttachmentLightbox({ attachment, onClose }: { attachment: Attachment; o
           <img className="lightbox-image" src={objectUrl} alt={attachment.filename} />
         ) : kind === "html" && objectUrl ? (
           <iframe className="lightbox-frame" title={attachment.filename} src={objectUrl} sandbox="" />
+        ) : kind === "text" ? (
+          <div className="lightbox-text-shell">
+            <pre className="lightbox-text">{textPreview}</pre>
+            {textTruncated ? <span className="lightbox-text-note">Preview truncated. Download to view the full file.</span> : null}
+          </div>
         ) : (
           <div className="lightbox-file">
             <File size={42} aria-hidden="true" />

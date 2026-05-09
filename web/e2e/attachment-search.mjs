@@ -93,6 +93,8 @@ async function run() {
     browser = await chromium.launch();
     const page = await browser.newPage();
     const filename = `preview-${Date.now()}.html`;
+    const textFilename = `notes-${Date.now()}.txt`;
+    const textContent = `plain text inline preview ${Date.now()}`;
     const messageText = `attachment e2e ${Date.now()}`;
 
     await page.goto(server.baseURL);
@@ -102,17 +104,29 @@ async function run() {
     await expect(page.getByLabel("Current target")).toBeVisible();
 
     await page.getByRole("button", { name: /^Messages$/ }).click();
-    await page.locator('input[type="file"]').setInputFiles({
-      name: filename,
-      mimeType: "text/html",
-      buffer: Buffer.from("<strong>attachment search e2e</strong>")
-    });
+    await page.locator('input[type="file"]').setInputFiles([
+      {
+        name: filename,
+        mimeType: "text/html",
+        buffer: Buffer.from("<strong>attachment search e2e</strong>")
+      },
+      {
+        name: textFilename,
+        mimeType: "text/plain",
+        buffer: Buffer.from(textContent)
+      }
+    ]);
     await expect(page.getByText(filename)).toBeVisible();
+    await expect(page.getByText(textFilename)).toBeVisible();
     await page.getByLabel("Message content").fill(messageText);
     await page.getByRole("button", { name: /^Send$/ }).click();
 
     const bubble = page.locator(".message-bubble").filter({ hasText: messageText }).last();
     await expect(bubble).toBeVisible();
+    await expect(bubble).toContainText(textContent);
+    await bubble.getByRole("button", { name: `Preview ${textFilename}` }).click();
+    await expect(page.getByRole("dialog")).toContainText(textContent);
+    await page.getByRole("button", { name: "Close preview" }).click();
     await bubble.getByRole("button", { name: /^Save$/ }).click();
     await expect(bubble.getByRole("button", { name: /^Saved$/ })).toBeVisible();
 

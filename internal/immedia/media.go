@@ -189,7 +189,7 @@ func DetectFileContentType(path string) (string, error) {
 
 func IsInlineAttachment(mimeType string) bool {
 	mimeType = NormalizeMimeType(mimeType)
-	return strings.HasPrefix(mimeType, "image/") || mimeType == "text/html"
+	return strings.HasPrefix(mimeType, "image/") || mimeType == "text/html" || mimeType == "text/plain"
 }
 
 func KindFromMimeType(mimeType string) string {

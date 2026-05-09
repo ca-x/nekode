@@ -138,7 +138,7 @@ func TestHelpers(t *testing.T) {
 	if got := NormalizeMimeType("Image/PNG; charset=binary"); got != "image/png" {
 		t.Fatalf("NormalizeMimeType = %q", got)
 	}
-	if !IsInlineAttachment("image/png") || !IsInlineAttachment("text/html; charset=utf-8") {
+	if !IsInlineAttachment("image/png") || !IsInlineAttachment("text/html; charset=utf-8") || !IsInlineAttachment("text/plain; charset=utf-8") {
 		t.Fatal("inline attachment detection failed")
 	}
 	if IsInlineAttachment("application/pdf") {
