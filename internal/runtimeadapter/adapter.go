@@ -560,7 +560,7 @@ func buildCodexArgs(values map[string]string) ([]string, string, string, []strin
 }
 
 func buildClaudeArgs(values map[string]string) ([]string, string, string, []string, error) {
-	args := []string{"--print", "--output-format", "stream-json", "--permission-mode", "bypassPermissions"}
+	args := []string{"--print", "--output-format", "stream-json", "--verbose", "--permission-mode", "bypassPermissions"}
 	if model := values["model"]; model != "" && model != "default" {
 		args = append(args, "--model", model)
 	}

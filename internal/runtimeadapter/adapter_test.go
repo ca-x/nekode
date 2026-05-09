@@ -181,7 +181,7 @@ func TestBuildWrapCommandPerRuntimeContracts(t *testing.T) {
 		},
 		{
 			kind:       "claude",
-			wantArgs:   []string{"--print", "--output-format"},
+			wantArgs:   []string{"--print", "--output-format", "stream-json", "--verbose"},
 			wantPairs:  map[string]string{"--model": "model-1", "--effort": "high", "--append-system-prompt": "system rules", "--resume": "session-1", "--permission-mode": "bypassPermissions"},
 			forbidArgs: []string{"--reasoning-effort", "--system-message"},
 			wantDir:    "/tmp/work",
