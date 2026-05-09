@@ -1922,13 +1922,15 @@ textarea {
   max-height: 60dvh;
   overflow: auto;
   padding-right: 4px;
+  min-width: 0;
 }
 
 .event-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
   align-items: center;
   gap: 12px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1952,6 +1954,7 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .event-main span:not(.event-kind),
@@ -1959,6 +1962,10 @@ textarea {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .event-kind {
@@ -2012,6 +2019,9 @@ textarea {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   text-align: right;
 }
 
@@ -2957,6 +2967,15 @@ textarea {
   .task-inspector {
     position: static;
     max-height: none;
+  }
+
+  .event-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .event-sequence {
+    text-align: left;
   }
 }
 
