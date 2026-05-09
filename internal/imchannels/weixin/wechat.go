@@ -324,16 +324,12 @@ func (r Runtime) sendILinkDelivery(ctx context.Context, cfg Config, delivery sto
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", "weixin ilink binding is required before send", 0, 0)
 		return SendResult{Delivery: failed}, errors.New("weixin ilink binding is required before send")
 	}
+	contextToken := ""
+	if source, ok := sourceForReply(ctx, r.Store, message); ok {
+		contextToken = wechatContextToken(source.MetadataJSON)
+	}
 	client := NewILinkClient(cfg.BaseURL, cfg.CDNBaseURL, cfg.BotToken)
-	err = client.SendMessage(ILinkMessage{
-		ToUserID:     toUserID,
-		ClientID:     RandomILinkClientID("resp"),
-		MessageType:  ILinkMessageTypeBot,
-		MessageState: ILinkMessageStateFinish,
-		ItemList: []ILinkMessageItem{
-			{Type: ILinkItemTypeText, TextItem: &ILinkTextItem{Text: outboundText(message.Content)}},
-		},
-	}, ILinkDefaultChannelVersion)
+	err = client.SendText(ctx, toUserID, contextToken, message.Content, r.httpClient())
 	if err != nil {
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
 		return SendResult{Delivery: failed}, err
@@ -460,6 +456,16 @@ func wechatConversationID(metadataJSON string) string {
 		return ""
 	}
 	return firstNonEmpty(metadata.IM.Conversation.ExternalID, metadata.IM.Conversation.ExternalIDCompat)
+}
+
+func wechatContextToken(metadataJSON string) string {
+	var metadata struct {
+		ContextToken string `json:"context_token"`
+	}
+	if err := json.Unmarshal([]byte(metadataJSON), &metadata); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(metadata.ContextToken)
 }
 
 func (c Config) normalize() Config {

@@ -240,7 +240,7 @@ func TestRuntimeFailsILinkSendBeforeBinding(t *testing.T) {
 		SenderKind:        "endpoint",
 		SourceEndpointID:  endpoint.ID,
 		ExternalMessageID: "wx-msg-unbound",
-		MetadataJSON:      `{"im":{"provider":"weixin","conversation":{"external_id":"wx-user-1"},"sender":{"external_id":"wx-user-1"}}}`,
+		MetadataJSON:      `{"context_token":"ctx-token-1","im":{"provider":"weixin","conversation":{"external_id":"wx-user-1"},"sender":{"external_id":"wx-user-1"}}}`,
 		RequestID:         endpoint.ID + ":wx-msg-unbound",
 	})
 	if err != nil {
@@ -303,7 +303,7 @@ func TestRuntimeSendsILinkMessageOnlyAfterBinding(t *testing.T) {
 		SenderKind:        "endpoint",
 		SourceEndpointID:  endpoint.ID,
 		ExternalMessageID: "wx-msg-1",
-		MetadataJSON:      `{"im":{"provider":"weixin","conversation":{"external_id":"wx-user-1"},"sender":{"external_id":"wx-user-1"}}}`,
+		MetadataJSON:      `{"context_token":"ctx-token-1","im":{"provider":"weixin","conversation":{"external_id":"wx-user-1"},"sender":{"external_id":"wx-user-1"}}}`,
 		RequestID:         endpoint.ID + ":wx-msg-1",
 	})
 	if err != nil {
@@ -350,8 +350,16 @@ func TestRuntimeSendsILinkMessageOnlyAfterBinding(t *testing.T) {
 		t.Fatalf("SendPending() = %+v, want delivered", results)
 	}
 	msg, _ := sendBody["msg"].(map[string]any)
-	if msg["to_user_id"] != "wx-user-1" || msg["message_type"] != float64(ILinkMessageTypeBot) || msg["message_state"] != float64(ILinkMessageStateFinish) {
+	if msg["to_user_id"] != "wx-user-1" || msg["message_type"] != float64(ILinkMessageTypeBot) || msg["message_state"] != float64(ILinkMessageStateFinish) || msg["context_token"] != "ctx-token-1" {
 		t.Fatalf("ilink send msg = %#v", msg)
+	}
+	items, _ := msg["item_list"].([]any)
+	if len(items) != 1 {
+		t.Fatalf("ilink item_list = %#v, want one text item", msg["item_list"])
+	}
+	item, _ := items[0].(map[string]any)
+	if item["type"] != float64(ILinkItemTypeText) {
+		t.Fatalf("ilink item = %#v, want text item", item)
 	}
 }
 

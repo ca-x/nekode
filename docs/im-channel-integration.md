@@ -9,10 +9,12 @@ the deployment and attribution companion to tasks #156-#165.
 For real provider runtime selection and SDK/API boundaries, also read
 `docs/im-real-provider-runtime-plan.md`. The current first-version IM code is an
 adapter boundary plus provider-specific thin runtimes. Terminal has a local
-live smoke gate. Telegram has a webhook/Bot API runtime. Feishu has a plain
-callback/OpenAPI send runtime. QQ uses Tencent BotGo WebSocket/send
-boundaries. Weixin has an official-account callback/send runtime plus a Stella
-iLink fork boundary for QR binding work. ServerChan uses the Nekobot bot-go
+live smoke gate. Telegram uses `telebot.v4`. Feishu uses the official
+`larksuite/oapi-sdk-go/v3` send boundary. QQ uses Tencent BotGo WebSocket/send
+boundaries. Weixin has two distinct modes: `official_account` keeps the
+WeChat public-account HTTP callback/send path, while `ilink` uses the
+`github.com/lib-x/ilink` bot SDK for messaging plus a narrow QR/status
+compatibility adapter. ServerChan uses the Nekobot bot-go
 polling/send shape. External providers still need operator-owned credential
 smoke before being described as production connected.
 

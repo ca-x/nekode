@@ -7,8 +7,9 @@ Reference baseline: CherryHQ/stella at `120eced`
 
 Nekode now has real local Terminal, Telegram webhook/runtime through
 `telebot.v4`, Feishu callback/runtime through the official
-`larksuite/oapi-sdk-go/v3`, QQ BotGo, Weixin official-account/iLink boundary,
-and ServerChan bot-go thin runtimes. The shared IM boundary provides:
+`larksuite/oapi-sdk-go/v3`, QQ BotGo, Weixin official-account plus
+`github.com/lib-x/ilink` iLink bot boundaries, and ServerChan bot-go thin
+runtimes. The shared IM boundary provides:
 
 - provider schemas, validation, and credential redaction;
 - inbound `iminbound.RawEvent` and normalizer contracts;
@@ -31,7 +32,7 @@ operator-owned credentials.
 | Telegram | Webhook route, secret-token validation, inbound normalization/storage, `telebot.v4` send boundary, and delivery status updates are implemented. | Live bot smoke still requires operator-owned token and webhook URL. |
 | Feishu | Plain callback route, verification-token URL challenge/event auth, inbound normalization/storage, official `larksuite/oapi-sdk-go/v3` tenant-token/message send boundary, and delivery status updates are implemented. | Encrypted callback decrypt support and live tenant smoke require operator-owned app credentials/callback URL. |
 | QQ | Schema/config validation, normalizer, BotGo token/OpenAPI/WebSocket boundary, group/C2C send calls, and mocked send/storage tests are implemented. | QQ sandbox/live smoke still requires operator-owned bot credentials; BotGo webhook-vs-WebSocket compliance should stay visible in release notes. |
-| WeChat/Weixin | Canonical provider id is `weixin`; `wechat` is accepted as an alias. Official-account callback/signature handling, customer-service send, and Stella iLink client fork boundary are implemented. | Generic QR binding API/Web panel is task #206; Weixin QR binding adapter/openid send gating is task #207; live public-account/iLink smoke requires operator-owned credentials and callback/QR environment. |
+| WeChat/Weixin | Canonical provider id is `weixin`; `wechat` is accepted as an alias. Official-account callback/signature handling and customer-service send are implemented through the WeChat public-account HTTP API. `mode=ilink` bot messaging uses `github.com/lib-x/ilink`; QR ticket/status remains a narrow compatibility adapter because the SDK exposes only a blocking login wait flow. | Generic QR binding API/Web panel is task #206; Weixin QR binding adapter/openid send gating is task #207; live public-account/iLink smoke requires operator-owned credentials and callback/QR environment. |
 | ServerChan | Schema/config validation, Nekobot-derived bot-go polling receive, sendMessage delivery, normalizer, and mocked send/storage tests are implemented. | Live ServerChan send/poll smoke requires operator-owned bot token and chat ID. |
 
 ## Task #205 Live Smoke Gate Matrix
@@ -68,7 +69,7 @@ Local verification commands run for this gate:
 | Feishu | `Passed locally`: URL verification challenge, plain callback verification-token auth, encrypted-payload rejection, group mention filtering, official SDK tenant-token/message send boundary, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned Feishu app credentials, event subscription, verification token, public callback URL, tenant access, and real chat/open/union ID. Encrypted callbacks are intentionally unsupported in the current callback surface. | `Implemented, not live-smoked`. Plain callbacks can remain available with explicit encrypted-callback caveat; do not mark Feishu production-ready until tenant live smoke passes. |
 | QQ | `Passed locally`: BotGo DTO group receive, normalized storage, source-only outbound delivery, group/C2C send boundary, and delivered status are covered with a fake QQ OpenAPI boundary. | `Not-tested`: requires operator-owned QQ bot app ID/secret, sandbox or live bot access, event delivery mode validation, and real group/C2C target. | `Implemented, not live-smoked`. QQ must remain live-gated; BotGo WebSocket-vs-webhook delivery-mode caveat stays visible in release notes. |
 | Weixin official account | `Passed locally`: callback signature URL verification, XML text callback normalization/storage, customer-service access-token fetch shape, send request shape, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned WeChat public account or test account, app credentials, callback token, public callback URL, user openid, and a valid customer-service reply window. | `Implemented, not live-smoked`. Official-account mode must not be called production connected until public-account live receive/send smoke passes. |
-| Weixin iLink QR | `Passed locally`: generic QR binding session contract from task #206 is consumed only for `mode=ilink`, Stella-style iLink QR ticket/status calls are represented by `httptest`, bound bot config is persisted, official-account endpoints reject QR session creation, unbound iLink sends fail, and bound `sendmessage` marks delivery delivered. | `Not-tested`: requires operator-owned Stella-compatible iLink/Weixin environment, QR scan by a real account, bound bot token/user ID, and live send path. | `Implemented, not live-smoked`. Web may show QR binding only for Weixin endpoints whose config is `mode=ilink`; iLink remains not production green until live QR bind/send smoke passes. |
+| Weixin iLink QR | `Passed locally`: generic QR binding session contract from task #206 is consumed only for `mode=ilink`, iLink QR ticket/status calls are represented by `httptest`, bound bot config is persisted, official-account endpoints reject QR session creation, unbound iLink sends fail, and bound bot sends go through `github.com/lib-x/ilink` and mark delivery delivered. | `Not-tested`: requires operator-owned iLink/Weixin environment, QR scan by a real account, bound bot token/user ID, and live send path. | `Implemented, not live-smoked`. Web may show QR binding only for Weixin endpoints whose config is `mode=ilink`; iLink remains not production green until live QR bind/send smoke passes. |
 | ServerChan | `Passed locally`: Nekobot-derived polling update shape, allow-list rejection, inbound storage, source-only outbound delivery, `sendMessage` request shape, and delivered status are covered with local `httptest`. | `Not-tested`: requires operator-owned ServerChan bot token, real chat ID, and live poll/send confirmation. | `Implemented, not live-smoked`. ServerChan is a product-level provider in the schema, but not release green until live bot token smoke passes. |
 
 The task #205 gate is considered complete only for documentation/review
@@ -88,7 +89,7 @@ edge handling, but Nekode must keep provider runtimes behind the existing
 | Telegram | `gopkg.in/telebot.v4` | `tele.LongPoller`, handlers for commands/messages/callbacks, group-mode guard. | `Notify` sends MarkdownV2 messages, supports numeric chat IDs and `@channel`, chunks long text. | Use Stella's config, guard, normalization, and render ideas. Prefer webhook mode for server deployment because task #179 requires it and Nekode already exposes HTTP APIs; allow long polling only as an optional local-dev mode. |
 | Feishu | `github.com/larksuite/oapi-sdk-go/v3` | WebSocket client with `dispatcher.NewEventDispatcher(verificationToken, encryptKey)`, `OnP2MessageReceiveV1`, reaction handler, message ID dedupe. | `client.Im.Message.Create` with `receive_id_type` derived from `ou_`, `on_`, or `oc_` prefixes. | Use the official SDK for tenant-token/message send. The first callback surface still accepts plain URL verification and `im.message.receive_v1` HTTP callbacks behind Nekode's normalizer; encrypted callbacks remain explicitly rejected until decrypt support lands. |
 | QQ | `github.com/tencent-connect/botgo` | Token refresh, OpenAPI client, event handlers for C2C and group at-message, WebSocket session manager. | `PostGroupMessage` for `qq:group:` and `PostC2CMessage` for `qq:c2c:`/default C2C. | Use BotGo and copy Stella's target ID convention. Keep live availability gated until QQ sandbox/live credentials prove the receive/send path. |
-| WeChat/Weixin | Custom iLink REST client over `go-resty/resty/v2`; no public Go SDK in Stella. | Long polling `GetUpdates`; QR endpoints for bot login; in-memory cursor/context tokens. | `/ilink/bot/sendmessage` using `bot_token` headers and cached `context_token`. | Keep `weixin` as the canonical id. Official-account callback/send and iLink QR/send are implemented as thin provider paths; live production claims still need account/compliance and credential smoke. |
+| WeChat/Weixin | `github.com/lib-x/ilink` for iLink bot messaging; WeChat public-account official HTTP API for `official_account`; narrow direct QR/status adapter for iLink binding sessions until the SDK exposes nonblocking poll with base-URL injection. | Official-account callbacks arrive through WeChat HTTP XML callbacks. iLink receive can use the SDK's `ListenAndServe`; Nekode's current local gate focuses on binding and outbound send. | Official-account sends use customer-service HTTP send. iLink sends use `Client.Send` with bound `bot_token` and cached `context_token`. | Keep `weixin` as the canonical id. Do not conflate `official_account` and `ilink`; live production claims still need account/compliance and credential smoke for each mode. |
 | ServerChan | Nekobot `pkg/channels/serverchan` bot-go shape. | Polling `getUpdates` with bot token and update offset. | `sendMessage` to numeric chat id. | Treat ServerChan as a product-level IM provider with polling receive/send, but keep it Not-live-smoked until an operator token/chat id proves it. |
 | Terminal | Local channel shape in Nekode, not external SDK. | Local operator input becomes the same inbound DTO shape as providers. | Render `OutboundDelivery` as terminal lines and mark status. | Terminal validates the runtime boundary without external accounts. |
 
@@ -110,10 +111,10 @@ edge handling, but Nekode must keep provider runtimes behind the existing
   HTTP handler setup, and notes that WebSocket event delivery is being phased
   down while webhook callbacks are in gray rollout. Source:
   <https://github.com/tencent-connect/botgo>.
-- Stella's Weixin runtime uses iLink REST endpoints; this plan did not find a
-  broadly documented official public Go SDK equivalent in the project
-  references. task #181 must validate compliance and account availability
-  before implementation.
+- Weixin has two separate modes. `official_account` is the WeChat public-account
+  HTTP API and is not covered by the iLink SDK. `ilink` is the iLink bot
+  protocol; Nekode uses `github.com/lib-x/ilink` for bot messaging while keeping
+  direct QR/status calls only where the SDK has no nonblocking poll surface.
 
 ## Nekode Runtime Boundary
 
@@ -176,8 +177,9 @@ Add a provider runtime layer that is separate from the existing mock gate:
 4. task #202/#203/#207/#209 provider contract follow-up.
    - QQ uses BotGo for token/OpenAPI/send and remains live-gated until
      sandbox/live smoke proves the account delivery mode.
-   - Weixin uses official-account callback/send plus Stella iLink QR binding
-     and send gating; generic QR Web/API capability is task #206.
+   - Weixin uses official-account callback/send plus the lib-x iLink bot SDK
+     boundary for `mode=ilink`; QR/status remains a narrow compatibility
+     adapter until the SDK exposes that server-side binding surface.
    - ServerChan uses the Nekobot bot-go polling/send shape and remains
      live-gated until an operator token/chat id proves it.
    - Detailed historical feasibility plan:

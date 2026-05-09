@@ -9,6 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/larksuite/oapi-sdk-go/v3 v3.5.3
 	github.com/lib-x/entsqlite v0.1.9
+	github.com/lib-x/ilink v0.2.0
 	github.com/lib/pq v1.12.3
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/tencent-connect/botgo v0.2.1

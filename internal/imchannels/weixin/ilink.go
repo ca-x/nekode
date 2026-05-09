@@ -1,23 +1,26 @@
 package weixin
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	ilinksdk "github.com/lib-x/ilink"
 )
 
 const (
 	ILinkDefaultBaseURL        = "https://ilinkai.weixin.qq.com"
 	ILinkDefaultCDNBaseURL     = "https://novac2c.cdn.weixin.qq.com"
-	ILinkDefaultChannelVersion = "1.0.0"
+	ILinkDefaultChannelVersion = "2.0.0"
 	ILinkMessageTypeBot        = 2
 	ILinkMessageStateFinish    = 2
 	ILinkItemTypeText          = 1
@@ -28,9 +31,12 @@ const (
 
 var ErrILinkSessionExpired = errors.New("weixin ilink: session expired")
 
-// ILinkClient is fork-adapted from Stella plugins/channels/weixin/client.go.
-// It keeps the request surface close to Stella while routing credentials through
-// Nekode InteractionEndpoint config and provider availability gating.
+// ILinkClient adapts Nekode's endpoint config to the lib-x iLink SDK.
+//
+// Authenticated bot messaging goes through github.com/lib-x/ilink. QR binding
+// still uses narrow ticket/status calls directly because v0.2.0 exposes
+// StartLogin/Wait, but not a server-side single-poll status API with base-URL
+// injection for Nekode's persisted binding sessions.
 type ILinkClient struct {
 	baseURL    string
 	cdnBaseURL string
@@ -109,17 +115,6 @@ type ILinkGetUpdatesResponse struct {
 	Msgs                 []ILinkMessage `json:"msgs,omitempty"`
 	GetUpdatesBuf        string         `json:"get_updates_buf,omitempty"`
 	LongPollingTimeoutMS int            `json:"longpolling_timeout_ms,omitempty"`
-}
-
-type ILinkSendMessageRequest struct {
-	Msg      ILinkMessage  `json:"msg"`
-	BaseInfo ILinkBaseInfo `json:"base_info"`
-}
-
-type ILinkSendMessageResponse struct {
-	Ret     int    `json:"ret,omitempty"`
-	ErrCode int    `json:"errcode,omitempty"`
-	ErrMsg  string `json:"errmsg,omitempty"`
 }
 
 type ILinkGetConfigRequest struct {
@@ -226,22 +221,6 @@ func (c *ILinkClient) GetUpdates(buf, channelVersion string, timeout time.Durati
 	return &result, ilinkCheckError(result.Ret, result.ErrCode, result.ErrMsg)
 }
 
-func (c *ILinkClient) SendMessage(msg ILinkMessage, channelVersion string) error {
-	if channelVersion == "" {
-		channelVersion = ILinkDefaultChannelVersion
-	}
-	var result ILinkSendMessageResponse
-	_, err := c.httpClient.R().
-		SetHeaders(c.commonHeaders()).
-		SetBody(ILinkSendMessageRequest{Msg: msg, BaseInfo: ILinkBaseInfo{ChannelVersion: channelVersion}}).
-		SetResult(&result).
-		Post(c.baseURL + "/ilink/bot/sendmessage")
-	if err != nil {
-		return fmt.Errorf("weixin ilink sendmessage: %w", err)
-	}
-	return ilinkCheckError(result.Ret, result.ErrCode, result.ErrMsg)
-}
-
 func (c *ILinkClient) GetConfig(userID, contextToken, channelVersion string) (*ILinkGetConfigResponse, error) {
 	if channelVersion == "" {
 		channelVersion = ILinkDefaultChannelVersion
@@ -261,14 +240,20 @@ func (c *ILinkClient) GetConfig(userID, contextToken, channelVersion string) (*I
 	return &result, ilinkCheckError(result.Ret, result.ErrCode, result.ErrMsg)
 }
 
-func RandomILinkClientID(prefix string) string {
-	var buf [8]byte
-	_, _ = rand.Read(buf[:])
-	seed := binary.BigEndian.Uint64(buf[:])
-	if strings.TrimSpace(prefix) == "" {
-		prefix = "nekode-weixin"
+func (c *ILinkClient) SendText(ctx context.Context, toUserID, contextToken, text string, httpClient *http.Client) error {
+	opts := []ilinksdk.Option{}
+	if httpClient != nil {
+		opts = append(opts, ilinksdk.WithHTTPClient(httpClient))
 	}
-	return prefix + ":" + strconv.FormatUint(seed, 36)
+	client := ilinksdk.NewClient(ilinksdk.Token{
+		BotToken: c.token,
+		BaseURL:  c.baseURL,
+	}, opts...)
+	return client.Send(ctx, &ilinksdk.OutboundMessage{
+		To:           strings.TrimSpace(toUserID),
+		ContextToken: strings.TrimSpace(contextToken),
+		Items:        []ilinksdk.Item{ilinksdk.TextMessage(outboundText(text))},
+	})
 }
 
 func (c *ILinkClient) commonHeaders() map[string]string {

@@ -38,10 +38,9 @@ arbitrary personal WeChat or group chat automation.
   validation, heartbeat reply, callback verification reply, and dispatch through
   handlers registered with `event.RegisterHandlers`:
   <https://pkg.go.dev/github.com/tencent-connect/botgo/interaction/webhook>.
-- Stella Weixin uses a custom iLink REST client, not a public Go SDK. It calls
-  `/ilink/bot/getupdates`, `/ilink/bot/sendmessage`, QR-code endpoints, and CDN
-  helpers with `AuthorizationType: ilink_bot_token`; it stores update cursor,
-  user context tokens, and typing tickets in memory.
+- Weixin iLink bot mode now has a Go SDK at `github.com/lib-x/ilink`. Nekode
+  should use that SDK for bot messaging and keep any direct HTTP usage limited
+  to SDK gaps such as server-side QR ticket/status polling.
 - WeChat Official Account server integration is a separate official path:
   configure a server URL/token, verify message signatures, receive XML events
   and messages, and reply through passive responses or customer-service message
@@ -174,15 +173,14 @@ Verification gate:
   message, Nekode stores it, sends a customer-service reply inside the allowed
   window, and records delivery status.
 
-### Path B: Stella iLink Runtime
+### Path B: iLink Bot Runtime
 
 This is not the default compliant path.
 
 Nekode may consider iLink only if the operator provides explicit evidence that
 its deployment has legitimate iLink bot access and permission to use the
-endpoints Stella calls. If accepted, it should be labeled `mode=ilink` or a
-separate provider variant so UI and release notes do not imply generic official
-WeChat support.
+bot protocol. If accepted, it must be labeled `mode=ilink` so UI and release
+notes do not imply generic official WeChat public-account support.
 
 Additional requirements beyond Stella:
 
@@ -225,8 +223,8 @@ After task #181, product/release copy may say:
 - QQ official BotGo runtime is feasible, implementation pending live bot access.
 - WeChat official-account/customer-service runtime is feasible for official
   account conversations, not personal chats/groups.
-- Stella iLink remains a reference/private-path candidate pending account and
-  compliance confirmation.
+- iLink bot mode remains separate from official-account mode and requires
+  account/compliance confirmation before being called live.
 
 It must not say QQ or WeChat is live until the relevant runtime task passes its
 receive/auth/send/live-smoke gate.
