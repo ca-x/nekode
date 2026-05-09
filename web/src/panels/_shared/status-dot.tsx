@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 export type StatusTone = "online" | "offline" | "running" | "idle" | "warning" | "error" | "neutral";
 
 const TONE_TO_CLASS: Record<StatusTone, string> = {
-  online: "status-dot-online",
-  offline: "status-dot-offline",
-  running: "status-dot-running",
-  idle: "status-dot-idle",
-  warning: "status-dot-warning",
-  error: "status-dot-error",
-  neutral: "status-dot-neutral"
+  online: "panel-status-dot-online",
+  offline: "panel-status-dot-offline",
+  running: "panel-status-dot-running",
+  idle: "panel-status-dot-idle",
+  warning: "panel-status-dot-warning",
+  error: "panel-status-dot-error",
+  neutral: "panel-status-dot-neutral"
 };
 
 /**
@@ -19,9 +19,9 @@ const TONE_TO_CLASS: Record<StatusTone, string> = {
  */
 export function StatusDot({ tone, label, trailing }: { tone: StatusTone; label: ReactNode; trailing?: ReactNode }) {
   return (
-    <span className="status-dot-wrapper">
-      <span className={`status-dot ${TONE_TO_CLASS[tone]}`} aria-hidden="true" />
-      <span className="status-dot-label">{label}</span>
+    <span className="panel-status-dot-wrapper">
+      <span className={`panel-status-dot ${TONE_TO_CLASS[tone]}`} aria-hidden="true" />
+      <span className="panel-status-dot-label">{label}</span>
       {trailing}
     </span>
   );

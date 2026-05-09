@@ -29,16 +29,20 @@ export function AgentDetailPanel({
   activityPanel,
   onStart,
   onRestart,
-  onDelete
+  onDelete,
+  onOpenDms,
+  onOpenActivity
 }: {
   agent: DaemonAgentInstance;
   computer: DaemonInventoryComputer | null;
-  dmPanel: ReactNode;
+  dmPanel?: ReactNode;
   reminders: readonly Reminder[];
-  activityPanel: ReactNode;
+  activityPanel?: ReactNode;
   onStart?: () => void;
   onRestart?: () => void;
   onDelete?: () => void;
+  onOpenDms?: () => void;
+  onOpenActivity?: () => void;
 }) {
   const { t } = useT();
   const [activeTab, setActiveTab] = useState<AgentDetailTab>("profile");
@@ -118,7 +122,21 @@ export function AgentDetailPanel({
           />
         </>
       ) : null}
-      {activeTab === "dms" ? <div className="detail-embed">{dmPanel}</div> : null}
+      {activeTab === "dms" ? (
+        dmPanel ?? (
+          <EmptyState
+            title={t("agent.tabs.dms")}
+            body={`dm:${agent.agentId}`}
+            action={
+              onOpenDms ? (
+                <button className="primary-button" type="button" onClick={onOpenDms}>
+                  {t("agent.tabs.dms")}
+                </button>
+              ) : undefined
+            }
+          />
+        )
+      ) : null}
       {activeTab === "reminders" ? (
         remindersForAgent.length === 0 ? (
           <EmptyState title={t("agent.tabs.reminders")} body={t("agent.reminders.empty")} />
@@ -136,7 +154,21 @@ export function AgentDetailPanel({
       {activeTab === "workspace" ? (
         <EmptyState title={t("agent.tabs.workspace")} body={t("agent.workspace.empty")} />
       ) : null}
-      {activeTab === "activity" ? <div className="detail-embed">{activityPanel}</div> : null}
+      {activeTab === "activity" ? (
+        activityPanel ?? (
+          <EmptyState
+            title={t("agent.tabs.activity")}
+            body={t("agent.activity.empty")}
+            action={
+              onOpenActivity ? (
+                <button className="ghost-button" type="button" onClick={onOpenActivity}>
+                  {t("agent.tabs.activity")}
+                </button>
+              ) : undefined
+            }
+          />
+        )
+      ) : null}
     </DetailShell>
   );
 }

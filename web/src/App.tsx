@@ -153,6 +153,17 @@ function viewForSlot(slot: PrimarySlot, preferred?: ViewKey): ViewKey {
   return entry.views[0] ?? "messages";
 }
 
+type SettingsTabKey = "account" | "users" | "imProviders" | "runtimes" | "notifications" | "system";
+
+const SETTINGS_TABS: ReadonlyArray<{ key: SettingsTabKey; labelKey: MessageKey }> = [
+  { key: "account", labelKey: "settings.tabs.account" },
+  { key: "users", labelKey: "settings.tabs.users" },
+  { key: "imProviders", labelKey: "settings.tabs.imProviders" },
+  { key: "runtimes", labelKey: "settings.tabs.runtimes" },
+  { key: "notifications", labelKey: "settings.tabs.notifications" },
+  { key: "system", labelKey: "settings.tabs.system" }
+];
+
 /**
  * parseRouteHash maps a browser hash like `#/computers/abc123` to the
  * matching primary slot, inner view, and any remaining path segment.
@@ -946,15 +957,28 @@ function App() {
   // work (e.g. copy-paste a URL pointing at #/computers) and the browser
   // back button walks the navigation history instead of leaving the app.
   useEffect(() => {
+    // Only include routeRest in the URL when it actually refers to a
+    // Computer / Agent detail record reachable via the daemon view. That
+    // prevents stale ids from leaking into, say, #/settings after the user
+    // switches away from a computer detail page.
+    const canCarryRest = view === "daemon" && routeRest;
     const desired = primarySlotOverride
-      ? hashForSlot(primarySlotOverride, routeRest)
-      : routeRest
+      ? hashForSlot(primarySlotOverride, canCarryRest ? routeRest : undefined)
+      : canCarryRest
         ? hashForSlot(primarySlot, routeRest)
         : hashForView(view);
     if (window.location.hash !== desired) {
       window.history.pushState(null, "", desired);
     }
   }, [primarySlot, primarySlotOverride, routeRest, view]);
+
+  useEffect(() => {
+    // Keep routeRest in sync with the current view: stale object ids should
+    // be dropped the moment the user leaves the daemon object-detail view.
+    if (routeRest && view !== "daemon") {
+      setRouteRest("");
+    }
+  }, [routeRest, view]);
 
   useEffect(() => {
     if (primarySlotOverride && slotForView(view) !== "computers") {
@@ -1217,17 +1241,15 @@ function App() {
           ) : daemonInventory.map((computer) => {
             const heartbeatAt = computer.lastHeartbeatUnix ?? 0;
             const isOnline = heartbeatAt > 0 && Date.now() / 1000 - heartbeatAt < 120;
-            const active = view === "daemon" && routeRest === computer.computerId;
             return (
               <button
                 key={computer.computerId}
-                className={active ? "side-link is-active" : "side-link"}
+                className="side-link"
                 type="button"
                 aria-label={`Open daemon details for ${computer.displayName || computer.hostname || computer.computerId}`}
-                aria-current={active ? "page" : undefined}
                 onClick={() => {
                   setView("daemon");
-                  setRouteRest(computer.computerId);
+                  setRouteRest("");
                 }}
               >
                 <Monitor size={15} aria-hidden="true" />
@@ -1443,7 +1465,12 @@ function App() {
                     setView("daemon");
                     setRouteRest(`agent/${agentId}`);
                   }}
-                  onCreateAgent={undefined}
+                  onCreateAgent={() => {
+                    // Take the user to the legacy daemon panel where the full
+                    // agent creation form lives. M3c will inline this as a
+                    // side sheet.
+                    setRouteRest("");
+                  }}
                   onStartAll={undefined}
                   onDeleteComputer={undefined}
                 />
@@ -1459,9 +1486,13 @@ function App() {
                   <AgentDetailPanel
                     agent={agent}
                     computer={host}
-                    dmPanel={null}
                     reminders={reminders}
-                    activityPanel={null}
+                    onOpenDms={() => {
+                      setActiveThread(null);
+                      setTarget(`dm:${agent.agentId}`);
+                      setView("messages");
+                    }}
+                    onOpenActivity={() => setView("activity")}
                   />
                 );
               }
@@ -4114,6 +4145,7 @@ function SettingsPanel({
   const userRole = (user?.role || "member").toLowerCase();
   const channelRole = channel?.currentUserRole || "member";
   const visibility = channel?.visibility || "public";
+  const [settingsTab, setSettingsTab] = useState<SettingsTabKey>("account");
   const recommendedRuntimes = runtimePresets.filter((preset) => preset.recommended).length;
   const writableEndpoints = endpoints.filter((endpoint) => endpoint.outboundEnabled).length;
   const readableEndpoints = endpoints.filter((endpoint) => endpoint.inboundEnabled).length;
