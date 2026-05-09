@@ -136,10 +136,12 @@ more agent instances; a runtime kind is not unique and may back multiple agents.
 
 Release builds publish `nekode_${version}_${os}_${arch}` and
 `nekode-daemon_${version}_${os}_${arch}` artifacts for Linux, macOS, and
-Windows. The default Docker image runs only the server; daemon installation
-should download the platform-specific daemon artifact from GitHub Releases
-instead of pulling it from the server runtime image. Private deployments can add
-a download-source override without changing the server image.
+Windows, plus a multi-arch server Docker image at `czyt/nekode:<version>` and
+`ghcr.io/ca-x/nekode:<version>` for Linux amd64/arm64. The default Docker image
+runs only the server; daemon installation should download the platform-specific
+daemon artifact from GitHub Releases instead of pulling it from the server
+runtime image. Private deployments can add a download-source override without
+changing the server image.
 
 Daemon management scripts are exposed without enrollment tokens for already
 installed machines:

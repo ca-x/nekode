@@ -8,6 +8,12 @@ on:
 
 permissions:
   contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKERHUB_IMAGE: czyt/nekode
 
 jobs:
   binaries:
@@ -144,26 +150,93 @@ jobs:
           gh release upload "$tag" "$RUNNER_TEMP/artifacts/SHA256SUMS.txt" --clobber
 
   docker:
-    name: Build server Docker image
+    name: Publish server Docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build server image
+      - name: Validate Docker Hub secrets
+        if: github.ref_type == 'tag'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "Docker Hub publish requires DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository secrets." >&2
+            exit 1
+          fi
+
+      - name: Log in to Docker Hub
+        if: github.ref_type == 'tag'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        if: github.ref_type == 'tag'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKERHUB_IMAGE }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=dev,enable=${{ github.ref_type != 'tag' }}
+            type=sha,format=long
+            type=ref,event=tag
+            type=semver,pattern={{version}},enable=${{ github.ref_type == 'tag' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.ref_type == 'tag' }}
+            type=semver,pattern={{major}},enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+
+      - name: Compute build metadata
+        id: buildmeta
+        run: echo "build_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish server image
         uses: docker/build-push-action@v6
         with:
           context: .
-          load: true
-          tags: nekode:${{ github.sha }}
+          platforms: ${{ github.ref_type == 'tag' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          push: ${{ github.ref_type == 'tag' }}
+          load: ${{ github.ref_type != 'tag' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
             COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ steps.buildmeta.outputs.build_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Verify server image
+        if: github.ref_type != 'tag'
         run: |
           set -euo pipefail
-          docker run --rm --entrypoint /app/nekode nekode:${{ github.sha }} version
+          docker run --rm --entrypoint /app/nekode ${{ env.DOCKERHUB_IMAGE }}:dev version
+
+      - name: Inspect published image
+        if: github.ref_type == 'tag'
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect ${{ env.DOCKERHUB_IMAGE }}:${{ github.ref_name }}
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}

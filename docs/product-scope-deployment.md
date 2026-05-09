@@ -274,6 +274,18 @@ Or start the local compose stack:
 docker compose up --build
 ```
 
+Tagged releases publish the server image to both Docker Hub and GitHub
+Container Registry:
+
+- `czyt/nekode:<version>`
+- `ghcr.io/ca-x/nekode:<version>`
+
+Stable non-prerelease tags also publish `latest`, and semantic aliases such as
+`0.1` and `0` are generated from the release tag. The Docker Hub publish path
+requires repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; a tag
+release fails early if they are missing so the release cannot appear successful
+without a Docker Hub image.
+
 `docker-compose.yml` starts a single server with `/data` persisted. It also
 shows the optional first-admin bootstrap env variables as commented examples.
 
@@ -465,6 +477,8 @@ Before tagging or deploying:
 - `go build ./...`
 - `./build.sh /tmp/nekode-build-check`
 - `docker build -t nekode:local-check .`
+- release workflow publishes Docker images to `czyt/nekode:<version>` and
+  `ghcr.io/ca-x/nekode:<version>` for Linux amd64/arm64
 - `cd web && npm ci && npm run typecheck && npm run build`
 - `git diff --check`
 - smoke checklist above completed against the intended deploy target
