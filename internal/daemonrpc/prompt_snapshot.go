@@ -161,6 +161,7 @@ func buildLaunchPromptSnapshot(input launchPromptInput) *daemonv1.LaunchPromptSn
 	}
 	sections = append(sections,
 		promptSection("communication_protocol", "nekode.prompt_template", communicationPrompt(), false),
+		promptSection("execution_verification", "nekode.prompt_template", executionVerificationPrompt(), false),
 		promptSection("tools_permissions_skills", "runtime_profile.capabilities", toolsPrompt(agent, input.runtimeProfile), false),
 		promptSection("memory_context", "server_memory_summary", memoryPrompt(), false),
 		promptSection("safety_audit", "nekode.prompt_template", safetyPrompt(), false),
@@ -323,6 +324,19 @@ func communicationPrompt() string {
 		"- Do not mention yourself to ask whether you have started or to create a self-reminder; after an assignment, claim the task and report real progress, claim failure, or a concrete blocker.",
 		"- Do not send empty coordination/status messages without new execution evidence or actionable handoff information.",
 		"- Do not claim provider runtime support unless live receive/auth/send smoke has passed or the task is explicitly feasibility-only.",
+	}, "\n")
+}
+
+func executionVerificationPrompt() string {
+	return strings.Join([]string{
+		"execution_verification:",
+		"- For long-running work, keep a short execution plan and update it when scope or ownership changes.",
+		"- Split independent work into claimable subtasks when it improves throughput; avoid artificial sequential chains.",
+		"- Treat acceptance criteria as default-failing until you have opened or observed concrete evidence.",
+		"- Persist progress, decisions, blockers, and handoff notes in server-visible task, message, status, or activity surfaces rather than only local context.",
+		"- Use a fresh reviewer or narrowly scoped verification pass for substantial claims when available.",
+		"- Do not stop at analysis or half-finished implementation while a recoverable path remains.",
+		"- Before finishing, run the checks that prove the claim and report the evidence or the exact remaining gap.",
 	}, "\n")
 }
 

@@ -638,6 +638,33 @@ Rules:
   error output;
 - ordinary channel delivery stops when the agent leaves or loses membership.
 
+## Long-Running Agent Harness Guidance
+
+Nekode should inject a compact execution/verification section into daemon
+launch prompts, borrowing the durable parts of
+`anthropics/cwc-long-running-agents` without copying its Claude Code-specific
+hook implementation. The portable ideas are:
+
+- default-failing acceptance: no criterion is treated as complete until the
+  agent has observed concrete evidence such as a test log, screenshot, command
+  output, or review result;
+- fresh verification: substantial claims should use a separate reviewer or
+  narrowly scoped verification pass when available, instead of relying only on
+  the builder agent's own confidence;
+- server-visible handoff: progress, blockers, decisions, and proof should be
+  written to task/message/status/activity surfaces so the next run can recover
+  without depending on local context alone;
+- bounded slicing: split independent work into claimable subtasks when it
+  improves throughput, but do not create artificial sequential chains;
+- persistence: continue through implementation and verification while a
+  recoverable path remains; if blocked, report the attempted recovery and the
+  next actionable handoff.
+
+This belongs in the launch prompt's execution/verification contract, not in IM
+provider-specific planning or attachment UX flows. Runtime-specific hooks can
+enforce these rules later, but the first compatibility layer is prompt-level so
+all daemon-managed runtimes receive the same discipline.
+
 ## Memory Design
 
 Memory has separate layers. Do not collapse them into one transcript file.

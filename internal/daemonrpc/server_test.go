@@ -334,6 +334,11 @@ func TestGetLaunchPromptSnapshotBuildsRedactedManifest(t *testing.T) {
 		"file_write",
 		"Do not mention yourself to ask whether you have started",
 		"Do not send empty coordination/status messages",
+		"execution_verification:",
+		"acceptance criteria as default-failing",
+		"server-visible task, message, status, or activity surfaces",
+		"Do not stop at analysis or half-finished implementation",
+		"report the evidence or the exact remaining gap",
 	} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("snapshot content missing %q:\n%s", want, content)
