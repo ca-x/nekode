@@ -9,10 +9,12 @@ import (
 )
 
 const (
-	TelegramMaxMessageLen = 4000
-	QQMaxMessageLen       = 3500
+	TelegramMaxMessageLen   = 4000
+	QQMaxMessageLen         = 3500
+	ServerChanMaxMessageLen = 4000
 
 	telegramParseModeMarkdownV2 = "MarkdownV2"
+	serverChanParseModeMarkdown = "markdown"
 	qqStreamStateGenerating     = 1
 	qqStreamStateDone           = 10
 )
@@ -68,6 +70,10 @@ func WeChatRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
 	return providerRawEvent(ProviderWeixin, input)
 }
 
+func ServerChanRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
+	return providerRawEvent(ProviderServerChan, input)
+}
+
 func providerRawEvent(provider string, input ProviderRawEventInput) iminbound.RawEvent {
 	return iminbound.RawEvent{
 		EndpointID:        strings.TrimSpace(input.EndpointID),
@@ -87,6 +93,8 @@ func RenderProviderOutbound(input OutboundRenderInput) ([]OutboundFrame, error) 
 		return RenderTelegramOutbound(input), nil
 	case ProviderQQ:
 		return RenderQQOutbound(input), nil
+	case ProviderServerChan:
+		return RenderServerChanOutbound(input), nil
 	default:
 		return nil, fmt.Errorf("unsupported IM provider %q", input.Provider)
 	}
@@ -142,6 +150,27 @@ func RenderQQOutbound(input OutboundRenderInput) []OutboundFrame {
 			Silent:                   input.Silent,
 			StreamID:                 strings.TrimSpace(input.StreamID),
 			StreamState:              streamState,
+		})
+	}
+	return frames
+}
+
+func RenderServerChanOutbound(input OutboundRenderInput) []OutboundFrame {
+	targetID := strings.TrimPrefix(strings.TrimSpace(input.ConversationID), "serverchan:")
+	text := outboundText(input, ServerChanMaxMessageLen)
+	chunks := splitProviderMessage(text, ServerChanMaxMessageLen)
+	frames := make([]OutboundFrame, 0, len(chunks))
+	for i, chunk := range chunks {
+		frames = append(frames, OutboundFrame{
+			Provider:                 ProviderServerChan,
+			TargetID:                 targetID,
+			TargetKind:               "chat",
+			ReplyToExternalMessageID: strings.TrimSpace(input.ReplyToExternalMessageID),
+			Text:                     chunk,
+			Sequence:                 uint32(i + 1),
+			Done:                     input.Stream == nil || input.Stream.Done,
+			Silent:                   input.Silent,
+			ParseMode:                serverChanParseModeMarkdown,
 		})
 	}
 	return frames

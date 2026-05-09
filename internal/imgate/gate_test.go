@@ -14,13 +14,14 @@ import (
 	"github.com/ca-x/nekode/internal/storage"
 )
 
-func TestProviderFixturesCoverFiveStellaProviders(t *testing.T) {
+func TestProviderFixturesCoverCanonicalIMProviders(t *testing.T) {
 	want := map[string]bool{
-		imadapter.ProviderTelegram: false,
-		imadapter.ProviderQQ:       false,
-		imadapter.ProviderFeishu:   false,
-		imadapter.ProviderWeixin:   false,
-		imadapter.ProviderTerminal: false,
+		imadapter.ProviderTelegram:   false,
+		imadapter.ProviderQQ:         false,
+		imadapter.ProviderFeishu:     false,
+		imadapter.ProviderWeixin:     false,
+		imadapter.ProviderTerminal:   false,
+		imadapter.ProviderServerChan: false,
 	}
 	for _, fixture := range ProviderFixtures() {
 		if _, ok := want[fixture.Provider]; !ok {

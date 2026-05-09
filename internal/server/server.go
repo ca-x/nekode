@@ -23,12 +23,12 @@ import (
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
 	"github.com/ca-x/nekode/internal/imbinding"
+	imfeishu "github.com/ca-x/nekode/internal/imchannels/feishu"
+	imtelegram "github.com/ca-x/nekode/internal/imchannels/telegram"
+	imwechat "github.com/ca-x/nekode/internal/imchannels/weixin"
 	"github.com/ca-x/nekode/internal/imcoord"
-	"github.com/ca-x/nekode/internal/imfeishu"
 	"github.com/ca-x/nekode/internal/immedia"
 	"github.com/ca-x/nekode/internal/impolicy"
-	"github.com/ca-x/nekode/internal/imtelegram"
-	"github.com/ca-x/nekode/internal/imwechat"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/version"
@@ -722,6 +722,7 @@ func (s *Server) handleCreateInteractionEndpoint(w http.ResponseWriter, r *http.
 		endpoint.AuthMode = "bearer"
 	}
 	if strings.EqualFold(endpoint.Kind, "im") {
+		endpoint.Provider = imadapter.CanonicalProvider(endpoint.Provider)
 		if err := imadapter.ValidateConfig(endpoint.Provider, endpoint.ConfigJSON); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -873,6 +874,14 @@ func (s *Server) handleCreateBindingSession(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusInternalServerError, "create binding session failed")
 		return
 	}
+	if imadapter.CanonicalProvider(endpoint.Provider) == imadapter.ProviderWeixin {
+		if updated, err := imwechat.StartILinkBindingSession(endpoint, s.imBindings, session); err == nil {
+			session = updated
+		} else {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+	}
 	writeJSON(w, http.StatusCreated, session)
 }
 
@@ -889,6 +898,18 @@ func (s *Server) handleGetBindingSession(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "read binding session failed")
 		return
+	}
+	if imadapter.CanonicalProvider(endpoint.Provider) == imadapter.ProviderWeixin {
+		update, err := imwechat.PollILinkBindingSession(endpoint, s.imBindings, session)
+		if update.Session.ID != "" {
+			session = update.Session
+		}
+		if err == nil && update.Bound && update.ConfigJSON != "" {
+			if _, err := s.store.UpdateInteractionEndpoint(r.Context(), endpoint.ID, storage.InteractionEndpointPatch{ConfigJSON: &update.ConfigJSON}); err != nil {
+				writeError(w, http.StatusInternalServerError, "persist weixin binding failed")
+				return
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, session)
 }

@@ -7,11 +7,12 @@ import (
 )
 
 const (
-	ProviderTelegram = "telegram"
-	ProviderQQ       = "qq"
-	ProviderFeishu   = "feishu"
-	ProviderWeixin   = "weixin"
-	ProviderTerminal = "terminal"
+	ProviderTelegram   = "telegram"
+	ProviderQQ         = "qq"
+	ProviderFeishu     = "feishu"
+	ProviderWeixin     = "weixin"
+	ProviderTerminal   = "terminal"
+	ProviderServerChan = "serverchan"
 )
 
 const (
@@ -49,6 +50,11 @@ type ProviderSchema struct {
 	DisplayName       string          `json:"displayName"`
 	Transport         string          `json:"transport"`
 	Description       string          `json:"description"`
+	Canonical         bool            `json:"canonical"`
+	Availability      string          `json:"availability"`
+	RuntimeStatus     string          `json:"runtimeStatus"`
+	Source            string          `json:"source"`
+	Notes             []string        `json:"notes,omitempty"`
 	SupportsWebhook   bool            `json:"supportsWebhook"`
 	SupportsPolling   bool            `json:"supportsPolling"`
 	SupportsStreaming bool            `json:"supportsStreaming"`
@@ -65,6 +71,11 @@ var providerSchemas = []ProviderSchema{
 		DisplayName:       "Telegram",
 		Transport:         "webhook",
 		Description:       "Telegram Bot API channel. Nekode uses webhook updates with Telegram secret-token validation plus Bot API sendMessage delivery.",
+		Canonical:         true,
+		Availability:      "runtime",
+		RuntimeStatus:     "implemented_not_live_smoked",
+		Source:            "Nekode runtime aligned with Stella plugins/channels/telegram.",
+		Notes:             []string{"Requires operator bot token and public webhook live smoke before production-ready claims."},
 		SupportsWebhook:   true,
 		SupportsPolling:   true,
 		SupportsStreaming: true,
@@ -90,7 +101,12 @@ var providerSchemas = []ProviderSchema{
 		Provider:          ProviderQQ,
 		DisplayName:       "QQ",
 		Transport:         "websocket",
-		Description:       "QQ Bot channel based on Stella's BotGo adapter shape.",
+		Description:       "QQ Bot channel using Tencent BotGo WebSocket receive and C2C/group send semantics adapted from Stella's QQ channel.",
+		Canonical:         true,
+		Availability:      "runtime",
+		RuntimeStatus:     "implemented_not_live_smoked",
+		Source:            "Fork-adapted from Stella plugins/channels/qq with Tencent BotGo.",
+		Notes:             []string{"Requires QQ bot app credentials and sandbox/live WebSocket smoke."},
 		SupportsStreaming: true,
 		SupportsMedia:     true,
 		BindingTargets:    defaultBindingTargets(),
@@ -101,6 +117,9 @@ var providerSchemas = []ProviderSchema{
 		Fields: []Field{
 			{Name: "app_id", Label: "App ID", Type: FieldString, Required: true, Description: "QQ bot app ID."},
 			{Name: "app_secret", Label: "App secret", Type: FieldString, Required: true, Sensitive: true, Description: "QQ bot app secret."},
+			{Name: "default_target", Label: "Default target", Type: FieldString, Description: "Default Nekode target for inbound QQ messages."},
+			{Name: "default_thread_id", Label: "Default thread ID", Type: FieldString, Description: "Optional Nekode thread for inbound QQ messages."},
+			{Name: "default_target_id", Label: "Default QQ target ID", Type: FieldString, Description: "Optional qq:group:<id> or qq:c2c:<id> target for outbound notifications."},
 			groupModeField(),
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
@@ -110,6 +129,11 @@ var providerSchemas = []ProviderSchema{
 		DisplayName:       "Feishu",
 		Transport:         "webhook",
 		Description:       "Feishu/Lark bot channel. Nekode uses plain event callbacks with verification-token challenge handling plus OpenAPI Message.Create delivery.",
+		Canonical:         true,
+		Availability:      "runtime",
+		RuntimeStatus:     "implemented_not_live_smoked",
+		Source:            "Nekode runtime aligned with Stella plugins/channels/feishu.",
+		Notes:             []string{"Encrypted callbacks are rejected until the encrypt_key path is fully adapted and tested."},
 		SupportsWebhook:   true,
 		SupportsStreaming: true,
 		SupportsMedia:     true,
@@ -140,6 +164,11 @@ var providerSchemas = []ProviderSchema{
 		DisplayName:     "WeChat Official Account",
 		Transport:       "webhook",
 		Description:     "Official WeChat public account channel using callback signature verification and customer-service message sending.",
+		Canonical:       true,
+		Availability:    "runtime",
+		RuntimeStatus:   "implemented_not_live_smoked",
+		Source:          "Official-account runtime plus Stella plugins/channels/weixin iLink client fork boundary.",
+		Notes:           []string{"Provider id is weixin; wechat is accepted as a legacy alias.", "Current HTTP callback runtime is official-account only; iLink fork code is kept in the same provider boundary."},
 		SupportsWebhook: true,
 		SupportsMedia:   true,
 		BindingTargets:  defaultBindingTargets(),
@@ -157,10 +186,14 @@ var providerSchemas = []ProviderSchema{
 			"Customer-service sends require app_id/app_secret access_token permissions and WeChat's allowed reply window.",
 		},
 		Fields: []Field{
-			{Name: "mode", Label: "Mode", Type: FieldSelect, Required: true, Options: []string{"official_account"}, Description: "Only the official public-account path is supported in this runtime."},
-			{Name: "app_id", Label: "App ID", Type: FieldString, Required: true, Description: "WeChat public account app_id."},
-			{Name: "app_secret", Label: "App secret", Type: FieldString, Required: true, Sensitive: true, Description: "WeChat public account app_secret for access_token."},
-			{Name: "token", Label: "Callback token", Type: FieldString, Required: true, Sensitive: true, Description: "Token used for WeChat callback SHA1 signature verification."},
+			{Name: "mode", Label: "Mode", Type: FieldSelect, Required: true, Options: []string{"ilink", "official_account"}, Description: "iLink uses QR binding from Stella's weixin channel; official_account uses public-account callbacks."},
+			{Name: "bot_token", Label: "iLink bot token", Type: FieldString, Sensitive: true, Description: "Filled after QR binding for Stella-compatible iLink mode."},
+			{Name: "bot_id", Label: "iLink bot ID", Type: FieldString, Description: "Filled after QR binding for iLink mode."},
+			{Name: "user_id", Label: "iLink user ID", Type: FieldString, Description: "Filled after QR binding for iLink mode."},
+			{Name: "base_url", Label: "iLink base URL", Type: FieldString, Description: "Optional iLink API base URL override."},
+			{Name: "app_id", Label: "App ID", Type: FieldString, Description: "WeChat public account app_id."},
+			{Name: "app_secret", Label: "App secret", Type: FieldString, Sensitive: true, Description: "WeChat public account app_secret for access_token."},
+			{Name: "token", Label: "Callback token", Type: FieldString, Sensitive: true, Description: "Token used for WeChat callback SHA1 signature verification."},
 			{Name: "default_target", Label: "Default target", Type: FieldString, Description: "Default Nekode target for inbound WeChat messages."},
 			{Name: "default_thread_id", Label: "Default thread ID", Type: FieldString, Description: "Optional Nekode thread for inbound WeChat messages."},
 			{Name: "api_base_url", Label: "API base URL", Type: FieldString, Description: "Optional API base URL for local tests or compatible gateways."},
@@ -173,6 +206,11 @@ var providerSchemas = []ProviderSchema{
 		DisplayName:       "Terminal",
 		Transport:         "local",
 		Description:       "Local terminal channel for development smoke tests and manual operator input.",
+		Canonical:         true,
+		Availability:      "runtime",
+		RuntimeStatus:     "local_smoked",
+		Source:            "Nekode local channel using the Stella channel boundary shape.",
+		Notes:             []string{"Local development provider; external provider live smoke does not apply."},
 		SupportsStreaming: true,
 		BindingTargets:    defaultBindingTargets(),
 		SetupHints: []string{
@@ -185,6 +223,34 @@ var providerSchemas = []ProviderSchema{
 			{Name: "operator", Label: "Operator name", Type: FieldString, Description: "Optional display name for local input."},
 			{Name: "target", Label: "Default target", Type: FieldString, Description: "Optional Nekode target hint for terminal input."},
 			{Name: "thread_id", Label: "Default thread ID", Type: FieldString, Description: "Optional Nekode thread hint for terminal input."},
+			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
+		},
+	},
+	{
+		Provider:        ProviderServerChan,
+		DisplayName:     "ServerChan",
+		Transport:       "polling",
+		Description:     "ServerChan Bot channel using bot-go polling receive and sendMessage delivery adapted from Nekobot's ServerChan runtime.",
+		Canonical:       true,
+		Availability:    "runtime",
+		RuntimeStatus:   "implemented_not_live_smoked",
+		Source:          "Fork-adapted from Nekobot pkg/channels/serverchan.",
+		Notes:           []string{"Requires operator-owned ServerChan Bot token and live send/poll smoke before production-ready claims.", "ServerChan is treated as an IM provider with polling receive; it does not use the generic QR binding capability."},
+		SupportsPolling: true,
+		SupportsMedia:   false,
+		BindingTargets:  defaultBindingTargets(),
+		SetupHints: []string{
+			"Create or reuse a ServerChan Bot token and paste bot_token.",
+			"Optional default_chat_id can route notifications; replies use the source chat when present.",
+			"Use allow_from to restrict accepted user/chat IDs when exposing polling receive.",
+		},
+		Fields: []Field{
+			{Name: "bot_token", Label: "Bot token", Type: FieldString, Required: true, Sensitive: true, Description: "ServerChan Bot token."},
+			{Name: "default_target", Label: "Default target", Type: FieldString, Description: "Default Nekode target for inbound ServerChan messages."},
+			{Name: "default_thread_id", Label: "Default thread ID", Type: FieldString, Description: "Optional Nekode thread for inbound ServerChan messages."},
+			{Name: "default_chat_id", Label: "Default chat ID", Type: FieldString, Description: "Optional ServerChan chat ID for outbound notifications."},
+			{Name: "allow_from", Label: "Allowed IDs", Type: FieldJSON, Description: "Optional array of user/chat IDs allowed to send inbound messages; use [\"*\"] to allow all."},
+			{Name: "api_base_url", Label: "API base URL", Type: FieldString, Description: "Optional ServerChan-compatible API base URL for tests or private gateways."},
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
 	},
@@ -211,7 +277,7 @@ func ListProviders() []ProviderSchema {
 }
 
 func GetProvider(provider string) (ProviderSchema, bool) {
-	provider = normalizeProvider(provider)
+	provider = CanonicalProvider(provider)
 	for _, schema := range providerSchemas {
 		if schema.Provider == provider {
 			return schema, true
@@ -229,6 +295,9 @@ func ValidateConfig(provider string, rawConfig string) error {
 	if err != nil {
 		return err
 	}
+	if schema.Provider == ProviderWeixin {
+		return validateWeixinConfig(config)
+	}
 	for _, field := range schema.Fields {
 		if !field.Required {
 			continue
@@ -239,6 +308,37 @@ func ValidateConfig(provider string, rawConfig string) error {
 		}
 	}
 	return nil
+}
+
+func validateWeixinConfig(config map[string]any) error {
+	mode := configString(config, "mode")
+	if mode == "" {
+		mode = "ilink"
+	}
+	switch mode {
+	case "ilink":
+		return nil
+	case "official_account":
+		for _, field := range []string{"app_id", "app_secret", "token"} {
+			if configString(config, field) == "" {
+				return fmt.Errorf("%s: missing required config field %s", ProviderWeixin, field)
+			}
+		}
+	default:
+		return fmt.Errorf("%s: unsupported mode %q", ProviderWeixin, mode)
+	}
+	return nil
+}
+
+func configString(config map[string]any, key string) string {
+	if config == nil {
+		return ""
+	}
+	value, ok := config[key]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
 }
 
 func RedactConfig(provider string, rawConfig string) (string, error) {
@@ -268,7 +368,7 @@ func RedactConfig(provider string, rawConfig string) (string, error) {
 	return string(data), nil
 }
 
-func normalizeProvider(provider string) string {
+func CanonicalProvider(provider string) string {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	switch provider {
 	case "wechat":
@@ -276,6 +376,10 @@ func normalizeProvider(provider string) string {
 	default:
 		return provider
 	}
+}
+
+func normalizeProvider(provider string) string {
+	return CanonicalProvider(provider)
 }
 
 func groupModeField() Field {

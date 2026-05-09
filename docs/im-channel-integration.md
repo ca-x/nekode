@@ -8,10 +8,13 @@ the deployment and attribution companion to tasks #156-#165.
 
 For real provider runtime selection and SDK/API boundaries, also read
 `docs/im-real-provider-runtime-plan.md`. The current first-version IM code is an
-adapter boundary plus mock gate for most providers. Terminal has a local live
-smoke gate, Telegram has a webhook/Bot API runtime, and Feishu has a plain
-callback/OpenAPI send runtime. Remaining provider runtimes must still pass
-their own receive/auth/send smoke before being described as connected.
+adapter boundary plus provider-specific thin runtimes. Terminal has a local
+live smoke gate. Telegram has a webhook/Bot API runtime. Feishu has a plain
+callback/OpenAPI send runtime. QQ uses Tencent BotGo WebSocket/send
+boundaries. Weixin has an official-account callback/send runtime plus a Stella
+iLink fork boundary for QR binding work. ServerChan uses the Nekobot bot-go
+polling/send shape. External providers still need operator-owned credential
+smoke before being described as production connected.
 
 ## Design Boundary
 
@@ -71,7 +74,7 @@ Required fields:
 
 - `Kind`: `im`
 - `Provider`: provider identifier such as `feishu`, `weixin`, `telegram`, `qq`,
-  or `custom`
+  `serverchan`, or `custom`
 - `DisplayName`: operator-facing channel name
 - `TargetPrefix`: default Nekode target prefix, usually `#`
 - `InboundEnabled`: whether the adapter accepts provider messages
@@ -153,7 +156,9 @@ The common acceptance bar for every provider is:
 - Stella-derived structure, field names, or copied code are attributed.
 
 Real credential smoke can be phased by provider availability, but mock fixtures
-for all five providers are part of the first-version gate.
+for the canonical providers (`telegram`, `qq`, `feishu`, `weixin`, `terminal`,
+and `serverchan`) are part of the first-version gate. The legacy external name
+`wechat` is accepted as an alias for the canonical `weixin` provider id.
 
 Mock fixtures do not prove live provider connectivity. A provider becomes live
 only when its runtime can receive provider events, verify provider auth or
@@ -170,7 +175,8 @@ patterns for provider selection and setup flow while still writing Nekode's
 
 Expected channel add flow:
 
-- provider picker for Telegram, QQ, Feishu, WeChat, Terminal, and custom;
+- provider picker for Telegram, QQ, Feishu, Weixin/WeChat, Terminal,
+  ServerChan, and custom;
 - provider-specific required fields with clear labels and validation;
 - secret fields presented as write-only inputs after save;
 - redacted API responses and list/detail views;
@@ -190,7 +196,7 @@ as terminal-readable lines. This keeps Terminal useful for smoke tests without
 creating a separate local chat store.
 
 The Terminal live smoke gate must use the real local channel path, not a static
-fixture: local operator input flows through `internal/imterminal.Channel`,
+fixture: local operator input flows through `internal/imchannels/terminal`,
 normalizes into `imcoord`, persists as a source endpoint message, receives an
 agent reply through the normal daemon `SendMessage` source-only outbound
 delivery path, renders with the Terminal outbound renderer, and records the
@@ -224,7 +230,7 @@ Inbound IM messages persist through `storage.Message` and must keep:
 - `SourceEndpointID`: the Nekode `InteractionEndpoint` that received the event;
 - `ExternalMessageID`: the provider message ID used for dedupe;
 - `MetadataJSON.im.provider`: provider name such as `telegram`, `qq`,
-  `feishu`, `weixin`, or `terminal`;
+  `feishu`, `weixin`, `terminal`, or `serverchan`;
 - `MetadataJSON.im.endpoint_id`: copied source endpoint ID;
 - `MetadataJSON.im.conversation`: normalized external conversation record;
 - `MetadataJSON.im.sender`: normalized external sender record;

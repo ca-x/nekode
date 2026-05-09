@@ -1,4 +1,4 @@
-package imfeishu
+package feishu
 
 import (
 	"bytes"

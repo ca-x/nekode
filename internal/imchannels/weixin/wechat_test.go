@@ -1,4 +1,4 @@
-package imwechat
+package weixin
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/daemonrpc"
+	"github.com/ca-x/nekode/internal/imbinding"
 	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/storage"
 )
@@ -140,6 +141,133 @@ func TestRuntimeSendsCustomerServiceMessageAndMarksDelivered(t *testing.T) {
 	text, _ := sendBody["text"].(map[string]any)
 	if !strings.Contains(text["content"].(string), "acknowledged via wechat") {
 		t.Fatalf("send text = %#v", text)
+	}
+}
+
+func TestILinkBindingSessionFetchesQRAndPersistsBoundConfig(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ilink/bot/get_bot_qrcode":
+			_, _ = w.Write([]byte(`{"qrcode":"qr-ticket-1","qrcode_img_content":"base64-png"}`))
+		case "/ilink/bot/get_qrcode_status":
+			if r.URL.Query().Get("qrcode") != "qr-ticket-1" {
+				t.Fatalf("qrcode query = %q", r.URL.Query().Get("qrcode"))
+			}
+			_, _ = w.Write([]byte(`{"status":"confirmed","bot_token":"wx-token","ilink_bot_id":"bot-1","ilink_user_id":"user-1","baseurl":"https://wx-bound.example"}`))
+		default:
+			t.Fatalf("unexpected iLink API path %q", r.URL.Path)
+		}
+	}))
+	t.Cleanup(api.Close)
+
+	endpoint := storage.InteractionEndpoint{
+		ID:         "iep-weixin-ilink",
+		Kind:       "im",
+		Provider:   "weixin",
+		ConfigJSON: `{"mode":"ilink","base_url":"` + api.URL + `"}`,
+	}
+	bindings := imbinding.NewStore(time.Minute)
+	session, err := bindings.Create(endpoint, imbinding.MethodQRCode)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	started, err := StartILinkBindingSession(endpoint, bindings, session)
+	if err != nil {
+		t.Fatalf("StartILinkBindingSession() error = %v", err)
+	}
+	if started.QRPayload != "qr-ticket-1" || started.QRImageURL != "data:image/png;base64,base64-png" || started.Status != imbinding.StatusPending {
+		t.Fatalf("started session = %+v", started)
+	}
+	result, err := PollILinkBindingSession(endpoint, bindings, started)
+	if err != nil {
+		t.Fatalf("PollILinkBindingSession() error = %v", err)
+	}
+	if !result.Bound || result.Session.Status != imbinding.StatusBound {
+		t.Fatalf("binding result = %+v, want bound", result)
+	}
+	cfg, err := ConfigFromEndpoint(storage.InteractionEndpoint{ID: endpoint.ID, ConfigJSON: result.ConfigJSON})
+	if err != nil {
+		t.Fatalf("ConfigFromEndpoint(bound config) error = %v", err)
+	}
+	if cfg.BotToken != "wx-token" || cfg.BotID != "bot-1" || cfg.UserID != "user-1" || cfg.BaseURL != "https://wx-bound.example" {
+		t.Fatalf("bound config = %+v from %s", cfg, result.ConfigJSON)
+	}
+}
+
+func TestRuntimeSendsILinkMessageOnlyAfterBinding(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		ID:              "iep-weixin-ilink",
+		Kind:            "im",
+		Provider:        "weixin",
+		DisplayName:     "Weixin iLink",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "ilink_bot_token",
+		ConfigJSON:      `{"mode":"ilink","bot_token":"wx-token","user_id":"wx-user-1","default_target":"#ops"}`,
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	inbound, err := store.CreateMessage(ctx, storage.Message{
+		Target:            "#ops",
+		Role:              "user",
+		Content:           "hello",
+		SenderDisplayName: "wx-user-1",
+		SenderKind:        "endpoint",
+		SourceEndpointID:  endpoint.ID,
+		ExternalMessageID: "wx-msg-1",
+		MetadataJSON:      `{"im":{"provider":"weixin","conversation":{"external_id":"wx-user-1"},"sender":{"external_id":"wx-user-1"}}}`,
+		RequestID:         endpoint.ID + ":wx-msg-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(inbound) error = %v", err)
+	}
+	_, err = daemonrpc.New(store, "srv-weixin-ilink").SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           inbound.Target,
+		Content:          "acknowledged via ilink",
+		ReplyToMessageId: inbound.ID,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		RequestId:        "ilink-reply",
+		IdempotencyKey:   "ilink-reply",
+		Sender:           &daemonv1.Actor{ActorKind: daemonv1.ActorKind_ACTOR_KIND_AGENT, AgentId: "agent-weixin", DisplayName: "Weixin Agent"},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage() error = %v", err)
+	}
+
+	var sendBody map[string]any
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/ilink/bot/sendmessage" {
+			t.Fatalf("unexpected iLink API path %q", r.URL.Path)
+		}
+		if auth := r.Header.Get("Authorization"); auth != "Bearer wx-token" {
+			t.Fatalf("Authorization = %q, want Bearer token", auth)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&sendBody); err != nil {
+			t.Fatalf("decode send body: %v", err)
+		}
+		_, _ = w.Write([]byte(`{"ret":0}`))
+	}))
+	t.Cleanup(api.Close)
+
+	cfg, err := ConfigFromEndpoint(endpoint)
+	if err != nil {
+		t.Fatalf("ConfigFromEndpoint() error = %v", err)
+	}
+	cfg.BaseURL = api.URL
+	results, err := (Runtime{Config: cfg, Store: store}).SendPending(ctx, 10)
+	if err != nil {
+		t.Fatalf("SendPending() error = %v", err)
+	}
+	if len(results) != 1 || results[0].Delivery.Status != "delivered" {
+		t.Fatalf("SendPending() = %+v, want delivered", results)
+	}
+	msg, _ := sendBody["msg"].(map[string]any)
+	if msg["to_user_id"] != "wx-user-1" || msg["message_type"] != float64(ILinkMessageTypeBot) || msg["message_state"] != float64(ILinkMessageStateFinish) {
+		t.Fatalf("ilink send msg = %#v", msg)
 	}
 }
 

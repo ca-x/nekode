@@ -9,7 +9,7 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imcoord"
-	"github.com/ca-x/nekode/internal/imterminal"
+	imterminal "github.com/ca-x/nekode/internal/imchannels/terminal"
 	"github.com/ca-x/nekode/internal/storage"
 )
 

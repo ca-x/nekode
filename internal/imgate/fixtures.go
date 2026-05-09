@@ -112,6 +112,21 @@ func ProviderFixtures() []Fixture {
 			SenderKind:        "terminal",
 			Text:              "start a new terminal session",
 		},
+		{
+			Provider:          imadapter.ProviderServerChan,
+			EndpointID:        "iep-im-serverchan",
+			EndpointName:      "ServerChan Bot",
+			ExternalMessageID: "sc-msg-6001",
+			Target:            "inbox:im/serverchan/1001",
+			ThreadID:          "im-serverchan-1001",
+			ConversationID:    "1001",
+			ConversationName:  "ServerChan private chat",
+			IsGroup:           false,
+			SenderID:          "42",
+			SenderName:        "ServerChan User",
+			SenderKind:        "user",
+			Text:              "serverchan operator ping",
+		},
 	}
 }
 

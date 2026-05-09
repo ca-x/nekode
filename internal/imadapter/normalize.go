@@ -28,6 +28,8 @@ func (n Normalizer) NormalizeInbound(ctx context.Context, event iminbound.RawEve
 		return n.normalizeWeixin(event)
 	case ProviderTerminal:
 		return n.normalizeTerminal(event)
+	case ProviderServerChan:
+		return n.normalizeServerChan(event)
 	default:
 		return iminbound.Message{}, fmt.Errorf("unsupported IM provider %q", event.Provider)
 	}
@@ -315,6 +317,58 @@ func (n Normalizer) normalizeTerminal(event iminbound.RawEvent) (iminbound.Messa
 	msg.Conversation = iminbound.Conversation{ExternalID: firstNonEmpty(payload.SessionID, "local"), TargetHint: payload.Target, ThreadID: payload.ThreadID}
 	msg.Sender = iminbound.Sender{ExternalID: firstNonEmpty(payload.OperatorID, payload.Operator, "terminal"), DisplayName: firstNonEmpty(payload.OperatorName, payload.Operator), Kind: "human"}
 	msg.Content = []iminbound.ContentBlock{{Type: iminbound.ContentTypeText, Text: payload.Text}}
+	return normalizeAndValidate(msg)
+}
+
+func (n Normalizer) normalizeServerChan(event iminbound.RawEvent) (iminbound.Message, error) {
+	var payload struct {
+		UpdateID int64 `json:"update_id"`
+		Message  struct {
+			MessageID int64  `json:"message_id"`
+			ChatID    int64  `json:"chat_id"`
+			Text      string `json:"text"`
+			Date      int64  `json:"date"`
+			Chat      struct {
+				ID   int64  `json:"id"`
+				Type string `json:"type"`
+			} `json:"chat"`
+			From struct {
+				ID        int64  `json:"id"`
+				Username  string `json:"username"`
+				FirstName string `json:"first_name"`
+				LastName  string `json:"last_name"`
+			} `json:"from"`
+		} `json:"message"`
+	}
+	if err := json.Unmarshal(event.Body, &payload); err != nil {
+		return iminbound.Message{}, err
+	}
+	msg := n.baseMessage(event, ProviderServerChan)
+	if msg.ExternalMessageID == "" {
+		msg.ExternalMessageID = firstNonEmpty(formatInt(payload.Message.MessageID), formatInt(payload.UpdateID))
+	}
+	chatID := payload.Message.Chat.ID
+	if chatID == 0 {
+		chatID = payload.Message.ChatID
+	}
+	userID := payload.Message.From.ID
+	if userID == 0 {
+		userID = chatID
+	}
+	msg.Conversation = iminbound.Conversation{
+		ExternalID: formatInt(chatID),
+		IsGroup:    payload.Message.Chat.Type == "group" || payload.Message.Chat.Type == "supergroup",
+	}
+	msg.Sender = iminbound.Sender{
+		ExternalID:  formatInt(userID),
+		DisplayName: strings.TrimSpace(payload.Message.From.FirstName + " " + payload.Message.From.LastName),
+		Username:    payload.Message.From.Username,
+		Kind:        "human",
+	}
+	if msg.Sender.DisplayName == "" {
+		msg.Sender.DisplayName = payload.Message.From.Username
+	}
+	msg.Content = []iminbound.ContentBlock{{Type: iminbound.ContentTypeText, Text: payload.Message.Text}}
 	return normalizeAndValidate(msg)
 }
 

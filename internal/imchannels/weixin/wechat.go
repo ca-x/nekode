@@ -1,4 +1,4 @@
-package imwechat
+package weixin
 
 import (
 	"bytes"
@@ -26,6 +26,11 @@ var ErrUnauthorizedWebhook = errors.New("unauthorized wechat webhook")
 type Config struct {
 	EndpointID      string
 	Mode            string
+	BotToken        string
+	BotID           string
+	UserID          string
+	BaseURL         string
+	CDNBaseURL      string
 	AppID           string
 	AppSecret       string
 	Token           string
@@ -108,6 +113,11 @@ func ConfigFromEndpoint(endpoint storage.InteractionEndpoint) (Config, error) {
 	return Config{
 		EndpointID:      endpoint.ID,
 		Mode:            firstNonEmpty(stringValue(raw, "mode"), "official_account"),
+		BotToken:        stringValue(raw, "bot_token"),
+		BotID:           stringValue(raw, "bot_id"),
+		UserID:          stringValue(raw, "user_id"),
+		BaseURL:         stringValue(raw, "base_url"),
+		CDNBaseURL:      stringValue(raw, "cdn_base_url"),
 		AppID:           stringValue(raw, "app_id"),
 		AppSecret:       firstNonEmpty(stringValue(raw, "app_secret"), stringValue(raw, "app_secret_ref")),
 		Token:           firstNonEmpty(stringValue(raw, "token"), stringValue(raw, "webhook_token"), stringValue(raw, "token_ref")),
@@ -274,6 +284,9 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	if cfg.EndpointID == "" {
 		cfg.EndpointID = delivery.EndpointID
 	}
+	if cfg.Mode == "ilink" {
+		return r.sendILinkDelivery(ctx, cfg, delivery)
+	}
 	message, err := r.Store.GetMessage(ctx, delivery.Target, delivery.MessageID)
 	if err != nil {
 		return SendResult{}, err
@@ -296,6 +309,40 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 		return SendResult{}, err
 	}
 	return SendResult{Delivery: updated, Messages: []CustomerServiceMessage{resp}}, nil
+}
+
+func (r Runtime) sendILinkDelivery(ctx context.Context, cfg Config, delivery storage.OutboundDelivery) (SendResult, error) {
+	message, err := r.Store.GetMessage(ctx, delivery.Target, delivery.MessageID)
+	if err != nil {
+		return SendResult{}, err
+	}
+	toUserID := cfg.UserID
+	if source, ok := sourceForReply(ctx, r.Store, message); ok {
+		toUserID = firstNonEmpty(wechatConversationID(source.MetadataJSON), toUserID)
+	}
+	if cfg.BotToken == "" || toUserID == "" {
+		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", "weixin ilink binding is required before send", 0, 0)
+		return SendResult{Delivery: failed}, errors.New("weixin ilink binding is required before send")
+	}
+	client := NewILinkClient(cfg.BaseURL, cfg.CDNBaseURL, cfg.BotToken)
+	err = client.SendMessage(ILinkMessage{
+		ToUserID:     toUserID,
+		ClientID:     RandomILinkClientID("resp"),
+		MessageType:  ILinkMessageTypeBot,
+		MessageState: ILinkMessageStateFinish,
+		ItemList: []ILinkMessageItem{
+			{Type: ILinkItemTypeText, TextItem: &ILinkTextItem{Text: outboundText(message.Content)}},
+		},
+	}, ILinkDefaultChannelVersion)
+	if err != nil {
+		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
+		return SendResult{Delivery: failed}, err
+	}
+	updated, err := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "delivered", "", 0, time.Now().Unix())
+	if err != nil {
+		return SendResult{}, err
+	}
+	return SendResult{Delivery: updated, Messages: []CustomerServiceMessage{{ErrCode: 0, ErrMsg: "ilink delivered"}}}, nil
 }
 
 func (r Runtime) sendCustomerServiceText(ctx context.Context, cfg Config, openID string, text string) (CustomerServiceMessage, error) {
@@ -421,6 +468,11 @@ func (c Config) normalize() Config {
 	if c.Mode == "" {
 		c.Mode = "official_account"
 	}
+	c.BotToken = strings.TrimSpace(c.BotToken)
+	c.BotID = strings.TrimSpace(c.BotID)
+	c.UserID = strings.TrimSpace(c.UserID)
+	c.BaseURL = strings.TrimSpace(c.BaseURL)
+	c.CDNBaseURL = strings.TrimSpace(c.CDNBaseURL)
 	c.AppID = strings.TrimSpace(c.AppID)
 	c.AppSecret = strings.TrimSpace(c.AppSecret)
 	c.Token = strings.TrimSpace(c.Token)

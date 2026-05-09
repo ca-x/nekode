@@ -78,7 +78,7 @@ func TestCoordinatorCreatesExistingStorageMessage(t *testing.T) {
 func TestCoordinatorCreatesMessageFromInboundDraft(t *testing.T) {
 	store := &fakeStore{}
 	coord := New(store, nil)
-	providers := []string{"telegram", "qq", "feishu", "wechat", "terminal"}
+	providers := []string{"telegram", "qq", "feishu", "wechat", "terminal", "serverchan"}
 	for _, provider := range providers {
 		t.Run(provider, func(t *testing.T) {
 			inbound := iminbound.Message{

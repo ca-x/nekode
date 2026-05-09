@@ -26,6 +26,11 @@ func TestProviderRawEventsUseStableProviderEnvelope(t *testing.T) {
 	if qq.EndpointKind != "im" || qq.Provider != ProviderQQ || qq.EndpointID != "ep-qq" {
 		t.Fatalf("QQRawEvent() = %+v", qq)
 	}
+
+	serverChan := ServerChanRawEvent(ProviderRawEventInput{EndpointID: "ep-serverchan"})
+	if serverChan.EndpointKind != "im" || serverChan.Provider != ProviderServerChan || serverChan.EndpointID != "ep-serverchan" {
+		t.Fatalf("ServerChanRawEvent() = %+v", serverChan)
+	}
 }
 
 func TestProviderRawEventsFeedNormalizer(t *testing.T) {
@@ -50,6 +55,17 @@ func TestProviderRawEventsFeedNormalizer(t *testing.T) {
 	}
 	if qq.Provider != ProviderQQ || qq.Conversation.ExternalID != "g1" || qq.Sender.ExternalID != "u1" {
 		t.Fatalf("qq normalized message = %+v", qq)
+	}
+
+	serverChan, err := normalizer.NormalizeInbound(context.Background(), ServerChanRawEvent(ProviderRawEventInput{
+		EndpointID: "ep-serverchan",
+		Body:       []byte(`{"update_id":12,"message":{"message_id":13,"text":"hi serverchan","chat":{"id":1001,"type":"private"},"from":{"id":42,"username":"alice","first_name":"Alice"}}}`),
+	}))
+	if err != nil {
+		t.Fatalf("NormalizeInbound(serverchan) error = %v", err)
+	}
+	if serverChan.Provider != ProviderServerChan || serverChan.Conversation.ExternalID != "1001" || serverChan.Sender.ExternalID != "42" {
+		t.Fatalf("serverchan normalized message = %+v", serverChan)
 	}
 }
 
@@ -126,6 +142,27 @@ func TestRenderProviderOutboundStreamFrames(t *testing.T) {
 		!strings.Contains(frames[0].Text, "bash: go test") ||
 		!strings.HasSuffix(frames[0].Text, typingCursor) {
 		t.Fatalf("stream frame = %+v", frames)
+	}
+}
+
+func TestRenderServerChanOutboundFrames(t *testing.T) {
+	frames, err := RenderProviderOutbound(OutboundRenderInput{
+		Provider:       "serverchan",
+		ConversationID: "serverchan:1001",
+		Text:           strings.Repeat("a", ServerChanMaxMessageLen+5),
+		Silent:         true,
+	})
+	if err != nil {
+		t.Fatalf("RenderProviderOutbound(serverchan) error = %v", err)
+	}
+	if len(frames) != 2 ||
+		frames[0].Provider != ProviderServerChan ||
+		frames[0].TargetKind != "chat" ||
+		frames[0].TargetID != "1001" ||
+		frames[0].ParseMode != serverChanParseModeMarkdown ||
+		!frames[0].Silent ||
+		len(frames[0].Text) > ServerChanMaxMessageLen {
+		t.Fatalf("serverchan frames = %+v", frames)
 	}
 }
 

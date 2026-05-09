@@ -17,7 +17,7 @@ func TestProviderRegistryCoversStellaProviders(t *testing.T) {
 			t.Fatalf("schema %q missing binding targets", schema.Provider)
 		}
 	}
-	for _, provider := range []string{ProviderTelegram, ProviderQQ, ProviderFeishu, ProviderWeixin, ProviderTerminal} {
+	for _, provider := range []string{ProviderTelegram, ProviderQQ, ProviderFeishu, ProviderWeixin, ProviderTerminal, ProviderServerChan} {
 		if !providers[provider] {
 			t.Fatalf("provider %q not registered; got %#v", provider, providers)
 		}
@@ -51,6 +51,15 @@ func TestValidateConfigAndRedact(t *testing.T) {
 	}
 	if err := ValidateConfig(ProviderWeixin, `{"mode":"official_account","app_id":"wx","token":"callback"}`); err == nil || !strings.Contains(err.Error(), "app_secret") {
 		t.Fatalf("ValidateConfig(weixin missing secret) error = %v, want missing app_secret", err)
+	}
+	if err := ValidateConfig(ProviderWeixin, `{"mode":"ilink"}`); err != nil {
+		t.Fatalf("ValidateConfig(weixin ilink pre-bind) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderServerChan, `{"bot_token":"serverchan-token"}`); err != nil {
+		t.Fatalf("ValidateConfig(serverchan) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderServerChan, `{}`); err == nil || !strings.Contains(err.Error(), "bot_token") {
+		t.Fatalf("ValidateConfig(serverchan missing token) error = %v, want missing bot_token", err)
 	}
 }
 

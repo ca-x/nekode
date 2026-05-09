@@ -1,4 +1,4 @@
-package imterminal
+package terminal
 
 import (
 	"crypto/sha256"

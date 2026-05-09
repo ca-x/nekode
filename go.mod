@@ -5,10 +5,13 @@ go 1.26.0
 require (
 	entgo.io/ent v0.14.5
 	github.com/dgraph-io/badger/v4 v4.9.1
+	github.com/go-resty/resty/v2 v2.6.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/lib-x/entsqlite v0.1.9
 	github.com/lib/pq v1.12.3
 	github.com/redis/go-redis/v9 v9.18.0
+	github.com/tencent-connect/botgo v0.2.1
+	golang.org/x/oauth2 v0.34.0
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
 )
@@ -29,12 +32,16 @@ require (
 	github.com/google/flatbuffers v25.2.10+incompatible // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/tidwall/gjson v1.9.3 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/zclconf/go-cty v1.14.4 // indirect
 	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -44,6 +51,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect

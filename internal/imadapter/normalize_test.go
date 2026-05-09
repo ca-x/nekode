@@ -72,6 +72,16 @@ func TestNormalizeStellaProviderFixtures(t *testing.T) {
 			wantChat:   "local-1",
 			wantMsgID:  "term-1",
 		},
+		{
+			name:       "serverchan",
+			provider:   ProviderServerChan,
+			body:       `{"update_id":12,"message":{"message_id":13,"text":"hello serverchan","chat":{"id":1001,"type":"private"},"from":{"id":42,"username":"alice","first_name":"Alice"}}}`,
+			wantText:   "hello serverchan",
+			wantGroup:  false,
+			wantSender: "42",
+			wantChat:   "1001",
+			wantMsgID:  "13",
+		},
 	}
 
 	for _, tt := range tests {

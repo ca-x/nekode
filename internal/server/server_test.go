@@ -19,8 +19,8 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/auth"
 	"github.com/ca-x/nekode/internal/config"
-	"github.com/ca-x/nekode/internal/imtelegram"
-	"github.com/ca-x/nekode/internal/imwechat"
+	imtelegram "github.com/ca-x/nekode/internal/imchannels/telegram"
+	imwechat "github.com/ca-x/nekode/internal/imchannels/weixin"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/storage"
 )
@@ -274,7 +274,7 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	for _, provider := range providerBody.Items {
 		seenProviders[provider.Provider] = true
 	}
-	for _, provider := range []string{"telegram", "qq", "feishu", "weixin", "terminal"} {
+	for _, provider := range []string{"telegram", "qq", "feishu", "weixin", "terminal", "serverchan"} {
 		if !seenProviders[provider] {
 			t.Fatalf("IM providers missing %q: %+v", provider, providerBody.Items)
 		}
@@ -986,6 +986,77 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	changed := findHTTPMutationEvent(events.GetEvents(), daemonv1.CollaborationEventKind_COLLABORATION_EVENT_KIND_TASK, daemonv1.EventOperation_EVENT_OPERATION_STATE_CHANGED)
 	if changed == nil || changed.GetScope().GetScopeType() != daemonv1.EventScopeType_EVENT_SCOPE_TYPE_TASK {
 		t.Fatalf("HTTP mutation events = %+v, want task state_changed event with task scope", events.GetEvents())
+	}
+}
+
+func TestWeixinILinkBindingSessionUsesProviderQRAndPersistsBoundConfig(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+	token := bootstrapToken(t, s)
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ilink/bot/get_bot_qrcode":
+			_, _ = w.Write([]byte(`{"qrcode":"qr-ticket-1","qrcode_img_content":"base64-png"}`))
+		case "/ilink/bot/get_qrcode_status":
+			_, _ = w.Write([]byte(`{"status":"confirmed","bot_token":"wx-token","ilink_bot_id":"bot-1","ilink_user_id":"user-1","baseurl":"https://wx-bound.example"}`))
+		default:
+			t.Fatalf("unexpected iLink API path %q", r.URL.Path)
+		}
+	}))
+	t.Cleanup(api.Close)
+
+	endpointResp := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "weixin",
+		"displayName":     "Weixin iLink",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "ilink",
+		"configJson":      `{"mode":"ilink","base_url":"` + api.URL + `"}`,
+	})
+	if endpointResp.Code != http.StatusCreated {
+		t.Fatalf("create iLink endpoint status = %d body=%s", endpointResp.Code, endpointResp.Body.String())
+	}
+	var endpoint storage.InteractionEndpoint
+	if err := json.Unmarshal(endpointResp.Body.Bytes(), &endpoint); err != nil {
+		t.Fatalf("decode endpoint: %v", err)
+	}
+	createResp := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+endpoint.ID+"/binding-sessions", token, map[string]any{"method": "qr_code"})
+	if createResp.Code != http.StatusCreated {
+		t.Fatalf("create iLink binding status = %d body=%s", createResp.Code, createResp.Body.String())
+	}
+	var created struct {
+		ID         string `json:"id"`
+		QRPayload  string `json:"qrPayload"`
+		QRImageURL string `json:"qrImageUrl"`
+		Status     string `json:"status"`
+	}
+	if err := json.Unmarshal(createResp.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode created binding: %v", err)
+	}
+	if created.QRPayload != "qr-ticket-1" || created.QRImageURL != "data:image/png;base64,base64-png" || created.Status != "pending" {
+		t.Fatalf("created binding = %+v", created)
+	}
+	pollResp := doGET(t, s, "/api/interaction-endpoints/"+endpoint.ID+"/binding-sessions/"+created.ID, token)
+	if pollResp.Code != http.StatusOK {
+		t.Fatalf("poll iLink binding status = %d body=%s", pollResp.Code, pollResp.Body.String())
+	}
+	var polled struct {
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(pollResp.Body.Bytes(), &polled); err != nil {
+		t.Fatalf("decode polled binding: %v", err)
+	}
+	if polled.Status != "bound" {
+		t.Fatalf("polled binding = %+v, want bound", polled)
+	}
+	stored, err := s.store.GetInteractionEndpoint(context.Background(), endpoint.ID)
+	if err != nil {
+		t.Fatalf("GetInteractionEndpoint() error = %v", err)
+	}
+	if !strings.Contains(stored.ConfigJSON, `"bot_token":"wx-token"`) ||
+		!strings.Contains(stored.ConfigJSON, `"bot_id":"bot-1"`) ||
+		!strings.Contains(stored.ConfigJSON, `"user_id":"user-1"`) {
+		t.Fatalf("stored bound config = %s", stored.ConfigJSON)
 	}
 }
 

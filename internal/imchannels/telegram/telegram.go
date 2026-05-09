@@ -1,4 +1,4 @@
-package imtelegram
+package telegram
 
 import (
 	"bytes"
