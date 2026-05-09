@@ -1,6 +1,7 @@
 :root {
   color: #17201d;
   background: #f5f7f6;
+  color-scheme: light;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -39,6 +40,95 @@
   --canceled-bg: #f9f9f8;
   --canceled-border: #e5e7eb;
   --shadow: 0 14px 40px rgba(23, 32, 29, 0.08);
+  --sidebar-bg: #fbfcfb;
+  --white-text: #ffffff;
+  --focus-ring: rgba(20, 107, 90, 0.28);
+  --active-border: #c5e7de;
+  --status-success-bg: #eaf7f0;
+  --status-warning-bg: #fff4d6;
+  --status-danger-bg: #fdebea;
+  --notice-warning-border: #f6d88f;
+  --notice-warning-bg: #fff9e8;
+  --notice-danger-border: #f2b8b5;
+  --notice-danger-bg: #fff5f4;
+  --notice-success-border: #b9e6cb;
+  --notice-success-bg: #eefaf2;
+  --selection-ring: rgba(20, 107, 90, 0.16);
+  --selection-ring-soft: rgba(20, 107, 90, 0.12);
+  --overlay: rgba(10, 16, 14, 0.74);
+  --code-bg: #111c18;
+  --code-text: #edf7f3;
+  --image-bg: #111111;
+  --soft-panel: rgba(255, 255, 255, 0.5);
+  --presence-neutral: #aab8b2;
+  --presence-idle: #7a8983;
+  --attachment-bg: #fbfcfd;
+  --attachment-icon-bg: #eaf0f6;
+  --endpoint-selected-bg: #f1f7fb;
+}
+
+:root[data-theme="dark"] {
+  color: #e5eee9;
+  background: #101614;
+  color-scheme: dark;
+  --bg: #101614;
+  --surface: #18211e;
+  --surface-subtle: #202c28;
+  --surface-strong: #2a3833;
+  --text: #e5eee9;
+  --muted: #9cacaa;
+  --border: #33443e;
+  --primary: #52b89f;
+  --primary-strong: #88dcc8;
+  --primary-soft: #153930;
+  --accent: #9fbbe0;
+  --danger: #ff9b8f;
+  --warning: #f0c15b;
+  --success: #77d7a5;
+  --todo: #b4b0aa;
+  --todo-bg: #242927;
+  --todo-border: #414846;
+  --in-progress: #9fc2ff;
+  --in-progress-bg: #172b4d;
+  --in-progress-border: #315892;
+  --blocked: #ffb17d;
+  --blocked-bg: #3b2518;
+  --blocked-border: #7f4724;
+  --in-review: #c8adff;
+  --in-review-bg: #2d2345;
+  --in-review-border: #60468f;
+  --done: #8be0a8;
+  --done-bg: #193724;
+  --done-border: #356943;
+  --canceled: #adb6bd;
+  --canceled-bg: #242929;
+  --canceled-border: #485051;
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.34);
+  --sidebar-bg: #131b18;
+  --white-text: #ffffff;
+  --focus-ring: rgba(82, 184, 159, 0.36);
+  --active-border: #266754;
+  --status-success-bg: #173625;
+  --status-warning-bg: #382c12;
+  --status-danger-bg: #3d211e;
+  --notice-warning-border: #775c20;
+  --notice-warning-bg: #2b2416;
+  --notice-danger-border: #7e3a34;
+  --notice-danger-bg: #2f1d1b;
+  --notice-success-border: #2f7049;
+  --notice-success-bg: #162c20;
+  --selection-ring: rgba(82, 184, 159, 0.24);
+  --selection-ring-soft: rgba(82, 184, 159, 0.18);
+  --overlay: rgba(2, 6, 5, 0.78);
+  --code-bg: #0b100f;
+  --code-text: #d8f3ea;
+  --image-bg: #080a09;
+  --soft-panel: rgba(255, 255, 255, 0.04);
+  --presence-neutral: #60706b;
+  --presence-idle: #899893;
+  --attachment-bg: #121a18;
+  --attachment-icon-bg: #1d3140;
+  --endpoint-selected-bg: #172b33;
 }
 
 * {
@@ -66,7 +156,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(20, 107, 90, 0.28);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -86,7 +176,7 @@ textarea:focus-visible {
   padding: 24px 18px;
   min-width: 0;
   border-right: 1px solid var(--border);
-  background: #fbfcfb;
+  background: var(--sidebar-bg);
 }
 
 .brand,
@@ -173,7 +263,7 @@ textarea:focus-visible {
 .nav-item.is-active {
   color: var(--primary-strong);
   background: var(--primary-soft);
-  border-color: #c5e7de;
+  border-color: var(--active-border);
 }
 
 .sidebar-section {
@@ -251,7 +341,7 @@ textarea:focus-visible {
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  color: #fff;
+  color: var(--white-text);
   font-size: 0.75rem;
   font-weight: 800;
 }
@@ -260,7 +350,7 @@ textarea:focus-visible {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #aab8b2;
+  background: var(--presence-neutral);
   box-shadow: 0 0 0 3px var(--surface);
 }
 
@@ -273,7 +363,7 @@ textarea:focus-visible {
 }
 
 .presence.idle {
-  background: #7a8983;
+  background: var(--presence-idle);
 }
 
 .presence.offline {
@@ -284,7 +374,7 @@ textarea:focus-visible {
   padding: 2px 6px;
   border-radius: 999px;
   color: var(--warning);
-  background: #fff4d6;
+  background: var(--status-warning-bg);
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -387,7 +477,7 @@ textarea {
 }
 
 .primary-button {
-  color: #fff;
+  color: var(--white-text);
   background: var(--primary);
   border-color: var(--primary);
 }
@@ -414,18 +504,18 @@ textarea {
   padding: 0 12px;
   border-radius: 999px;
   color: var(--success);
-  background: #eaf7f0;
+  background: var(--status-success-bg);
   font-weight: 700;
 }
 
 .status-pill.loading {
   color: var(--warning);
-  background: #fff4d6;
+  background: var(--status-warning-bg);
 }
 
 .status-pill.error {
   color: var(--danger);
-  background: #fdebea;
+  background: var(--status-danger-bg);
 }
 
 .section-notice-row {
@@ -446,8 +536,8 @@ textarea {
 
 .section-status-notice {
   color: var(--warning);
-  border: 1px solid #f6d88f;
-  background: #fff9e8;
+  border: 1px solid var(--notice-warning-border);
+  background: var(--notice-warning-bg);
   font-weight: 700;
 }
 
@@ -458,8 +548,8 @@ textarea {
 .section-issues-notice {
   align-items: flex-start;
   color: var(--danger);
-  border: 1px solid #f2b8b5;
-  background: #fff5f4;
+  border: 1px solid var(--notice-danger-border);
+  background: var(--notice-danger-bg);
 }
 
 .section-issues-notice div {
@@ -705,8 +795,8 @@ textarea {
 }
 
 .inbox-row.is-unread {
-  border-color: #b8ddd4;
-  background: #f3fbf8;
+  border-color: var(--active-border);
+  background: var(--primary-soft);
 }
 
 .inbox-row-main {
@@ -773,7 +863,7 @@ textarea {
   height: 26px;
   padding: 0 8px;
   border-radius: 999px;
-  color: #fff;
+  color: var(--white-text);
   background: var(--primary);
   font-size: 0.8125rem;
   font-weight: 800;
@@ -855,7 +945,7 @@ textarea {
 
 .message-bubble.is-system {
   color: var(--muted);
-  background: #f8faf9;
+  background: var(--surface-subtle);
 }
 
 .message-bubble.is-compact {
@@ -866,7 +956,7 @@ textarea {
 
 .message-bubble.is-selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(20, 107, 90, 0.16);
+  box-shadow: 0 0 0 2px var(--selection-ring);
 }
 
 .message-bubble header {
@@ -912,7 +1002,7 @@ textarea {
   width: min(720px, 100%);
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f8faf9;
+  background: var(--surface-subtle);
 }
 
 .system-receipt-group > button {
@@ -997,7 +1087,7 @@ textarea {
   padding: 7px;
   overflow: hidden;
   color: var(--text);
-  background: #fbfcfd;
+  background: var(--attachment-bg);
   font: 0.6875rem/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   text-align: left;
   white-space: pre-wrap;
@@ -1011,7 +1101,7 @@ textarea {
   height: 42px;
   border-radius: 8px;
   color: var(--accent);
-  background: #eaf0f6;
+  background: var(--attachment-icon-bg);
 }
 
 .attachment-preview div {
@@ -1096,7 +1186,7 @@ textarea {
 .message-actions button.is-saved {
   color: var(--primary-strong);
   background: var(--primary-soft);
-  border-color: #c5e7de;
+  border-color: var(--active-border);
 }
 
 .reference-chip,
@@ -1141,7 +1231,7 @@ textarea {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(10, 16, 14, 0.74);
+  background: var(--overlay);
 }
 
 .lightbox-surface {
@@ -1188,7 +1278,7 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #111;
+  background: var(--image-bg);
 }
 
 .lightbox-frame {
@@ -1202,7 +1292,7 @@ textarea {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
-  background: #fbfcfd;
+  background: var(--attachment-bg);
 }
 
 .lightbox-text {
@@ -1314,9 +1404,9 @@ textarea {
 .board-note {
   margin-bottom: 14px;
   padding: 10px 12px;
-  border: 1px solid #f6d88f;
+  border: 1px solid var(--notice-warning-border);
   border-radius: 8px;
-  background: #fff9e8;
+  background: var(--notice-warning-bg);
 }
 
 .task-receipt {
@@ -1437,7 +1527,7 @@ textarea {
 
 .reminder-row.is-selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(20, 107, 90, 0.12);
+  box-shadow: 0 0 0 2px var(--selection-ring-soft);
 }
 
 .reminder-row > button {
@@ -1477,7 +1567,7 @@ textarea {
   padding: 3px 8px;
   border-radius: 4px;
   color: var(--accent);
-  background: #eaf0f6;
+  background: var(--attachment-icon-bg);
   font-size: 0.75rem;
   font-weight: 800;
   text-align: center;
@@ -1508,7 +1598,7 @@ textarea {
 
 .task-card.is-selected {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(20, 107, 90, 0.12);
+  box-shadow: 0 0 0 2px var(--selection-ring-soft);
 }
 
 .task-card-open {
@@ -1787,7 +1877,7 @@ textarea {
 
 .endpoint-row.is-selected {
   border-color: var(--primary);
-  background: #f1f7fb;
+  background: var(--endpoint-selected-bg);
 }
 
 .endpoint-row div:first-child {
@@ -2159,17 +2249,17 @@ textarea {
 
 .diagnostic-badge.is-ok {
   color: var(--success);
-  background: #eaf7f0;
+  background: var(--status-success-bg);
 }
 
 .diagnostic-badge.is-idle {
   color: var(--accent);
-  background: #edf4fb;
+  background: var(--attachment-icon-bg);
 }
 
 .diagnostic-badge.is-warn {
   color: var(--danger);
-  background: #fdebea;
+  background: var(--status-danger-bg);
 }
 
 .diagnostic-table td {
@@ -2340,7 +2430,7 @@ textarea {
 
 .platform-tabs button.is-active {
   color: var(--primary-strong);
-  border-color: #c5e7de;
+  border-color: var(--active-border);
   background: var(--primary-soft);
 }
 
@@ -2362,15 +2452,15 @@ textarea {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: #edf7f3;
-  background: #111c18;
+  color: var(--code-text);
+  background: var(--code-bg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .command-box.is-pending code {
   color: var(--muted);
-  background: #f8faf9;
+  background: var(--surface-subtle);
 }
 
 .inline-error {
@@ -2385,10 +2475,10 @@ textarea {
   flex-wrap: wrap;
   gap: 10px;
   padding: 10px;
-  border: 1px solid #b9e6cb;
+  border: 1px solid var(--notice-success-border);
   border-radius: 8px;
   color: var(--success);
-  background: #eefaf2;
+  background: var(--notice-success-bg);
   font-weight: 700;
 }
 
@@ -2477,7 +2567,7 @@ textarea {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #aab8b2;
+  background: var(--presence-neutral);
 }
 
 .status-dot.active span {
@@ -2670,6 +2760,54 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.theme-choice-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.theme-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: start;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.theme-choice.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--selection-ring-soft);
+}
+
+.theme-choice input {
+  width: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 3px 0 0;
+  accent-color: var(--primary);
+}
+
+.theme-choice span,
+.theme-choice small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.theme-choice span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.theme-choice small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .channel-admin-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(220px, 1fr));
@@ -2821,7 +2959,7 @@ textarea {
   color: var(--muted);
   border: 1px dashed var(--border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--soft-panel);
 }
 
 .notice {
@@ -2833,8 +2971,8 @@ textarea {
 
 .notice.error {
   color: var(--danger);
-  border-color: #f2b8b5;
-  background: #fff5f4;
+  border-color: var(--notice-danger-border);
+  background: var(--notice-danger-bg);
 }
 
 .auth-screen {
@@ -2914,6 +3052,12 @@ textarea {
   display: grid;
   gap: 6px;
   color: var(--text);
+  font-weight: 700;
+}
+
+.theme-select-label span {
+  color: var(--muted);
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 

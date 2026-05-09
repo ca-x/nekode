@@ -87,6 +87,7 @@ import type {
 
 const TOKEN_KEY = "nekode.console.token";
 const EVENT_CURSOR_KEY = "nekode.console.serverEvents.cursorState";
+const THEME_KEY = "nekode.console.theme";
 const DEFAULT_TARGET = "#general";
 const TEXT_ATTACHMENT_PREVIEW_LIMIT = 2000;
 const TEXT_ATTACHMENT_LIGHTBOX_LIMIT = 200000;
@@ -104,6 +105,8 @@ type ViewKey =
   | "daemon";
 type LoadState = "idle" | "loading" | "ready" | "error";
 type RealtimeStatus = "disabled" | "connecting" | "connected" | "error";
+type ThemePreference = "light" | "dark" | "system";
+type ThemeName = "light" | "dark";
 type TaskViewMode = "board" | "list";
 type TaskStateFilter = TaskState | "all" | "open";
 type TaskSortKey = "updated_desc" | "created_desc" | "summary_asc" | "state_asc";
@@ -152,6 +155,28 @@ type EnrollmentPlatform = "linux" | "macos" | "windows";
 
 const api = new ApiClient();
 
+function systemTheme(): ThemeName {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function readThemePreference(): ThemePreference {
+  const value = localStorage.getItem(THEME_KEY);
+  return value === "light" || value === "dark" || value === "system" ? value : "system";
+}
+
+function resolvedTheme(preference: ThemePreference): ThemeName {
+  return preference === "system" ? systemTheme() : preference;
+}
+
+function applyTheme(preference: ThemePreference) {
+  const theme = resolvedTheme(preference);
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.themePreference = preference;
+  document.documentElement.style.colorScheme = theme;
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", theme);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#101614" : "#f5f7f6");
+}
+
 const taskColumns: Array<{ state: TaskState; label: string; icon: typeof Circle }> = [
   { state: "todo", label: "Todo", icon: Circle },
   { state: "in_progress", label: "In Progress", icon: Loader2 },
@@ -183,6 +208,12 @@ const agentControlActions: Array<{ value: AgentControlAction; label: string }> =
   { value: "restart", label: "Restart" },
   { value: "restart_reset_session", label: "Reset session" },
   { value: "restart_full_reset", label: "Full reset" }
+];
+
+const themeOptions: Array<{ value: ThemePreference; label: string; detail: string }> = [
+  { value: "system", label: "System", detail: "Follow this device" },
+  { value: "light", label: "Light", detail: "Bright operator console" },
+  { value: "dark", label: "Dark", detail: "Low-light console" }
 ];
 
 const navItems: Array<{ key: ViewKey; label: string; icon: typeof Activity }> = [
@@ -647,6 +678,8 @@ function realAgentSidebarItems(inventory: DaemonInventoryComputer[], statuses: A
 
 function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) ?? "");
+  const [themePreference, setThemePreference] = useState<ThemePreference>(() => readThemePreference());
+  const [theme, setTheme] = useState<ThemeName>(() => resolvedTheme(themePreference));
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewKey>("overview");
   const [status, setStatus] = useState<LoadState>("idle");
@@ -701,6 +734,19 @@ function App() {
       daemon: pick(["daemon", "agentStatuses", "daemonInventory", "daemonRuns", "daemonActivity", "runtimePresets"])
     };
   }, [sectionIssues]);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, themePreference);
+    const syncTheme = () => {
+      const next = resolvedTheme(themePreference);
+      applyTheme(themePreference);
+      setTheme(next);
+    };
+    syncTheme();
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    mediaQuery.addEventListener("change", syncTheme);
+    return () => mediaQuery.removeEventListener("change", syncTheme);
+  }, [themePreference]);
 
   const loadData = useCallback(async (options: { background?: boolean } = {}) => {
     if (!token) return;
@@ -913,7 +959,7 @@ function App() {
   };
 
   if (!token) {
-    return <AuthScreen onAuth={handleAuth} />;
+    return <AuthScreen themePreference={themePreference} theme={theme} onThemeChange={setThemePreference} onAuth={handleAuth} />;
   }
 
   return (
@@ -1128,6 +1174,9 @@ function App() {
         {view === "settings" ? (
           <SettingsPanel
             user={user}
+            themePreference={themePreference}
+            theme={theme}
+            onThemeChange={setThemePreference}
             setupStatus={setupStatus}
             protocol={protocol}
             daemonInfo={daemonInfo}
@@ -1208,7 +1257,17 @@ function AvatarBadge({ label, color }: { label: string; color: string }) {
   );
 }
 
-function AuthScreen({ onAuth }: { onAuth: (auth: AuthResponse) => void }) {
+function AuthScreen({
+  themePreference,
+  theme,
+  onThemeChange,
+  onAuth
+}: {
+  themePreference: ThemePreference;
+  theme: ThemeName;
+  onThemeChange: (theme: ThemePreference) => void;
+  onAuth: (auth: AuthResponse) => void;
+}) {
   const [mode, setMode] = useState<"checking" | "login" | "setup" | "disabled">("checking");
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [username, setUsername] = useState("admin");
@@ -1287,6 +1346,21 @@ function AuthScreen({ onAuth }: { onAuth: (auth: AuthResponse) => void }) {
           ) : null}
         </div>
         <form className="auth-form" onSubmit={submit}>
+          <label className="theme-select-label">
+            Theme
+            <select
+              value={themePreference}
+              onChange={(event) => onThemeChange(event.target.value as ThemePreference)}
+              aria-describedby="auth-theme-detail"
+            >
+              {themeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span id="auth-theme-detail">Using {theme} colors</span>
+          </label>
           <div className="setup-mode-banner">
             <Shield size={18} aria-hidden="true" />
             {mode === "checking"
@@ -3679,6 +3753,9 @@ function EventRow({ event }: { event: CollaborationEvent }) {
 
 function SettingsPanel({
   user,
+  themePreference,
+  theme,
+  onThemeChange,
   setupStatus,
   protocol,
   daemonInfo,
@@ -3694,6 +3771,9 @@ function SettingsPanel({
   onChanged
 }: {
   user: User | null;
+  themePreference: ThemePreference;
+  theme: ThemeName;
+  onThemeChange: (theme: ThemePreference) => void;
   setupStatus: SetupStatus | null;
   protocol: ProtocolInfo | null;
   daemonInfo: DaemonInfo | null;
@@ -3836,6 +3916,31 @@ function SettingsPanel({
       <MetricCard icon={Hash} label="Active Target" value={target} />
       <MetricCard icon={UsersRound} label="Visible Members" value={String(channelMembers.length)} />
       <MetricCard icon={Bot} label="Runtime Presets" value={String(runtimePresets.length)} />
+
+      <section className="panel wide">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Appearance</p>
+            <h2>Theme</h2>
+          </div>
+          <span className="diagnostic-badge is-idle">{theme}</span>
+        </div>
+        <div className="theme-choice-group" role="radiogroup" aria-label="Console theme">
+          {themeOptions.map((option) => (
+            <label className={themePreference === option.value ? "theme-choice is-selected" : "theme-choice"} key={option.value}>
+              <input
+                type="radio"
+                name="console-theme"
+                value={option.value}
+                checked={themePreference === option.value}
+                onChange={() => onThemeChange(option.value)}
+              />
+              <span>{option.label}</span>
+              <small>{option.detail}</small>
+            </label>
+          ))}
+        </div>
+      </section>
 
       <section className="panel wide">
         <div className="panel-heading">

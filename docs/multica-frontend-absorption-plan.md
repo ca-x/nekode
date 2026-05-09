@@ -432,6 +432,10 @@ give it these requirements instead of a vague request for a "nice UI":
 - Accessibility: keyboard reachability, visible focus states, no text overflow,
   no incoherent overlap, status text/icons in addition to color, and usable
   contrast in light and dark themes.
+- Theme foundation: `task #198` adds the first Web light/dark/system theme
+  switch with local persistence and first-paint `data-theme` initialization.
+  Future visual polish should reuse the existing CSS token layer instead of
+  adding raw one-off colors.
 - Desired Claude output: a reusable frontend style prompt with design principles,
   tokens for color/type/spacing/radius/status, layout rules, component rules,
   animation limits, responsive rules, forbidden patterns, and an acceptance

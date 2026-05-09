@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f5f7f6" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
@@ -11,6 +11,20 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <title>Nekode Console</title>
+    <script>
+      (() => {
+        const key = "nekode.console.theme";
+        const stored = localStorage.getItem(key);
+        const preference = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+        const dark = preference === "dark" || (preference === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        const theme = dark ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.themePreference = preference;
+        document.documentElement.style.colorScheme = theme;
+        document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", theme);
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#101614" : "#f5f7f6");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
