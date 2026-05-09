@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ApiClient } from "../../api";
 import type { ChannelDecision, ChannelDecisionVote, DecisionStatus, DecisionVote } from "../../types";
 import type { MessageKey } from "../../i18n/types";
@@ -57,6 +57,15 @@ export function ChannelDecisionsPanel({
   // update from another tab would tie and the fetched fresh row would
   // lose. This map is keyed by `${decisionID}::${voterId}`.
   const [optimisticVoteKeys, setOptimisticVoteKeys] = useState<Record<string, true>>({});
+  // Mirror the map into a ref so setVotesById's functional updater can
+  // read the freshest flag state without capturing a stale closure.
+  // Without the ref, a vote cast during an in-flight listDecisionVotes
+  // fetch would flip the flag after ensureVotes closed over the
+  // pre-vote map, and the merge would miss it.
+  const optimisticVoteKeysRef = useRef(optimisticVoteKeys);
+  useEffect(() => {
+    optimisticVoteKeysRef.current = optimisticVoteKeys;
+  }, [optimisticVoteKeys]);
   // Tracks whether votesById[decisionID] already reflects a full fetch
   // via listDecisionVotes. Without it, casting a vote before expanding
   // the card would seed votesById with one row and ensureVotes would
@@ -170,8 +179,12 @@ export function ChannelDecisionsPanel({
       const optimistic = current[decisionID] ?? [];
       const byVoter = new Map<string, ChannelDecisionVote>();
       for (const entry of fetched) byVoter.set(entry.voterId, entry);
+      // Read the latest optimistic flag map through the ref so a vote
+      // cast during the listDecisionVotes fetch is honoured here, even
+      // though the outer function closed over an earlier render's copy.
+      const flags = optimisticVoteKeysRef.current;
       for (const entry of optimistic) {
-        const isOptimistic = optimisticVoteKeys[`${decisionID}::${entry.voterId}`];
+        const isOptimistic = flags[`${decisionID}::${entry.voterId}`];
         if (isOptimistic) byVoter.set(entry.voterId, entry);
         else if (!byVoter.has(entry.voterId)) byVoter.set(entry.voterId, entry);
       }
