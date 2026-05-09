@@ -725,6 +725,26 @@ function App() {
     try {
       const messageTarget = activeThread?.target ?? target;
       const messageThreadID = activeThread?.threadId ?? "";
+      // Target-scoped endpoints reject empty targets with 400. On a fresh
+      // workspace (no channels persisted) target is "", so short-circuit
+      // those calls with empty results instead of flooding sectionIssues
+      // with bogus 400 errors on every reload.
+      const skipTargetScoped = !messageTarget;
+      const channelMembersPromise = skipTargetScoped
+        ? Promise.resolve({ items: [] as ChannelMember[] })
+        : capture("channelMembers", api.listChannelMembers(messageTarget), { items: [] as ChannelMember[] });
+      const messagesPromise = skipTargetScoped
+        ? Promise.resolve({ items: [] as Message[] })
+        : capture("messages", api.listMessages(messageTarget, 50, messageThreadID), { items: [] as Message[] });
+      const savedMessagesPromise = skipTargetScoped
+        ? Promise.resolve({ items: [] as SavedMessage[] })
+        : capture("savedMessages", api.listSavedMessages(messageTarget), { items: [] as SavedMessage[] });
+      const tasksPromise = !target
+        ? Promise.resolve({ items: [] as Task[] })
+        : capture("tasks", api.listTasks({ target }), { items: [] as Task[] });
+      const remindersPromise = !target
+        ? Promise.resolve({ items: [] as Reminder[] })
+        : capture("reminders", api.listReminders({ target, includeCanceled: true, limit: 100 }), { items: [] as Reminder[] });
       const coreData = await Promise.all([
         api.me(),
         capture<SetupStatus | null>("setup", api.setupStatus(), null),
@@ -734,12 +754,12 @@ function App() {
         capture("notificationRoutes", api.listNotificationRoutes(), { items: [] as NotificationRoute[] }),
         capture("imProviders", api.listIMProviders(), { items: [] as IMProviderSchema[] }),
         capture("channels", api.listChannels({ joinedOnly: false }), { items: [] as Channel[] }),
-        capture("channelMembers", api.listChannelMembers(messageTarget), { items: [] as ChannelMember[] }),
-        capture("messages", api.listMessages(messageTarget, 50, messageThreadID), { items: [] as Message[] }),
-        capture("savedMessages", api.listSavedMessages(messageTarget), { items: [] as SavedMessage[] }),
+        channelMembersPromise,
+        messagesPromise,
+        savedMessagesPromise,
         capture("inbox", api.listThreadInbox({ limit: 100 }), { items: [] as ThreadInboxItem[] }),
-        capture("tasks", api.listTasks({ target }), { items: [] as Task[] }),
-        capture("reminders", api.listReminders({ target, includeCanceled: true, limit: 100 }), { items: [] as Reminder[] })
+        tasksPromise,
+        remindersPromise
       ]);
       const [
         me,
@@ -2684,6 +2704,27 @@ function TasksPanel({
 
   const filtersActive = query.trim() !== "" || stateFilter !== "all" || sortKey !== "updated_desc";
 
+  if (!target) {
+    return (
+      <section className="two-column">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Tasks</p>
+              <h2>No channel selected</h2>
+            </div>
+          </div>
+          <div className="empty-state">
+            <p>
+              Tasks belong to a channel. Create a channel from the sidebar first,
+              then come back here to open a board.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="task-workspace">
       <div className="panel task-board-panel">
@@ -3041,6 +3082,27 @@ function RemindersPanel({
       setBusy(false);
     }
   };
+
+  if (!target) {
+    return (
+      <section className="two-column">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Reminders</p>
+              <h2>No channel selected</h2>
+            </div>
+          </div>
+          <div className="empty-state">
+            <p>
+              Reminders are scheduled inside a channel. Create a channel from the
+              sidebar to start scheduling them.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="two-column">

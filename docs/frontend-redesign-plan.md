@@ -212,6 +212,55 @@ cleanly on its own.
 - [ ] Prune any now-unused imports.
 - [ ] `tsc --noEmit` and manual smoke check.
 
+### M1.5 — i18n baseline (en + zh-CN, pulled forward)
+
+**i18n is a dedicated frontend module, not scattered across panels.**
+Structure:
+
+```
+web/src/i18n/
+  index.ts           # i18next init + config; only entry App.tsx imports
+  types.ts           # Locale, LocaleCatalog, MessageKey (typed from en.json)
+  provider.tsx       # <I18nProvider> wraps app root; handles detect/persist
+  switcher.tsx       # <LocaleSwitcher /> UI component
+  use-t.ts           # useT() / useLocale() / useFormat() hooks
+  locales/
+    en.json          # Source of truth. Keys are namespaced objects.
+    zh-CN.json
+    registry.ts      # Locale metadata (code, label, dir, nativeLabel)
+  README.md          # How to add a locale, add a key, sync translations
+```
+
+Design rules:
+
+1. Application code consumes i18n only through `useT()` / `t()`. Never
+   `import i18next` from panels.
+2. Catalog keys are **namespaced objects**, not flat dot-paths. Example:
+   `messages.emptyState.title`, `computer.actions.delete.confirmTitle`.
+3. **Type safety**: `MessageKey` is a union type derived from `en.json`, so
+   misspelled keys fail the TS build.
+4. Date / number / relative-time formatting go through `useFormat()` backed
+   by `Intl.*` with the active locale; no i18next formatters.
+5. **Fallback chain**: missing zh-CN falls through to en; missing en shows
+   the literal key so developers notice during smoke testing.
+6. **Lint rule**: a project eslint rule (custom or via
+   `eslint-plugin-react-intl-translations`) forbids hardcoded JSX strings
+   outside the `locales/` folder. Strings that must stay raw (command
+   blocks, code) are marked with a `/* i18n-skip */` comment.
+
+Rollout:
+
+- Set up `web/src/i18n/` with the module structure above.
+- Add `i18next` + `react-i18next` dependencies.
+- Sweep existing user-visible strings in `web/src/App.tsx` and its child
+  panels into the catalog before any further UI work; land this as the
+  single "extract strings" commit so later milestones don't mix extraction
+  with feature changes.
+- Language switcher lives in Settings (and in a condensed form on the
+  primary-rail footer once M2 ships).
+- From this milestone onward, every PR that touches frontend copy must
+  ship catalog updates for all active locales.
+
 ### M2 — Primary + context rails + mobile tab bar + hash routing
 
 - Introduce `<Shell>` component wrapping `.layout-shell`.
@@ -315,6 +364,11 @@ Each milestone is done when:
   `frontend: M<n> — <scope>` message summarizing the milestone, push to the
   current branch. This turns each milestone into a reviewable Git checkpoint
   so regressions can be bisected per milestone.
+- **i18n is always on.** Once the i18n baseline lands (see M1.5 below),
+  every frontend change that introduces or touches user-visible copy must
+  add/update the string in all active locale catalogs (en + zh-CN at a
+  minimum). No hardcoded UI strings in new code. PRs that add untranslated
+  strings are treated as incomplete and returned to author.
 - **Live-browser UI verification is delegated to codex.** Claude handles the
   code and diff-level review; for each UI-facing milestone, spawn a codex
   agent that drives `agent-browser --engine chrome` against a local server,
