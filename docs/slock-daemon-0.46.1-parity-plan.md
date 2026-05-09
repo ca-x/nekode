@@ -1,13 +1,27 @@
 # Slock Daemon 0.46.1 Parity Plan
 
-Status: next milestone planning
-Related tasks: task #225
+Status: implementation in progress; first parity slices are In Review
+Related tasks: task #225, task #227, task #228, task #229
 Reference: Slock daemon 0.46.1 release notice from 2026-05-09
 
 This plan records the daemon 0.46.1 behaviors that are worth evaluating for
 Nekode. It also confirms that the current IM optimization plan already exists
 in the next-milestone IM documents, so this daemon parity work should not block
 or duplicate the task #212, task #213, and task #214 IM implementation track.
+
+## Current Status
+
+| Work | Task | Status | Mainline evidence |
+| --- | --- | --- | --- |
+| Reply-target hints | task #225 | In Review | Implemented in `main@7874345`; launch prompt `message_context` includes `reply_target_hint` and communication guidance says to reuse it exactly. |
+| Channel membership system events | task #225 | In Review | Implemented in `main@7874345`; add/remove membership emits channel-visible system messages and daemon collaboration events. |
+| Plain-text attachment inline preview | task #227 | In Review | Implemented in `main@6ee591e`; Web cards and lightbox preview `text/plain` / `.txt` with size limits and truncation labels. |
+| Gemini Windows stdin launch | task #228 | In Review | Implemented in `main@8c3b3ec`; Gemini Windows long prompts use stdin and bypass the npm `.cmd` shim path. |
+| Workspace/activity visibility scoping | task #229 | In Review | Reviewed in `main@9fa73fe`; implementation is still pending because it requires a server-enforced authorization pass. |
+
+The remaining daemon parity blocker is the workspace/activity visibility
+implementation. Treat it as a permission boundary change, not a Web-only
+filtering cleanup.
 
 ## IM Plan Check
 
