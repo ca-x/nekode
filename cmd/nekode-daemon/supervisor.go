@@ -110,9 +110,6 @@ func (s *runSupervisor) pollOnce(ctx context.Context) error {
 		Limit:      uint32(s.cfg.MaxConcurrentRuns),
 		RequestId:  newRequestID("fetch-runs"),
 	}
-	if strings.TrimSpace(s.cfg.AgentID) != "" {
-		req.AgentIds = []string{s.cfg.AgentID}
-	}
 	callCtx, cancel := context.WithTimeout(s.withToken(ctx), 10*time.Second)
 	defer cancel()
 	resp, err := s.client.FetchAssignedRuns(callCtx, req)
@@ -280,7 +277,7 @@ func (s *runSupervisor) executeDirectMessage(ctx context.Context, message *daemo
 	if message == nil || message.GetMessageId() == "" {
 		return nil
 	}
-	agentID := firstNonEmpty(s.cfg.AgentID, message.GetAggregateId())
+	agentID := firstNonEmpty(message.GetAggregateId(), s.cfg.AgentID)
 	run := &daemonv1.Run{
 		RunId:            "direct-" + message.GetMessageId(),
 		Target:           message.GetTarget(),

@@ -378,6 +378,15 @@ Heartbeats are liveness and status updates, not mandatory full inventory syncs.
 `inventory_full_snapshot` is true; otherwise omitted inventory means unchanged.
 Inventory changes should use `SyncComputerInventory`.
 
+Daemon supervision is computer-scoped, not limited to the bootstrap
+`agent_id` in the daemon config. A daemon that advertises reusable runtime
+inventory must subscribe to server events for all agents assigned to the same
+computer and must fetch queued runs by `computer_id` without narrowing the poll
+request to the bootstrap agent. Direct-message events carry the target agent in
+the message aggregate id; the supervisor should launch that target agent profile
+and report receipts/status for that agent, so Web-created agent instances can
+actually receive direct messages and task runs.
+
 `GetServerInfoResponse.server_id` is the stable identity for cursor validity.
 If it changes between connections, the daemon must treat cached cursors as
 invalid and perform a fresh replay/sync from the server.

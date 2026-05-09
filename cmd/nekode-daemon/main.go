@@ -236,11 +236,11 @@ func (s *daemonSession) streamServerEvents(ctx context.Context, supervisor *runS
 		}
 		callCtx := s.withToken(ctx)
 		stream, err := s.client.SubscribeServerEvents(callCtx, &daemonv1.SubscribeServerEventsRequest{
-			DaemonId:   s.cfg.DaemonID,
-			ComputerId: s.cfg.ComputerID,
-			AgentIds:   []string{s.cfg.AgentID},
-			RequestId:  newRequestID("events"),
-			LeaseId:    s.lease.GetLeaseId(),
+			DaemonId:         s.cfg.DaemonID,
+			ComputerId:       s.cfg.ComputerID,
+			IncludeAllAgents: true,
+			RequestId:        newRequestID("events"),
+			LeaseId:          s.lease.GetLeaseId(),
 			Kinds: []daemonv1.ServerEventKind{
 				daemonv1.ServerEventKind_SERVER_EVENT_KIND_AGENT_CONTROL,
 				daemonv1.ServerEventKind_SERVER_EVENT_KIND_MESSAGE,

@@ -73,6 +73,54 @@ func TestRunSupervisorCompletesQueuedRun(t *testing.T) {
 	}
 }
 
+func TestRunSupervisorPollsAllComputerAgents(t *testing.T) {
+	client := newFakeSupervisorClient(&daemonv1.Run{
+		RunId:            "run-created-agent",
+		TaskId:           "task-1",
+		Target:           "#LightOsClub",
+		AgentId:          "agent-created",
+		ComputerId:       "computer-1",
+		RuntimeProfileId: "profile-agent-created",
+		State:            daemonv1.RunState_RUN_STATE_QUEUED,
+		Summary:          "created agent run",
+	})
+	runner := &fakeRuntimeRunner{result: runtimeCommandResult{Output: "ok\n"}}
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "bootstrap-agent",
+			RuntimeKind:       "codex",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+			ExecutorCommand:   "echo",
+			ExecutorArgs:      []string{"ok"},
+		},
+		Client: client,
+		Runner: runner,
+	})
+
+	if err := supervisor.pollOnce(context.Background()); err != nil {
+		t.Fatalf("pollOnce() error = %v", err)
+	}
+	if len(client.fetchRequests) != 1 {
+		t.Fatalf("fetch requests = %d, want one", len(client.fetchRequests))
+	}
+	if got := client.fetchRequests[0].GetAgentIds(); len(got) != 0 {
+		t.Fatalf("fetch agent ids = %+v, want no bootstrap-agent filter", got)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("runner commands = %+v, want created-agent run", runner.commands)
+	}
+	if !containsString(runner.commands[0].Env, "NEKODE_AGENT_ID=agent-created") {
+		t.Fatalf("runner env = %+v, want created agent id", runner.commands[0].Env)
+	}
+	if got, want := client.updates[len(client.updates)-1].GetAgentId(), "agent-created"; got != want {
+		t.Fatalf("final update agent = %q, want %q", got, want)
+	}
+}
+
 func TestRunSupervisorInjectsLaunchPromptSnapshot(t *testing.T) {
 	client := newFakeSupervisorClient(&daemonv1.Run{
 		RunId:            "run-prompt",
@@ -448,6 +496,49 @@ func TestRunSupervisorHandlesDirectMessage(t *testing.T) {
 	}
 }
 
+func TestRunSupervisorHandlesDirectMessageForCreatedAgent(t *testing.T) {
+	client := newFakeSupervisorClient()
+	runner := &fakeRuntimeRunner{result: runtimeCommandResult{Output: "direct ok"}}
+	supervisor := newRunSupervisor(runSupervisorConfig{
+		Config: daemonConfig{
+			ComputerID:        "computer-1",
+			AgentID:           "bootstrap-agent",
+			Target:            "#LightOsClub",
+			HeartbeatInterval: time.Second,
+			RunTimeout:        time.Second,
+			MaxConcurrentRuns: 1,
+			ExecutorCommand:   "echo",
+			ExecutorArgs:      []string{"direct"},
+		},
+		Client: client,
+		Runner: runner,
+	})
+
+	err := supervisor.handleServerEvent(context.Background(), &daemonv1.ServerEvent{
+		Payload: &daemonv1.ServerEvent_Message{Message: &daemonv1.CollaborationMessage{
+			MessageId:   "msg-created",
+			Target:      "dm:agent-created",
+			AggregateId: "agent-created",
+			Content:     "please work",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("handleServerEvent(message) error = %v", err)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("runner commands = %+v, want one direct-message run", runner.commands)
+	}
+	if !containsString(runner.commands[0].Env, "NEKODE_AGENT_ID=agent-created") {
+		t.Fatalf("runner env = %+v, want created agent id", runner.commands[0].Env)
+	}
+	if len(client.messages) != 1 {
+		t.Fatalf("messages = %+v, want one direct-message receipt", client.messages)
+	}
+	if got := client.messages[0].GetSender().GetAgentId(); got != "agent-created" {
+		t.Fatalf("receipt sender agent = %q, want agent-created", got)
+	}
+}
+
 type fakeRuntimeRunner struct {
 	commands []runtimeCommand
 	result   runtimeCommandResult
@@ -465,6 +556,7 @@ func (r *fakeRuntimeRunner) Run(_ context.Context, cmd runtimeCommand) runtimeCo
 type fakeSupervisorClient struct {
 	runs            []*daemonv1.Run
 	promptSnapshot  *daemonv1.LaunchPromptSnapshot
+	fetchRequests   []*daemonv1.FetchAssignedRunsRequest
 	updates         []*daemonv1.UpdateRunStatusRequest
 	steps           []*daemonv1.RunStep
 	activities      []*daemonv1.LogActivityRequest
@@ -490,6 +582,7 @@ func (c *fakeSupervisorClient) ReleaseStartPermit(_ context.Context, req *daemon
 }
 
 func (c *fakeSupervisorClient) FetchAssignedRuns(_ context.Context, req *daemonv1.FetchAssignedRunsRequest, _ ...grpc.CallOption) (*daemonv1.FetchAssignedRunsResponse, error) {
+	c.fetchRequests = append(c.fetchRequests, req)
 	out := []*daemonv1.Run{}
 	for _, run := range c.runs {
 		if req.GetComputerId() != "" && run.GetComputerId() != req.GetComputerId() {
