@@ -332,6 +332,13 @@ func (s *Server) ListChannels(ctx context.Context, req *daemonv1.ListChannelsReq
 		if target == "" || seen[target] {
 			continue
 		}
+		// ListMessageTargets returns every distinct message target, including
+		// DMs (dm:<id>), threads (thread:<id>) and other non-channel targets.
+		// ListChannels contracts return channels only, so filter on the `#`
+		// prefix — matching the web handler's channelSummaries behaviour.
+		if !strings.HasPrefix(target, "#") {
+			continue
+		}
 		seen[target] = true
 		channels = append(channels, channelRecord(target, strings.TrimPrefix(target, "#")))
 	}

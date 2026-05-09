@@ -1499,18 +1499,12 @@ func (s *Server) channelMembers(ctx context.Context, user storage.User, target s
 	if len(persisted) > 0 {
 		return persisted, nil
 	}
-	members := []storage.ChannelMember{
-		{
-			Target:         target,
-			MemberID:       user.ID,
-			Username:       user.Username,
-			DisplayName:    firstNonEmptyString(user.DisplayName, user.Username, "Signed in user"),
-			Kind:           "human",
-			Role:           firstNonEmptyString(s.channelRoleFor(ctx, user, target), "viewer"),
-			JoinedTimeUnix: user.CreatedUnix,
-		},
-	}
-	return members, nil
+	// When the channel has no persisted members — which is the case for
+	// first-run workspaces with no channels at all — return the empty list
+	// verbatim rather than fabricating a phantom membership for the signed-in
+	// user. The UI renders an explicit "no channel selected" state when the
+	// channel list is empty, so it no longer depends on a synthetic member.
+	return nil, nil
 }
 
 func canReadChannel(user storage.User, target string) bool {

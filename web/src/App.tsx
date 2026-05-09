@@ -88,7 +88,7 @@ import type {
 const TOKEN_KEY = "nekode.console.token";
 const EVENT_CURSOR_KEY = "nekode.console.serverEvents.cursorState";
 const THEME_KEY = "nekode.console.theme";
-const DEFAULT_TARGET = "#general";
+const DEFAULT_TARGET = "";
 const TEXT_ATTACHMENT_PREVIEW_LIMIT = 2000;
 const TEXT_ATTACHMENT_LIGHTBOX_LIMIT = 200000;
 
@@ -765,6 +765,15 @@ function App() {
       setNotificationRoutes(notificationRouteList.items);
       setIMProviders(imProviderList.items);
       setChannels(channelList.items);
+      setTarget((current) => {
+        if (current && channelList.items.some((channel) => channel.target === current)) {
+          return current;
+        }
+        if (current.startsWith("dm:") || current.startsWith("thread:")) {
+          return current;
+        }
+        return channelList.items[0]?.target ?? "";
+      });
       setChannelMembers(channelMemberList.items);
       setMessages(messageList.items);
       setSavedMessages(savedMessageList.items);
@@ -1949,6 +1958,27 @@ function MessagesPanel({
       setActionError(errorMessage(err, "Unable to mark thread read"));
     }
   };
+
+  if (!target) {
+    return (
+      <section className="two-column">
+        <div className="panel message-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Messages</p>
+              <h2>No channel selected</h2>
+            </div>
+          </div>
+          <div className="empty-state">
+            <p>
+              You haven't joined any channels yet. Create a channel from the sidebar, or pick a
+              direct message to start a conversation.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="two-column">
