@@ -865,6 +865,17 @@ func (s *Server) handleCreateBindingSession(w http.ResponseWriter, r *http.Reque
 	if !decodeJSON(w, r, &req) {
 		return
 	}
+	method := strings.ToLower(strings.TrimSpace(req.Method))
+	if method == "" {
+		method = imbinding.MethodQRCode
+	}
+	if imadapter.CanonicalProvider(endpoint.Provider) == imadapter.ProviderWeixin &&
+		method == imbinding.MethodQRCode &&
+		!imwechat.SupportsILinkBinding(endpoint) {
+		writeError(w, http.StatusUnprocessableEntity, "weixin QR binding requires mode=ilink")
+		return
+	}
+	req.Method = method
 	session, err := s.imBindings.Create(endpoint, req.Method)
 	if errors.Is(err, imbinding.ErrEndpointUnsupported) {
 		writeError(w, http.StatusUnprocessableEntity, "binding method is not available for this endpoint")

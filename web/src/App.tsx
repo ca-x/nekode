@@ -4197,6 +4197,25 @@ function editableConfigJSON(endpoint: InteractionEndpoint) {
   return endpoint.configJson.includes(`"${REDACTED_VALUE}"`) ? "" : endpoint.configJson || "{}";
 }
 
+function endpointConfig(endpoint: InteractionEndpoint | null): Record<string, unknown> {
+  if (!endpoint?.configJson.trim()) return {};
+  try {
+    const parsed = JSON.parse(endpoint.configJson);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function endpointSupportsBindingMethod(endpoint: InteractionEndpoint | null, schema: IMProviderSchema | null, method: string) {
+  if (!endpoint || !schema?.bindingMethods?.some((bindingMethod) => bindingMethod.method === method)) return false;
+  if ((endpoint.provider === "weixin" || endpoint.provider === "wechat") && method === "qr_code") {
+    const mode = String(endpointConfig(endpoint).mode ?? "official_account").trim().toLowerCase();
+    return mode === "ilink";
+  }
+  return true;
+}
+
 function targetLabel(target: string) {
   return target
     .replace(/_/g, " ")
@@ -4288,7 +4307,9 @@ function EndpointsPanel({
     () => imProviders.find((schema) => schema.provider === selectedEndpoint?.provider) ?? null,
     [imProviders, selectedEndpoint?.provider]
   );
-  const qrBindingMethod = selectedEndpointProvider?.bindingMethods?.find((method) => method.method === "qr_code") ?? null;
+  const qrBindingMethod = endpointSupportsBindingMethod(selectedEndpoint, selectedEndpointProvider, "qr_code")
+    ? selectedEndpointProvider?.bindingMethods?.find((method) => method.method === "qr_code") ?? null
+    : null;
 
   useEffect(() => {
     if (mode !== "im") return;

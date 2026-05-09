@@ -15,6 +15,14 @@ type BindingUpdate struct {
 	Bound      bool
 }
 
+func SupportsILinkBinding(endpoint storage.InteractionEndpoint) bool {
+	cfg, err := ConfigFromEndpoint(endpoint)
+	if err != nil {
+		return false
+	}
+	return cfg.normalize().Mode == "ilink"
+}
+
 func StartILinkBindingSession(endpoint storage.InteractionEndpoint, bindings *imbinding.Store, session imbinding.Session) (imbinding.Session, error) {
 	cfg, err := ConfigFromEndpoint(endpoint)
 	if err != nil {
@@ -22,7 +30,7 @@ func StartILinkBindingSession(endpoint storage.InteractionEndpoint, bindings *im
 	}
 	cfg = cfg.normalize()
 	if cfg.Mode != "ilink" {
-		return session, nil
+		return session, imbinding.ErrEndpointUnsupported
 	}
 	client := NewILinkClient(cfg.BaseURL, cfg.CDNBaseURL, "")
 	qr, err := client.GetQRCode("")

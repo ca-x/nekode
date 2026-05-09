@@ -194,6 +194,90 @@ func TestILinkBindingSessionFetchesQRAndPersistsBoundConfig(t *testing.T) {
 	}
 }
 
+func TestOfficialAccountBindingSessionIsUnsupported(t *testing.T) {
+	endpoint := storage.InteractionEndpoint{
+		ID:         "iep-weixin-official",
+		Kind:       "im",
+		Provider:   "weixin",
+		ConfigJSON: `{"mode":"official_account","app_id":"wx-app","app_secret":"wx-secret","token":"wechat-token"}`,
+	}
+	bindings := imbinding.NewStore(time.Minute)
+	session, err := bindings.Create(endpoint, imbinding.MethodQRCode)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	started, err := StartILinkBindingSession(endpoint, bindings, session)
+	if err != imbinding.ErrEndpointUnsupported {
+		t.Fatalf("StartILinkBindingSession() = %+v, %v; want unsupported", started, err)
+	}
+	if started.QRPayload != session.QRPayload {
+		t.Fatalf("StartILinkBindingSession changed QR payload for unsupported endpoint: %+v", started)
+	}
+}
+
+func TestRuntimeFailsILinkSendBeforeBinding(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		ID:              "iep-weixin-ilink-unbound",
+		Kind:            "im",
+		Provider:        "weixin",
+		DisplayName:     "Weixin iLink",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "ilink_bot_token",
+		ConfigJSON:      `{"mode":"ilink","default_target":"#ops"}`,
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	inbound, err := store.CreateMessage(ctx, storage.Message{
+		Target:            "#ops",
+		Role:              "user",
+		Content:           "hello",
+		SenderDisplayName: "wx-user-1",
+		SenderKind:        "endpoint",
+		SourceEndpointID:  endpoint.ID,
+		ExternalMessageID: "wx-msg-unbound",
+		MetadataJSON:      `{"im":{"provider":"weixin","conversation":{"external_id":"wx-user-1"},"sender":{"external_id":"wx-user-1"}}}`,
+		RequestID:         endpoint.ID + ":wx-msg-unbound",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(inbound) error = %v", err)
+	}
+	_, err = daemonrpc.New(store, "srv-weixin-ilink").SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           inbound.Target,
+		Content:          "acknowledged via ilink",
+		ReplyToMessageId: inbound.ID,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		RequestId:        "ilink-unbound-reply",
+		IdempotencyKey:   "ilink-unbound-reply",
+		Sender:           &daemonv1.Actor{ActorKind: daemonv1.ActorKind_ACTOR_KIND_AGENT, AgentId: "agent-weixin", DisplayName: "Weixin Agent"},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage() error = %v", err)
+	}
+	cfg, err := ConfigFromEndpoint(endpoint)
+	if err != nil {
+		t.Fatalf("ConfigFromEndpoint() error = %v", err)
+	}
+	results, err := (Runtime{Config: cfg, Store: store}).SendPending(ctx, 10)
+	if err == nil {
+		t.Fatal("SendPending() error = nil, want unbound failure")
+	}
+	if len(results) != 0 {
+		t.Fatalf("SendPending() results = %+v, want no delivered results on failure", results)
+	}
+	failed, listErr := store.ListOutboundDeliveries(ctx, storage.OutboundDeliveryListOptions{EndpointID: endpoint.ID, Statuses: []string{"failed"}, Limit: 10})
+	if listErr != nil {
+		t.Fatalf("ListOutboundDeliveries(failed) error = %v", listErr)
+	}
+	if len(failed) != 1 || !strings.Contains(failed[0].LastError, "binding is required") {
+		t.Fatalf("failed deliveries = %+v, %v; want failed unbound delivery", failed, err)
+	}
+}
+
 func TestRuntimeSendsILinkMessageOnlyAfterBinding(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)

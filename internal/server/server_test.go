@@ -724,37 +724,8 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	weixinBinding := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+wechatEndpointBody.ID+"/binding-sessions", token, map[string]any{
 		"method": "qr_code",
 	})
-	if weixinBinding.Code != http.StatusCreated {
-		t.Fatalf("create weixin binding session status = %d body=%s", weixinBinding.Code, weixinBinding.Body.String())
-	}
-	var weixinBindingBody struct {
-		ID          string `json:"id"`
-		EndpointID  string `json:"endpointId"`
-		Provider    string `json:"provider"`
-		Method      string `json:"method"`
-		Status      string `json:"status"`
-		QRPayload   string `json:"qrPayload"`
-		ExpiresUnix int64  `json:"expiresUnix"`
-	}
-	if err := json.Unmarshal(weixinBinding.Body.Bytes(), &weixinBindingBody); err != nil {
-		t.Fatalf("decode weixin binding session: %v", err)
-	}
-	if weixinBindingBody.ID == "" ||
-		weixinBindingBody.EndpointID != wechatEndpointBody.ID ||
-		weixinBindingBody.Provider != "weixin" ||
-		weixinBindingBody.Method != "qr_code" ||
-		weixinBindingBody.Status != "pending" ||
-		weixinBindingBody.QRPayload == "" ||
-		weixinBindingBody.ExpiresUnix == 0 {
-		t.Fatalf("weixin binding session = %+v, want pending QR session", weixinBindingBody)
-	}
-	polledBinding := doGET(t, s, "/api/interaction-endpoints/"+wechatEndpointBody.ID+"/binding-sessions/"+weixinBindingBody.ID, token)
-	if polledBinding.Code != http.StatusOK {
-		t.Fatalf("poll weixin binding session status = %d body=%s", polledBinding.Code, polledBinding.Body.String())
-	}
-	canceledBinding := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+wechatEndpointBody.ID+"/binding-sessions/"+weixinBindingBody.ID+"/cancel", token, map[string]any{})
-	if canceledBinding.Code != http.StatusOK {
-		t.Fatalf("cancel weixin binding session status = %d body=%s", canceledBinding.Code, canceledBinding.Body.String())
+	if weixinBinding.Code != http.StatusUnprocessableEntity || !strings.Contains(weixinBinding.Body.String(), "mode=ilink") {
+		t.Fatalf("create official-account weixin binding status = %d body=%s, want unsupported mode", weixinBinding.Code, weixinBinding.Body.String())
 	}
 	wechatBody := strings.NewReader(`<xml><ToUserName><![CDATA[gh_app]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName><CreateTime>1700000020</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[hello official account]]></Content><MsgId>888</MsgId></xml>`)
 	wechatWebhook := httptest.NewRecorder()
