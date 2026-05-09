@@ -312,10 +312,17 @@ textarea:focus-visible {
 
 .main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 20px;
   min-width: 0;
+  max-width: 100%;
   padding: 24px;
+}
+
+.main > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .topbar {
@@ -323,6 +330,13 @@ textarea:focus-visible {
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.topbar > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .eyebrow {
@@ -474,6 +488,8 @@ textarea {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .panel,
@@ -485,11 +501,15 @@ textarea {
 }
 
 .panel {
+  min-width: 0;
+  max-width: 100%;
   padding: 18px;
 }
 
 .panel.wide {
   grid-column: 1 / -1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .panel.compact {
