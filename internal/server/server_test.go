@@ -257,8 +257,11 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 	var providerBody struct {
 		Items []struct {
-			Provider string `json:"provider"`
-			Fields   []struct {
+			Provider       string `json:"provider"`
+			BindingMethods []struct {
+				Method string `json:"method"`
+			} `json:"bindingMethods"`
+			Fields []struct {
 				Name      string `json:"name"`
 				Sensitive bool   `json:"sensitive"`
 			} `json:"fields"`
@@ -274,6 +277,20 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	for _, provider := range []string{"telegram", "qq", "feishu", "weixin", "terminal"} {
 		if !seenProviders[provider] {
 			t.Fatalf("IM providers missing %q: %+v", provider, providerBody.Items)
+		}
+	}
+	for _, provider := range providerBody.Items {
+		hasQRCode := false
+		for _, method := range provider.BindingMethods {
+			if method.Method == "qr_code" {
+				hasQRCode = true
+			}
+		}
+		if provider.Provider == "weixin" && !hasQRCode {
+			t.Fatalf("weixin provider missing qr_code binding method: %+v", provider)
+		}
+		if provider.Provider != "weixin" && hasQRCode {
+			t.Fatalf("provider %q should not expose qr_code binding method yet", provider.Provider)
 		}
 	}
 
@@ -350,6 +367,12 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 	if !testEndpointBody.Ready || testEndpointBody.RuntimeLive || !strings.Contains(testEndpointBody.Summary, "Provider receive/send runtime") {
 		t.Fatalf("endpoint test result = %+v, want config-ready non-live runtime", testEndpointBody)
+	}
+	unsupportedBinding := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+imEndpointBody.ID+"/binding-sessions", token, map[string]any{
+		"method": "qr_code",
+	})
+	if unsupportedBinding.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("create unsupported binding session status = %d body=%s, want 422", unsupportedBinding.Code, unsupportedBinding.Body.String())
 	}
 	updateEndpoint := doJSON(t, s, http.MethodPatch, "/api/interaction-endpoints/"+imEndpointBody.ID, token, map[string]any{
 		"displayName":     "Feishu Ops Primary",
@@ -697,6 +720,41 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	badWechatWebhook := doJSON(t, s, http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature=bad&timestamp=1700000020&nonce=nonce-1", "", map[string]any{})
 	if badWechatWebhook.Code != http.StatusUnauthorized {
 		t.Fatalf("bad WeChat webhook status = %d body=%s", badWechatWebhook.Code, badWechatWebhook.Body.String())
+	}
+	weixinBinding := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+wechatEndpointBody.ID+"/binding-sessions", token, map[string]any{
+		"method": "qr_code",
+	})
+	if weixinBinding.Code != http.StatusCreated {
+		t.Fatalf("create weixin binding session status = %d body=%s", weixinBinding.Code, weixinBinding.Body.String())
+	}
+	var weixinBindingBody struct {
+		ID          string `json:"id"`
+		EndpointID  string `json:"endpointId"`
+		Provider    string `json:"provider"`
+		Method      string `json:"method"`
+		Status      string `json:"status"`
+		QRPayload   string `json:"qrPayload"`
+		ExpiresUnix int64  `json:"expiresUnix"`
+	}
+	if err := json.Unmarshal(weixinBinding.Body.Bytes(), &weixinBindingBody); err != nil {
+		t.Fatalf("decode weixin binding session: %v", err)
+	}
+	if weixinBindingBody.ID == "" ||
+		weixinBindingBody.EndpointID != wechatEndpointBody.ID ||
+		weixinBindingBody.Provider != "weixin" ||
+		weixinBindingBody.Method != "qr_code" ||
+		weixinBindingBody.Status != "pending" ||
+		weixinBindingBody.QRPayload == "" ||
+		weixinBindingBody.ExpiresUnix == 0 {
+		t.Fatalf("weixin binding session = %+v, want pending QR session", weixinBindingBody)
+	}
+	polledBinding := doGET(t, s, "/api/interaction-endpoints/"+wechatEndpointBody.ID+"/binding-sessions/"+weixinBindingBody.ID, token)
+	if polledBinding.Code != http.StatusOK {
+		t.Fatalf("poll weixin binding session status = %d body=%s", polledBinding.Code, polledBinding.Body.String())
+	}
+	canceledBinding := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+wechatEndpointBody.ID+"/binding-sessions/"+weixinBindingBody.ID+"/cancel", token, map[string]any{})
+	if canceledBinding.Code != http.StatusOK {
+		t.Fatalf("cancel weixin binding session status = %d body=%s", canceledBinding.Code, canceledBinding.Body.String())
 	}
 	wechatBody := strings.NewReader(`<xml><ToUserName><![CDATA[gh_app]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName><CreateTime>1700000020</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[hello official account]]></Content><MsgId>888</MsgId></xml>`)
 	wechatWebhook := httptest.NewRecorder()

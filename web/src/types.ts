@@ -73,6 +73,12 @@ export type IMProviderField = {
   options?: string[];
 };
 
+export type IMBindingMethod = {
+  method: string;
+  displayName: string;
+  description: string;
+};
+
 export type IMProviderSchema = {
   provider: string;
   displayName: string;
@@ -83,8 +89,23 @@ export type IMProviderSchema = {
   supportsStreaming: boolean;
   supportsMedia: boolean;
   bindingTargets: string[];
+  bindingMethods?: IMBindingMethod[];
   setupHints: string[];
   fields: IMProviderField[];
+};
+
+export type IMBindingSession = {
+  id: string;
+  endpointId: string;
+  provider: string;
+  method: string;
+  status: string;
+  qrPayload?: string;
+  qrImageUrl?: string;
+  expiresUnix: number;
+  createdUnix: number;
+  updatedUnix: number;
+  detail?: string;
 };
 
 export type ChannelVisibility = "public" | "private" | "unspecified";

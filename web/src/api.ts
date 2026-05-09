@@ -26,6 +26,7 @@ import type {
   EventScopeType,
   InteractionEndpoint,
   IMProviderSchema,
+  IMBindingSession,
   JsonObject,
   Message,
   NotificationRoute,
@@ -233,6 +234,26 @@ type RawInteractionEndpoint = {
   created_unix?: unknown;
   updatedUnix?: unknown;
   updated_unix?: unknown;
+};
+
+type RawIMBindingSession = {
+  id?: unknown;
+  endpointId?: unknown;
+  endpoint_id?: unknown;
+  provider?: unknown;
+  method?: unknown;
+  status?: unknown;
+  qrPayload?: unknown;
+  qr_payload?: unknown;
+  qrImageUrl?: unknown;
+  qr_image_url?: unknown;
+  expiresUnix?: unknown;
+  expires_unix?: unknown;
+  createdUnix?: unknown;
+  created_unix?: unknown;
+  updatedUnix?: unknown;
+  updated_unix?: unknown;
+  detail?: unknown;
 };
 
 type RawNotificationRoute = {
@@ -659,6 +680,23 @@ function normalizeInteractionEndpoint(raw: unknown): InteractionEndpoint {
 		createdUnix: asNumber(row.createdUnix ?? row.created_unix),
 		updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix)
 	};
+}
+
+function normalizeIMBindingSession(raw: unknown): IMBindingSession {
+  const row = asRecord(raw) as RawIMBindingSession;
+  return {
+    id: asString(row.id),
+    endpointId: asString(row.endpointId ?? row.endpoint_id),
+    provider: asString(row.provider),
+    method: asString(row.method),
+    status: asString(row.status),
+    qrPayload: asOptionalString(row.qrPayload ?? row.qr_payload),
+    qrImageUrl: asOptionalString(row.qrImageUrl ?? row.qr_image_url),
+    expiresUnix: asNumber(row.expiresUnix ?? row.expires_unix),
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+    updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix),
+    detail: asOptionalString(row.detail)
+  };
 }
 
 function normalizeNotificationRoute(raw: unknown): NotificationRoute {
@@ -1367,6 +1405,26 @@ export class ApiClient {
       `/api/interaction-endpoints/${encodeURIComponent(id)}/test`,
       { method: "POST", body: JSON.stringify({}) }
     );
+  }
+
+  createIMBindingSession(endpointId: string, method = "qr_code") {
+    return this.request<unknown>(
+      `/api/interaction-endpoints/${encodeURIComponent(endpointId)}/binding-sessions`,
+      { method: "POST", body: JSON.stringify({ method }) }
+    ).then(normalizeIMBindingSession);
+  }
+
+  getIMBindingSession(endpointId: string, sessionId: string) {
+    return this.request<unknown>(
+      `/api/interaction-endpoints/${encodeURIComponent(endpointId)}/binding-sessions/${encodeURIComponent(sessionId)}`
+    ).then(normalizeIMBindingSession);
+  }
+
+  cancelIMBindingSession(endpointId: string, sessionId: string) {
+    return this.request<unknown>(
+      `/api/interaction-endpoints/${encodeURIComponent(endpointId)}/binding-sessions/${encodeURIComponent(sessionId)}/cancel`,
+      { method: "POST", body: JSON.stringify({}) }
+    ).then(normalizeIMBindingSession);
   }
 
   listNotificationRoutes(filters: {

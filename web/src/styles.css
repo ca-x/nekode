@@ -1808,6 +1808,48 @@ textarea {
   font-weight: 700;
 }
 
+.binding-session-panel {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.binding-qr-frame {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  aspect-ratio: 1;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.binding-qr-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.binding-qr-frame code {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.binding-session-detail {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  min-width: 0;
+}
+
+.binding-session-detail span {
+  overflow-wrap: anywhere;
+}
+
 .endpoint-create-panel {
   align-content: start;
 }
@@ -2822,6 +2864,7 @@ textarea {
   .channel-admin-grid,
   .channel-member-form-grid,
   .channel-member-management-row,
+  .binding-session-panel,
   .endpoint-binding-grid,
   .endpoint-grid,
   .endpoint-route-grid,

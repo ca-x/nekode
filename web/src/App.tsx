@@ -64,6 +64,7 @@ import type {
   DaemonInventoryComputer,
   DaemonRun,
   EventCursor,
+  IMBindingSession,
   IMProviderField,
   IMProviderSchema,
   InteractionEndpoint,
@@ -4244,6 +4245,9 @@ function EndpointsPanel({
   const [endpointActionError, setEndpointActionError] = useState("");
   const [endpointActionBusy, setEndpointActionBusy] = useState("");
   const [endpointTestResult, setEndpointTestResult] = useState<InteractionEndpointTestResult | null>(null);
+  const [bindingSession, setBindingSession] = useState<IMBindingSession | null>(null);
+  const [bindingError, setBindingError] = useState("");
+  const [bindingBusy, setBindingBusy] = useState("");
   const [routeTarget, setRouteTarget] = useState("#general");
   const [routeThreadId, setRouteThreadId] = useState("");
   const [routeEndpointId, setRouteEndpointId] = useState("");
@@ -4280,6 +4284,11 @@ function EndpointsPanel({
     ? selectedProvider.bindingTargets
     : DEFAULT_BINDING_TARGETS;
   const providerHasGroupMode = hasConfigField(selectedProvider, "group_mode");
+  const selectedEndpointProvider = useMemo(
+    () => imProviders.find((schema) => schema.provider === selectedEndpoint?.provider) ?? null,
+    [imProviders, selectedEndpoint?.provider]
+  );
+  const qrBindingMethod = selectedEndpointProvider?.bindingMethods?.find((method) => method.method === "qr_code") ?? null;
 
   useEffect(() => {
     if (mode !== "im") return;
@@ -4309,6 +4318,8 @@ function EndpointsPanel({
     setEndpointEditConfig(editableConfigJSON(selectedEndpoint));
     setEndpointActionError("");
     setEndpointTestResult(null);
+    setBindingSession(null);
+    setBindingError("");
   }, [selectedEndpoint]);
 
   useEffect(() => {
@@ -4436,6 +4447,61 @@ function EndpointsPanel({
       setEndpointActionError(err instanceof Error ? err.message : "Endpoint test failed.");
     } finally {
       setEndpointActionBusy("");
+    }
+  };
+
+  useEffect(() => {
+    if (!bindingSession || bindingSession.status !== "pending") return undefined;
+    const timer = window.setInterval(() => {
+      void (async () => {
+        try {
+          const next = await api.getIMBindingSession(bindingSession.endpointId, bindingSession.id);
+          setBindingSession(next);
+          setBindingError("");
+        } catch (err) {
+          setBindingError(err instanceof Error ? err.message : "Binding session refresh failed.");
+        }
+      })();
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [bindingSession]);
+
+  const startBindingSession = async () => {
+    if (!selectedEndpoint || !qrBindingMethod) return;
+    setBindingBusy("create");
+    setBindingError("");
+    try {
+      setBindingSession(await api.createIMBindingSession(selectedEndpoint.id, qrBindingMethod.method));
+    } catch (err) {
+      setBindingError(err instanceof Error ? err.message : "Binding session creation failed.");
+    } finally {
+      setBindingBusy("");
+    }
+  };
+
+  const refreshBindingSession = async () => {
+    if (!bindingSession) return;
+    setBindingBusy("refresh");
+    setBindingError("");
+    try {
+      setBindingSession(await api.getIMBindingSession(bindingSession.endpointId, bindingSession.id));
+    } catch (err) {
+      setBindingError(err instanceof Error ? err.message : "Binding session refresh failed.");
+    } finally {
+      setBindingBusy("");
+    }
+  };
+
+  const cancelBindingSession = async () => {
+    if (!bindingSession) return;
+    setBindingBusy("cancel");
+    setBindingError("");
+    try {
+      setBindingSession(await api.cancelIMBindingSession(bindingSession.endpointId, bindingSession.id));
+    } catch (err) {
+      setBindingError(err instanceof Error ? err.message : "Binding session cancel failed.");
+    } finally {
+      setBindingBusy("");
     }
   };
 
@@ -4841,6 +4907,18 @@ function EndpointsPanel({
                   </p>
                 </div>
 
+                {selectedProvider.bindingMethods?.length ? (
+                  <div className="endpoint-form-section">
+                    <strong>Binding capabilities</strong>
+                    <div className="endpoint-config-chips">
+                      {selectedProvider.bindingMethods.map((method) => (
+                        <span key={method.method}>{method.displayName}</span>
+                      ))}
+                    </div>
+                    <p>Binding sessions are started after the endpoint is created.</p>
+                  </div>
+                ) : null}
+
                 {selectedProvider.setupHints.length ? (
                   <div className="setup-hints">
                     {selectedProvider.setupHints.map((hint) => (
@@ -4996,6 +5074,62 @@ function EndpointsPanel({
                     </span>
                   ))}
                 </div>
+              </div>
+            ) : null}
+            {selectedEndpoint.kind === "im" ? (
+              <div className="endpoint-form-section">
+                <strong>Channel binding</strong>
+                {qrBindingMethod ? (
+                  <>
+                    <p>{qrBindingMethod.description}</p>
+                    <div className="endpoint-actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        disabled={bindingBusy === "create"}
+                        onClick={() => void startBindingSession()}
+                      >
+                        Start QR binding
+                      </button>
+                      <button
+                        className="mini-action-button"
+                        type="button"
+                        disabled={!bindingSession || bindingBusy === "refresh"}
+                        onClick={() => void refreshBindingSession()}
+                      >
+                        Refresh
+                      </button>
+                      <button
+                        className="mini-action-button"
+                        type="button"
+                        disabled={!bindingSession || bindingBusy === "cancel"}
+                        onClick={() => void cancelBindingSession()}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {bindingSession ? (
+                      <div className="binding-session-panel" role="status">
+                        <div className="binding-qr-frame" aria-label="QR binding payload">
+                          {bindingSession.qrImageUrl ? (
+                            <img src={bindingSession.qrImageUrl} alt="Channel binding QR code" />
+                          ) : (
+                            <code>{bindingSession.qrPayload || "QR payload pending provider adapter"}</code>
+                          )}
+                        </div>
+                        <div className="binding-session-detail">
+                          <strong>{targetLabel(bindingSession.status)}</strong>
+                          <span>{bindingSession.detail || "Waiting for scan status from provider adapter."}</span>
+                          <span>Session {bindingSession.id}</span>
+                          <span>Expires {formatUnixTime(bindingSession.expiresUnix)}</span>
+                        </div>
+                      </div>
+                    ) : null}
+                    {bindingError ? <p className="inline-error" role="alert">{bindingError}</p> : null}
+                  </>
+                ) : (
+                  <p>No QR binding capability is available for this provider.</p>
+                )}
               </div>
             ) : null}
             <div className="endpoint-actions">

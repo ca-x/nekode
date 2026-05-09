@@ -22,6 +22,7 @@ import (
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
+	"github.com/ca-x/nekode/internal/imbinding"
 	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/imfeishu"
 	"github.com/ca-x/nekode/internal/immedia"
@@ -50,6 +51,7 @@ type Server struct {
 	auth              *auth.Service
 	daemon            *daemonrpc.Server
 	daemonEnrollments *daemonEnrollmentStore
+	imBindings        *imbinding.Store
 }
 
 type Principal struct {
@@ -66,11 +68,12 @@ func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, 
 		logger = slog.Default()
 	}
 	s := &Server{
-		cfg:    cfg,
-		logger: logger,
-		mux:    http.NewServeMux(),
-		store:  store,
-		cache:  cacheStore,
+		cfg:        cfg,
+		logger:     logger,
+		mux:        http.NewServeMux(),
+		store:      store,
+		cache:      cacheStore,
+		imBindings: imbinding.NewStore(5 * time.Minute),
 	}
 	if store != nil {
 		s.auth = auth.New(store)
@@ -168,6 +171,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("PATCH /api/interaction-endpoints/{id}", s.requireAuth(s.handleUpdateInteractionEndpoint))
 	s.mux.HandleFunc("DELETE /api/interaction-endpoints/{id}", s.requireAuth(s.handleDeleteInteractionEndpoint))
 	s.mux.HandleFunc("POST /api/interaction-endpoints/{id}/test", s.requireAuth(s.handleTestInteractionEndpoint))
+	s.mux.HandleFunc("POST /api/interaction-endpoints/{id}/binding-sessions", s.requireAuth(s.handleCreateBindingSession))
+	s.mux.HandleFunc("GET /api/interaction-endpoints/{id}/binding-sessions/{sessionID}", s.requireAuth(s.handleGetBindingSession))
+	s.mux.HandleFunc("POST /api/interaction-endpoints/{id}/binding-sessions/{sessionID}/cancel", s.requireAuth(s.handleCancelBindingSession))
 	s.mux.HandleFunc("GET /api/notification-routes", s.requireAuth(s.handleListNotificationRoutes))
 	s.mux.HandleFunc("POST /api/notification-routes", s.requireAuth(s.handleCreateNotificationRoute))
 	s.mux.HandleFunc("GET /api/notification-routes/resolve", s.requireAuth(s.handleResolveNotificationRoutes))
@@ -847,6 +853,78 @@ func (s *Server) handleTestInteractionEndpoint(w http.ResponseWriter, r *http.Re
 		"checks":      checks,
 		"endpoint":    endpoint,
 	})
+}
+
+func (s *Server) handleCreateBindingSession(w http.ResponseWriter, r *http.Request) {
+	endpoint, ok := s.readBindingEndpoint(w, r)
+	if !ok {
+		return
+	}
+	var req bindingSessionRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	session, err := s.imBindings.Create(endpoint, req.Method)
+	if errors.Is(err, imbinding.ErrEndpointUnsupported) {
+		writeError(w, http.StatusUnprocessableEntity, "binding method is not available for this endpoint")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "create binding session failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, session)
+}
+
+func (s *Server) handleGetBindingSession(w http.ResponseWriter, r *http.Request) {
+	endpoint, ok := s.readBindingEndpoint(w, r)
+	if !ok {
+		return
+	}
+	session, err := s.imBindings.Get(endpoint, r.PathValue("sessionID"))
+	if errors.Is(err, imbinding.ErrSessionNotFound) {
+		writeError(w, http.StatusNotFound, "binding session not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read binding session failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, session)
+}
+
+func (s *Server) handleCancelBindingSession(w http.ResponseWriter, r *http.Request) {
+	endpoint, ok := s.readBindingEndpoint(w, r)
+	if !ok {
+		return
+	}
+	session, err := s.imBindings.Cancel(endpoint, r.PathValue("sessionID"))
+	if errors.Is(err, imbinding.ErrSessionNotFound) {
+		writeError(w, http.StatusNotFound, "binding session not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "cancel binding session failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, session)
+}
+
+func (s *Server) readBindingEndpoint(w http.ResponseWriter, r *http.Request) (storage.InteractionEndpoint, bool) {
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return storage.InteractionEndpoint{}, false
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return storage.InteractionEndpoint{}, false
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") {
+		writeError(w, http.StatusBadRequest, "interaction endpoint is not an IM endpoint")
+		return storage.InteractionEndpoint{}, false
+	}
+	return endpoint, true
 }
 
 func (s *Server) handleListNotificationRoutes(w http.ResponseWriter, r *http.Request) {
@@ -2289,6 +2367,10 @@ type endpointRequest struct {
 	OutboundEnabled bool   `json:"outboundEnabled"`
 	AuthMode        string `json:"authMode"`
 	ConfigJSON      string `json:"configJson"`
+}
+
+type bindingSessionRequest struct {
+	Method string `json:"method"`
 }
 
 type endpointPatchRequest struct {

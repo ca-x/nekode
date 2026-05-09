@@ -55,6 +55,7 @@ func TestValidateConfigAndRedact(t *testing.T) {
 }
 
 func TestProviderSchemaShapeForConfigUI(t *testing.T) {
+	bindingMethods := map[string][]BindingMethod{}
 	for _, schema := range ListProviders() {
 		t.Run(schema.Provider, func(t *testing.T) {
 			if _, ok := GetProvider(strings.ToUpper(schema.Provider)); !ok {
@@ -72,6 +73,7 @@ func TestProviderSchemaShapeForConfigUI(t *testing.T) {
 			if len(schema.SetupHints) == 0 {
 				t.Fatalf("schema %q missing setup hints", schema.Provider)
 			}
+			bindingMethods[schema.Provider] = schema.BindingMethods
 			for _, field := range schema.Fields {
 				if field.Name == "group_mode" {
 					if field.Type != FieldSelect || strings.Join(field.Options, ",") != "mention,always,disabled" {
@@ -84,6 +86,17 @@ func TestProviderSchemaShapeForConfigUI(t *testing.T) {
 
 	if schema, ok := GetProvider("wechat"); !ok || schema.Provider != ProviderWeixin {
 		t.Fatalf("GetProvider(wechat) = %+v, %v; want weixin alias", schema, ok)
+	}
+	if !SupportsBindingMethod(ProviderWeixin, BindingMethodQRCode) {
+		t.Fatalf("weixin should declare QR code binding support")
+	}
+	for provider, methods := range bindingMethods {
+		if provider == ProviderWeixin {
+			continue
+		}
+		if len(methods) != 0 || SupportsBindingMethod(provider, BindingMethodQRCode) {
+			t.Fatalf("provider %q binding methods = %+v, want no QR support until implemented", provider, methods)
+		}
 	}
 }
 

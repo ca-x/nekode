@@ -14,6 +14,10 @@ const (
 	ProviderTerminal = "terminal"
 )
 
+const (
+	BindingMethodQRCode = "qr_code"
+)
+
 type FieldType string
 
 const (
@@ -34,18 +38,25 @@ type Field struct {
 	Options     []string  `json:"options,omitempty"`
 }
 
+type BindingMethod struct {
+	Method      string `json:"method"`
+	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
+}
+
 type ProviderSchema struct {
-	Provider          string   `json:"provider"`
-	DisplayName       string   `json:"displayName"`
-	Transport         string   `json:"transport"`
-	Description       string   `json:"description"`
-	SupportsWebhook   bool     `json:"supportsWebhook"`
-	SupportsPolling   bool     `json:"supportsPolling"`
-	SupportsStreaming bool     `json:"supportsStreaming"`
-	SupportsMedia     bool     `json:"supportsMedia"`
-	BindingTargets    []string `json:"bindingTargets"`
-	SetupHints        []string `json:"setupHints"`
-	Fields            []Field  `json:"fields"`
+	Provider          string          `json:"provider"`
+	DisplayName       string          `json:"displayName"`
+	Transport         string          `json:"transport"`
+	Description       string          `json:"description"`
+	SupportsWebhook   bool            `json:"supportsWebhook"`
+	SupportsPolling   bool            `json:"supportsPolling"`
+	SupportsStreaming bool            `json:"supportsStreaming"`
+	SupportsMedia     bool            `json:"supportsMedia"`
+	BindingTargets    []string        `json:"bindingTargets"`
+	BindingMethods    []BindingMethod `json:"bindingMethods,omitempty"`
+	SetupHints        []string        `json:"setupHints"`
+	Fields            []Field         `json:"fields"`
 }
 
 var providerSchemas = []ProviderSchema{
@@ -132,9 +143,17 @@ var providerSchemas = []ProviderSchema{
 		SupportsWebhook: true,
 		SupportsMedia:   true,
 		BindingTargets:  defaultBindingTargets(),
+		BindingMethods: []BindingMethod{
+			{
+				Method:      BindingMethodQRCode,
+				DisplayName: "QR code",
+				Description: "Create a channel binding session that the operator scans in WeChat. The provider adapter supplies the QR ticket and scan status.",
+			},
+		},
 		SetupHints: []string{
 			"Use an official WeChat public account test or production account; this is not a generic personal WeChat runtime.",
 			"Configure the public account server URL to /api/im/weixin/<endpoint_id>/callback with the same token.",
+			"Bind users from the channel management panel by starting a QR code binding session.",
 			"Customer-service sends require app_id/app_secret access_token permissions and WeChat's allowed reply window.",
 		},
 		Fields: []Field{
@@ -169,6 +188,20 @@ var providerSchemas = []ProviderSchema{
 			{Name: "enable_notify", Label: "Enable notifications", Type: FieldBoolean, Description: "Allow Nekode notifications to use this endpoint."},
 		},
 	},
+}
+
+func SupportsBindingMethod(provider string, method string) bool {
+	schema, ok := GetProvider(provider)
+	if !ok {
+		return false
+	}
+	method = strings.ToLower(strings.TrimSpace(method))
+	for _, bindingMethod := range schema.BindingMethods {
+		if bindingMethod.Method == method {
+			return true
+		}
+	}
+	return false
 }
 
 func ListProviders() []ProviderSchema {
