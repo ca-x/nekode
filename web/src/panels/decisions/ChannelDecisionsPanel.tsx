@@ -329,6 +329,16 @@ function DecisionCard({
               {t("decisions.actions.retire")}
             </button>
           </div>
+        ) : decision.status === "ratified" ? (
+          // Ratified rows are still retireable — typically when a newer
+          // decision supersedes this one. Proposed/ratified both flow
+          // through the same retire endpoint server-side; rejected and
+          // retired rows are terminal and stay read-only.
+          <div className="decision-actions">
+            <button type="button" className="ghost-button" onClick={onRetireStart}>
+              {t("decisions.actions.retire")}
+            </button>
+          </div>
         ) : null}
 
         {expanded && votes ? (
