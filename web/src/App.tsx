@@ -902,6 +902,10 @@ function App() {
     }
   };
 
+  const reloadDaemonInventory = useCallback(() => {
+    void loadData({ background: true });
+  }, [loadData]);
+
   const markThreadRead = async (item: ThreadInboxItem) => {
     await api.markThreadRead({ target: item.target, threadId: item.threadId });
     await loadData();
@@ -1174,7 +1178,7 @@ function App() {
             daemonRuns={daemonRuns}
             daemonActivity={daemonActivity}
             runtimePresets={runtimePresets}
-            onAgentCreated={() => void loadData({ background: true })}
+            onAgentCreated={reloadDaemonInventory}
             issues={sectionIssueGroups.daemon}
             loading={status === "loading" && !daemonInfo}
             onRetry={loadData}
@@ -5573,6 +5577,13 @@ function DaemonPanel({
     return byProfile;
   }, [daemonInventory]);
 
+  // Keep a stable reference so the enrollment poller effect below doesn't
+  // resubscribe every time the parent rerenders with a fresh inline callback.
+  const onAgentCreatedRef = useRef(onAgentCreated);
+  useEffect(() => {
+    onAgentCreatedRef.current = onAgentCreated;
+  }, [onAgentCreated]);
+
   useEffect(() => {
     if (!enrollment?.id || canFinishEnrollment || currentEnrollmentStatus !== "pending") {
       return undefined;
@@ -5587,7 +5598,7 @@ function DaemonPanel({
           // Refresh the daemon inventory once the enrollment connects so the
           // sidebar Machines list picks up the new computer without requiring
           // the operator to click Finish or navigate elsewhere.
-          onAgentCreated();
+          onAgentCreatedRef.current();
         }
       }).catch((err: unknown) => {
         setWizardState("error");
@@ -5595,7 +5606,7 @@ function DaemonPanel({
       });
     }, 3000);
     return () => window.clearInterval(timer);
-  }, [canFinishEnrollment, currentEnrollmentStatus, enrollment?.id, onAgentCreated]);
+  }, [canFinishEnrollment, currentEnrollmentStatus, enrollment?.id]);
 
   useEffect(() => {
     if (selectedAgentComputer && selectedAgentComputer.computerId !== agentComputerId) {
