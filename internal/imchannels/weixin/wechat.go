@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ca-x/nekode/internal/imadapter"
@@ -72,8 +73,33 @@ type CustomerServiceMessage struct {
 }
 
 type TokenCache struct {
+	mu          sync.Mutex
 	AccessToken string
 	ExpiresUnix int64
+}
+
+// Get returns the cached token if it is still valid for at least leeway seconds.
+func (c *TokenCache) Get(leeway int64) (string, bool) {
+	if c == nil {
+		return "", false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.AccessToken != "" && c.ExpiresUnix > time.Now().Unix()+leeway {
+		return c.AccessToken, true
+	}
+	return "", false
+}
+
+// Set stores the token and its absolute expiry.
+func (c *TokenCache) Set(token string, expiresUnix int64) {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.AccessToken = token
+	c.ExpiresUnix = expiresUnix
 }
 
 type Query struct {
@@ -380,8 +406,8 @@ func (r Runtime) accessToken(ctx context.Context, cfg Config) (string, error) {
 	if cfg.AccessToken != "" {
 		return cfg.AccessToken, nil
 	}
-	if r.TokenCache != nil && r.TokenCache.AccessToken != "" && r.TokenCache.ExpiresUnix > time.Now().Unix()+60 {
-		return r.TokenCache.AccessToken, nil
+	if tok, ok := r.TokenCache.Get(60); ok {
+		return tok, nil
 	}
 	if cfg.AppID == "" || cfg.AppSecret == "" {
 		return "", errors.New("wechat app_id and app_secret are required for access_token")
@@ -412,10 +438,7 @@ func (r Runtime) accessToken(ctx context.Context, cfg Config) (string, error) {
 	if out.ErrCode != 0 || out.AccessToken == "" {
 		return "", fmt.Errorf("wechat access_token rejected %d: %s", out.ErrCode, out.ErrMsg)
 	}
-	if r.TokenCache != nil {
-		r.TokenCache.AccessToken = out.AccessToken
-		r.TokenCache.ExpiresUnix = time.Now().Unix() + out.ExpiresIn
-	}
+	r.TokenCache.Set(out.AccessToken, time.Now().Unix()+out.ExpiresIn)
 	return out.AccessToken, nil
 }
 

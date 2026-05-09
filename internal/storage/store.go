@@ -60,6 +60,11 @@ func OpenWithOptions(ctx context.Context, opts OpenOptions) (*Store, error) {
 			}
 			dsn = sqliteDSN(dsn)
 		} else {
+			if path := sqliteFilePath(dsn); path != "" && path != ":memory:" {
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					return nil, err
+				}
+			}
 			dsn = ensureSQLiteForeignKeys(dsn)
 		}
 	} else if dsn == "" {
@@ -2453,6 +2458,26 @@ func entDialect(dbType string) string {
 
 func sqliteDSN(path string) string {
 	return fmt.Sprintf("file:%s?cache=shared&_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(10000)", path)
+}
+
+// sqliteFilePath extracts the filesystem path from a SQLite DSN. Returns "" for
+// in-memory or URIs without a resolvable file path (":memory:", "file::memory:",
+// "file:?mode=memory", etc.) so callers can skip MkdirAll.
+func sqliteFilePath(dsn string) string {
+	if dsn == "" || dsn == ":memory:" {
+		return ""
+	}
+	if !strings.HasPrefix(dsn, "file:") {
+		return dsn
+	}
+	rest := strings.TrimPrefix(dsn, "file:")
+	if i := strings.IndexByte(rest, '?'); i >= 0 {
+		rest = rest[:i]
+	}
+	if rest == "" || rest == ":memory:" {
+		return ""
+	}
+	return rest
 }
 
 func ensureSQLiteForeignKeys(dsn string) string {

@@ -87,9 +87,17 @@ func TestDaemonEnrollmentInstallScriptConsumesCodeAndRotatesToken(t *testing.T) 
 	}
 	rotatedToken := extractDaemonToken(t, body)
 
+	// Install code is TTL-based, not single-use: a second fetch before the
+	// daemon connects must still return a usable script so the operator can
+	// retry on flaky networks. It rotates the token each time, invalidating
+	// any previously-emitted token that never got registered.
 	replay := doGET(t, server, enrollment.InstallScriptURL, "")
-	if replay.Code != http.StatusNotFound {
-		t.Fatalf("replayed install script status = %d body=%s, want 404", replay.Code, replay.Body.String())
+	if replay.Code != http.StatusOK {
+		t.Fatalf("replayed install script status = %d body=%s, want 200", replay.Code, replay.Body.String())
+	}
+	replayToken := extractDaemonToken(t, replay.Body.String())
+	if replayToken == rotatedToken {
+		t.Fatalf("replay returned the same token; expected rotation")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -97,8 +105,17 @@ func TestDaemonEnrollmentInstallScriptConsumesCodeAndRotatesToken(t *testing.T) 
 	_, err := cleanup.client.RegisterComputer(withDaemonToken(ctx, enrollment.Token), registerComputerRequest("old-token"))
 	assertGRPCCode(t, err, codes.Unauthenticated)
 	_, err = cleanup.client.RegisterComputer(withDaemonToken(ctx, rotatedToken), registerComputerRequest("rotated-token"))
+	assertGRPCCode(t, err, codes.Unauthenticated)
+	_, err = cleanup.client.RegisterComputer(withDaemonToken(ctx, replayToken), registerComputerRequest("replay-token"))
 	if err != nil {
-		t.Fatalf("RegisterComputer(with rotated install token) error = %v", err)
+		t.Fatalf("RegisterComputer(with replay token) error = %v", err)
+	}
+
+	// After a successful registration the install code is burned: further
+	// fetches must 404 so a third host cannot steal the enrollment.
+	afterRegister := doGET(t, server, enrollment.InstallScriptURL, "")
+	if afterRegister.Code != http.StatusNotFound {
+		t.Fatalf("post-register install status = %d body=%s, want 404", afterRegister.Code, afterRegister.Body.String())
 	}
 }
 

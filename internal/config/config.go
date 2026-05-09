@@ -21,6 +21,7 @@ const (
 type Config struct {
 	Addr                   string
 	GRPCAddr               string
+	GRPCAdvertiseAddr      string
 	DaemonTransport        string
 	BaseURL                string
 	WebDistDir             string
@@ -51,6 +52,7 @@ func Load() (Config, error) {
 	cfg := Config{
 		Addr:                   env("NEKODE_ADDR", DefaultAddr),
 		GRPCAddr:               env("NEKODE_GRPC_ADDR", DefaultGRPCAddr),
+		GRPCAdvertiseAddr:      strings.TrimSpace(os.Getenv("NEKODE_GRPC_ADVERTISE_ADDR")),
 		DaemonTransport:        env("NEKODE_DAEMON_TRANSPORT", "grpc"),
 		BaseURL:                env("NEKODE_BASE_URL", DefaultBaseURL),
 		WebDistDir:             strings.TrimSpace(os.Getenv("NEKODE_WEB_DIST_DIR")),

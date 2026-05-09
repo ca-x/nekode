@@ -3,14 +3,17 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/version"
 )
 
-func (s *Server) renderDaemonInstallShell(enrollment daemonEnrollment, token string) string {
+func (s *Server) renderDaemonInstallShell(r *http.Request, enrollment daemonEnrollment, token string) string {
 	return fmt.Sprintf(`#!/bin/sh
 set -eu
 
@@ -108,10 +111,10 @@ else
 fi
 
 log "Nekode daemon install finished"
-`, shellDoubleQuoted(daemonArtifactVersion()), shellDoubleQuoted(daemonDownloadBaseURL()), s.daemonConfigJSON(enrollment, token))
+`, shellDoubleQuoted(daemonArtifactVersion()), shellDoubleQuoted(daemonDownloadBaseURL()), s.daemonConfigJSON(r, enrollment, token))
 }
 
-func (s *Server) renderDaemonInstallPowerShell(enrollment daemonEnrollment, token string) string {
+func (s *Server) renderDaemonInstallPowerShell(r *http.Request, enrollment daemonEnrollment, token string) string {
 	return fmt.Sprintf(`$ErrorActionPreference = "Stop"
 
 function Fail($Message) {
@@ -169,7 +172,7 @@ try {
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }
-`, powerShellDoubleQuoted(daemonArtifactVersion()), powerShellDoubleQuoted(daemonDownloadBaseURL()), s.daemonConfigJSON(enrollment, token))
+`, powerShellDoubleQuoted(daemonArtifactVersion()), powerShellDoubleQuoted(daemonDownloadBaseURL()), s.daemonConfigJSON(r, enrollment, token))
 }
 
 func (s *Server) renderDaemonManagementShell(action string) string {
@@ -436,9 +439,9 @@ switch ($action) {
 `, powerShellDoubleQuoted(action), powerShellDoubleQuoted(daemonArtifactVersion()), powerShellDoubleQuoted(daemonDownloadBaseURL()))
 }
 
-func (s *Server) daemonConfigJSON(enrollment daemonEnrollment, token string) string {
+func (s *Server) daemonConfigJSON(r *http.Request, enrollment daemonEnrollment, token string) string {
 	body := map[string]string{
-		"grpcAddr":          s.cfg.GRPCAddr,
+		"grpcAddr":          s.daemonGRPCEndpoint(r),
 		"token":             token,
 		"computerId":        enrollment.ComputerID,
 		"displayName":       enrollment.DisplayName,
@@ -450,6 +453,61 @@ func (s *Server) daemonConfigJSON(enrollment daemonEnrollment, token string) str
 	}
 	data, _ := json.MarshalIndent(body, "", "  ")
 	return string(data)
+}
+
+// daemonGRPCEndpoint returns the address the installed daemon should dial.
+// Preference order:
+//  1. NEKODE_GRPC_ADVERTISE_ADDR / cfg.GRPCAdvertiseAddr if set.
+//  2. Host from BaseURL or the incoming request, combined with the port of
+//     cfg.GRPCAddr. This keeps a single public domain working for both HTTP
+//     and gRPC when the operator terminates TLS on one host.
+//  3. cfg.GRPCAddr as-is (fallback for dev where everything is localhost).
+func (s *Server) daemonGRPCEndpoint(r *http.Request) string {
+	if advertise := strings.TrimSpace(s.cfg.GRPCAdvertiseAddr); advertise != "" {
+		return advertise
+	}
+	grpcPort := grpcPortFromAddr(s.cfg.GRPCAddr)
+	if host := externalHost(r, s.cfg.BaseURL); host != "" && grpcPort != "" {
+		return net.JoinHostPort(host, grpcPort)
+	}
+	return s.cfg.GRPCAddr
+}
+
+func grpcPortFromAddr(addr string) string {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return ""
+	}
+	if _, port, err := net.SplitHostPort(addr); err == nil {
+		return port
+	}
+	return ""
+}
+
+func externalHost(r *http.Request, baseURL string) string {
+	base := strings.TrimSpace(baseURL)
+	if base != "" && base != config.DefaultBaseURL {
+		if u, err := url.Parse(base); err == nil && u.Hostname() != "" {
+			return u.Hostname()
+		}
+	}
+	if r == nil {
+		return ""
+	}
+	host := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
+	if host == "" {
+		host = strings.TrimSpace(r.Host)
+	}
+	if i := strings.IndexByte(host, ','); i >= 0 {
+		host = strings.TrimSpace(host[:i])
+	}
+	if host == "" {
+		return ""
+	}
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		return h
+	}
+	return host
 }
 
 func daemonDownloadBaseURL() string {

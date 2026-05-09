@@ -311,7 +311,7 @@ func (s *Server) handleCreateDaemonEnrollment(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "create daemon enrollment failed")
 		return
 	}
-	writeJSON(w, http.StatusCreated, s.daemonEnrollmentResponse(enrollment, token, installCode))
+	writeJSON(w, http.StatusCreated, s.daemonEnrollmentResponse(r, enrollment, token, installCode))
 }
 
 func (s *Server) handleGetDaemonEnrollment(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +328,7 @@ func (s *Server) handleGetDaemonEnrollment(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "get daemon enrollment failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(enrollment, "", ""))
+	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(r, enrollment, "", ""))
 }
 
 func (s *Server) handleRevokeDaemonEnrollment(w http.ResponseWriter, r *http.Request) {
@@ -345,7 +345,7 @@ func (s *Server) handleRevokeDaemonEnrollment(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusInternalServerError, "revoke daemon enrollment failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(enrollment, "", ""))
+	writeJSON(w, http.StatusOK, s.daemonEnrollmentResponse(r, enrollment, "", ""))
 }
 
 func (s *Server) handleDaemonEnrollmentInstallShell(w http.ResponseWriter, r *http.Request) {
@@ -427,10 +427,10 @@ func (s *Server) handleDaemonEnrollmentInstallScript(w http.ResponseWriter, r *h
 	switch scriptKind {
 	case "ps1":
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte(s.renderDaemonInstallPowerShell(enrollment, token)))
+		_, _ = w.Write([]byte(s.renderDaemonInstallPowerShell(r, enrollment, token)))
 	default:
 		w.Header().Set("Content-Type", "text/x-shellscript; charset=utf-8")
-		_, _ = w.Write([]byte(s.renderDaemonInstallShell(enrollment, token)))
+		_, _ = w.Write([]byte(s.renderDaemonInstallShell(r, enrollment, token)))
 	}
 }
 

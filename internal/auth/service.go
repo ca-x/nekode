@@ -67,6 +67,9 @@ func (s *Service) Initialized(ctx context.Context) (bool, error) {
 func (s *Service) Login(ctx context.Context, username, password string) (SessionToken, error) {
 	user, err := s.store.GetUserByUsername(ctx, strings.TrimSpace(username))
 	if err != nil {
+		// Always run VerifyPassword against a dummy hash so the response time
+		// does not reveal whether the username exists.
+		_ = VerifyPassword(dummyPasswordHash, password)
 		return SessionToken{}, ErrInvalidCredential
 	}
 	if !VerifyPassword(user.PasswordHash, password) {

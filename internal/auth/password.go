@@ -16,6 +16,12 @@ const (
 	passwordKeyLength  = 32
 )
 
+// dummyPasswordHash is a valid pbkdf2-sha256 encoded hash used for constant-time
+// comparison against non-existent users to defeat username enumeration via
+// login timing. The salt and key are deterministic but the password it encodes
+// is unknown to callers, so VerifyPassword always returns false.
+const dummyPasswordHash = "pbkdf2-sha256$210000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 func HashPassword(password string) (string, error) {
 	var salt [16]byte
 	if _, err := rand.Read(salt[:]); err != nil {

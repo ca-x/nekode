@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/storage"
 )
 
@@ -199,7 +201,7 @@ func (s *daemonEnrollmentStore) consumeInstallCode(id, code string) (daemonEnrol
 	if enrollment.InstallCodeExpiry > 0 && enrollment.InstallCodeExpiry <= now {
 		return daemonEnrollment{}, "", storage.ErrNotFound
 	}
-	if enrollment.InstallCodeUsed > 0 || enrollment.InstallCodeHash == "" {
+	if enrollment.InstallCodeHash == "" {
 		return daemonEnrollment{}, "", storage.ErrNotFound
 	}
 	if subtle.ConstantTimeCompare([]byte(enrollment.InstallCodeHash), []byte(hashDaemonEnrollmentToken(code))) != 1 {
@@ -211,7 +213,9 @@ func (s *daemonEnrollmentStore) consumeInstallCode(id, code string) (daemonEnrol
 	}
 	enrollment.TokenHash = hashDaemonEnrollmentToken(token)
 	enrollment.TokenPrefix = tokenPrefix(token)
-	enrollment.InstallCodeUsed = now
+	// The install code stays valid until its TTL expires or the daemon
+	// successfully registers (markConnected burns the code). This lets the
+	// user retry the install script on flaky networks without re-enrolling.
 	if err := s.save(enrollment); err != nil {
 		return daemonEnrollment{}, "", err
 	}
@@ -263,6 +267,12 @@ func (s *daemonEnrollmentStore) markConnected(id string, info *daemonv1.Computer
 			enrollment.Hostname = strings.TrimSpace(info.GetHostname())
 		}
 	}
+	// First successful connection burns the install code: further retries of
+	// the install script will 404 so another host cannot steal the enrollment.
+	if enrollment.InstallCodeUsed == 0 {
+		enrollment.InstallCodeUsed = now
+		enrollment.InstallCodeHash = ""
+	}
 	return s.save(enrollment)
 }
 
@@ -293,7 +303,7 @@ func (s *daemonEnrollmentStore) path(id string) (string, error) {
 	return filepath.Join(s.dir, id+".json"), nil
 }
 
-func (s *Server) daemonEnrollmentResponse(enrollment daemonEnrollment, token, installCode string) daemonEnrollmentResponse {
+func (s *Server) daemonEnrollmentResponse(r *http.Request, enrollment daemonEnrollment, token, installCode string) daemonEnrollmentResponse {
 	statusURL := "/api/daemon/enrollments/" + url.PathEscape(enrollment.ID)
 	resp := daemonEnrollmentResponse{
 		ID:                enrollment.ID,
@@ -312,14 +322,14 @@ func (s *Server) daemonEnrollmentResponse(enrollment daemonEnrollment, token, in
 		Status:            enrollment.Status,
 	}
 	if installCode != "" {
-		resp.InstallScriptURL = s.absoluteURL(s.daemonInstallScriptURL(enrollment, installCode, "linux"))
-		resp.InstallCommand = s.daemonInstallCommand(enrollment, installCode)
+		resp.InstallScriptURL = s.absoluteURL(r, s.daemonInstallScriptURL(enrollment, installCode, "linux"))
+		resp.InstallCommand = s.daemonInstallCommand(r, enrollment, installCode)
 	}
 	return resp
 }
 
-func (s *Server) daemonInstallCommand(enrollment daemonEnrollment, installCode string) string {
-	return `sudo bash -c "$(curl -fsSL ` + shellQuote(s.absoluteURL(s.daemonInstallScriptURL(enrollment, installCode, "linux"))) + `)"`
+func (s *Server) daemonInstallCommand(r *http.Request, enrollment daemonEnrollment, installCode string) string {
+	return `sudo bash -c "$(curl -fsSL ` + shellQuote(s.absoluteURL(r, s.daemonInstallScriptURL(enrollment, installCode, "linux"))) + `)"`
 }
 
 func (s *Server) daemonInstallScriptURL(enrollment daemonEnrollment, installCode, platform string) string {
@@ -383,19 +393,59 @@ func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }
 
-func (s *Server) absoluteURL(pathValue string) string {
+func (s *Server) absoluteURL(r *http.Request, pathValue string) string {
 	pathValue = strings.TrimSpace(pathValue)
 	if strings.HasPrefix(pathValue, "http://") || strings.HasPrefix(pathValue, "https://") {
 		return pathValue
 	}
-	base := strings.TrimRight(strings.TrimSpace(s.cfg.BaseURL), "/")
-	if base == "" {
-		base = "http://localhost:18790"
-	}
 	if !strings.HasPrefix(pathValue, "/") {
 		pathValue = "/" + pathValue
 	}
+	base := strings.TrimRight(strings.TrimSpace(s.cfg.BaseURL), "/")
+	if base == "" || base == config.DefaultBaseURL {
+		if derived := deriveExternalBase(r); derived != "" {
+			return derived + pathValue
+		}
+	}
+	if base == "" {
+		base = config.DefaultBaseURL
+	}
 	return base + pathValue
+}
+
+// deriveExternalBase reconstructs the scheme://host the client used to reach
+// this server. When the request came through a reverse proxy, standard
+// forwarding headers (X-Forwarded-Proto, X-Forwarded-Host) or the RFC 7239
+// Forwarded header take precedence so generated links match the public URL.
+func deriveExternalBase(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	host := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
+	if host == "" {
+		host = strings.TrimSpace(r.Host)
+	}
+	if host == "" {
+		return ""
+	}
+	scheme := strings.TrimSpace(strings.ToLower(r.Header.Get("X-Forwarded-Proto")))
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	if i := strings.IndexByte(scheme, ','); i >= 0 {
+		scheme = strings.TrimSpace(scheme[:i])
+	}
+	if i := strings.IndexByte(host, ','); i >= 0 {
+		host = strings.TrimSpace(host[:i])
+	}
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
+	return scheme + "://" + host
 }
 
 var errDaemonEnrollmentNotReady = fmt.Errorf("daemon enrollment store is not configured")
