@@ -384,6 +384,7 @@ func (s *Server) SendMessage(ctx context.Context, req *daemonv1.SendMessageReque
 		ThreadID:          req.GetReplyToMessageId(),
 		Role:              role,
 		Content:           req.GetContent(),
+		Kind:              messageKindToStorage(req.GetKind()),
 		ReplyToMessageID:  req.GetReplyToMessageId(),
 		SenderUserID:      sender.GetUserId(),
 		SenderAgentID:     sender.GetAgentId(),
@@ -3144,6 +3145,26 @@ func actorKindToStorage(kind daemonv1.ActorKind) string {
 		return "endpoint"
 	case daemonv1.ActorKind_ACTOR_KIND_SYSTEM:
 		return "system"
+	default:
+		return ""
+	}
+}
+
+// messageKindToStorage mirrors the REST-side string vocabulary used by
+// the frontend (kind chip renders: decision / blocker / status / note).
+// Keeping the storage layer on free-form strings rather than a FK means
+// gRPC and REST agree by convention, not by foreign key — so this is
+// the one place new kinds need to be registered.
+func messageKindToStorage(kind daemonv1.MessageKind) string {
+	switch kind {
+	case daemonv1.MessageKind_MESSAGE_KIND_DECISION:
+		return "decision"
+	case daemonv1.MessageKind_MESSAGE_KIND_BLOCKER:
+		return "blocker"
+	case daemonv1.MessageKind_MESSAGE_KIND_STATUS:
+		return "status"
+	case daemonv1.MessageKind_MESSAGE_KIND_NOTE:
+		return "note"
 	default:
 		return ""
 	}

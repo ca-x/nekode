@@ -163,16 +163,17 @@ func (s *Store) GetAgentRun(ctx context.Context, runID string, includeEvents boo
 }
 
 // SearchAgentRuns performs a LIKE-based fallback over summary + payload
-// until FTS5 virtual tables are wired. The query escapes % and _ so user
-// input can't produce unexpected matches.
+// until FTS5 virtual tables are wired. ContainsFold itself wraps the
+// term in % wildcards (and SQLite treats its LIKE as case-insensitive
+// for ASCII by default), so we just pass the raw query; wrapping it
+// ourselves would produce a literal `%term%` search.
 func (s *Store) SearchAgentRuns(ctx context.Context, opts AgentRunSearchOptions) ([]AgentRunSearchHit, error) {
 	query := s.client.AgentRunEvent.Query()
 	if opts.Query != "" {
-		escaped := strings.NewReplacer("%", `\%`, "_", `\_`).Replace(opts.Query)
-		pattern := "%" + escaped + "%"
+		term := opts.Query
 		query.Where(agentrunevent.Or(
-			agentrunevent.SummaryContainsFold(pattern),
-			agentrunevent.PayloadJSONContainsFold(pattern),
+			agentrunevent.SummaryContainsFold(term),
+			agentrunevent.PayloadJSONContainsFold(term),
 		))
 	}
 	query.Order(ent.Desc(agentrunevent.FieldAtUnixNano))
