@@ -229,18 +229,12 @@ func (s *Server) proxyOverTunnel(w http.ResponseWriter, r *http.Request, record 
 	// the 101; regular HTTP runs a concurrent request-body pump plus the
 	// standard response-writer path.
 	if isWebSocketUpgradeHTTP(r.Header) {
-		// For WS we send a REQUEST_END immediately — the daemon's raw-TCP
-		// WebSocket path doesn't expect request body frames before the
-		// upgrade; post-upgrade frames come from the hijacked conn
-		// handled inside pumpWebSocket.
-		if err := stream.Send(&daemonv1.ProxyFrame{
-			TunnelId:  record.ID,
-			RequestId: requestID,
-			Kind:      daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_END,
-		}); err != nil {
-			s.logger.Warn("preview proxy ws REQUEST_END send failed", "error", err, "tunnel_id", record.ID)
-			return
-		}
+		// Do NOT send REQUEST_END here. Once the browser→daemon pump
+		// inside pumpWebSocket starts draining the hijacked conn, it
+		// will emit REQUEST_BODY frames followed by a single REQUEST_END
+		// when the socket closes. If we terminated the request early the
+		// daemon would close its local pipe and drop every post-upgrade
+		// client frame (Vite HMR pings, browser→server messages, etc.).
 		if err := pumpWebSocket(ctx, w, responder, stream, record.ID, requestID); err != nil {
 			s.logger.Warn("preview proxy websocket pump failed", "error", err, "tunnel_id", record.ID)
 		}
@@ -484,8 +478,12 @@ func pumpWebSocket(ctx context.Context, w http.ResponseWriter, responder *tunnel
 		RequestId: requestID,
 		Kind:      daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_END,
 	})
-	// Drain the client→daemon goroutine; closing conn (via defer) will
-	// unblock its Read with an error.
+	// Force the hijacked conn shut BEFORE draining the client→daemon
+	// goroutine. Otherwise an idle browser Read pins this handler open
+	// forever: the daemon might have cleanly ended the response, but
+	// there's nothing else that will unblock bufrw.Read. The deferred
+	// conn.Close would never get a chance to run until after the drain.
+	_ = conn.Close()
 	<-clientToDaemon
 	return pumpErr
 }

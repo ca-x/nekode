@@ -2805,6 +2805,7 @@ func messageToProto(msg storage.Message) *daemonv1.CollaborationMessage {
 		Target:            msg.Target,
 		ThreadId:          msg.ThreadID,
 		Role:              msg.Role,
+		Kind:              messageKindFromStorage(msg.Kind),
 		Content:           msg.Content,
 		ReplyToMessageId:  msg.ReplyToMessageID,
 		CreatedTimeUnix:   msg.CreatedUnix,
@@ -3167,6 +3168,23 @@ func messageKindToStorage(kind daemonv1.MessageKind) string {
 		return "note"
 	default:
 		return ""
+	}
+}
+
+// messageKindFromStorage is the inverse, used when projecting storage
+// rows back out through gRPC responses and mutation event payloads.
+func messageKindFromStorage(kind string) daemonv1.MessageKind {
+	switch kind {
+	case "decision":
+		return daemonv1.MessageKind_MESSAGE_KIND_DECISION
+	case "blocker":
+		return daemonv1.MessageKind_MESSAGE_KIND_BLOCKER
+	case "status":
+		return daemonv1.MessageKind_MESSAGE_KIND_STATUS
+	case "note":
+		return daemonv1.MessageKind_MESSAGE_KIND_NOTE
+	default:
+		return daemonv1.MessageKind_MESSAGE_KIND_UNSPECIFIED
 	}
 }
 

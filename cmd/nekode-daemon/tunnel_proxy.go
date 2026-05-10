@@ -44,6 +44,30 @@ const tunnelProxyBodyChunk = 32 * 1024
 // sending. The daemon reads it, strips it, and dials 127.0.0.1:<port>.
 const tunnelTargetPortHeader = "X-Nekode-Tunnel-Port"
 
+// proxySender is the Send-only view of a gRPC client stream. The
+// per-request workers (handleUpstream / handleWebSocket / pumpReader /
+// sendEndErr) only ever write, never read; taking the narrower type
+// means we can hand them a mutex-guarded wrapper without exposing the
+// full stream surface and risking a racy Recv from the worker side.
+type proxySender interface {
+	Send(*daemonv1.ProxyFrame) error
+}
+
+// lockedSender serializes writes on a single client stream. grpc-go
+// allows exactly one concurrent sender, so every handleUpstream /
+// handleWebSocket goroutine has to go through this before calling
+// stream.Send.
+type lockedSender struct {
+	mu     sync.Mutex
+	stream daemonv1.DaemonControlService_ProxyExchangeClient
+}
+
+func (ls *lockedSender) Send(frame *daemonv1.ProxyFrame) error {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	return ls.stream.Send(frame)
+}
+
 type tunnelProxyClient struct {
 	cfg        daemonConfig
 	client     daemonv1.DaemonControlServiceClient
@@ -103,7 +127,14 @@ func (c *tunnelProxyClient) serveOne(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("open proxy exchange: %w", err)
 	}
-	if err := stream.Send(&daemonv1.ProxyFrame{
+	// grpc-go permits exactly one concurrent sender per client stream.
+	// serveOne spawns a handleUpstream goroutine per inbound REQUEST_START,
+	// each of which independently writes RESPONSE_* frames, so we wrap
+	// Send in a mutex-guarded helper and pass only that to the worker
+	// goroutines. Recv stays on the raw stream — it has exactly one
+	// reader (this function) so no lock is needed there.
+	sender := &lockedSender{stream: stream}
+	if err := sender.Send(&daemonv1.ProxyFrame{
 		TunnelId:  "__attach__",
 		RequestId: c.cfg.ComputerID,
 	}); err != nil {
@@ -124,7 +155,7 @@ func (c *tunnelProxyClient) serveOne(ctx context.Context) error {
 		switch frame.GetKind() {
 		case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_START:
 			body := bodies.open(frame.GetRequestId())
-			go c.handleUpstream(streamCtx, stream, frame, body)
+			go c.handleUpstream(streamCtx, sender, frame, body)
 		case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_BODY:
 			bodies.write(frame.GetRequestId(), frame.GetBodyChunk())
 		case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_END:
@@ -140,7 +171,7 @@ func (c *tunnelProxyClient) serveOne(ctx context.Context) error {
 // and streams the response back as RESPONSE_* frames. WebSocket upgrade
 // requests take a separate path that keeps a raw TCP connection open and
 // relays frames in both directions.
-func (c *tunnelProxyClient) handleUpstream(streamCtx context.Context, stream daemonv1.DaemonControlService_ProxyExchangeClient, start *daemonv1.ProxyFrame, body io.ReadCloser) {
+func (c *tunnelProxyClient) handleUpstream(streamCtx context.Context, stream proxySender, start *daemonv1.ProxyFrame, body io.ReadCloser) {
 	requestID := start.GetRequestId()
 	tunnelID := start.GetTunnelId()
 	defer body.Close()
@@ -222,7 +253,7 @@ func (c *tunnelProxyClient) handleUpstream(streamCtx context.Context, stream dae
 	})
 }
 
-func (c *tunnelProxyClient) sendEndErr(stream daemonv1.DaemonControlService_ProxyExchangeClient, tunnelID, requestID, message string) {
+func (c *tunnelProxyClient) sendEndErr(stream proxySender, tunnelID, requestID, message string) {
 	_ = stream.Send(&daemonv1.ProxyFrame{
 		TunnelId:  tunnelID,
 		RequestId: requestID,
@@ -414,7 +445,7 @@ func isWebSocketUpgrade(headers []*daemonv1.ProxyHeader) bool {
 // handleWebSocket opens a raw TCP connection to localhost:<port>, writes
 // the upgrade request manually, parses the 101 response, then relays
 // binary frames in both directions until either side closes.
-func (c *tunnelProxyClient) handleWebSocket(ctx context.Context, stream daemonv1.DaemonControlService_ProxyExchangeClient, start *daemonv1.ProxyFrame, body io.ReadCloser, port uint32) {
+func (c *tunnelProxyClient) handleWebSocket(ctx context.Context, stream proxySender, start *daemonv1.ProxyFrame, body io.ReadCloser, port uint32) {
 	tunnelID := start.GetTunnelId()
 	requestID := start.GetRequestId()
 
@@ -537,7 +568,7 @@ func (c *tunnelProxyClient) handleWebSocket(ctx context.Context, stream daemonv1
 // pumpReader drains an io.Reader into RESPONSE_BODY frames. Used for the
 // non-upgrade branch of handleWebSocket where the upstream refused the
 // handshake and returned a normal error response instead.
-func (c *tunnelProxyClient) pumpReader(stream daemonv1.DaemonControlService_ProxyExchangeClient, tunnelID, requestID string, r io.Reader) {
+func (c *tunnelProxyClient) pumpReader(stream proxySender, tunnelID, requestID string, r io.Reader) {
 	buf := make([]byte, tunnelProxyBodyChunk)
 	for {
 		n, err := r.Read(buf)
