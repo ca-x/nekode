@@ -32,14 +32,16 @@ const (
 
 // --- handlers -----------------------------------------------------------
 
-// handleCreateTunnel opens a new tunnel record. Humans (any authenticated
-// user) get their tunnel activated immediately; agents have to request
-// approval from a channel admin before the URL becomes usable.
+// handleCreateTunnel opens a new tunnel record. Only admins can create
+// tunnels through the REST path — they're the only users with a durable
+// trust relationship with every computer in the workspace, so gating
+// this endpoint on the admin role is the simplest correct approximation
+// of "the person allowed to publish a port on this machine" until the
+// Computer entity grows an explicit owner field.
 //
-// Agent-initiated calls would arrive through the runtime tool which
-// authenticates as the agent identity — we detect that via the principal
-// role. For now all REST callers are treated as human and land in the
-// active state directly; the agent path lives in runtime-adapter.
+// Agent-initiated tunnels arrive over gRPC (daemonrpc.CreateTunnel),
+// always land in pending_approval, and require an admin to release them
+// — so the agent path does not bypass this check.
 func (s *Server) handleCreateTunnel(w http.ResponseWriter, r *http.Request) {
 	var req createTunnelRequest
 	if !decodeJSON(w, r, &req) {
@@ -48,6 +50,11 @@ func (s *Server) handleCreateTunnel(w http.ResponseWriter, r *http.Request) {
 	computerID := strings.TrimSpace(req.ComputerID)
 	if computerID == "" || req.LocalPort == 0 {
 		writeError(w, http.StatusBadRequest, "computerId and localPort are required")
+		return
+	}
+	principal := principalFromContext(r.Context())
+	if !strings.EqualFold(principal.User.Role, "admin") {
+		writeError(w, http.StatusForbidden, "admin role required to create tunnels")
 		return
 	}
 	policy := strings.TrimSpace(req.AccessPolicy)
@@ -61,8 +68,7 @@ func (s *Server) handleCreateTunnel(w http.ResponseWriter, r *http.Request) {
 	if ttl > tunnelMaxTTLSeconds {
 		ttl = tunnelMaxTTLSeconds
 	}
-	principal := principalFromContext(r.Context())
-	// Human creator → active on creation per locked policy in
+	// Admin creator → active on creation per locked policy in
 	// docs/preview-tunnels-design.md §Locked call boundaries.
 	state := storage.TunnelStateActive
 	now := time.Now().Unix()
@@ -92,11 +98,15 @@ func (s *Server) handleCreateTunnel(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, record)
 }
 
-// handleListTunnels returns tunnels scoped by computer id (or global when
-// admin). Non-admins see only their own tunnels plus tunnels they
-// approved; ordering is newest-first.
+// handleListTunnels returns tunnels scoped by computer id. Admins see
+// every tunnel (optionally filtered); non-admins see only tunnels they
+// created, regardless of the query parameters — this prevents the
+// endpoint from leaking labels, ports, and creator IDs to every
+// authenticated workspace member.
 func (s *Server) handleListTunnels(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+	principal := principalFromContext(r.Context())
+	isAdmin := strings.EqualFold(principal.User.Role, "admin")
 	opts := storage.TunnelListOptions{
 		ComputerID:  strings.TrimSpace(q.Get("computerId")),
 		StateFilter: strings.TrimSpace(q.Get("state")),
@@ -109,6 +119,9 @@ func (s *Server) handleListTunnels(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]storage.TunnelRecord, 0, len(rows))
 	for _, row := range rows {
+		if !isAdmin && row.CreatorID != principal.User.ID {
+			continue
+		}
 		row.Token = "" // never return tokens in a list response
 		row = populatePublicURL(r, row)
 		out = append(out, row)

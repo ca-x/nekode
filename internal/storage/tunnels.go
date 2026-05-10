@@ -198,19 +198,22 @@ func (s *Store) UpdateTunnelState(
 	if err != nil {
 		return TunnelRecord{}, err
 	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-	}()
+	// Tx lifecycle: we commit at the happy-path bottom, and roll back on
+	// every early return. Historical versions of this function relied on
+	// a named-return / defer pattern that silently skipped rollback for
+	// ErrInvalid paths — that pinned SQLite connections on repeat calls.
+	// Explicit rollback at every error branch is uglier but correct.
 	row, err := tx.Tunnel.Get(ctx, id)
 	if ent.IsNotFound(err) {
+		_ = tx.Rollback()
 		return TunnelRecord{}, ErrNotFound
 	}
 	if err != nil {
+		_ = tx.Rollback()
 		return TunnelRecord{}, err
 	}
 	if !validTunnelTransition(row.State, toState) {
+		_ = tx.Rollback()
 		return TunnelRecord{}, ErrInvalid
 	}
 	now := unixNow()
@@ -223,6 +226,7 @@ func (s *Store) UpdateTunnelState(
 	}
 	updated, err := update.Save(ctx)
 	if err != nil {
+		_ = tx.Rollback()
 		return TunnelRecord{}, err
 	}
 	if commitErr := tx.Commit(); commitErr != nil {
