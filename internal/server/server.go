@@ -32,6 +32,7 @@ import (
 	"github.com/ca-x/nekode/internal/impolicy"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
+	"github.com/ca-x/nekode/internal/tunnelregistry"
 	"github.com/ca-x/nekode/internal/version"
 	"github.com/ca-x/nekode/internal/webdist"
 	"google.golang.org/grpc"
@@ -53,6 +54,8 @@ type Server struct {
 	daemon            *daemonrpc.Server
 	daemonEnrollments *daemonEnrollmentStore
 	imBindings        *imbinding.Store
+	tunnels           *tunnelregistry.Registry
+	tunnelRate        *tunnelRateLimiter
 }
 
 type Principal struct {
@@ -75,6 +78,8 @@ func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, 
 		store:      store,
 		cache:      cacheStore,
 		imBindings: imbinding.NewStore(5 * time.Minute),
+		tunnels:    tunnelregistry.New(),
+		tunnelRate: newTunnelRateLimiter(),
 	}
 	if store != nil {
 		s.auth = auth.New(store)
@@ -83,7 +88,7 @@ func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, 
 			logger.Warn("failed to load server id; using ephemeral id", "error", err)
 		}
 		s.daemonEnrollments = newDaemonEnrollmentStore(filepath.Join(cfg.DataDir, daemonEnrollmentDir))
-		s.daemon = daemonrpc.New(store, serverID)
+		s.daemon = daemonrpc.New(store, serverID, daemonrpc.WithTunnelRegistry(s.tunnels))
 	}
 	s.routes()
 	return s
@@ -224,6 +229,18 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/agent-runs", s.requireAuth(s.handleListAgentRuns))
 	s.mux.HandleFunc("GET /api/agent-runs/search", s.requireAuth(s.handleSearchAgentRuns))
 	s.mux.HandleFunc("GET /api/agent-runs/{id}", s.requireAuth(s.handleGetAgentRun))
+	// Preview tunnels — short-lived reverse-proxy bindings; /preview/{token}/ is handled separately.
+	s.mux.HandleFunc("POST /api/tunnels", s.requireAuth(s.handleCreateTunnel))
+	s.mux.HandleFunc("GET /api/tunnels", s.requireAuth(s.handleListTunnels))
+	s.mux.HandleFunc("POST /api/tunnels/{id}/approve", s.requireAuth(s.handleApproveTunnel))
+	s.mux.HandleFunc("POST /api/tunnels/{id}/reject", s.requireAuth(s.handleRejectTunnel))
+	s.mux.HandleFunc("POST /api/tunnels/{id}/close", s.requireAuth(s.handleCloseTunnel))
+	// Method-less /preview/{token}/ conflicts with the GET / SPA fallback
+	// under Go's mux rules, so register each HTTP verb explicitly.
+	for _, method := range []string{"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"} {
+		s.mux.HandleFunc(method+" /preview/{token}/", s.handlePreviewProxy)
+		s.mux.HandleFunc(method+" /preview/{token}", s.handlePreviewProxy)
+	}
 	s.mux.HandleFunc("GET /api/daemon/info", s.requireAuth(s.handleDaemonInfo))
 	s.mux.HandleFunc("GET /api/daemon/inventory", s.requireAuth(s.handleDaemonInventory))
 	s.mux.HandleFunc("GET /api/daemon/agent-statuses", s.requireAuth(s.handleDaemonAgentStatuses))

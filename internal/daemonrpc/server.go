@@ -17,6 +17,7 @@ import (
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/runtimecatalog"
 	"github.com/ca-x/nekode/internal/storage"
+	"github.com/ca-x/nekode/internal/tunnelregistry"
 	"github.com/ca-x/nekode/internal/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,6 +40,7 @@ type Server struct {
 	store      *storage.Store
 	serverID   string
 	serverName string
+	tunnels    *tunnelregistry.Registry
 
 	mu           sync.Mutex
 	computers    map[string]*computerState
@@ -52,6 +54,17 @@ type Server struct {
 	activities   []*daemonv1.ActivityRecord
 	eventSeq     int64
 	idempotency  map[string]proto.Message
+}
+
+// Option customizes Server construction. Keeping the constructor optionable
+// lets callers inject cross-cutting dependencies (tunnel registry, metrics,
+// etc.) without widening the required signature.
+type Option func(*Server)
+
+// WithTunnelRegistry wires the shared preview-tunnel registry so the
+// ProxyExchange handler can route inbound HTTP frames.
+func WithTunnelRegistry(reg *tunnelregistry.Registry) Option {
+	return func(s *Server) { s.tunnels = reg }
 }
 
 type computerState struct {
@@ -84,11 +97,11 @@ type CreateAgentInstanceResult struct {
 	RuntimeProfile *daemonv1.RuntimeProfile `json:"runtimeProfile"`
 }
 
-func New(store *storage.Store, serverID string) *Server {
+func New(store *storage.Store, serverID string, opts ...Option) *Server {
 	if strings.TrimSpace(serverID) == "" {
 		serverID = storage.NewID("srv")
 	}
-	return &Server{
+	s := &Server{
 		store:        store,
 		serverID:     serverID,
 		serverName:   "Nekode",
@@ -102,6 +115,10 @@ func New(store *storage.Store, serverID string) *Server {
 		serverEvents: make(map[string]*daemonv1.ServerEvent),
 		idempotency:  make(map[string]proto.Message),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func (s *Server) ServerID() string {
