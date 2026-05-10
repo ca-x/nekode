@@ -210,6 +210,11 @@ func (s *daemonSession) loop(ctx context.Context) error {
 		Runner:         commandRunner{},
 	})
 	go s.streamServerEvents(ctx, supervisor)
+	// Preview-tunnel proxy: long-lived bidi stream that lets the server
+	// reverse-proxy into locally-bound dev servers. Runs for the life of
+	// the daemon and reconnects on transient stream errors internally.
+	tunnelProxy := newTunnelProxyClient(s.cfg, s.client, s.withToken)
+	go tunnelProxy.run(ctx)
 	runTicker := time.NewTicker(s.cfg.RunPollInterval)
 	defer runTicker.Stop()
 	pollSupervisor(ctx, supervisor)
