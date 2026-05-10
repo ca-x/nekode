@@ -33,6 +33,41 @@ type Stream interface {
 	Send(frame *daemonv1.ProxyFrame) error
 }
 
+// lockedStream serializes Send calls on a single underlying gRPC stream.
+// grpc-go allows exactly one concurrent sender per stream, so the
+// registry wraps every attached stream in this guard before handing it
+// out to HTTP responders (which run one per in-flight request and each
+// call Send independently for REQUEST_START / REQUEST_BODY / REQUEST_END).
+type lockedStream struct {
+	mu     sync.Mutex
+	inner  Stream
+	closed bool
+}
+
+func newLockedStream(inner Stream) *lockedStream {
+	return &lockedStream{inner: inner}
+}
+
+// Send serializes writes. Returns an error matching io.ErrClosedPipe
+// semantics when the stream has already been detached, so handlers can
+// distinguish "stream gone" from "transient send failure".
+func (ls *lockedStream) Send(frame *daemonv1.ProxyFrame) error {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	if ls.closed {
+		return ErrStreamClosed
+	}
+	return ls.inner.Send(frame)
+}
+
+// markClosed flips the sentinel so further Send calls short-circuit
+// instead of touching a stream the handler has already returned from.
+func (ls *lockedStream) markClosed() {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	ls.closed = true
+}
+
 // Responder is the HTTP side of one in-flight request. The reverse-proxy
 // handler registers a responder before sending REQUEST_START; the gRPC
 // handler pushes RESPONSE_* frames into it; the handler Waits on it for
@@ -89,41 +124,72 @@ func (r *Responder) Close() {
 // Registry is the hub. Safe for concurrent use.
 type Registry struct {
 	mu         sync.Mutex
-	streams    map[string]Stream               // computerID → stream
-	responders map[string]map[string]*Responder // computerID → requestID → responder
+	streams    map[string]*lockedStream             // computerID → serialized stream
+	responders map[string]map[string]*streamOwnedResponder
+}
+
+// streamOwnedResponder ties a Responder to the specific stream it was
+// registered against. On reconnect-race we can then close only the
+// responders that actually belong to the stale stream, leaving any
+// responders bound to the fresh stream alive.
+type streamOwnedResponder struct {
+	stream    *lockedStream
+	responder *Responder
 }
 
 // New returns an empty registry.
 func New() *Registry {
 	return &Registry{
-		streams:    make(map[string]Stream),
-		responders: make(map[string]map[string]*Responder),
+		streams:    make(map[string]*lockedStream),
+		responders: make(map[string]map[string]*streamOwnedResponder),
 	}
 }
 
 // Attach binds a stream to a computer. If a prior stream exists for the
-// same computer, the caller is responsible for closing that stream first
-// — Attach overwrites without signalling.
-func (rg *Registry) Attach(computerID string, stream Stream) {
+// same computer, it is marked closed — subsequent sends on the old
+// stream's handle will return ErrStreamClosed instead of silently racing.
+func (rg *Registry) Attach(computerID string, stream Stream) Stream {
+	wrapped := newLockedStream(stream)
 	rg.mu.Lock()
-	defer rg.mu.Unlock()
-	rg.streams[computerID] = stream
+	if existing, ok := rg.streams[computerID]; ok {
+		existing.markClosed()
+	}
+	rg.streams[computerID] = wrapped
+	rg.mu.Unlock()
+	return wrapped
 }
 
 // Detach removes the stream for a computer and closes every pending
-// responder bound to it, unblocking their Next() callers with a nil
-// frame. Call when the gRPC handler returns.
+// responder that was registered against this specific stream handle.
+// Responders belonging to a newer stream (if the daemon reconnected
+// faster than the old handler's defer) are left untouched so their
+// in-flight requests can still complete.
 func (rg *Registry) Detach(computerID string, stream Stream) {
+	wrapped, ok := stream.(*lockedStream)
+	if !ok {
+		// Defensive: callers must pass the handle Attach returned.
+		return
+	}
+	wrapped.markClosed()
 	rg.mu.Lock()
-	// Only clear if the current stream matches — prevents a fresh reconnect
-	// from being torn down by the previous handler's defer.
-	if rg.streams[computerID] == stream {
+	if rg.streams[computerID] == wrapped {
 		delete(rg.streams, computerID)
 	}
-	responders := rg.responders[computerID]
-	delete(rg.responders, computerID)
+	bucket := rg.responders[computerID]
+	var stale []*Responder
+	if bucket != nil {
+		for id, owned := range bucket {
+			if owned.stream == wrapped {
+				stale = append(stale, owned.responder)
+				delete(bucket, id)
+			}
+		}
+		if len(bucket) == 0 {
+			delete(rg.responders, computerID)
+		}
+	}
 	rg.mu.Unlock()
-	for _, responder := range responders {
+	for _, responder := range stale {
 		responder.Close()
 	}
 }
@@ -140,11 +206,11 @@ func (rg *Registry) Register(computerID string, responder *Responder) (string, S
 	}
 	bucket, ok := rg.responders[computerID]
 	if !ok {
-		bucket = make(map[string]*Responder)
+		bucket = make(map[string]*streamOwnedResponder)
 		rg.responders[computerID] = bucket
 	}
 	requestID := newRequestID()
-	bucket[requestID] = responder
+	bucket[requestID] = &streamOwnedResponder{stream: stream, responder: responder}
 	return requestID, stream, nil
 }
 
@@ -171,15 +237,15 @@ func (rg *Registry) Dispatch(computerID string, frame *daemonv1.ProxyFrame) erro
 	requestID := frame.GetRequestId()
 	rg.mu.Lock()
 	bucket := rg.responders[computerID]
-	var responder *Responder
+	var owned *streamOwnedResponder
 	if bucket != nil {
-		responder = bucket[requestID]
+		owned = bucket[requestID]
 	}
 	rg.mu.Unlock()
-	if responder == nil {
+	if owned == nil {
 		return ErrRequestGone
 	}
-	if !responder.Push(frame) {
+	if !owned.responder.Push(frame) {
 		return ErrRequestGone
 	}
 	return nil

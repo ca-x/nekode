@@ -152,8 +152,11 @@ func (s *Server) ProxyExchange(stream daemonv1.DaemonControlService_ProxyExchang
 	if computerID == "" {
 		return status.Error(codes.InvalidArgument, "attach frame missing computer id in request_id")
 	}
-	s.tunnels.Attach(computerID, stream)
-	defer s.tunnels.Detach(computerID, stream)
+	// Attach returns the wrapped, serialized stream handle; reuse it on
+	// Detach so only responders bound to THIS stream are torn down on
+	// disconnect.
+	wrapped := s.tunnels.Attach(computerID, stream)
+	defer s.tunnels.Detach(computerID, wrapped)
 	for {
 		frame, err := stream.Recv()
 		if errors.Is(err, io.EOF) {

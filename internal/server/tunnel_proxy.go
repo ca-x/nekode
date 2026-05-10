@@ -224,23 +224,37 @@ func (s *Server) proxyOverTunnel(w http.ResponseWriter, r *http.Request, record 
 		return
 	}
 
+	// Daemon → downstream response pipe. WebSocket upgrades need a
+	// hijacked conn so we can relay raw frames in BOTH directions after
+	// the 101; regular HTTP runs a concurrent request-body pump plus the
+	// standard response-writer path.
+	if isWebSocketUpgradeHTTP(r.Header) {
+		// For WS we send a REQUEST_END immediately — the daemon's raw-TCP
+		// WebSocket path doesn't expect request body frames before the
+		// upgrade; post-upgrade frames come from the hijacked conn
+		// handled inside pumpWebSocket.
+		if err := stream.Send(&daemonv1.ProxyFrame{
+			TunnelId:  record.ID,
+			RequestId: requestID,
+			Kind:      daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_END,
+		}); err != nil {
+			s.logger.Warn("preview proxy ws REQUEST_END send failed", "error", err, "tunnel_id", record.ID)
+			return
+		}
+		if err := pumpWebSocket(ctx, w, responder, stream, record.ID, requestID); err != nil {
+			s.logger.Warn("preview proxy websocket pump failed", "error", err, "tunnel_id", record.ID)
+		}
+		return
+	}
+
 	// Upstream → daemon body pipe. Runs concurrently so the daemon can
 	// start responding before the body finishes streaming (important for
 	// long uploads and chunked requests).
 	sendErrCh := make(chan error, 1)
 	go func() { sendErrCh <- streamRequestBody(ctx, stream, record.ID, requestID, r.Body) }()
 
-	// Daemon → downstream response pipe. WebSocket upgrades need a
-	// hijacked conn so we can relay raw frames after the 101; regular
-	// HTTP uses the standard ResponseWriter path.
-	if isWebSocketUpgradeHTTP(r.Header) {
-		if err := pumpWebSocket(ctx, w, responder); err != nil {
-			s.logger.Warn("preview proxy websocket pump failed", "error", err, "tunnel_id", record.ID)
-		}
-	} else {
-		if err := pumpResponse(ctx, w, responder); err != nil {
-			s.logger.Warn("preview proxy response pump failed", "error", err, "tunnel_id", record.ID)
-		}
+	if err := pumpResponse(ctx, w, responder); err != nil {
+		s.logger.Warn("preview proxy response pump failed", "error", err, "tunnel_id", record.ID)
 	}
 	if err := <-sendErrCh; err != nil && !errors.Is(err, io.EOF) {
 		s.logger.Warn("preview proxy request body send failed", "error", err, "tunnel_id", record.ID)
@@ -350,8 +364,9 @@ func pumpResponse(ctx context.Context, w http.ResponseWriter, responder *tunnelr
 
 // pumpWebSocket handles the 101-Switching-Protocols response path. It
 // hijacks the underlying TCP conn, writes the upstream-supplied status
-// line + headers, then streams RESPONSE_BODY frames as raw bytes.
-func pumpWebSocket(ctx context.Context, w http.ResponseWriter, responder *tunnelregistry.Responder) error {
+// line + headers, then fans out two pumps: daemon RESPONSE_BODY frames
+// → browser conn, and browser conn bytes → daemon REQUEST_BODY frames.
+func pumpWebSocket(ctx context.Context, w http.ResponseWriter, responder *tunnelregistry.Responder, stream tunnelregistry.Stream, tunnelID, requestID string) error {
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "websocket upgrade not supported on this server", http.StatusInternalServerError)
@@ -407,26 +422,72 @@ func pumpWebSocket(ctx context.Context, w http.ResponseWriter, responder *tunnel
 	if err := bufrw.Flush(); err != nil {
 		return err
 	}
-	// Relay RESPONSE_BODY frames to the browser as raw bytes until
+
+	// Browser → daemon pump: read raw bytes from the hijacked conn and
+	// emit REQUEST_BODY frames. Runs concurrently with the server→browser
+	// pump below so the socket is truly bidirectional.
+	clientToDaemon := make(chan error, 1)
+	go func() {
+		buf := make([]byte, previewReadBufferBytes)
+		for {
+			n, readErr := bufrw.Read(buf)
+			if n > 0 {
+				chunk := make([]byte, n)
+				copy(chunk, buf[:n])
+				if sendErr := stream.Send(&daemonv1.ProxyFrame{
+					TunnelId:  tunnelID,
+					RequestId: requestID,
+					Kind:      daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_BODY,
+					BodyChunk: chunk,
+				}); sendErr != nil {
+					clientToDaemon <- sendErr
+					return
+				}
+			}
+			if errors.Is(readErr, io.EOF) {
+				clientToDaemon <- nil
+				return
+			}
+			if readErr != nil {
+				clientToDaemon <- readErr
+				return
+			}
+		}
+	}()
+
+	// Daemon → browser pump: RESPONSE_BODY frames to raw bytes until
 	// RESPONSE_END or the daemon disconnects.
-	for {
-		frame, err := responder.Next(ctx)
-		if err != nil {
-			return err
-		}
-		if frame == nil {
-			return nil
-		}
-		switch frame.GetKind() {
-		case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_RESPONSE_BODY:
-			if _, err := conn.Write(frame.GetBodyChunk()); err != nil {
+	pumpErr := func() error {
+		for {
+			frame, err := responder.Next(ctx)
+			if err != nil {
 				return err
 			}
-		case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_RESPONSE_END,
-			daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_CANCEL:
-			return nil
+			if frame == nil {
+				return nil
+			}
+			switch frame.GetKind() {
+			case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_RESPONSE_BODY:
+				if _, err := conn.Write(frame.GetBodyChunk()); err != nil {
+					return err
+				}
+			case daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_RESPONSE_END,
+				daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_CANCEL:
+				return nil
+			}
 		}
-	}
+	}()
+	// Signal the daemon that the client side is done so its WS pump
+	// can tear down the upstream socket cleanly.
+	_ = stream.Send(&daemonv1.ProxyFrame{
+		TunnelId:  tunnelID,
+		RequestId: requestID,
+		Kind:      daemonv1.ProxyFrameKind_PROXY_FRAME_KIND_REQUEST_END,
+	})
+	// Drain the client→daemon goroutine; closing conn (via defer) will
+	// unblock its Read with an error.
+	<-clientToDaemon
+	return pumpErr
 }
 
 // drainAsBody consumes remaining BODY/END frames into the current
@@ -460,8 +521,15 @@ func drainAsBody(ctx context.Context, w http.ResponseWriter, responder *tunnelre
 func headersToProto(header http.Header, targetPort uint32) []*daemonv1.ProxyHeader {
 	out := make([]*daemonv1.ProxyHeader, 0, len(header)+1)
 	for name, values := range header {
-		if _, isHop := hopByHopHeaders[http.CanonicalHeaderKey(name)]; isHop {
-			continue
+		canonical := http.CanonicalHeaderKey(name)
+		if _, isHop := hopByHopHeaders[canonical]; isHop {
+			// Connection and Upgrade are technically hop-by-hop per
+			// RFC 7230, but the daemon needs to see them to detect
+			// WebSocket / h2c upgrades. Forward them; everything else
+			// hop-by-hop (Keep-Alive, TE, Proxy-*, etc.) is dropped.
+			if canonical != "Connection" && canonical != "Upgrade" {
+				continue
+			}
 		}
 		copied := make([]string, len(values))
 		copy(copied, values)
