@@ -1528,6 +1528,8 @@ function App() {
                   }}
                   onStartAll={undefined}
                   onDeleteComputer={undefined}
+                  currentUserId={user?.id ?? ""}
+                  userIsAdmin={(user?.role ?? "").toLowerCase() === "admin"}
                 />
               );
             }

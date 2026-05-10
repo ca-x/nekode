@@ -761,6 +761,80 @@
   color: var(--alert-warning-text);
 }
 
+/* Preview tunnels (P milestone). Reuses the decisions-card rhythm so the
+   two governance-heavy panels feel visually related. */
+.tunnels-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.tunnel-card {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-3);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.tunnel-state-pending_approval { border-color: var(--alert-warning-bg); }
+.tunnel-state-active { border-color: var(--primary-soft); }
+.tunnel-state-closed,
+.tunnel-state-rejected { opacity: 0.75; }
+.tunnel-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.tunnel-card-heading > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.tunnel-state-badge {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  background: var(--surface-strong);
+}
+.tunnel-state-badge.tunnel-state-active { background: var(--primary-soft); color: var(--primary-strong); }
+.tunnel-state-badge.tunnel-state-pending_approval { background: var(--alert-warning-bg); color: var(--alert-warning-text); }
+.tunnel-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.tunnel-meta dt { font-size: 0.75rem; color: var(--text-muted); }
+.tunnel-meta dd { margin: 0; font-weight: 500; }
+.tunnel-url-row { display: flex; align-items: center; gap: var(--space-2); }
+.tunnel-url {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+.tunnel-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.tunnel-reject-inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface-strong);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+}
+.tunnel-ttl-group { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+@media (max-width: 767px) {
+  .tunnel-meta { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 767px) {
   .detail-shell { padding: var(--space-4); border-radius: 0; }
   .kv-list { grid-template-columns: 1fr; }

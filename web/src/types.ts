@@ -638,3 +638,26 @@ export type AgentRunSearchHit = {
   event: AgentRunEvent;
   highlight: string;
 };
+
+export type TunnelState = "pending_approval" | "active" | "rejected" | "closed";
+export type TunnelAccessPolicy = "private" | "members" | "public";
+
+export type TunnelRecord = {
+  id: string;
+  token: string;
+  publicUrl: string;
+  computerId: string;
+  daemonId: string;
+  localPort: number;
+  label: string;
+  state: TunnelState;
+  accessPolicy: TunnelAccessPolicy;
+  creatorId: string;
+  creatorKind: string;
+  createdUnix: number;
+  expiresUnix: number;
+  approvedUnix: number;
+  approvedBy: string;
+  closedUnix: number;
+  closeReason: string;
+};

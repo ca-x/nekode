@@ -85,6 +85,7 @@
       "overview": "Overview",
       "agents": "Agents",
       "runs": "Runs",
+      "tunnels": "Tunnels",
       "settings": "Settings"
     },
     "info": {
@@ -264,5 +265,56 @@
   "locale": {
     "english": "English",
     "chineseSimplified": "简体中文"
+  },
+  "tunnels": {
+    "panelTitle": "Preview tunnels",
+    "panelHint": "Expose a local port through a short-lived URL. Tokens rotate per-tunnel and URLs expire automatically.",
+    "tabActive": "Active",
+    "tabPending": "Pending approval",
+    "tabClosed": "History",
+    "emptyActiveTitle": "No active tunnels",
+    "emptyActiveBody": "Create a tunnel to get a shareable URL for a local dev server.",
+    "emptyPendingTitle": "Nothing waiting",
+    "emptyPendingBody": "Agent-initiated tunnels land here for an admin to approve.",
+    "emptyClosedTitle": "No history yet",
+    "emptyClosedBody": "Closed and rejected tunnels show up here once you've used some.",
+    "rejectPlaceholder": "Reason (optional)",
+    "labels": {
+      "port": "Local port",
+      "accessPolicy": "Access policy",
+      "expires": "Expires",
+      "closeReason": "Closed · {{reason}}"
+    },
+    "state": {
+      "active": "Active",
+      "pending": "Pending approval",
+      "rejected": "Rejected",
+      "closed": "Closed"
+    },
+    "accessPolicy": {
+      "private": "Private",
+      "members": "Members",
+      "public": "Public"
+    },
+    "actions": {
+      "create": "New tunnel",
+      "approve": "Approve",
+      "reject": "Reject",
+      "close": "Close"
+    },
+    "create": {
+      "title": "New preview tunnel",
+      "portLabel": "Local port",
+      "labelLabel": "Label",
+      "labelPlaceholder": "Optional — e.g. dev server",
+      "policyLabel": "Who can reach it",
+      "ttlLabel": "Auto-close after",
+      "submit": "Create tunnel"
+    },
+    "created": {
+      "title": "Tunnel ready",
+      "hint": "Copy the URL now — the token is shown only once.",
+      "urlLabel": "Public URL"
+    }
   }
 }

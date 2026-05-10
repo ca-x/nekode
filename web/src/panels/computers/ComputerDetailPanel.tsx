@@ -13,13 +13,15 @@ import { AlertPill } from "../_shared/alert-pill";
 import { DangerZone } from "../_shared/danger-zone";
 import { detectedRuntimeKinds, isComputerOnline } from "./computer-utils";
 import { AgentRunsPanel } from "../agents/AgentRunsPanel";
+import { TunnelsPanel } from "../tunnels/TunnelsPanel";
 
-type ComputerDetailTab = "overview" | "agents" | "runs" | "settings";
+type ComputerDetailTab = "overview" | "agents" | "runs" | "tunnels" | "settings";
 
 const TAB_DEFS: ReadonlyArray<{ key: ComputerDetailTab; labelKey: MessageKey }> = [
   { key: "overview", labelKey: "computer.tabs.overview" },
   { key: "agents", labelKey: "computer.tabs.agents" },
   { key: "runs", labelKey: "computer.tabs.runs" },
+  { key: "tunnels", labelKey: "computer.tabs.tunnels" },
   { key: "settings", labelKey: "computer.tabs.settings" }
 ];
 
@@ -33,7 +35,9 @@ export function ComputerDetailPanel({
   onOpenAgent,
   onCreateAgent,
   onStartAll,
-  onDeleteComputer
+  onDeleteComputer,
+  currentUserId = "",
+  userIsAdmin = false
 }: {
   computer: DaemonInventoryComputer;
   runtimeCatalog: readonly RuntimePreset[];
@@ -45,6 +49,8 @@ export function ComputerDetailPanel({
   onCreateAgent?: () => void;
   onStartAll?: () => void;
   onDeleteComputer?: () => void;
+  currentUserId?: string;
+  userIsAdmin?: boolean;
 }) {
   const { t } = useT();
   const [activeTab, setActiveTab] = useState<ComputerDetailTab>("overview");
@@ -196,6 +202,18 @@ export function ComputerDetailPanel({
           <AgentRunsPanel api={api} computerId={computer.computerId} />
         ) : (
           <EmptyState title={t("computer.tabs.runs")} body={t("agent.activity.empty")} />
+        )
+      ) : null}
+      {activeTab === "tunnels" ? (
+        api ? (
+          <TunnelsPanel
+            api={api}
+            computerId={computer.computerId}
+            userIsAdmin={userIsAdmin}
+            currentUserId={currentUserId}
+          />
+        ) : (
+          <EmptyState title={t("computer.tabs.tunnels")} body={t("agent.activity.empty")} />
         )
       ) : null}
       {activeTab === "settings" ? (

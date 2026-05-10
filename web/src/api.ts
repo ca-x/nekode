@@ -55,6 +55,9 @@ import type {
   Task,
   TaskState,
   ThreadInboxItem,
+  TunnelAccessPolicy,
+  TunnelRecord,
+  TunnelState,
   User
 } from "./types";
 
@@ -690,6 +693,29 @@ function normalizeAgentRunHit(raw: unknown): AgentRunSearchHit {
     run: normalizeAgentRun(row.run),
     event: normalizeAgentRunEvent(row.event),
     highlight: asOptionalString(row.highlight) ?? ""
+  };
+}
+
+function normalizeTunnel(raw: unknown): TunnelRecord {
+  const row = asRecord(raw);
+  return {
+    id: asString(row.id),
+    token: asOptionalString(row.token) ?? "",
+    publicUrl: asOptionalString(row.publicUrl ?? row.public_url) ?? "",
+    computerId: asString(row.computerId ?? row.computer_id),
+    daemonId: asOptionalString(row.daemonId ?? row.daemon_id) ?? "",
+    localPort: asNumber(row.localPort ?? row.local_port),
+    label: asOptionalString(row.label) ?? "",
+    state: (asString(row.state) || "pending_approval") as TunnelState,
+    accessPolicy: (asOptionalString(row.accessPolicy ?? row.access_policy) ?? "members") as TunnelAccessPolicy,
+    creatorId: asOptionalString(row.creatorId ?? row.creator_id) ?? "",
+    creatorKind: asOptionalString(row.creatorKind ?? row.creator_kind) ?? "",
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+    expiresUnix: asNumber(row.expiresUnix ?? row.expires_unix),
+    approvedUnix: asNumber(row.approvedUnix ?? row.approved_unix),
+    approvedBy: asOptionalString(row.approvedBy ?? row.approved_by) ?? "",
+    closedUnix: asNumber(row.closedUnix ?? row.closed_unix),
+    closeReason: asOptionalString(row.closeReason ?? row.close_reason) ?? ""
   };
 }
 
@@ -2039,6 +2065,52 @@ export class ApiClient {
     return normalizeList(
       await this.request<RawListResponse<unknown>>(`/api/agent-runs/search?${params}`),
       normalizeAgentRunHit
+    );
+  }
+
+  // --- Preview tunnels --------------------------------------------------
+
+  async listTunnels(filters: { computerId?: string; state?: TunnelState; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "computerId", filters.computerId);
+    appendIfPresent(params, "state", filters.state);
+    params.set("limit", String(filters.limit ?? 50));
+    return normalizeList(
+      await this.request<RawListResponse<unknown>>(`/api/tunnels?${params}`),
+      normalizeTunnel
+    );
+  }
+
+  async createTunnel(body: { computerId: string; localPort: number; label?: string; accessPolicy?: TunnelAccessPolicy; ttlSeconds?: number }) {
+    return normalizeTunnel(
+      await this.request<unknown>(`/api/tunnels`, {
+        method: "POST",
+        body: JSON.stringify(body)
+      })
+    );
+  }
+
+  async approveTunnel(id: string) {
+    return normalizeTunnel(
+      await this.request<unknown>(`/api/tunnels/${encodeURIComponent(id)}/approve`, { method: "POST" })
+    );
+  }
+
+  async rejectTunnel(id: string, reason?: string) {
+    return normalizeTunnel(
+      await this.request<unknown>(`/api/tunnels/${encodeURIComponent(id)}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason ?? "" })
+      })
+    );
+  }
+
+  async closeTunnel(id: string, reason?: string) {
+    return normalizeTunnel(
+      await this.request<unknown>(`/api/tunnels/${encodeURIComponent(id)}/close`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason ?? "" })
+      })
     );
   }
 }
