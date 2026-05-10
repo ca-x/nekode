@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -156,7 +157,25 @@ func (s *Server) ProxyExchange(stream daemonv1.DaemonControlService_ProxyExchang
 	// Detach so only responders bound to THIS stream are torn down on
 	// disconnect.
 	wrapped := s.tunnels.Attach(computerID, stream)
-	defer s.tunnels.Detach(computerID, wrapped)
+	defer func() {
+		s.tunnels.Detach(computerID, wrapped)
+		// When the stream closes we also flip the computer's active /
+		// pending tunnels to closed. Otherwise they'd sit in "active"
+		// state until the TTL sweeper catches them, and any browser
+		// hitting /preview/<token>/ would get a confusing timeout
+		// instead of a clean "daemon disconnected" message.
+		//
+		// Uses a fresh context because stream.Context is already done
+		// by the time we get here. Timeout is tight — at worst we fail
+		// the cleanup and the TTL sweeper catches it next minute.
+		if s.store != nil {
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := s.store.CloseTunnelsForComputer(cleanupCtx, computerID, "daemon_disconnect"); err != nil {
+				slog.Warn("tunnel cleanup on daemon disconnect failed", "error", err, "computer_id", computerID)
+			}
+		}
+	}()
 	for {
 		frame, err := stream.Recv()
 		if errors.Is(err, io.EOF) {

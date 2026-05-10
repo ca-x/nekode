@@ -114,6 +114,14 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		defer listener.Close()
 	}
 
+	// Periodic sweeper: walks the tunnels table every minute and flips
+	// any active / pending_approval row whose TTL has passed to closed.
+	// Cheap compared to one inbound request, so a tight cadence is fine.
+	// Runs in the background; cancelled when ctx is done.
+	if s.store != nil {
+		go s.runTunnelSweeper(ctx)
+	}
+
 	errs := make(chan error, 1)
 	go func() {
 		s.logger.Info("nekode server starting", "addr", s.cfg.Addr)
@@ -133,6 +141,32 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 			return nil
 		}
 		return err
+	}
+}
+
+// runTunnelSweeper closes tunnels whose TTL has elapsed. The store does
+// the SQL in one query; we just wake it up periodically. One minute is
+// a compromise between "URLs feel punctual when they expire" and "don't
+// pound SQLite with needless writes when nothing expired."
+func (s *Server) runTunnelSweeper(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			sweepCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			n, err := s.store.CloseExpiredTunnels(sweepCtx, 0)
+			cancel()
+			if err != nil {
+				s.logger.Warn("tunnel sweeper failed", "error", err)
+				continue
+			}
+			if n > 0 {
+				s.logger.Info("tunnel sweeper closed expired rows", "count", n)
+			}
+		}
 	}
 }
 
