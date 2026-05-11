@@ -82,6 +82,19 @@ WantedBy=multi-user.target
 NEKODE_SYSTEMD
   systemctl daemon-reload
   systemctl enable --now nekode-daemon
+
+  # Verify the daemon registered within a few seconds.
+  # If the server is unreachable (e.g. IPv6-only address that
+  # isn't open) the service will loop restarting — surface
+  # that early instead of silently failing.
+  sleep 3
+  if ! systemctl is-active --quiet nekode-daemon 2>/dev/null; then
+    log "Daemon failed to start — checking logs:"
+    journalctl -u nekode-daemon --no-pager -n 5 >&2 || true
+    fail "daemon service did not stay active; check: systemctl status nekode-daemon"
+  fi
+  log "Daemon installed and running"
+
 elif [ "$SERVICE_MODE" = "launchd" ]; then
   cat > /Library/LaunchDaemons/tech.nekode.daemon.plist <<'NEKODE_PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

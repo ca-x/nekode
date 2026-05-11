@@ -29,6 +29,7 @@ internal/webdist/dist/*
 # Release/build artifacts
 dist/
 /nekode
+/nekode-daemon
 
 # Go workspace file
 go.work

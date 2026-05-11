@@ -99,8 +99,16 @@ func runDaemon(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	target := cfg.GRPCAddr
+	// Use gRPC DNS resolver for Happy Eyeballs dual-stack support (RFC 8305).
+	// The default passthrough resolver delegates to the OS DNS, which may pick
+	// an unreachable IPv6 address while IPv4 works. dns:/// forces gRPC to
+	// resolve and try all returned addresses.
+	if !strings.Contains(target, "://") {
+		target = "dns:///" + target
+	}
 	conn, err := grpc.NewClient(
-		cfg.GRPCAddr,
+		target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
