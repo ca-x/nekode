@@ -52,16 +52,20 @@
     "online": "online",
     "offline": "offline",
     "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
     "close": "Close",
     "done": "Done",
-    "edit": "Edit"
+    "edit": "Edit",
+    "noPermission": "You don't have permission to do this.",
+    "unknownError": "Something went wrong. Please try again."
   },
   "empty": {
     "noChannelSelected": {
       "title": "No channel selected",
       "messagesBody": "You haven't joined any channels yet. Create a channel from the sidebar, or pick a direct message to start a conversation.",
       "tasksBody": "Tasks belong to a channel. Create a channel from the sidebar first, then come back here to open a board.",
-      "remindersBody": "Reminders are scheduled inside a channel. Create a channel from the sidebar to start scheduling them."
+      "remindersBody": "Reminders are scheduled inside a channel. Create a channel from the sidebar first."
     }
   },
   "auth": {
@@ -163,7 +167,7 @@
       "delete": "Delete"
     },
     "reminders": {
-      "empty": "This agent hasn't scheduled anything. Reminders appear here in real time as soon as the agent schedules them."
+      "empty": "No reminders scheduled yet."
     },
     "workspace": {
       "empty": "Workspace browsing isn't available yet."
@@ -268,7 +272,7 @@
   },
   "tunnels": {
     "panelTitle": "Preview tunnels",
-    "panelHint": "Expose a local port through a short-lived URL. Tokens rotate per-tunnel and URLs expire automatically.",
+    "panelHint": "Share a local dev server via a temporary public URL.",
     "tabActive": "Active",
     "tabPending": "Pending approval",
     "tabClosed": "History",
@@ -277,11 +281,11 @@
     "emptyPendingTitle": "Nothing waiting",
     "emptyPendingBody": "Agent-initiated tunnels land here for an admin to approve.",
     "emptyClosedTitle": "No history yet",
-    "emptyClosedBody": "Closed and rejected tunnels show up here once you've used some.",
+    "emptyClosedBody": "Closed and rejected tunnels show up here.",
     "rejectPlaceholder": "Reason (optional)",
     "labels": {
       "port": "Local port",
-      "accessPolicy": "Access policy",
+      "accessPolicy": "Access",
       "expires": "Expires",
       "closeReason": "Closed · {{reason}}"
     },
@@ -309,12 +313,81 @@
       "labelPlaceholder": "Optional — e.g. dev server",
       "policyLabel": "Who can reach it",
       "ttlLabel": "Auto-close after",
-      "submit": "Create tunnel"
+      "submit": "Create tunnel",
+      "showAdvanced": "Advanced",
+      "hideAdvanced": "Hide advanced"
     },
     "created": {
       "title": "Tunnel ready",
       "hint": "Copy the URL now — the token is shown only once.",
       "urlLabel": "Public URL"
+    }
+  },
+  "endpoints": {
+    "eyebrow": "Interaction Layer",
+    "title": "Endpoints",
+    "empty": "No endpoints configured",
+    "createEyebrow": "Create Endpoint",
+    "manageEyebrow": "Manage Endpoint",
+    "selectOne": "Select an endpoint",
+    "modeIM": "IM",
+    "modeGeneric": "Generic",
+    "provider": "Provider",
+    "displayName": "Display name",
+    "kind": "Kind",
+    "targetPrefix": "Target prefix",
+    "authMode": "Auth mode",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "advancedToggle": "Advanced",
+    "providerConfig": "Provider config",
+    "binding": "Binding",
+    "targetType": "Target type",
+    "defaultTarget": "Default target",
+    "defaultAgent": "Default agent",
+    "groupMode": "Group mode",
+    "credentialHandling": "Credential handling",
+    "credentialHint": "Sensitive fields are sent once and the endpoint list reads back redacted values.",
+    "imProviderUnavailable": "IM provider schema is unavailable.",
+    "create": "Create",
+    "edit": "Edit",
+    "test": "Test",
+    "delete": "Delete",
+    "saveEndpoint": "Save endpoint",
+    "testReadiness": "Test readiness",
+    "configRedacted": "Config redacted",
+    "configJSON": "Config JSON",
+    "configKeepBlank": "Leave blank to preserve stored redacted secrets",
+    "configKeepHint": "Blank keeps the existing provider config when sensitive values are redacted.",
+    "routes": {
+      "eyebrow": "Notification Routes",
+      "title": "Delivery routing",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "enable": "Enable",
+      "disable": "Disable",
+      "rebind": "Rebind",
+      "count": "{{count}} routes"
+    },
+    "testResult": {
+      "ready": "Config ready",
+      "needsAttention": "Needs attention",
+      "runtimePassed": "Runtime smoke passed",
+      "runtimeNotExercised": "Runtime not exercised",
+      "ok": "ok",
+      "notReady": "not ready"
+    },
+    "channelBinding": {
+      "title": "Channel binding",
+      "startQR": "Start QR binding",
+      "refresh": "Refresh",
+      "cancel": "Cancel",
+      "noQR": "No QR binding capability is available for this provider.",
+      "qrAlt": "Channel binding QR code",
+      "scanning": "Waiting for scan status from provider adapter.",
+      "payloadPending": "QR payload pending provider adapter",
+      "sessionExpires": "Expires",
+      "session": "Session"
     }
   }
 }

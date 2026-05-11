@@ -52,16 +52,20 @@
     "online": "在线",
     "offline": "离线",
     "copy": "复制",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
     "close": "关闭",
     "done": "完成",
-    "edit": "编辑"
+    "edit": "编辑",
+    "noPermission": "你没有权限执行此操作。",
+    "unknownError": "出了点问题，请重试。"
   },
   "empty": {
     "noChannelSelected": {
       "title": "未选择频道",
       "messagesBody": "你还没有加入任何频道。点击左侧栏创建一个频道，或者选择一个私信开始聊天。",
       "tasksBody": "任务归属于某个频道。请先到左侧栏创建频道，再回到这里打开看板。",
-      "remindersBody": "提醒是在频道里调度的。先从左侧栏创建一个频道吧。"
+      "remindersBody": "提醒归属到某个频道。先从左侧栏创建一个频道。"
     }
   },
   "auth": {
@@ -163,7 +167,7 @@
       "delete": "删除"
     },
     "reminders": {
-      "empty": "该 Agent 暂未调度任何提醒。当它调度时会实时出现在这里。"
+      "empty": "暂未调度任何提醒。"
     },
     "workspace": {
       "empty": "工作区浏览功能暂未开放。"
@@ -268,7 +272,7 @@
   },
   "tunnels": {
     "panelTitle": "预览隧道",
-    "panelHint": "通过短期 URL 暴露本地端口，每条隧道使用独立令牌并自动过期。",
+    "panelHint": "通过临时链接分享本地开发服务。",
     "tabActive": "生效中",
     "tabPending": "待审批",
     "tabClosed": "历史",
@@ -281,7 +285,7 @@
     "rejectPlaceholder": "拒绝原因（可选）",
     "labels": {
       "port": "本地端口",
-      "accessPolicy": "访问策略",
+      "accessPolicy": "访问权限",
       "expires": "过期时间",
       "closeReason": "已关闭 · {{reason}}"
     },
@@ -309,12 +313,81 @@
       "labelPlaceholder": "可选 — 例如开发服务",
       "policyLabel": "可访问人员",
       "ttlLabel": "自动关闭时长",
-      "submit": "创建隧道"
+      "submit": "创建隧道",
+      "showAdvanced": "高级选项",
+      "hideAdvanced": "收起高级选项"
     },
     "created": {
       "title": "隧道已就绪",
       "hint": "请立即复制链接 — 令牌只显示这一次。",
       "urlLabel": "公开 URL"
+    }
+  },
+  "endpoints": {
+    "eyebrow": "交互接入",
+    "title": "通道",
+    "empty": "还没有接入任何通道",
+    "createEyebrow": "创建通道",
+    "manageEyebrow": "管理通道",
+    "selectOne": "选择一个通道",
+    "modeIM": "IM",
+    "modeGeneric": "通用",
+    "provider": "提供方",
+    "displayName": "显示名",
+    "kind": "类型",
+    "targetPrefix": "目标前缀",
+    "authMode": "认证方式",
+    "inbound": "入站",
+    "outbound": "出站",
+    "advancedToggle": "高级选项",
+    "providerConfig": "提供方配置",
+    "binding": "绑定",
+    "targetType": "绑定目标类型",
+    "defaultTarget": "默认目标",
+    "defaultAgent": "默认 Agent",
+    "groupMode": "群组模式",
+    "credentialHandling": "凭据安全",
+    "credentialHint": "敏感字段仅提交一次，列表读取时为已脱敏值。",
+    "imProviderUnavailable": "IM 提供方信息不可用。",
+    "create": "创建",
+    "edit": "编辑",
+    "test": "测试",
+    "delete": "删除",
+    "saveEndpoint": "保存通道",
+    "testReadiness": "检测联通性",
+    "configRedacted": "配置已脱敏",
+    "configJSON": "配置 JSON",
+    "configKeepBlank": "留空以保留已脱敏的凭据",
+    "configKeepHint": "当敏感字段已脱敏时，留空表示沿用已有配置。",
+    "routes": {
+      "eyebrow": "通知路由",
+      "title": "消息分发",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "enable": "启用",
+      "disable": "禁用",
+      "rebind": "重新绑定",
+      "count": "{{count}} 条路由"
+    },
+    "testResult": {
+      "ready": "配置正常",
+      "needsAttention": "需要关注",
+      "runtimePassed": "运行时自检通过",
+      "runtimeNotExercised": "运行时未覆盖",
+      "ok": "正常",
+      "notReady": "未就绪"
+    },
+    "channelBinding": {
+      "title": "频道绑定",
+      "startQR": "扫码绑定",
+      "refresh": "刷新",
+      "cancel": "取消",
+      "noQR": "该提供方不支持扫码绑定。",
+      "qrAlt": "频道绑定二维码",
+      "scanning": "等待提供方扫码状态反馈。",
+      "payloadPending": "二维码数据等待提供方适配",
+      "sessionExpires": "过期时间",
+      "session": "会话"
     }
   }
 }

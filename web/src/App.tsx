@@ -1910,11 +1910,6 @@ function Overview({
             </span>
           </div>
         </div>
-        <p className="boundary-note">
-          Realtime follows task #107 producer coverage: message/appended/target,
-          task created/state_changed/updated/claimed on task scope, and
-          activity/created/target trigger refetch. Server DTOs remain authoritative.
-        </p>
       </section>
       <section className="panel wide">
         <div className="panel-heading">
@@ -4096,8 +4091,6 @@ function TaskInspector({
         </div>
       </section>
       <p className="boundary-note">
-        This panel submits mutations through the API and waits for server DTO/refetch. It does not
-        treat local state changes or SSE payloads as authoritative facts.
       </p>
     </aside>
   );
@@ -4902,6 +4895,8 @@ function EndpointsPanel({
   const [groupMode, setGroupMode] = useState("mention");
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const { t } = useT();
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
   const [endpointEditName, setEndpointEditName] = useState("");
   const [endpointEditTargetPrefix, setEndpointEditTargetPrefix] = useState("#");
@@ -5348,14 +5343,14 @@ function EndpointsPanel({
 
   return (
     <section className="endpoint-workspace">
-      <SectionStatusNotice loading={loading} message="Loading endpoint configuration" />
+      <SectionStatusNotice loading={loading} message={t("common.loading")} />
       <SectionIssuesNotice issues={issues} onRetry={onRetry} />
       <div className="endpoint-grid">
       <div className="panel endpoint-list-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Interaction Layer</p>
-            <h2>Endpoints</h2>
+            <p className="eyebrow">{t("endpoints.eyebrow")}</p>
+            <h2>{t("endpoints.title")}</h2>
           </div>
         </div>
         <div className="endpoint-list">
@@ -5398,25 +5393,25 @@ function EndpointsPanel({
                             </span>
                           ))
                         ) : (
-                          <span>Config redacted</span>
+                          <span>{t("endpoints.configRedacted")}</span>
                         )}
                       </div>
                     ) : null}
                     {endpoint.kind === "im" && endpoint.configJson ? (
                       <details className="endpoint-config-details">
-                        <summary>Redacted config JSON</summary>
+                        <summary>{t("endpoints.configJSON")}</summary>
                         <code>{endpoint.configJson}</code>
                       </details>
                     ) : null}
                   </div>
                   <div className="endpoint-flags">
-                    <StatusDot active={endpoint.inboundEnabled} label="Inbound" />
-                    <StatusDot active={endpoint.outboundEnabled} label="Outbound" />
-                    <span className="route-count">{routesByEndpoint.get(endpoint.id) ?? 0} routes</span>
+                    <StatusDot active={endpoint.inboundEnabled} label={t("endpoints.inbound")} />
+                    <StatusDot active={endpoint.outboundEnabled} label={t("endpoints.outbound")} />
+                    <span className="route-count">{t("endpoints.routes.count", { count: routesByEndpoint.get(endpoint.id) ?? 0 })}</span>
                   </div>
                   <div className="endpoint-actions">
                     <button className="mini-action-button" type="button" onClick={() => setSelectedEndpointId(endpoint.id)}>
-                      Edit
+                      {t("endpoints.edit")}
                     </button>
                     <button
                       className="mini-action-button"
@@ -5424,7 +5419,7 @@ function EndpointsPanel({
                       disabled={endpointActionBusy === `test:${endpoint.id}`}
                       onClick={() => void testEndpoint(endpoint.id)}
                     >
-                      Test
+                      {t("endpoints.test")}
                     </button>
                     <button
                       className="mini-action-button"
@@ -5432,41 +5427,41 @@ function EndpointsPanel({
                       disabled={endpointActionBusy === `delete:${endpoint.id}`}
                       onClick={() => void deleteEndpoint(endpoint)}
                     >
-                      Delete
+                      {t("endpoints.delete")}
                     </button>
                   </div>
                 </article>
               );
             })
           ) : (
-            <EmptyState icon={Settings} title="No endpoints configured" />
+            <EmptyState icon={Settings} title={t("endpoints.empty")} />
           )}
         </div>
         {endpointActionError ? <p className="inline-error" role="alert">{endpointActionError}</p> : null}
       </div>
       <form className="panel compact form-stack endpoint-create-panel" onSubmit={createEndpoint}>
-        <p className="eyebrow">Create Endpoint</p>
+        <p className="eyebrow">{t("endpoints.createEyebrow")}</p>
         <div className="segmented endpoint-mode-toggle" role="group" aria-label="Endpoint type">
           <button
             className={mode === "im" ? "is-active" : ""}
             type="button"
             onClick={() => setMode("im")}
           >
-            IM
+            {t("endpoints.modeIM")}
           </button>
           <button
             className={mode === "generic" ? "is-active" : ""}
             type="button"
             onClick={() => setMode("generic")}
           >
-            Generic
+            {t("endpoints.modeGeneric")}
           </button>
         </div>
 
         {mode === "im" ? (
           <>
             <label htmlFor="im-provider">
-              Provider
+              {t("endpoints.provider")}
               <select
                 id="im-provider"
                 value={selectedProvider?.provider || ""}
@@ -5495,10 +5490,10 @@ function EndpointsPanel({
                 </div>
               </div>
             ) : (
-              <p className="notice error">IM provider schema is unavailable.</p>
+              <p className="notice error">{t("endpoints.imProviderUnavailable")}</p>
             )}
             <label htmlFor="endpoint-display-name">
-              Display name
+              {t("endpoints.displayName")}
               <input
                 id="endpoint-display-name"
                 value={displayName}
@@ -5508,109 +5503,94 @@ function EndpointsPanel({
 
             {selectedProvider ? (
               <>
-                <div className="endpoint-form-section">
-                  <strong>Provider config</strong>
-                  <div className="form-stack">
-                    {selectedProvider.fields.map((field) => renderProviderField(field))}
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  style={{ marginBottom: "0.5rem", fontSize: "0.85rem" }}
+                  onClick={() => setShowAdvanced((v) => !v)}
+                >
+                  {showAdvanced ? t("tunnels.create.hideAdvanced") : t("tunnels.create.showAdvanced")}
+                </button>
 
-                <div className="endpoint-form-section">
-                  <strong>Binding</strong>
-                  <div className="endpoint-binding-grid">
-                    <label htmlFor="binding-target-type">
-                      Target type
-                      <select
-                        id="binding-target-type"
-                        value={bindingTargetType}
-                        onChange={(event) => setBindingTargetType(event.target.value)}
-                      >
-                        {bindingTargets.map((target) => (
-                          <option key={target} value={target}>
-                            {targetLabel(target)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label htmlFor="default-target">
-                      Default target
-                      <input
-                        id="default-target"
-                        value={defaultTarget}
-                        placeholder="#general or inbox:im/provider"
-                        onChange={(event) => setDefaultTarget(event.target.value)}
-                      />
-                    </label>
-                    <label htmlFor="default-agent">
-                      Default agent
-                      <input
-                        id="default-agent"
-                        value={defaultAgent}
-                        placeholder="@agent handle or agent id"
-                        onChange={(event) => setDefaultAgent(event.target.value)}
-                      />
-                    </label>
-                    {!providerHasGroupMode ? (
-                      <label htmlFor="group-mode">
-                        Group mode
-                        <select
-                          id="group-mode"
-                          value={groupMode}
-                          onChange={(event) => setGroupMode(event.target.value)}
-                        >
-                          {DEFAULT_GROUP_MODES.map((modeOption) => (
-                            <option key={modeOption} value={modeOption}>
-                              {targetLabel(modeOption)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="endpoint-form-section">
-                  <strong>Credential handling</strong>
-                  <p>
-                    Sensitive fields are sent once and the endpoint list reads back redacted values.
-                  </p>
-                </div>
-
-                {(() => {
-                  const visibleBindingMethods = (selectedProvider.bindingMethods ?? []).filter((method) =>
-                    providerSupportsBindingMethod(selectedProvider, imConfigValues, method.method),
-                  );
-                  if (!visibleBindingMethods.length) return null;
-                  return (
+                {showAdvanced && (
+                  <>
                     <div className="endpoint-form-section">
-                      <strong>Binding capabilities</strong>
-                      <div className="endpoint-config-chips">
-                        {visibleBindingMethods.map((method) => (
-                          <span key={method.method}>{method.displayName}</span>
+                      <strong>{t("endpoints.providerConfig")}</strong>
+                      <div className="form-stack">
+                        {selectedProvider.fields.map((field) => renderProviderField(field))}
+                      </div>
+                    </div>
+
+                    <div className="endpoint-form-section">
+                      <strong>{t("endpoints.binding")}</strong>
+                      <div className="endpoint-binding-grid">
+                        <label htmlFor="binding-target-type">
+                          {t("endpoints.targetType")}
+                          <select
+                            id="binding-target-type"
+                            value={bindingTargetType}
+                            onChange={(event) => setBindingTargetType(event.target.value)}
+                          >
+                            {bindingTargets.map((target) => (
+                              <option key={target} value={target}>
+                                {targetLabel(target)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label htmlFor="default-target">
+                          {t("endpoints.defaultTarget")}
+                          <input
+                            id="default-target"
+                            value={defaultTarget}
+                            placeholder="#general or inbox:im/provider"
+                            onChange={(event) => setDefaultTarget(event.target.value)}
+                          />
+                        </label>
+                        <label htmlFor="default-agent">
+                          {t("endpoints.defaultAgent")}
+                          <input
+                            id="default-agent"
+                            value={defaultAgent}
+                            placeholder="@agent handle or agent id"
+                            onChange={(event) => setDefaultAgent(event.target.value)}
+                          />
+                        </label>
+                        {!providerHasGroupMode ? (
+                          <label htmlFor="group-mode">
+                            {t("endpoints.groupMode")}
+                            <select
+                              id="group-mode"
+                              value={groupMode}
+                              onChange={(event) => setGroupMode(event.target.value)}
+                            >
+                              {DEFAULT_GROUP_MODES.map((modeOption) => (
+                                <option key={modeOption} value={modeOption}>
+                                  {targetLabel(modeOption)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {selectedProvider.setupHints.length ? (
+                      <div className="setup-hints">
+                        {selectedProvider.setupHints.map((hint) => (
+                          <span key={hint}>{hint}</span>
                         ))}
                       </div>
-                      <p>Binding sessions are started after the endpoint is created.</p>
-                    </div>
-                  );
-                })()}
-
-                {selectedProvider.setupHints.length ? (
-                  <div className="setup-hints">
-                    {selectedProvider.setupHints.map((hint) => (
-                      <span key={hint}>{hint}</span>
-                    ))}
-                    {selectedProvider.supportsWebhook ? (
-                      <span>Callback setup is provider-runtime specific; use webhook signature auth for signed callbacks.</span>
                     ) : null}
-                  </div>
-                ) : null}
+                  </>
+                )}
               </>
             ) : null}
           </>
         ) : (
           <>
             <label htmlFor="generic-display-name">
-              Display name
+              {t("endpoints.displayName")}
               <input
                 id="generic-display-name"
                 value={displayName}
@@ -5618,11 +5598,11 @@ function EndpointsPanel({
               />
             </label>
             <label htmlFor="generic-kind">
-              Kind
+              {t("endpoints.kind")}
               <input id="generic-kind" value={kind} onChange={(event) => setKind(event.target.value)} />
             </label>
             <label htmlFor="generic-provider">
-              Provider
+              {t("endpoints.provider")}
               <input
                 id="generic-provider"
                 value={provider}
@@ -5630,7 +5610,7 @@ function EndpointsPanel({
               />
             </label>
             <label htmlFor="generic-prefix">
-              Target prefix
+              {t("endpoints.targetPrefix")}
               <input
                 id="generic-prefix"
                 value={targetPrefix}
@@ -5648,7 +5628,7 @@ function EndpointsPanel({
               checked={inboundEnabled}
               onChange={(event) => setInboundEnabled(event.target.checked)}
             />
-            <span>Inbound</span>
+            <span>{t("endpoints.inbound")}</span>
           </label>
           <label className="checkbox-row" htmlFor="endpoint-outbound-enabled">
             <input
@@ -5657,12 +5637,12 @@ function EndpointsPanel({
               checked={outboundEnabled}
               onChange={(event) => setOutboundEnabled(event.target.checked)}
             />
-            <span>Outbound</span>
+            <span>{t("endpoints.outbound")}</span>
           </label>
         </div>
 
         <label htmlFor="endpoint-auth-mode">
-          Auth mode
+          {t("endpoints.authMode")}
           <input
             id="endpoint-auth-mode"
             value={authMode}
@@ -5673,16 +5653,16 @@ function EndpointsPanel({
         {formError ? <p className="inline-error">{formError}</p> : null}
         <button className="primary-button" type="submit" disabled={busy || (mode === "im" && !selectedProvider)}>
           <Plus size={16} aria-hidden="true" />
-          Create
+          {t("endpoints.create")}
         </button>
       </form>
 
       <form className="panel compact form-stack endpoint-edit-panel" onSubmit={updateEndpoint}>
-        <p className="eyebrow">Manage Endpoint</p>
+        <p className="eyebrow">{t("endpoints.manageEyebrow")}</p>
         {selectedEndpoint ? (
           <>
             <label htmlFor="endpoint-edit-name">
-              Display name
+              {t("endpoints.displayName")}
               <input
                 id="endpoint-edit-name"
                 value={endpointEditName}
@@ -5697,7 +5677,7 @@ function EndpointsPanel({
                   checked={endpointEditInbound}
                   onChange={(event) => setEndpointEditInbound(event.target.checked)}
                 />
-                <span>Inbound</span>
+                <span>{t("endpoints.inbound")}</span>
               </label>
               <label className="checkbox-row" htmlFor="endpoint-edit-outbound">
                 <input
@@ -5706,11 +5686,11 @@ function EndpointsPanel({
                   checked={endpointEditOutbound}
                   onChange={(event) => setEndpointEditOutbound(event.target.checked)}
                 />
-                <span>Outbound</span>
+                <span>{t("endpoints.outbound")}</span>
               </label>
             </div>
             <label htmlFor="endpoint-edit-prefix">
-              Target prefix
+              {t("endpoints.targetPrefix")}
               <input
                 id="endpoint-edit-prefix"
                 value={endpointEditTargetPrefix}
@@ -5718,7 +5698,7 @@ function EndpointsPanel({
               />
             </label>
             <label htmlFor="endpoint-edit-auth-mode">
-              Auth mode
+              {t("endpoints.authMode")}
               <input
                 id="endpoint-edit-auth-mode"
                 value={endpointEditAuthMode}
@@ -5726,90 +5706,84 @@ function EndpointsPanel({
               />
             </label>
             <label htmlFor="endpoint-edit-config">
-              Config JSON
+              {t("endpoints.configJSON")}
               <textarea
                 id="endpoint-edit-config"
                 value={endpointEditConfig}
-                placeholder={selectedEndpoint.configJson.includes(REDACTED_VALUE) ? "Leave blank to preserve stored redacted secrets" : "{}"}
+                placeholder={selectedEndpoint.configJson.includes(REDACTED_VALUE) ? t("endpoints.configKeepBlank") : "{}"}
                 onChange={(event) => setEndpointEditConfig(event.target.value)}
               />
-              <small>Blank keeps the existing provider config when sensitive values are redacted.</small>
+              <small>{t("endpoints.configKeepHint")}</small>
             </label>
             {endpointTestResult ? (
               <div className="endpoint-test-result" role="status">
                 <div>
-                  <strong>{endpointTestResult.ready ? "Config ready" : "Needs attention"}</strong>
+                  <strong>{endpointTestResult.ready ? t("endpoints.testResult.ready") : t("endpoints.testResult.needsAttention")}</strong>
                   <span>{endpointTestResult.summary}</span>
                 </div>
                 <div className="endpoint-config-chips">
-                  <span>{endpointTestResult.runtimeLive ? "Runtime smoke passed" : "Runtime not exercised"}</span>
+                  <span>{endpointTestResult.runtimeLive ? t("endpoints.testResult.runtimePassed") : t("endpoints.testResult.runtimeNotExercised")}</span>
                   {endpointTestResult.checks.map((check) => (
                     <span key={check.name}>
-                      {targetLabel(check.name)}: {check.ok ? "ok" : "not ready"}
+                      {targetLabel(check.name)}: {check.ok ? t("endpoints.testResult.ok") : t("endpoints.testResult.notReady")}
                     </span>
                   ))}
                 </div>
               </div>
             ) : null}
-            {selectedEndpoint.kind === "im" ? (
+            {selectedEndpoint.kind === "im" && qrBindingMethod ? (
               <div className="endpoint-form-section">
-                <strong>Channel binding</strong>
-                {qrBindingMethod ? (
-                  <>
-                    <p>{qrBindingMethod.description}</p>
-                    <div className="endpoint-actions">
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        disabled={bindingBusy === "create"}
-                        onClick={() => void startBindingSession()}
-                      >
-                        Start QR binding
-                      </button>
-                      <button
-                        className="mini-action-button"
-                        type="button"
-                        disabled={!bindingSession || bindingBusy === "refresh"}
-                        onClick={() => void refreshBindingSession()}
-                      >
-                        Refresh
-                      </button>
-                      <button
-                        className="mini-action-button"
-                        type="button"
-                        disabled={!bindingSession || bindingBusy === "cancel"}
-                        onClick={() => void cancelBindingSession()}
-                      >
-                        Cancel
-                      </button>
+                <strong>{t("endpoints.channelBinding.title")}</strong>
+                <p>{qrBindingMethod.description}</p>
+                <div className="endpoint-actions">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={bindingBusy === "create"}
+                    onClick={() => void startBindingSession()}
+                  >
+                    {t("endpoints.channelBinding.startQR")}
+                  </button>
+                  <button
+                    className="mini-action-button"
+                    type="button"
+                    disabled={!bindingSession || bindingBusy === "refresh"}
+                    onClick={() => void refreshBindingSession()}
+                  >
+                    {t("endpoints.channelBinding.refresh")}
+                  </button>
+                  <button
+                    className="mini-action-button"
+                    type="button"
+                    disabled={!bindingSession || bindingBusy === "cancel"}
+                    onClick={() => void cancelBindingSession()}
+                  >
+                    {t("endpoints.channelBinding.cancel")}
+                  </button>
+                </div>
+                {bindingSession ? (
+                  <div className="binding-session-panel" role="status">
+                    <div className="binding-qr-frame" aria-label="QR binding payload">
+                      {bindingSession.qrImageUrl ? (
+                        <img src={bindingSession.qrImageUrl} alt={t("endpoints.channelBinding.qrAlt")} />
+                      ) : (
+                        <code>{bindingSession.qrPayload || t("endpoints.channelBinding.payloadPending")}</code>
+                      )}
                     </div>
-                    {bindingSession ? (
-                      <div className="binding-session-panel" role="status">
-                        <div className="binding-qr-frame" aria-label="QR binding payload">
-                          {bindingSession.qrImageUrl ? (
-                            <img src={bindingSession.qrImageUrl} alt="Channel binding QR code" />
-                          ) : (
-                            <code>{bindingSession.qrPayload || "QR payload pending provider adapter"}</code>
-                          )}
-                        </div>
-                        <div className="binding-session-detail">
-                          <strong>{targetLabel(bindingSession.status)}</strong>
-                          <span>{bindingSession.detail || "Waiting for scan status from provider adapter."}</span>
-                          <span>Session {bindingSession.id}</span>
-                          <span>Expires {formatUnixTime(bindingSession.expiresUnix)}</span>
-                        </div>
-                      </div>
-                    ) : null}
-                    {bindingError ? <p className="inline-error" role="alert">{bindingError}</p> : null}
-                  </>
-                ) : (
-                  <p>No QR binding capability is available for this provider.</p>
-                )}
+                    <div className="binding-session-detail">
+                      <strong>{targetLabel(bindingSession.status)}</strong>
+                      <span>{bindingSession.detail || t("endpoints.channelBinding.scanning")}</span>
+                      <span>{t("endpoints.channelBinding.session")} {bindingSession.id}</span>
+                      <span>{t("endpoints.channelBinding.sessionExpires")} {formatUnixTime(bindingSession.expiresUnix)}</span>
+                    </div>
+                  </div>
+                ) : null}
+                {bindingError ? <p className="inline-error" role="alert">{bindingError}</p> : null}
               </div>
             ) : null}
             <div className="endpoint-actions">
               <button className="primary-button" type="submit" disabled={endpointActionBusy === "update-endpoint"}>
-                Save endpoint
+                {t("endpoints.saveEndpoint")}
               </button>
               <button
                 className="secondary-button"
@@ -5817,12 +5791,12 @@ function EndpointsPanel({
                 disabled={endpointActionBusy === `test:${selectedEndpoint.id}`}
                 onClick={() => void testEndpoint(selectedEndpoint.id)}
               >
-                Test readiness
+                {t("endpoints.testReadiness")}
               </button>
             </div>
           </>
         ) : (
-          <EmptyState icon={Settings} title="Select an endpoint" />
+          <EmptyState icon={Settings} title={t("endpoints.selectOne")} />
         )}
       </form>
       </div>
@@ -5831,8 +5805,8 @@ function EndpointsPanel({
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Notification Routes</p>
-              <h2>Delivery routing</h2>
+              <p className="eyebrow">{t("endpoints.routes.eyebrow")}</p>
+              <h2>{t("endpoints.routes.title")}</h2>
             </div>
           </div>
           <div className="endpoint-list">
@@ -5845,7 +5819,7 @@ function EndpointsPanel({
                       <span>{route.eventKind} · {route.preference} · {endpointLabel(route.endpointId)}</span>
                     </div>
                     <div className="endpoint-config-chips">
-                      <span>{route.enabled ? "enabled" : "disabled"}</span>
+                      <span>{route.enabled ? t("endpoints.routes.enabled") : t("endpoints.routes.disabled")}</span>
                       <span>{route.configJson || "{}"}</span>
                     </div>
                   </div>
@@ -5856,7 +5830,7 @@ function EndpointsPanel({
                       disabled={routeActionBusy === `toggle:${route.id}`}
                       onClick={() => void toggleRoute(route)}
                     >
-                      {route.enabled ? "Disable" : "Enable"}
+                      {route.enabled ? t("endpoints.routes.disable") : t("endpoints.routes.enable")}
                     </button>
                     <button
                       className="mini-action-button"
@@ -5864,7 +5838,7 @@ function EndpointsPanel({
                       disabled={!routeEndpointId || route.endpointId === routeEndpointId || routeActionBusy === `rebind:${route.id}`}
                       onClick={() => void rebindRoute(route)}
                     >
-                      Rebind
+                      {t("endpoints.routes.rebind")}
                     </button>
                     <button
                       className="mini-action-button"
@@ -5872,13 +5846,13 @@ function EndpointsPanel({
                       disabled={routeActionBusy === `delete-route:${route.id}`}
                       onClick={() => void deleteRoute(route)}
                     >
-                      Delete
+                      {t("common.delete")}
                     </button>
                   </div>
                 </article>
               ))
             ) : (
-              <EmptyState icon={Bell} title="No notification routes configured" />
+              <EmptyState icon={Bell} title={t("endpoints.empty")} />
             )}
           </div>
         </section>
@@ -6607,10 +6581,10 @@ function DaemonPanel({
         </div>
         <div className="contract-grid">
           {[
-            ["Transport boundary", "Web uses SSE now; WebSocket can be added behind the API client later"],
-            ["Cursor boundary", "Resume persists data.sequence and clears on server_id/protocol change"],
-            ["DTO boundary", "Components receive camelCase frontend DTOs, not proto snake_case or enum numbers"],
-            ["Realtime boundary", "Events invalidate/refetch server facts; append-only patching stays in client layer"]
+            ["Transport", "SSE-based realtime event stream"],
+            ["Cursor", "Resumable event cursor across reconnects"],
+            ["Data model", "Frontend DTOs with camelCase keys"],
+            ["Realtime", "Server-push events with client cache invalidation"]
           ].map(([title, detail]) => (
             <article className="contract-item" key={title}>
               <Circle size={16} aria-hidden="true" />
@@ -6834,7 +6808,7 @@ function DaemonPanel({
         </div>
         <div className="board-note" role="note">
           <Activity size={16} aria-hidden="true" />
-          Showing daemon runs across all targets, including direct-message and task-linked runs.
+          Daemon runs across all targets.
         </div>
         {daemonRuns.length ? (
           <div className="task-list-shell">
@@ -6878,7 +6852,7 @@ function DaemonPanel({
         </div>
         <div className="board-note" role="note">
           <History size={16} aria-hidden="true" />
-          Showing persisted daemon activity across all scopes. Control requests remain visible after refresh.
+          Persisted daemon activity across all scopes.
         </div>
         {daemonActivity.length ? (
           <div className="event-stream" role="log" aria-label="Daemon activity">
