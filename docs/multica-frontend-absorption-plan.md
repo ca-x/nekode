@@ -169,7 +169,7 @@ Owner: task #98/#104 backend owners, with frontend review.
 
 Required before real frontend parity work:
 
-- Keep task #104 six-state support green across storage, HTTP, daemon gRPC, board
+- Keep task #104 six-state support green across storage, HTTP, daemon connect-rpc, board
   projection, docs, and tests.
 - Treat `canceled` as canonical in frontend types; `cancelled` remains API
   compatibility only.
@@ -330,8 +330,8 @@ Work:
 
 - Add agent list with status, current task, last heartbeat, recent activity, and
   availability.
-- Add daemon/runtime health view with local bridge identity, cache driver, gRPC
-  address, connected computers, leases, and heartbeat state.
+- Add daemon/runtime health view with local bridge identity, cache driver, RPC
+  URL, connected computers, leases, and heartbeat state.
 - Add run detail panels: attempt, max attempts, parent run, failure reason, last
   heartbeat, step log, and lease status.
 - Add offline state handling: when a daemon or agent is offline, mark related

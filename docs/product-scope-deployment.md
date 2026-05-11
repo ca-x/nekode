@@ -21,7 +21,7 @@ plane yet.
 - Message create/list APIs for channel, thread, and DM-style targets.
 - Task create/list/update APIs with canonical states:
   `todo`, `in_progress`, `blocked`, `in_review`, `done`, `canceled`.
-- Daemon gRPC minimum bridge for registration/heartbeat, message/task access,
+- Daemon connect-rpc bridge for registration/heartbeat, message/task access,
   server event/activity streams, task board, task claim, agent status, runs,
   and activity/event replay.
 - Durable collaboration event log with server identity, monotonic sequence,
@@ -64,7 +64,7 @@ The current deliverable is self-hosted:
 - embedded Badger cache by default;
 - browser console served as static Vite output or from a same-origin static
   host;
-- local daemon gRPC listener intended for trusted daemon processes.
+- daemon connect-rpc endpoints on the main HTTP listener for trusted daemon processes.
 
 The operator owns TLS termination, DNS, reverse proxy, backups, and external
 monitoring.
@@ -197,7 +197,7 @@ later settings pages.
 Run locally:
 
 ```bash
-go run ./cmd/nekode serve --addr :18790 --grpc-addr 127.0.0.1:18789
+go run ./cmd/nekode serve --addr :18790
 ```
 
 Health check:
@@ -211,8 +211,8 @@ Important environment variables:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEKODE_ADDR` | `:18790` | HTTP listen address |
-| `NEKODE_GRPC_ADDR` | `127.0.0.1:18789` | local daemon gRPC listen address |
-| `NEKODE_DAEMON_TRANSPORT` | `grpc` | daemon transport lane; only `grpc` is implemented |
+| `NEKODE_DAEMON_RPC_URL` | empty | public connect-rpc URL for daemon installers; defaults to `NEKODE_BASE_URL` |
+| `NEKODE_DAEMON_TRANSPORT` | `connect` | daemon transport lane |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | public server URL used by clients |
 | `NEKODE_WEB_DIST_DIR` | empty | optional external Web console dist directory; embedded assets are served by default |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | persistent data directory |
@@ -343,7 +343,7 @@ Use a fresh data directory to avoid confusing old state with acceptance data:
 
 ```bash
 export NEKODE_DATA_DIR="$(mktemp -d)"
-go run ./cmd/nekode serve --addr :18790 --grpc-addr 127.0.0.1:18789
+go run ./cmd/nekode serve --addr :18790
 ```
 
 Then open a second shell.
@@ -426,7 +426,7 @@ curl -fsS 'http://127.0.0.1:18790/api/daemon/events?target=%23general&limit=20' 
 
 Acceptance:
 
-- daemon info includes `serverId`, protocol version, gRPC address, transport,
+- daemon info includes `serverId`, protocol version, daemon RPC URL, transport,
   and cache driver;
 - event list includes message/task/activity-related durable events;
 - `sequence` values are monotonic.

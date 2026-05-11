@@ -17,6 +17,7 @@ import (
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/gen/go/nekode/daemon/v1/daemonv1connect"
 	"github.com/ca-x/nekode/internal/auth"
 	"github.com/ca-x/nekode/internal/config"
 	imtelegram "github.com/ca-x/nekode/internal/imchannels/telegram"
@@ -98,6 +99,24 @@ func TestWebConsoleStaticServing(t *testing.T) {
 	missingAPI := doGET(t, s, "/api/not-found", "")
 	if missingAPI.Code != http.StatusNotFound {
 		t.Fatalf("missing api status = %d, want 404", missingAPI.Code)
+	}
+}
+
+func TestConnectRPCPathDoesNotFallThroughToWebConsole(t *testing.T) {
+	dist := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dist, "index.html"), []byte(`<!doctype html><title>Nekode</title><div id="root"></div>`), 0o644); err != nil {
+		t.Fatalf("write index: %v", err)
+	}
+	cfg := testConfig()
+	cfg.WebDistDir = dist
+	s := New(cfg, slog.New(slog.DiscardHandler), newTestStore(t))
+
+	resp := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, daemonv1connect.DaemonControlServiceRegisterComputerProcedure, nil)
+	s.Handler().ServeHTTP(resp, req)
+
+	if resp.Code == http.StatusOK && strings.Contains(resp.Body.String(), "Nekode") {
+		t.Fatalf("connect RPC path fell through to web console: status=%d body=%s", resp.Code, resp.Body.String())
 	}
 }
 
@@ -1972,12 +1991,11 @@ func TestServerEventsSSEGlobalStreamKeepsGlobalCursor(t *testing.T) {
 
 func testConfig() config.Config {
 	return config.Config{
-		Addr:     "127.0.0.1:0",
-		GRPCAddr: "127.0.0.1:0",
-		BaseURL:  "http://127.0.0.1",
-		DataDir:  "/tmp/nekode-test",
-		DBType:   "sqlite",
-		DBDSN:    ":memory:",
+		Addr:    "127.0.0.1:0",
+		BaseURL: "http://127.0.0.1",
+		DataDir: "/tmp/nekode-test",
+		DBType:  "sqlite",
+		DBDSN:   ":memory:",
 	}
 }
 

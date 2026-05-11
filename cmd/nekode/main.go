@@ -52,8 +52,8 @@ func serve(args []string) error {
 
 	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 	flags.StringVar(&cfg.Addr, "addr", cfg.Addr, "HTTP listen address")
-	flags.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "gRPC daemon control listen address")
-	flags.StringVar(&cfg.DaemonTransport, "daemon-transport", cfg.DaemonTransport, "daemon transport: grpc (QUIC/WebTransport reserved)")
+	flags.StringVar(&cfg.DaemonTransport, "daemon-transport", cfg.DaemonTransport, "daemon transport: connect")
+	flags.StringVar(&cfg.DaemonRPCURL, "daemon-rpc-url", cfg.DaemonRPCURL, "public connect-rpc URL for daemon installers; defaults to base-url")
 	flags.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "public base URL")
 	flags.StringVar(&cfg.WebDistDir, "web-dist-dir", cfg.WebDistDir, "Web console dist directory; defaults to web/dist or /app/web/dist when present")
 	flags.StringVar(&cfg.DataDir, "data-dir", cfg.DataDir, "persistent data directory")
@@ -108,6 +108,6 @@ func serve(args []string) error {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  nekode serve [--addr :18790] [--grpc-addr 127.0.0.1:18789] [--daemon-transport grpc] [--base-url http://localhost:18790] [--web-dist-dir web/dist] [--data-dir ~/.nekode] [--db-type sqlite] [--db-dsn ~/.nekode/nekode.db] [--cache-driver badger]")
+	fmt.Fprintln(os.Stderr, "  nekode serve [--addr :18790] [--daemon-rpc-url http://localhost:18790] [--daemon-transport connect] [--base-url http://localhost:18790] [--web-dist-dir web/dist] [--data-dir ~/.nekode] [--db-type sqlite] [--db-dsn ~/.nekode/nekode.db] [--cache-driver badger]")
 	fmt.Fprintln(os.Stderr, "  nekode version")
 }

@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/storage"
-	"google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
 )
 
 func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +39,7 @@ func (s *Server) handleDaemonInfo(w http.ResponseWriter, r *http.Request) {
 		"protocolVersion":    s.daemon.ProtocolVersion(),
 		"minProtocolVersion": s.daemon.ProtocolVersion(),
 		"maxProtocolVersion": s.daemon.ProtocolVersion(),
-		"grpcAddr":           s.cfg.GRPCAddr,
+		"daemonRpcUrl":       s.daemonRPCURL(r),
 		"daemonTransport":    s.cfg.DaemonTransport,
 		"cacheDriver":        s.cfg.CacheDriver,
 		"serverTimeUnix":     time.Now().Unix(),
@@ -88,7 +87,7 @@ func (s *Server) handleCreateDaemonAgent(w http.ResponseWriter, r *http.Request)
 	}
 	result, err := s.daemon.CreateAgentInstance(input)
 	if err != nil {
-		writeError(w, daemonAgentHTTPStatus(err), grpcstatus.Convert(err).Message())
+		writeError(w, daemonAgentHTTPStatus(err), daemonAgentErrorMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, result)
@@ -121,7 +120,7 @@ func (s *Server) handleControlDaemonAgent(w http.ResponseWriter, r *http.Request
 		Context:          daemonHTTPContext(r),
 	})
 	if err != nil {
-		writeError(w, daemonAgentHTTPStatus(err), grpcstatus.Convert(err).Message())
+		writeError(w, daemonAgentHTTPStatus(err), daemonAgentErrorMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusAccepted, resp)
@@ -159,25 +158,36 @@ func (s *Server) handleSendDaemonAgentDirectMessage(w http.ResponseWriter, r *ht
 		},
 	})
 	if err != nil {
-		writeError(w, daemonAgentHTTPStatus(err), grpcstatus.Convert(err).Message())
+		writeError(w, daemonAgentHTTPStatus(err), daemonAgentErrorMessage(err))
 		return
 	}
 	writeJSON(w, http.StatusCreated, resp)
 }
 
 func daemonAgentHTTPStatus(err error) int {
-	switch grpcstatus.Code(err) {
-	case codes.InvalidArgument:
+	switch connect.CodeOf(err) {
+	case connect.CodeInvalidArgument:
 		return http.StatusBadRequest
-	case codes.AlreadyExists:
+	case connect.CodeAlreadyExists:
 		return http.StatusConflict
-	case codes.NotFound:
+	case connect.CodeNotFound:
 		return http.StatusNotFound
-	case codes.FailedPrecondition:
+	case connect.CodeFailedPrecondition:
 		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}
+}
+
+func daemonAgentErrorMessage(err error) string {
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return connectErr.Message()
+	}
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 func daemonAgentControlAction(value string) (daemonv1.AgentControlAction, bool) {

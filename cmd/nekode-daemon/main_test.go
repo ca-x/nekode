@@ -14,7 +14,7 @@ func TestLoadConfigReadsGeneratedInstallConfig(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "daemon.json")
 	if err := os.WriteFile(configPath, []byte(`{
-		"grpcAddr": "127.0.0.1:19999",
+		"serverUrl": "http://127.0.0.1:19999",
 		"token": "generated-token",
 		"daemonId": "daemon-test",
 		"computerId": "computer-test",
@@ -32,8 +32,8 @@ func TestLoadConfigReadsGeneratedInstallConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadConfig() error = %v", err)
 	}
-	if cfg.GRPCAddr != "127.0.0.1:19999" {
-		t.Fatalf("GRPCAddr = %q, want config value", cfg.GRPCAddr)
+	if cfg.ServerURL != "http://127.0.0.1:19999" {
+		t.Fatalf("ServerURL = %q, want config value", cfg.ServerURL)
 	}
 	if cfg.Token != "generated-token" {
 		t.Fatalf("Token = %q, want generated token", cfg.Token)
@@ -52,11 +52,11 @@ func TestLoadConfigReadsGeneratedInstallConfig(t *testing.T) {
 	}
 }
 
-func TestLoadConfigAllowsFlagOverrideForSmoke(t *testing.T) {
+func TestLoadConfigReadsConnectServerURL(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "daemon.json")
 	if err := os.WriteFile(configPath, []byte(`{
-		"grpcAddr": "127.0.0.1:19999",
+		"serverUrl": "https://nekode.example.test",
 		"token": "generated-token",
 		"daemonId": "daemon-test",
 		"computerId": "computer-test"
@@ -64,34 +64,43 @@ func TestLoadConfigAllowsFlagOverrideForSmoke(t *testing.T) {
 		t.Fatalf("write config: %v", err)
 	}
 
+	cfg, err := loadConfig([]string{"--config", configPath})
+	if err != nil {
+		t.Fatalf("loadConfig() error = %v", err)
+	}
+	if cfg.ServerURL != "https://nekode.example.test" {
+		t.Fatalf("ServerURL = %q, want config value", cfg.ServerURL)
+	}
+}
+
+func TestLoadConfigAcceptsServerURLFlag(t *testing.T) {
 	cfg, err := loadConfig([]string{
-		"--config", configPath,
-		"--grpc-addr", "127.0.0.1:20000",
+		"--server-url", "nekode.example.test",
+		"--token", "install-token",
+		"--daemon-id", "daemon-url",
+		"--computer-id", "computer-url",
+	})
+	if err != nil {
+		t.Fatalf("loadConfig() error = %v", err)
+	}
+	if cfg.ServerURL != "http://nekode.example.test" {
+		t.Fatalf("ServerURL = %q, want normalized flag value", cfg.ServerURL)
+	}
+}
+
+func TestLoadConfigAllowsFlagOverrideForSmoke(t *testing.T) {
+	cfg, err := loadConfig([]string{
+		"--server-url", "http://127.0.0.1:20000",
 		"--token", "override-token",
 	})
 	if err != nil {
 		t.Fatalf("loadConfig() error = %v", err)
 	}
-	if cfg.GRPCAddr != "127.0.0.1:20000" {
-		t.Fatalf("GRPCAddr = %q, want flag override", cfg.GRPCAddr)
+	if cfg.ServerURL != "http://127.0.0.1:20000" {
+		t.Fatalf("ServerURL = %q, want flag override", cfg.ServerURL)
 	}
 	if cfg.Token != "override-token" {
 		t.Fatalf("Token = %q, want flag override", cfg.Token)
-	}
-}
-
-func TestLoadConfigAcceptsServerGRPCAlias(t *testing.T) {
-	cfg, err := loadConfig([]string{
-		"--server-grpc", "127.0.0.1:20001",
-		"--token", "install-token",
-		"--daemon-id", "daemon-alias",
-		"--computer-id", "computer-alias",
-	})
-	if err != nil {
-		t.Fatalf("loadConfig() error = %v", err)
-	}
-	if cfg.GRPCAddr != "127.0.0.1:20001" {
-		t.Fatalf("GRPCAddr = %q, want --server-grpc value", cfg.GRPCAddr)
 	}
 }
 

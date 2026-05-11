@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -20,14 +21,13 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/version"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
+
+const defaultDaemonServerURL = "http://localhost:18790"
 
 type daemonConfig struct {
 	ConfigPath        string
-	GRPCAddr          string
+	ServerURL         string
 	Token             string
 	DaemonID          string
 	ComputerID        string
@@ -46,7 +46,7 @@ type daemonConfig struct {
 }
 
 type daemonConfigFile struct {
-	GRPCAddr          string   `json:"grpcAddr"`
+	ServerURL         string   `json:"serverUrl"`
 	Token             string   `json:"token"`
 	DaemonID          string   `json:"daemonId"`
 	ComputerID        string   `json:"computerId"`
@@ -99,24 +99,7 @@ func runDaemon(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	target := cfg.GRPCAddr
-	// Use gRPC DNS resolver for Happy Eyeballs dual-stack support (RFC 8305).
-	// The default passthrough resolver delegates to the OS DNS, which may pick
-	// an unreachable IPv6 address while IPv4 works. dns:/// forces gRPC to
-	// resolve and try all returned addresses.
-	if !strings.Contains(target, "://") {
-		target = "dns:///" + target
-	}
-	conn, err := grpc.NewClient(
-		target,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return fmt.Errorf("connect daemon grpc: %w", err)
-	}
-	defer conn.Close()
-
-	client := daemonv1.NewDaemonControlServiceClient(conn)
+	client := newConnectDaemonClient(defaultConnectHTTPClient(), cfg.ServerURL)
 	session := &daemonSession{cfg: cfg, client: client}
 	if err := session.register(ctx); err != nil {
 		return err
@@ -136,7 +119,7 @@ func runDaemon(args []string) error {
 
 type daemonSession struct {
 	cfg    daemonConfig
-	client daemonv1.DaemonControlServiceClient
+	client daemonControlClient
 	lease  *daemonv1.Lease
 }
 
@@ -388,17 +371,18 @@ func (s *daemonSession) requestContext() *daemonv1.RequestContext {
 }
 
 func (s *daemonSession) withToken(ctx context.Context) context.Context {
-	if strings.TrimSpace(s.cfg.Token) == "" {
+	token := strings.TrimSpace(s.cfg.Token)
+	if token == "" {
 		return ctx
 	}
-	return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+s.cfg.Token)
+	return context.WithValue(ctx, authContextKey{}, token)
 }
 
 func loadConfig(args []string) (daemonConfig, error) {
 	hostname, _ := os.Hostname()
 	cfg := daemonConfig{
 		ConfigPath:        firstConfigPathArg(args, env("NEKODE_DAEMON_CONFIG", defaultConfigPath())),
-		GRPCAddr:          env("NEKODE_DAEMON_GRPC_ADDR", env("NEKODE_GRPC_ADDR", "127.0.0.1:18789")),
+		ServerURL:         env("NEKODE_DAEMON_SERVER_URL", env("NEKODE_SERVER_URL", defaultDaemonServerURL)),
 		Token:             env("NEKODE_DAEMON_TOKEN", ""),
 		DaemonID:          env("NEKODE_DAEMON_ID", "daemon-"+hostname),
 		ComputerID:        env("NEKODE_COMPUTER_ID", "computer-"+hostname),
@@ -420,8 +404,7 @@ func loadConfig(args []string) (daemonConfig, error) {
 
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
 	flags.StringVar(&cfg.ConfigPath, "config", cfg.ConfigPath, "daemon install config path")
-	flags.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "Nekode server gRPC address")
-	flags.StringVar(&cfg.GRPCAddr, "server-grpc", cfg.GRPCAddr, "Nekode server gRPC address")
+	flags.StringVar(&cfg.ServerURL, "server-url", cfg.ServerURL, "Nekode server connect-rpc URL")
 	flags.StringVar(&cfg.Token, "token", cfg.Token, "daemon install token; normally read from generated daemon config")
 	flags.StringVar(&cfg.DaemonID, "daemon-id", cfg.DaemonID, "stable daemon id")
 	flags.StringVar(&cfg.ComputerID, "computer-id", cfg.ComputerID, "stable computer id")
@@ -443,8 +426,12 @@ func loadConfig(args []string) (daemonConfig, error) {
 	if err := flags.Parse(args); err != nil {
 		return cfg, err
 	}
-	if strings.TrimSpace(cfg.GRPCAddr) == "" {
-		return cfg, fmt.Errorf("grpc addr is required")
+	cfg.ServerURL = normalizeDaemonServerURL(cfg.ServerURL)
+	if strings.TrimSpace(cfg.ServerURL) == "" {
+		return cfg, fmt.Errorf("server url is required")
+	}
+	if _, err := url.ParseRequestURI(cfg.ServerURL); err != nil {
+		return cfg, fmt.Errorf("server url: %w", err)
 	}
 	if strings.TrimSpace(cfg.DaemonID) == "" || strings.TrimSpace(cfg.ComputerID) == "" {
 		return cfg, fmt.Errorf("daemon-id and computer-id are required")
@@ -491,7 +478,7 @@ func applyConfigFile(cfg *daemonConfig) error {
 	if err := json.Unmarshal(content, &file); err != nil {
 		return fmt.Errorf("parse daemon config: %w", err)
 	}
-	overlayString(&cfg.GRPCAddr, file.GRPCAddr)
+	overlayString(&cfg.ServerURL, file.ServerURL)
 	overlayString(&cfg.Token, file.Token)
 	overlayString(&cfg.DaemonID, file.DaemonID)
 	overlayString(&cfg.ComputerID, file.ComputerID)
@@ -535,6 +522,17 @@ func overlayString(dst *string, value string) {
 	if strings.TrimSpace(value) != "" {
 		*dst = strings.TrimSpace(value)
 	}
+}
+
+func normalizeDaemonServerURL(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if strings.Contains(value, "://") {
+		return strings.TrimRight(value, "/")
+	}
+	return "http://" + strings.TrimRight(value, "/")
 }
 
 func defaultConfigPath() string {
@@ -595,6 +593,6 @@ func newRequestID(prefix string) string {
 
 func printUsage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  nekode-daemon run [--config ~/.nekode/daemon.json] [--grpc-addr 127.0.0.1:18789] [--server-grpc 127.0.0.1:18789] [--token <install-token>] [--daemon-id daemon-host] [--computer-id computer-host] [--heartbeat-interval 30s] [--run-poll-interval 5s] [--executor-command codex] [--executor-arg run] [--once]")
+	fmt.Fprintln(os.Stderr, "  nekode-daemon run [--config ~/.nekode/daemon.json] [--server-url http://localhost:18790] [--token <install-token>] [--daemon-id daemon-host] [--computer-id computer-host] [--heartbeat-interval 30s] [--run-poll-interval 5s] [--executor-command codex] [--executor-arg run] [--once]")
 	fmt.Fprintln(os.Stderr, "  nekode-daemon version")
 }

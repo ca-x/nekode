@@ -39,7 +39,7 @@ const (
 // of "the person allowed to publish a port on this machine" until the
 // Computer entity grows an explicit owner field.
 //
-// Agent-initiated tunnels arrive over gRPC (daemonrpc.CreateTunnel),
+// Agent-initiated tunnels arrive over daemon RPC (daemonrpc.CreateTunnel),
 // always land in pending_approval, and require an admin to release them
 // — so the agent path does not bypass this check.
 func (s *Server) handleCreateTunnel(w http.ResponseWriter, r *http.Request) {

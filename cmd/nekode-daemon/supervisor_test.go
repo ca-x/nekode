@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"io"
 	"strings"
 	"testing"
 	"time"
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 func TestRunSupervisorCompletesQueuedRun(t *testing.T) {
@@ -571,19 +568,19 @@ func newFakeSupervisorClient(runs ...*daemonv1.Run) *fakeSupervisorClient {
 	return &fakeSupervisorClient{runs: runs}
 }
 
-func (c *fakeSupervisorClient) AcquireStartPermit(context.Context, *daemonv1.AcquireStartPermitRequest, ...grpc.CallOption) (*daemonv1.AcquireStartPermitResponse, error) {
+func (c *fakeSupervisorClient) AcquireStartPermit(context.Context, *daemonv1.AcquireStartPermitRequest) (*daemonv1.AcquireStartPermitResponse, error) {
 	return &daemonv1.AcquireStartPermitResponse{
 		Granted:     true,
 		PermitLease: &daemonv1.Lease{LeaseId: "lease-1"},
 	}, nil
 }
 
-func (c *fakeSupervisorClient) ReleaseStartPermit(_ context.Context, req *daemonv1.ReleaseStartPermitRequest, _ ...grpc.CallOption) (*daemonv1.ReleaseStartPermitResponse, error) {
+func (c *fakeSupervisorClient) ReleaseStartPermit(_ context.Context, req *daemonv1.ReleaseStartPermitRequest) (*daemonv1.ReleaseStartPermitResponse, error) {
 	c.releasedPermits = append(c.releasedPermits, req.GetLeaseId())
 	return &daemonv1.ReleaseStartPermitResponse{Accepted: true}, nil
 }
 
-func (c *fakeSupervisorClient) FetchAssignedRuns(_ context.Context, req *daemonv1.FetchAssignedRunsRequest, _ ...grpc.CallOption) (*daemonv1.FetchAssignedRunsResponse, error) {
+func (c *fakeSupervisorClient) FetchAssignedRuns(_ context.Context, req *daemonv1.FetchAssignedRunsRequest) (*daemonv1.FetchAssignedRunsResponse, error) {
 	c.fetchRequests = append(c.fetchRequests, req)
 	out := []*daemonv1.Run{}
 	for _, run := range c.runs {
@@ -598,7 +595,7 @@ func (c *fakeSupervisorClient) FetchAssignedRuns(_ context.Context, req *daemonv
 	return &daemonv1.FetchAssignedRunsResponse{Runs: out}, nil
 }
 
-func (c *fakeSupervisorClient) GetLaunchPromptSnapshot(_ context.Context, req *daemonv1.GetLaunchPromptSnapshotRequest, _ ...grpc.CallOption) (*daemonv1.GetLaunchPromptSnapshotResponse, error) {
+func (c *fakeSupervisorClient) GetLaunchPromptSnapshot(_ context.Context, req *daemonv1.GetLaunchPromptSnapshotRequest) (*daemonv1.GetLaunchPromptSnapshotResponse, error) {
 	if c.promptSnapshot == nil {
 		return &daemonv1.GetLaunchPromptSnapshotResponse{}, nil
 	}
@@ -608,13 +605,13 @@ func (c *fakeSupervisorClient) GetLaunchPromptSnapshot(_ context.Context, req *d
 	return &daemonv1.GetLaunchPromptSnapshotResponse{Snapshot: &snapshot}, nil
 }
 
-func (c *fakeSupervisorClient) UpdateRunStatus(_ context.Context, req *daemonv1.UpdateRunStatusRequest, _ ...grpc.CallOption) (*daemonv1.UpdateRunStatusResponse, error) {
+func (c *fakeSupervisorClient) UpdateRunStatus(_ context.Context, req *daemonv1.UpdateRunStatusRequest) (*daemonv1.UpdateRunStatusResponse, error) {
 	c.updates = append(c.updates, req)
 	run := &daemonv1.Run{RunId: req.GetRunId(), AgentId: req.GetAgentId(), State: req.GetState(), Summary: req.GetSummary(), Error: req.GetError()}
 	return &daemonv1.UpdateRunStatusResponse{Accepted: true, Run: run}, nil
 }
 
-func (c *fakeSupervisorClient) AppendRunStep(_ context.Context, req *daemonv1.AppendRunStepRequest, _ ...grpc.CallOption) (*daemonv1.AppendRunStepResponse, error) {
+func (c *fakeSupervisorClient) AppendRunStep(_ context.Context, req *daemonv1.AppendRunStepRequest) (*daemonv1.AppendRunStepResponse, error) {
 	step := req.GetStep()
 	if step.StepId == "" {
 		step.StepId = "step-" + time.Now().Format("150405.000000000")
@@ -623,17 +620,17 @@ func (c *fakeSupervisorClient) AppendRunStep(_ context.Context, req *daemonv1.Ap
 	return &daemonv1.AppendRunStepResponse{Accepted: true, Step: step}, nil
 }
 
-func (c *fakeSupervisorClient) UpdateAgentStatus(_ context.Context, req *daemonv1.UpdateAgentStatusRequest, _ ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error) {
+func (c *fakeSupervisorClient) UpdateAgentStatus(_ context.Context, req *daemonv1.UpdateAgentStatusRequest) (*daemonv1.UpdateAgentStatusResponse, error) {
 	c.agentStatuses = append(c.agentStatuses, req.GetStatus())
 	return &daemonv1.UpdateAgentStatusResponse{Status: req.GetStatus()}, nil
 }
 
-func (c *fakeSupervisorClient) SendMessage(_ context.Context, req *daemonv1.SendMessageRequest, _ ...grpc.CallOption) (*daemonv1.SendMessageResponse, error) {
+func (c *fakeSupervisorClient) SendMessage(_ context.Context, req *daemonv1.SendMessageRequest) (*daemonv1.SendMessageResponse, error) {
 	c.messages = append(c.messages, req)
 	return &daemonv1.SendMessageResponse{Accepted: true, Message: &daemonv1.CollaborationMessage{MessageId: "reply-1", Target: req.GetTarget(), Content: req.GetContent()}}, nil
 }
 
-func (c *fakeSupervisorClient) LogActivity(_ context.Context, req *daemonv1.LogActivityRequest, _ ...grpc.CallOption) (*daemonv1.LogActivityResponse, error) {
+func (c *fakeSupervisorClient) LogActivity(_ context.Context, req *daemonv1.LogActivityRequest) (*daemonv1.LogActivityResponse, error) {
 	c.activities = append(c.activities, req)
 	return &daemonv1.LogActivityResponse{Activity: &daemonv1.ActivityRecord{ActivityId: "activity-" + req.GetKind(), Kind: req.GetKind()}}, nil
 }
@@ -641,24 +638,17 @@ func (c *fakeSupervisorClient) LogActivity(_ context.Context, req *daemonv1.LogA
 // ReportAgentRun stub: tests don't exercise the archive; return a no-op
 // stream that discards events. This keeps the fake client in sync with
 // the supervisor interface without pulling in the full archive wiring.
-func (c *fakeSupervisorClient) ReportAgentRun(_ context.Context, _ ...grpc.CallOption) (daemonv1.DaemonControlService_ReportAgentRunClient, error) {
+func (c *fakeSupervisorClient) ReportAgentRun(_ context.Context) (reportAgentRunClient, error) {
 	return &noopReportAgentRunClient{}, nil
 }
 
-type noopReportAgentRunClient struct {
-	grpc.ClientStream
-}
+type noopReportAgentRunClient struct{}
 
 func (noopReportAgentRunClient) Send(*daemonv1.AgentRunEvent) error { return nil }
 func (noopReportAgentRunClient) CloseAndRecv() (*daemonv1.ReportAgentRunResponse, error) {
 	return &daemonv1.ReportAgentRunResponse{}, nil
 }
-func (noopReportAgentRunClient) Header() (metadata.MD, error) { return metadata.MD{}, nil }
-func (noopReportAgentRunClient) Trailer() metadata.MD         { return metadata.MD{} }
-func (noopReportAgentRunClient) CloseSend() error             { return nil }
-func (noopReportAgentRunClient) Context() context.Context     { return context.Background() }
-func (noopReportAgentRunClient) SendMsg(m any) error          { return nil }
-func (noopReportAgentRunClient) RecvMsg(m any) error          { return io.EOF }
+func (noopReportAgentRunClient) Close() error { return nil }
 
 func (c *fakeSupervisorClient) runStates() []daemonv1.RunState {
 	out := make([]daemonv1.RunState, 0, len(c.updates))

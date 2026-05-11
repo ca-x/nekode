@@ -6,7 +6,7 @@ lands and is signed off by codex.
 ## Goal
 
 Expose a web service running on a computer via a temporary HTTPS URL,
-routed through the nekode server over the existing daemon reverse gRPC
+routed through the nekode server over the existing daemon reverse connect-rpc
 stream. Agents use it to share "look what I built" with reviewers
 without manual port forwarding or third-party tunnels (ngrok, frp).
 

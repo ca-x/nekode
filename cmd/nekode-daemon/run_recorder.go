@@ -23,8 +23,8 @@ type runRecorder struct {
 	computerID string
 	agentID    string
 	runID      string
-	eventRunID string // identical to the gRPC run id; stored for readability
-	stream     daemonv1.DaemonControlService_ReportAgentRunClient
+	eventRunID string // identical to the RPC run id; stored for readability
+	stream     reportAgentRunClient
 }
 
 // newRunRecorder opens a stream and emits the START event. Returning nil
@@ -54,7 +54,7 @@ func newRunRecorder(ctx context.Context, client runSupervisorClient, withToken f
 	}
 	if err := rec.send(daemonv1.AgentRunPhase_AGENT_RUN_PHASE_START, summary, nil, 0, ""); err != nil {
 		slog.Warn("agent run recorder: start send failed", "run_id", runID, "error", err)
-		_ = stream.CloseSend()
+		_ = stream.Close()
 		return nil
 	}
 	return rec

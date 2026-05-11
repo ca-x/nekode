@@ -12,17 +12,15 @@ import (
 )
 
 const (
-	DefaultAddr     = ":18790"
-	DefaultGRPCAddr = "127.0.0.1:18789"
-	DefaultBaseURL  = "http://localhost:18790"
-	DefaultDBType   = "sqlite"
+	DefaultAddr    = ":18790"
+	DefaultBaseURL = "http://localhost:18790"
+	DefaultDBType  = "sqlite"
 )
 
 type Config struct {
 	Addr                   string
-	GRPCAddr               string
-	GRPCAdvertiseAddr      string
 	DaemonTransport        string
+	DaemonRPCURL           string
 	BaseURL                string
 	WebDistDir             string
 	DataDir                string
@@ -51,9 +49,8 @@ func Load() (Config, error) {
 
 	cfg := Config{
 		Addr:                   env("NEKODE_ADDR", DefaultAddr),
-		GRPCAddr:               env("NEKODE_GRPC_ADDR", DefaultGRPCAddr),
-		GRPCAdvertiseAddr:      strings.TrimSpace(os.Getenv("NEKODE_GRPC_ADVERTISE_ADDR")),
-		DaemonTransport:        env("NEKODE_DAEMON_TRANSPORT", "grpc"),
+		DaemonTransport:        env("NEKODE_DAEMON_TRANSPORT", "connect"),
+		DaemonRPCURL:           strings.TrimSpace(os.Getenv("NEKODE_DAEMON_RPC_URL")),
 		BaseURL:                env("NEKODE_BASE_URL", DefaultBaseURL),
 		WebDistDir:             strings.TrimSpace(os.Getenv("NEKODE_WEB_DIST_DIR")),
 		DataDir:                env("NEKODE_DATA_DIR", filepath.Join(home, ".nekode")),
@@ -94,6 +91,7 @@ func Load() (Config, error) {
 	if cfg.CacheDir == "" {
 		cfg.CacheDir = filepath.Join(cfg.DataDir, "cache")
 	}
+	cfg.DaemonTransport = normalizeDaemonTransport(cfg.DaemonTransport)
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -104,11 +102,13 @@ func (c Config) Validate() error {
 	if strings.TrimSpace(c.Addr) == "" {
 		return errors.New("addr is required")
 	}
-	if strings.TrimSpace(c.GRPCAddr) == "" {
-		return errors.New("grpc addr is required")
+	if normalizeDaemonTransport(c.DaemonTransport) != "connect" {
+		return errors.New("daemon transport must be connect")
 	}
-	if normalizeDaemonTransport(c.DaemonTransport) != "grpc" {
-		return errors.New("daemon transport must be grpc")
+	if strings.TrimSpace(c.DaemonRPCURL) != "" {
+		if _, err := url.ParseRequestURI(c.DaemonRPCURL); err != nil {
+			return fmt.Errorf("daemon rpc url: %w", err)
+		}
 	}
 	if strings.TrimSpace(c.DataDir) == "" {
 		return errors.New("data dir is required")
@@ -190,8 +190,8 @@ func normalizeCacheDriver(value string) string {
 
 func normalizeDaemonTransport(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "grpc", "grpc_http2", "grpc-http2":
-		return "grpc"
+	case "", "connect", "connect-rpc", "connectrpc":
+		return "connect"
 	default:
 		return strings.ToLower(strings.TrimSpace(value))
 	}

@@ -30,7 +30,7 @@ var hopByHopHeaders = map[string]struct{}{
 
 const (
 	// previewReadBufferBytes is the upload chunk size; chosen at 32 KiB to
-	// land below the default gRPC message size while staying large enough
+	// land below common RPC message limits while staying large enough
 	// to keep small requests in one frame.
 	previewReadBufferBytes = 32 * 1024
 	// previewResponseTimeout caps per-request wall time across server and

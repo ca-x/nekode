@@ -269,7 +269,7 @@ export type DaemonInfo = {
   protocolVersion: number;
   minProtocolVersion: number;
   maxProtocolVersion: number;
-  grpcAddr: string;
+  daemonRpcUrl: string;
   daemonTransport: string;
   cacheDriver: string;
   serverTimeUnix?: number;

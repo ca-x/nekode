@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -453,8 +452,9 @@ switch ($action) {
 }
 
 func (s *Server) daemonConfigJSON(r *http.Request, enrollment daemonEnrollment, token string) string {
+	serverURL := s.daemonRPCURL(r)
 	body := map[string]string{
-		"grpcAddr":          s.daemonGRPCEndpoint(r),
+		"serverUrl":         serverURL,
 		"token":             token,
 		"computerId":        enrollment.ComputerID,
 		"displayName":       enrollment.DisplayName,
@@ -468,59 +468,32 @@ func (s *Server) daemonConfigJSON(r *http.Request, enrollment daemonEnrollment, 
 	return string(data)
 }
 
-// daemonGRPCEndpoint returns the address the installed daemon should dial.
-// Preference order:
-//  1. NEKODE_GRPC_ADVERTISE_ADDR / cfg.GRPCAdvertiseAddr if set.
-//  2. Host from BaseURL or the incoming request, combined with the port of
-//     cfg.GRPCAddr. This keeps a single public domain working for both HTTP
-//     and gRPC when the operator terminates TLS on one host.
-//  3. cfg.GRPCAddr as-is (fallback for dev where everything is localhost).
-func (s *Server) daemonGRPCEndpoint(r *http.Request) string {
-	if advertise := strings.TrimSpace(s.cfg.GRPCAdvertiseAddr); advertise != "" {
-		return advertise
+// daemonRPCURL returns the HTTP base URL the installed daemon should dial.
+func (s *Server) daemonRPCURL(r *http.Request) string {
+	if advertise := strings.TrimSpace(s.cfg.DaemonRPCURL); advertise != "" {
+		return normalizeDaemonRPCURL(advertise)
 	}
-	grpcPort := grpcPortFromAddr(s.cfg.GRPCAddr)
-	if host := externalHost(r, s.cfg.BaseURL); host != "" && grpcPort != "" {
-		return net.JoinHostPort(host, grpcPort)
-	}
-	return s.cfg.GRPCAddr
-}
-
-func grpcPortFromAddr(addr string) string {
-	addr = strings.TrimSpace(addr)
-	if addr == "" {
-		return ""
-	}
-	if _, port, err := net.SplitHostPort(addr); err == nil {
-		return port
-	}
-	return ""
-}
-
-func externalHost(r *http.Request, baseURL string) string {
-	base := strings.TrimSpace(baseURL)
-	if base != "" && base != config.DefaultBaseURL {
-		if u, err := url.Parse(base); err == nil && u.Hostname() != "" {
-			return u.Hostname()
+	base := strings.TrimSpace(s.cfg.BaseURL)
+	if base == "" || normalizeDaemonRPCURL(base) == normalizeDaemonRPCURL(config.DefaultBaseURL) {
+		if derived := deriveExternalBase(r); derived != "" {
+			return normalizeDaemonRPCURL(derived)
 		}
 	}
-	if r == nil {
+	if base != "" {
+		return normalizeDaemonRPCURL(base)
+	}
+	return normalizeDaemonRPCURL(config.DefaultBaseURL)
+}
+
+func normalizeDaemonRPCURL(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
 		return ""
 	}
-	host := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
-	if host == "" {
-		host = strings.TrimSpace(r.Host)
+	if !strings.Contains(value, "://") {
+		value = "http://" + value
 	}
-	if i := strings.IndexByte(host, ','); i >= 0 {
-		host = strings.TrimSpace(host[:i])
-	}
-	if host == "" {
-		return ""
-	}
-	if h, _, err := net.SplitHostPort(host); err == nil {
-		return h
-	}
-	return host
+	return strings.TrimRight(value, "/")
 }
 
 func daemonDownloadBaseURL() string {

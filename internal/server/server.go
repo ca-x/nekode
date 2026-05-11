@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"path"
@@ -17,7 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/gen/go/nekode/daemon/v1/daemonv1connect"
 	"github.com/ca-x/nekode/internal/auth"
 	"github.com/ca-x/nekode/internal/cache"
 	"github.com/ca-x/nekode/internal/config"
@@ -35,7 +36,8 @@ import (
 	"github.com/ca-x/nekode/internal/tunnelregistry"
 	"github.com/ca-x/nekode/internal/version"
 	"github.com/ca-x/nekode/internal/webdist"
-	"google.golang.org/grpc"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 const ProtocolPath = "proto/nekode/daemon/v1/daemon.proto"
@@ -95,7 +97,7 @@ func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, 
 }
 
 func (s *Server) Handler() http.Handler {
-	return s.mux
+	return h2c.NewHandler(s.mux, &http2.Server{})
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
@@ -103,15 +105,6 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		Addr:              s.cfg.Addr,
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
-	}
-
-	grpcServer, listener, err := s.startGRPC()
-	if err != nil {
-		return err
-	}
-	if grpcServer != nil {
-		defer grpcServer.Stop()
-		defer listener.Close()
 	}
 
 	// Periodic sweeper: walks the tunnels table every minute and flips
@@ -170,26 +163,15 @@ func (s *Server) runTunnelSweeper(ctx context.Context) {
 	}
 }
 
-func (s *Server) startGRPC() (*grpc.Server, net.Listener, error) {
-	if s.daemon == nil || strings.TrimSpace(s.cfg.GRPCAddr) == "" {
-		return nil, nil, nil
-	}
-	listener, err := net.Listen("tcp", s.cfg.GRPCAddr)
-	if err != nil {
-		return nil, nil, err
-	}
-	grpcServer := grpc.NewServer(s.grpcServerOptions()...)
-	daemonv1.RegisterDaemonControlServiceServer(grpcServer, s.daemon)
-	go func() {
-		s.logger.Info("nekode daemon grpc starting", "addr", s.cfg.GRPCAddr)
-		if err := grpcServer.Serve(listener); err != nil {
-			s.logger.Error("daemon grpc stopped", "error", err)
-		}
-	}()
-	return grpcServer, listener, nil
-}
-
 func (s *Server) routes() {
+	if s.daemon != nil {
+		path, handler := daemonv1connect.NewDaemonControlServiceHandler(
+			daemonrpc.NewConnectHandler(s.daemon),
+			connect.WithInterceptors(s.daemonAuthInterceptor()),
+		)
+		s.mux.Handle("POST "+path, handler)
+		s.mux.Handle("GET "+path, handler)
+	}
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/version", s.handleVersion)
 	s.mux.HandleFunc("GET /api/protocol", s.handleProtocol)
@@ -259,7 +241,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/decisions/{id}/ratify", s.requireAuth(s.handleRatifyChannelDecision))
 	s.mux.HandleFunc("POST /api/decisions/{id}/retire", s.requireAuth(s.handleRetireChannelDecision))
 	s.mux.HandleFunc("GET /api/decisions/{id}/votes", s.requireAuth(s.handleListDecisionVotes))
-	// Agent runs archive (read side only; writes come over the gRPC stream).
+	// Agent runs archive (read side only; writes come over the daemon RPC stream).
 	s.mux.HandleFunc("GET /api/agent-runs", s.requireAuth(s.handleListAgentRuns))
 	s.mux.HandleFunc("GET /api/agent-runs/search", s.requireAuth(s.handleSearchAgentRuns))
 	s.mux.HandleFunc("GET /api/agent-runs/{id}", s.requireAuth(s.handleGetAgentRun))

@@ -29,7 +29,7 @@ guide. Those stay in task #92 and task #93.
 | Module | `github.com/ca-x/nekode` | Matches the GitHub repository import path. |
 | Backend | Go standard library HTTP for bootstrap | Keeps the first slice small and avoids locking into a framework too early. |
 | Protocol package | `nekode.daemon.v1` | Reuses Slock-style field/RPC semantics while removing old application naming. |
-| Proto generation | `buf` + Go/gRPC stubs | Keeps the protocol first-class and testable. |
+| Proto generation | `buf` + Go/connect-rpc stubs | Keeps the protocol first-class and testable. |
 | Data store | SQLite planned, not implemented in bootstrap | Self-hosted friendly; schema should be added when domain services land. |
 | Branding | Web console assets under `web/src/` and `web/public/` | Matches the requested visual lineage for the current UI work. |
 
@@ -41,7 +41,7 @@ egress surface:
 
 - `web`: browser console with HTTP/WebSocket;
 - `cli`: local or remote command-line client;
-- `api`: REST/gRPC clients;
+- `api`: REST/connect-rpc clients;
 - `webhook`: third-party automation callbacks;
 - `mcp`: model/tool clients;
 - `im`: WeChat, Slack, Telegram, DingTalk, Lark, and similar transports;
@@ -83,7 +83,7 @@ Use these as design references, not source-code templates.
 5. Implement daemon registration, heartbeat, event replay, and leases.
 6. Implement runtime discovery, start queue, token file injection, and agent
    status reporting.
-7. Add WebSocket/SSE and REST/gRPC gateway surfaces for the frontend and CLI.
+7. Add WebSocket/SSE and REST/connect-rpc gateway surfaces for the frontend and CLI.
 
 ## Verification
 

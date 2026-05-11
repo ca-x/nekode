@@ -2,7 +2,7 @@
 // routes inbound /preview/<token>/ HTTP requests over those streams.
 //
 // The registry is the single shared state between the HTTP reverse-proxy
-// handler (on the public server mux) and the gRPC bidi ProxyExchange
+// handler (on the public server mux) and the connect-rpc bidi ProxyExchange
 // handler (on the daemon control service). It is deliberately isolated in
 // its own package so both the server and daemonrpc layers can import it
 // without creating a dependency cycle.
@@ -26,15 +26,15 @@ var (
 	ErrRequestGone  = errors.New("request responder no longer waiting")
 )
 
-// Stream is the writer half the gRPC handler owns. The registry never
+// Stream is the writer half the connect handler owns. The registry never
 // reads from the underlying bidi stream; the daemon handler does that in
 // a goroutine and calls Dispatch on us for each inbound frame.
 type Stream interface {
 	Send(frame *daemonv1.ProxyFrame) error
 }
 
-// lockedStream serializes Send calls on a single underlying gRPC stream.
-// grpc-go allows exactly one concurrent sender per stream, so the
+// lockedStream serializes Send calls on a single underlying RPC stream.
+// The stream should have one sender at a time, so the
 // registry wraps every attached stream in this guard before handing it
 // out to HTTP responders (which run one per in-flight request and each
 // call Send independently for REQUEST_START / REQUEST_BODY / REQUEST_END).
@@ -69,7 +69,7 @@ func (ls *lockedStream) markClosed() {
 }
 
 // Responder is the HTTP side of one in-flight request. The reverse-proxy
-// handler registers a responder before sending REQUEST_START; the gRPC
+// handler registers a responder before sending REQUEST_START; the RPC
 // handler pushes RESPONSE_* frames into it; the handler Waits on it for
 // the next frame to write out.
 type Responder struct {
@@ -124,7 +124,7 @@ func (r *Responder) Close() {
 // Registry is the hub. Safe for concurrent use.
 type Registry struct {
 	mu         sync.Mutex
-	streams    map[string]*lockedStream             // computerID → serialized stream
+	streams    map[string]*lockedStream // computerID → serialized stream
 	responders map[string]map[string]*streamOwnedResponder
 }
 
@@ -230,7 +230,7 @@ func (rg *Registry) Unregister(computerID, requestID string) {
 }
 
 // Dispatch routes a daemon→server frame to the right responder. Returns
-// ErrRequestGone when the responder was already unregistered — the gRPC
+// ErrRequestGone when the responder was already unregistered — the RPC
 // handler typically logs-and-continues on that error rather than failing
 // the whole stream.
 func (rg *Registry) Dispatch(computerID string, frame *daemonv1.ProxyFrame) error {

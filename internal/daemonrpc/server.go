@@ -19,8 +19,6 @@ import (
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/tunnelregistry"
 	"github.com/ca-x/nekode/internal/version"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -35,8 +33,6 @@ const (
 )
 
 type Server struct {
-	daemonv1.UnimplementedDaemonControlServiceServer
-
 	store      *storage.Store
 	serverID   string
 	serverName string
@@ -1747,7 +1743,7 @@ func (s *Server) AcknowledgeServerEvents(_ context.Context, req *daemonv1.Acknow
 	return &daemonv1.AcknowledgeServerEventsResponse{Accepted: true, Cursor: req.GetCursor()}, nil
 }
 
-func (s *Server) SubscribeServerEvents(req *daemonv1.SubscribeServerEventsRequest, stream daemonv1.DaemonControlService_SubscribeServerEventsServer) error {
+func (s *Server) SubscribeServerEvents(req *daemonv1.SubscribeServerEventsRequest, stream ServerEventStream) error {
 	event := &daemonv1.ServerEvent{
 		EventId:         storage.NewID("evt"),
 		Sequence:        s.nextSequence(),
@@ -1870,7 +1866,7 @@ func (s *Server) AcknowledgeActivityEvents(_ context.Context, req *daemonv1.Ackn
 	return &daemonv1.AcknowledgeActivityEventsResponse{Accepted: true, Cursor: req.GetCursor()}, nil
 }
 
-func (s *Server) SubscribeActivity(req *daemonv1.SubscribeActivityRequest, stream daemonv1.DaemonControlService_SubscribeActivityServer) error {
+func (s *Server) SubscribeActivity(req *daemonv1.SubscribeActivityRequest, stream ActivityStream) error {
 	event := &daemonv1.CollaborationEvent{
 		EventId:         storage.NewID("cev"),
 		Target:          firstNonEmpty(first(req.GetTargets()), "server"),
@@ -3154,7 +3150,7 @@ func actorKindToStorage(kind daemonv1.ActorKind) string {
 // messageKindToStorage mirrors the REST-side string vocabulary used by
 // the frontend (kind chip renders: decision / blocker / status / note).
 // Keeping the storage layer on free-form strings rather than a FK means
-// gRPC and REST agree by convention, not by foreign key — so this is
+// daemon RPC and REST agree by convention, not by foreign key — so this is
 // the one place new kinds need to be registered.
 func messageKindToStorage(kind daemonv1.MessageKind) string {
 	switch kind {
@@ -3172,7 +3168,7 @@ func messageKindToStorage(kind daemonv1.MessageKind) string {
 }
 
 // messageKindFromStorage is the inverse, used when projecting storage
-// rows back out through gRPC responses and mutation event payloads.
+// rows back out through RPC responses and mutation event payloads.
 func messageKindFromStorage(kind string) daemonv1.MessageKind {
 	switch kind {
 	case "decision":
@@ -3592,8 +3588,6 @@ func contains(values []string, needle string) bool {
 func unixNow() int64 {
 	return time.Now().Unix()
 }
-
-var _ daemonv1.DaemonControlServiceServer = (*Server)(nil)
 
 func discardStream[T any](stream interface {
 	Send(*T) error

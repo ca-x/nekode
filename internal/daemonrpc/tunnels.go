@@ -11,8 +11,6 @@ import (
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/storage"
 	"github.com/ca-x/nekode/internal/tunnelregistry"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -138,7 +136,7 @@ func tunnelStateErr(err error) error {
 // request_id == its computer_id so the server can bind the stream to
 // the right computer. All subsequent frames are RESPONSE_* or CANCEL
 // frames correlated by request_id.
-func (s *Server) ProxyExchange(stream daemonv1.DaemonControlService_ProxyExchangeServer) error {
+func (s *Server) ProxyExchange(stream ProxyStream) error {
 	if s.tunnels == nil {
 		return status.Error(codes.Unavailable, "tunnel registry not configured on this server")
 	}

@@ -110,7 +110,7 @@ section header opens the Connect Computer modal.
 ### 3.5 Connect Computer modal
 
 - Monospace command block: `sudo bash -c "$(curl -fsSL <install_url>)"`. Install
-  URL comes from the freshly-fixed `absoluteURL` / `GRPCAdvertiseAddr` path so
+  URL comes from the server base URL / daemon RPC URL path so
   it resolves to the public host, not `localhost`.
 - Copy icon top-right.
 - Status pill below the block, polling the enrollment status endpoint:

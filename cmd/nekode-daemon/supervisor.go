@@ -12,26 +12,24 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const maxRunDetailBytes = 4096
 
 type runSupervisorClient interface {
-	AcquireStartPermit(context.Context, *daemonv1.AcquireStartPermitRequest, ...grpc.CallOption) (*daemonv1.AcquireStartPermitResponse, error)
-	ReleaseStartPermit(context.Context, *daemonv1.ReleaseStartPermitRequest, ...grpc.CallOption) (*daemonv1.ReleaseStartPermitResponse, error)
-	FetchAssignedRuns(context.Context, *daemonv1.FetchAssignedRunsRequest, ...grpc.CallOption) (*daemonv1.FetchAssignedRunsResponse, error)
-	GetLaunchPromptSnapshot(context.Context, *daemonv1.GetLaunchPromptSnapshotRequest, ...grpc.CallOption) (*daemonv1.GetLaunchPromptSnapshotResponse, error)
-	UpdateRunStatus(context.Context, *daemonv1.UpdateRunStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateRunStatusResponse, error)
-	AppendRunStep(context.Context, *daemonv1.AppendRunStepRequest, ...grpc.CallOption) (*daemonv1.AppendRunStepResponse, error)
-	UpdateAgentStatus(context.Context, *daemonv1.UpdateAgentStatusRequest, ...grpc.CallOption) (*daemonv1.UpdateAgentStatusResponse, error)
-	SendMessage(context.Context, *daemonv1.SendMessageRequest, ...grpc.CallOption) (*daemonv1.SendMessageResponse, error)
-	LogActivity(context.Context, *daemonv1.LogActivityRequest, ...grpc.CallOption) (*daemonv1.LogActivityResponse, error)
-	ReportAgentRun(context.Context, ...grpc.CallOption) (daemonv1.DaemonControlService_ReportAgentRunClient, error)
+	AcquireStartPermit(context.Context, *daemonv1.AcquireStartPermitRequest) (*daemonv1.AcquireStartPermitResponse, error)
+	ReleaseStartPermit(context.Context, *daemonv1.ReleaseStartPermitRequest) (*daemonv1.ReleaseStartPermitResponse, error)
+	FetchAssignedRuns(context.Context, *daemonv1.FetchAssignedRunsRequest) (*daemonv1.FetchAssignedRunsResponse, error)
+	GetLaunchPromptSnapshot(context.Context, *daemonv1.GetLaunchPromptSnapshotRequest) (*daemonv1.GetLaunchPromptSnapshotResponse, error)
+	UpdateRunStatus(context.Context, *daemonv1.UpdateRunStatusRequest) (*daemonv1.UpdateRunStatusResponse, error)
+	AppendRunStep(context.Context, *daemonv1.AppendRunStepRequest) (*daemonv1.AppendRunStepResponse, error)
+	UpdateAgentStatus(context.Context, *daemonv1.UpdateAgentStatusRequest) (*daemonv1.UpdateAgentStatusResponse, error)
+	SendMessage(context.Context, *daemonv1.SendMessageRequest) (*daemonv1.SendMessageResponse, error)
+	LogActivity(context.Context, *daemonv1.LogActivityRequest) (*daemonv1.LogActivityResponse, error)
+	ReportAgentRun(context.Context) (reportAgentRunClient, error)
 }
 
 type runSupervisorConfig struct {
@@ -612,8 +610,8 @@ func (s *runSupervisor) loadLaunchPromptSnapshot(ctx context.Context, run *daemo
 		Context:          s.requestContext(),
 	})
 	if err != nil {
-		code := status.Code(err)
-		if code == codes.Unimplemented || code == codes.NotFound {
+		code := connect.CodeOf(err)
+		if code == connect.CodeUnimplemented || code == connect.CodeNotFound {
 			slog.Warn("daemon supervisor launch prompt snapshot unavailable; using legacy run prompt", "run_id", run.GetRunId(), "error", err)
 			return nil, nil
 		}

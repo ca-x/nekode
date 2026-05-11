@@ -9,8 +9,6 @@ import (
 
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
 	"github.com/ca-x/nekode/internal/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ListChannelDecisions returns decisions scoped to a channel target,
@@ -188,7 +186,7 @@ func (s *Server) ListDecisionVotes(ctx context.Context, req *daemonv1.ListDecisi
 // ReportAgentRun is the streaming endpoint daemons use to publish agent
 // run events. The server persists them in order and returns the counts
 // of persisted vs dropped events when the stream closes.
-func (s *Server) ReportAgentRun(stream daemonv1.DaemonControlService_ReportAgentRunServer) error {
+func (s *Server) ReportAgentRun(stream AgentRunStream) error {
 	var persisted, dropped int64
 	for {
 		event, err := stream.Recv()
@@ -300,9 +298,9 @@ func (s *Server) SearchAgentRuns(ctx context.Context, req *daemonv1.SearchAgentR
 	out := make([]*daemonv1.SearchAgentRunsResponse_Hit, 0, len(hits))
 	for _, hit := range hits {
 		out = append(out, &daemonv1.SearchAgentRunsResponse_Hit{
-			Run:            agentRunSummaryToProto(hit.Run),
-			MatchingEvent:  agentRunEventToProto(hit.Event),
-			Highlight:      hit.Highlight,
+			Run:           agentRunSummaryToProto(hit.Run),
+			MatchingEvent: agentRunEventToProto(hit.Event),
+			Highlight:     hit.Highlight,
 		})
 	}
 	return &daemonv1.SearchAgentRunsResponse{Hits: out}, nil

@@ -40,14 +40,13 @@ async function waitForServer(url, child, logs) {
 
 async function startNekode() {
   const httpPort = await freePort();
-  const grpcPort = await freePort();
   const tmpDir = await mkdtemp(path.join(os.tmpdir(), "nekode-e2e-"));
   const baseURL = `http://127.0.0.1:${httpPort}`;
   const env = {
     ...process.env,
     NEKODE_ADDR: `127.0.0.1:${httpPort}`,
-    NEKODE_GRPC_ADDR: `127.0.0.1:${grpcPort}`,
     NEKODE_BASE_URL: baseURL,
+    NEKODE_DAEMON_RPC_URL: baseURL,
     NEKODE_DATA_DIR: tmpDir,
     NEKODE_DB_TYPE: "sqlite",
     NEKODE_DB_DSN: path.join(tmpDir, "nekode.db"),

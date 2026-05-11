@@ -2,16 +2,21 @@ package daemonrpc
 
 import (
 	"context"
+	"crypto/tls"
+	"io"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/gen/go/nekode/daemon/v1/daemonv1connect"
 	"github.com/ca-x/nekode/internal/storage"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 func TestDaemonControlFlow(t *testing.T) {
@@ -1534,7 +1539,7 @@ func assertComputerAndAgentStatus(t *testing.T, srv *Server, computerStatus daem
 	}
 }
 
-func consumeAgentEventIDs(t *testing.T, stream daemonv1.DaemonControlService_SubscribeServerEventsClient, wantOperationID string, wantMessageID string) []string {
+func consumeAgentEventIDs(t *testing.T, stream testServerEventStream, wantOperationID string, wantMessageID string) []string {
 	t.Helper()
 	seen := map[string]bool{}
 	eventIDs := []string{}
@@ -1625,30 +1630,159 @@ func TestDurableIdempotencyAndEventsSurviveServerRestart(t *testing.T) {
 	}
 }
 
-func newTestClient(t *testing.T) (daemonv1.DaemonControlServiceClient, func()) {
+func newTestClient(t *testing.T) (testDaemonClient, func()) {
 	t.Helper()
 	store := newTestStore(t, "daemonrpc_test")
-	listener := bufconn.Listen(1024 * 1024)
-	grpcServer := grpc.NewServer()
-	daemonv1.RegisterDaemonControlServiceServer(grpcServer, New(store, "srv_test"))
-	go func() {
-		_ = grpcServer.Serve(listener)
-	}()
-	conn, err := grpc.NewClient("passthrough:///bufnet",
-		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-			return listener.DialContext(ctx)
-		}),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		t.Fatalf("grpc.NewClient() error = %v", err)
-	}
+	mux := http.NewServeMux()
+	path, handler := daemonv1connect.NewDaemonControlServiceHandler(NewConnectHandler(New(store, "srv_test")))
+	mux.Handle(path, handler)
+	server := httptest.NewUnstartedServer(h2c.NewHandler(mux, &http2.Server{}))
+	server.EnableHTTP2 = true
+	server.Start()
+	client := testDaemonClient{client: daemonv1connect.NewDaemonControlServiceClient(testHTTP2Client(), server.URL)}
 	cleanup := func() {
-		_ = conn.Close()
-		grpcServer.Stop()
-		_ = listener.Close()
+		server.Close()
 	}
-	return daemonv1.NewDaemonControlServiceClient(conn), cleanup
+	return client, cleanup
+}
+
+type testDaemonClient struct {
+	client daemonv1connect.DaemonControlServiceClient
+}
+
+type testServerEventStream interface {
+	Recv() (*daemonv1.SubscribeServerEventsResponse, error)
+}
+
+type testConnectServerEventStream struct {
+	stream *connect.ServerStreamForClient[daemonv1.SubscribeServerEventsResponse]
+}
+
+func (s testConnectServerEventStream) Recv() (*daemonv1.SubscribeServerEventsResponse, error) {
+	if !s.stream.Receive() {
+		if err := s.stream.Err(); err != nil {
+			return nil, err
+		}
+		return nil, io.EOF
+	}
+	return s.stream.Msg(), nil
+}
+
+func testHTTP2Client() *http.Client {
+	return &http.Client{Transport: &http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			var dialer net.Dialer
+			return dialer.DialContext(ctx, network, addr)
+		},
+	}}
+}
+
+func testConnectReq[T any](msg *T) *connect.Request[T] {
+	return connect.NewRequest(msg)
+}
+
+func testConnectMsg[T any](resp *connect.Response[T], err error) (*T, error) {
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg, nil
+}
+
+func (c testDaemonClient) RegisterComputer(ctx context.Context, req *daemonv1.RegisterComputerRequest) (*daemonv1.RegisterComputerResponse, error) {
+	return testConnectMsg(c.client.RegisterComputer(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) HeartbeatComputer(ctx context.Context, req *daemonv1.HeartbeatComputerRequest) (*daemonv1.HeartbeatComputerResponse, error) {
+	return testConnectMsg(c.client.HeartbeatComputer(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListRuntimePresets(ctx context.Context, req *daemonv1.ListRuntimePresetsRequest) (*daemonv1.ListRuntimePresetsResponse, error) {
+	return testConnectMsg(c.client.ListRuntimePresets(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListAgentStatuses(ctx context.Context, req *daemonv1.ListAgentStatusesRequest) (*daemonv1.ListAgentStatusesResponse, error) {
+	return testConnectMsg(c.client.ListAgentStatuses(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) SubscribeServerEvents(ctx context.Context, req *daemonv1.SubscribeServerEventsRequest) (testServerEventStream, error) {
+	stream, err := c.client.SubscribeServerEvents(ctx, testConnectReq(req))
+	if err != nil {
+		return nil, err
+	}
+	return testConnectServerEventStream{stream: stream}, nil
+}
+
+func (c testDaemonClient) AcknowledgeServerEvents(ctx context.Context, req *daemonv1.AcknowledgeServerEventsRequest) (*daemonv1.AcknowledgeServerEventsResponse, error) {
+	return testConnectMsg(c.client.AcknowledgeServerEvents(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) SendMessage(ctx context.Context, req *daemonv1.SendMessageRequest) (*daemonv1.SendMessageResponse, error) {
+	return testConnectMsg(c.client.SendMessage(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ReadMessages(ctx context.Context, req *daemonv1.ReadMessagesRequest) (*daemonv1.ReadMessagesResponse, error) {
+	return testConnectMsg(c.client.ReadMessages(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) CreateCollaborationTask(ctx context.Context, req *daemonv1.CreateCollaborationTaskRequest) (*daemonv1.CreateCollaborationTaskResponse, error) {
+	return testConnectMsg(c.client.CreateCollaborationTask(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) UpdateTask(ctx context.Context, req *daemonv1.UpdateTaskRequest) (*daemonv1.UpdateTaskResponse, error) {
+	return testConnectMsg(c.client.UpdateTask(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListCollaborationTasks(ctx context.Context, req *daemonv1.ListCollaborationTasksRequest) (*daemonv1.ListCollaborationTasksResponse, error) {
+	return testConnectMsg(c.client.ListCollaborationTasks(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ClaimCollaborationTask(ctx context.Context, req *daemonv1.ClaimCollaborationTaskRequest) (*daemonv1.ClaimCollaborationTaskResponse, error) {
+	return testConnectMsg(c.client.ClaimCollaborationTask(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListTaskBoard(ctx context.Context, req *daemonv1.ListTaskBoardRequest) (*daemonv1.ListTaskBoardResponse, error) {
+	return testConnectMsg(c.client.ListTaskBoard(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) LogActivity(ctx context.Context, req *daemonv1.LogActivityRequest) (*daemonv1.LogActivityResponse, error) {
+	return testConnectMsg(c.client.LogActivity(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListEventsSince(ctx context.Context, req *daemonv1.ListEventsSinceRequest) (*daemonv1.ListEventsSinceResponse, error) {
+	return testConnectMsg(c.client.ListEventsSince(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) FetchAssignedRuns(ctx context.Context, req *daemonv1.FetchAssignedRunsRequest) (*daemonv1.FetchAssignedRunsResponse, error) {
+	return testConnectMsg(c.client.FetchAssignedRuns(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListRuns(ctx context.Context, req *daemonv1.ListRunsRequest) (*daemonv1.ListRunsResponse, error) {
+	return testConnectMsg(c.client.ListRuns(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) UpdateRunStatus(ctx context.Context, req *daemonv1.UpdateRunStatusRequest) (*daemonv1.UpdateRunStatusResponse, error) {
+	return testConnectMsg(c.client.UpdateRunStatus(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) GetTask(ctx context.Context, req *daemonv1.GetTaskRequest) (*daemonv1.GetTaskResponse, error) {
+	return testConnectMsg(c.client.GetTask(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ControlAgent(ctx context.Context, req *daemonv1.ControlAgentRequest) (*daemonv1.ControlAgentResponse, error) {
+	return testConnectMsg(c.client.ControlAgent(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) ListActivity(ctx context.Context, req *daemonv1.ListActivityRequest) (*daemonv1.ListActivityResponse, error) {
+	return testConnectMsg(c.client.ListActivity(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) SendAgentDirectMessage(ctx context.Context, req *daemonv1.SendAgentDirectMessageRequest) (*daemonv1.SendAgentDirectMessageResponse, error) {
+	return testConnectMsg(c.client.SendAgentDirectMessage(ctx, testConnectReq(req)))
+}
+
+func (c testDaemonClient) UpdateAgentStatus(ctx context.Context, req *daemonv1.UpdateAgentStatusRequest) (*daemonv1.UpdateAgentStatusResponse, error) {
+	return testConnectMsg(c.client.UpdateAgentStatus(ctx, testConnectReq(req)))
 }
 
 func newTestStore(t *testing.T, prefix string) *storage.Store {

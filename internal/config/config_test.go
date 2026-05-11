@@ -16,11 +16,8 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.Addr != DefaultAddr {
 		t.Fatalf("Addr = %q, want %q", cfg.Addr, DefaultAddr)
 	}
-	if cfg.GRPCAddr != DefaultGRPCAddr {
-		t.Fatalf("GRPCAddr = %q, want %q", cfg.GRPCAddr, DefaultGRPCAddr)
-	}
-	if cfg.DaemonTransport != "grpc" {
-		t.Fatalf("DaemonTransport = %q, want grpc", cfg.DaemonTransport)
+	if cfg.DaemonTransport != "connect" {
+		t.Fatalf("DaemonTransport = %q, want connect", cfg.DaemonTransport)
 	}
 	if cfg.BaseURL != DefaultBaseURL {
 		t.Fatalf("BaseURL = %q, want %q", cfg.BaseURL, DefaultBaseURL)
@@ -51,8 +48,8 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadFromEnvironment(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("NEKODE_ADDR", ":19000")
-	t.Setenv("NEKODE_GRPC_ADDR", "127.0.0.1:19001")
-	t.Setenv("NEKODE_DAEMON_TRANSPORT", "grpc_http2")
+	t.Setenv("NEKODE_DAEMON_RPC_URL", "https://daemon.example.test")
+	t.Setenv("NEKODE_DAEMON_TRANSPORT", "connect-rpc")
 	t.Setenv("NEKODE_BASE_URL", "https://nekode.example.test")
 	t.Setenv("NEKODE_WEB_DIST_DIR", "/srv/nekode/web")
 	t.Setenv("NEKODE_DATA_DIR", "/tmp/nekode-test")
@@ -75,11 +72,11 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if cfg.Addr != ":19000" {
 		t.Fatalf("Addr = %q", cfg.Addr)
 	}
-	if cfg.GRPCAddr != "127.0.0.1:19001" {
-		t.Fatalf("GRPCAddr = %q", cfg.GRPCAddr)
-	}
-	if cfg.DaemonTransport != "grpc_http2" {
+	if cfg.DaemonTransport != "connect" {
 		t.Fatalf("DaemonTransport = %q", cfg.DaemonTransport)
+	}
+	if cfg.DaemonRPCURL != "https://daemon.example.test" {
+		t.Fatalf("DaemonRPCURL = %q", cfg.DaemonRPCURL)
 	}
 	if cfg.BaseURL != "https://nekode.example.test" {
 		t.Fatalf("BaseURL = %q", cfg.BaseURL)
@@ -127,13 +124,13 @@ func TestLoadLegacyDBPath(t *testing.T) {
 
 func TestValidateRejectsBadBaseURL(t *testing.T) {
 	cfg := Config{
-		Addr:     ":18790",
-		GRPCAddr: "127.0.0.1:18789",
-		BaseURL:  "://bad",
-		DataDir:  "/tmp/nekode-test",
-		DBType:   "sqlite",
-		DBDSN:    "/tmp/nekode-test/nekode.db",
-		CacheDir: "/tmp/nekode-test/cache",
+		Addr:            ":18790",
+		DaemonTransport: "connect",
+		BaseURL:         "://bad",
+		DataDir:         "/tmp/nekode-test",
+		DBType:          "sqlite",
+		DBDSN:           "/tmp/nekode-test/nekode.db",
+		CacheDir:        "/tmp/nekode-test/cache",
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("Validate() error = nil, want error")
@@ -144,7 +141,7 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{
 		"NEKODE_ADDR",
-		"NEKODE_GRPC_ADDR",
+		"NEKODE_DAEMON_RPC_URL",
 		"NEKODE_DAEMON_TRANSPORT",
 		"NEKODE_BASE_URL",
 		"NEKODE_WEB_DIST_DIR",

@@ -102,7 +102,7 @@
 1. **Backend** (Go, like open-agent-room):
    - Single binary or docker-compose deployment
    - HTTP + WebSocket for Web UI
-   - gRPC for CLI clients
+   - connect-rpc for daemon/server RPC
    - JSON envelope protocol for extensibility
 
 2. **Database** (SQLite for MVP, Supabase-like for scale):
@@ -124,7 +124,7 @@
 
 **Interaction Endpoints** (from Task #91 plan):
 - `web`: Browser console (HTTP + WebSocket)
-- `cli`: Command-line interface (gRPC or stdio)
+- `cli`: Command-line interface (connect-rpc or stdio)
 - `api`: REST API (HTTP)
 - `webhook`: Webhook delivery (HTTP POST)
 - `mcp`: Model Context Protocol

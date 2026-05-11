@@ -6,24 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/test/bufconn"
-
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
+	"github.com/ca-x/nekode/gen/go/nekode/daemon/v1/daemonv1connect"
 	"github.com/ca-x/nekode/internal/storage"
 )
 
 // TestPreviewTunnelEndToEnd is a full-stack exercise of the preview
-// tunnel path: bootstrap an admin, attach a fake daemon over gRPC
-// (via bufconn), create a tunnel, round-trip a /preview/<token>/
+// tunnel path: bootstrap an admin, attach a fake daemon over connect-rpc,
+// create a tunnel, round-trip a /preview/<token>/
 // request through the bidi stream, verify the browser got back bytes
 // the "daemon" intended to send.
 //
@@ -36,26 +32,19 @@ func TestPreviewTunnelEndToEnd(t *testing.T) {
 	store := newTestStore(t)
 	server := newPreviewTunnelServer(t, store)
 	token := bootstrapToken(t, server)
-
-	// Spin up an in-memory gRPC server so the daemonrpc.Server is
-	// reachable over a real stream, not a mocked one.
-	lis := bufconn.Listen(1 << 20)
-	grpcServer := grpc.NewServer()
-	daemonv1.RegisterDaemonControlServiceServer(grpcServer, server.daemon)
-	go grpcServer.Serve(lis) //nolint:errcheck // test shutdown handles it
-	t.Cleanup(grpcServer.Stop)
-
-	conn, err := grpc.NewClient("passthrough:///bufnet",
-		grpc.WithContextDialer(func(_ context.Context, _ string) (net.Conn, error) {
-			return lis.DialContext(context.Background())
-		}),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
+	_, daemonToken, _, err := server.daemonEnrollments.create(daemonEnrollmentCreate{
+		DisplayName: "Tunnel Daemon",
+		ComputerID:  "cmp_e2e",
+	})
 	if err != nil {
-		t.Fatalf("grpc dial: %v", err)
+		t.Fatalf("create daemon enrollment: %v", err)
 	}
-	t.Cleanup(func() { _ = conn.Close() })
-	client := daemonv1.NewDaemonControlServiceClient(conn)
+
+	testHTTPServer := httptest.NewUnstartedServer(server.Handler())
+	testHTTPServer.EnableHTTP2 = true
+	testHTTPServer.Start()
+	t.Cleanup(testHTTPServer.Close)
+	client := daemonv1connect.NewDaemonControlServiceClient(connectTestHTTP2Client(), testHTTPServer.URL)
 
 	// Seed a computer row so the tunnel create passes validation.
 	// (No Computer ent entity today — CreateTunnel only validates the
@@ -70,7 +59,7 @@ func TestPreviewTunnelEndToEnd(t *testing.T) {
 	daemonReady := make(chan struct{})
 	daemonDone := make(chan struct{})
 	const bodyReply = "hello from fake daemon"
-	go runFakeDaemon(t, client, daemonCtx, computerID, bodyReply, daemonReady, daemonDone)
+	go runFakeDaemon(t, client, daemonCtx, daemonToken, computerID, bodyReply, daemonReady, daemonDone)
 
 	select {
 	case <-daemonReady:
@@ -150,19 +139,22 @@ func newPreviewTunnelServer(t *testing.T, store *storage.Store) *Server {
 // an in-process integration test.
 func runFakeDaemon(
 	t *testing.T,
-	client daemonv1.DaemonControlServiceClient,
+	client daemonv1connect.DaemonControlServiceClient,
 	ctx context.Context,
-	computerID, bodyReply string,
+	daemonToken, computerID, bodyReply string,
 	ready, done chan struct{},
 ) {
 	t.Helper()
 	defer close(done)
 
-	stream, err := client.ProxyExchange(ctx)
-	if err != nil {
-		t.Errorf("open proxy exchange: %v", err)
-		return
-	}
+	stream := client.ProxyExchange(ctx)
+	stream.RequestHeader().Set("Authorization", "Bearer "+daemonToken)
+	defer stream.CloseResponse()
+	go func() {
+		<-ctx.Done()
+		_ = stream.CloseRequest()
+		_ = stream.CloseResponse()
+	}()
 	// Attach frame uses the well-known sentinel tunnel_id the server
 	// expects as the first frame on any new stream.
 	if err := stream.Send(&daemonv1.ProxyFrame{
@@ -182,7 +174,7 @@ func runFakeDaemon(
 	}
 
 	for {
-		frame, err := stream.Recv()
+		frame, err := stream.Receive()
 		if errors.Is(err, io.EOF) {
 			return
 		}

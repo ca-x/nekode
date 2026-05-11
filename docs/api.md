@@ -8,8 +8,8 @@ Persistence uses Ent ORM. Configure the database with:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEKODE_ADDR` | `:18790` | HTTP listen address |
-| `NEKODE_GRPC_ADDR` | `127.0.0.1:18789` | local daemon gRPC listen address |
-| `NEKODE_DAEMON_TRANSPORT` | `grpc` | server/daemon transport lane; only `grpc` is implemented, QUIC/WebTransport is reserved |
+| `NEKODE_DAEMON_RPC_URL` | empty | public connect-rpc URL for daemon installers; defaults to `NEKODE_BASE_URL` |
+| `NEKODE_DAEMON_TRANSPORT` | `connect` | server/daemon transport lane |
 | `NEKODE_BASE_URL` | `http://localhost:18790` | Public server URL |
 | `NEKODE_DATA_DIR` | `$HOME/.nekode` | Persistent data directory |
 | `NEKODE_DB_TYPE` | `sqlite` | `sqlite`, `postgres`, or `mysql` |
@@ -423,25 +423,24 @@ Response shape: `{ "items": [CollaborationEvent], "nextCursor": EventCursor }`.
 ## Daemon Bridge
 
 The daemon control plane starts with the HTTP server. By default HTTP listens on
-`:18790`, while gRPC listens on `127.0.0.1:18789` because the current gRPC
-surface is intended for trusted local daemon processes. Browser clients should
-use the authenticated HTTP bridge and event stream instead of connecting to gRPC
-directly.
+`:18790`, and daemon RPC is served as connect-rpc on the same listener. Browser
+clients should use the authenticated HTTP bridge and event stream instead of
+calling daemon RPC directly.
 
 The server/daemon transport is intentionally a replaceable lane. The MVP
-supports `NEKODE_DAEMON_TRANSPORT=grpc` over HTTP/2; future transports such as
-QUIC/WebTransport should reuse the same daemon RPC semantics, durable event
-envelope, cursor, acknowledgement, idempotency, and lease model rather than
-forking protocol behavior.
+supports `NEKODE_DAEMON_TRANSPORT=connect` over HTTP/2 or h2c; future transports
+such as QUIC/WebTransport should reuse the same daemon RPC semantics, durable
+event envelope, cursor, acknowledgement, idempotency, and lease model rather
+than forking protocol behavior.
 
 The stable server identity is persisted in `$NEKODE_DATA_DIR/server_id`. Cursor
 consumers should treat `serverId` plus `protocolVersion` as the validity boundary
 for replay state.
 
-Daemon gRPC authentication is enrollment based. The server generates a daemon
+Daemon RPC authentication is enrollment based. The server generates a daemon
 install token when a user starts adding a Computer, stores only a token hash
 under `$NEKODE_DATA_DIR/daemon_enrollments`, and returns the full token once in
-the install command. Daemons send the token as gRPC metadata
+the install command. Daemons send the token as a connect-rpc bearer header:
 `authorization: Bearer <token>`. Missing, unknown, or expired tokens are rejected
 with `Unauthenticated`.
 
@@ -458,8 +457,8 @@ Response:
   "protocolVersion": 1,
   "minProtocolVersion": 1,
   "maxProtocolVersion": 1,
-  "grpcAddr": "127.0.0.1:18789",
-  "daemonTransport": "grpc",
+  "daemonRpcUrl": "http://localhost:18790",
+  "daemonTransport": "connect",
   "cacheDriver": "badger"
 }
 ```
@@ -581,7 +580,7 @@ Additional Windows overrides:
 Requires bearer auth. Revokes a pending enrollment, clears the stored daemon
 token hash and install-code hash, and returns status `revoked`. After this call,
 the previous install URL cannot render a script and the previous daemon token is
-rejected by gRPC authentication.
+rejected by daemon RPC authentication.
 
 ### `GET /api/daemon/enrollments/{id}`
 
@@ -677,7 +676,7 @@ Query:
 - `target`: optional target filter.
 - `aggregateId`: optional aggregate filter.
 - `sequence`: optional numeric resume sequence.
-- `scope` filters are represented in the gRPC proto as `EventScope`; the HTTP
+- `scope` filters are represented in the daemon proto as `EventScope`; the HTTP
   bridge currently exposes `target`/`aggregateId` as the minimum stable subset.
 - `limit`: optional, defaults to `100`.
 
@@ -719,9 +718,9 @@ Each SSE event includes `kind`, `operation`, `scope`, `workspace_id` when known,
 invalidate TanStack Query-style server-state caches; do not mirror authoritative
 server state into UI-only stores.
 
-## Daemon gRPC Minimum Surface
+## Daemon RPC Minimum Surface
 
-The gRPC service is `nekode.daemon.v1.DaemonControlService` in
+The connect-rpc service is `nekode.daemon.v1.DaemonControlService` in
 `proto/nekode/daemon/v1/service.proto`. The current implementation covers the
 minimum daemon/bridge loop:
 
@@ -734,17 +733,5 @@ minimum daemon/bridge loop:
 - activity log/list and event replay
 - run status, run lease renewal, run step append, run fetch/list/get
 
-Other protocol RPCs remain in the generated interface and will return the gRPC
-unimplemented status until the corresponding storage/runtime slice lands.
-
-Example `grpcurl` call:
-
-```bash
-grpcurl -plaintext \
-  -H "authorization: Bearer $NEKODE_DAEMON_INSTALL_TOKEN" \
-  -import-path proto \
-  -proto nekode/daemon/v1/service.proto \
-  -d '{}' \
-  127.0.0.1:18789 \
-  nekode.daemon.v1.DaemonControlService/GetServerInfo
-```
+Other protocol RPCs remain in the generated interface and will return
+`Unimplemented` until the corresponding storage/runtime slice lands.

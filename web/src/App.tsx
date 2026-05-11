@@ -565,7 +565,7 @@ function sameDaemonInfo(left: DaemonInfo | null, right: DaemonInfo | null) {
     left?.serverId === right?.serverId &&
     left?.protocolVersion === right?.protocolVersion &&
     left?.cacheDriver === right?.cacheDriver &&
-    left?.grpcAddr === right?.grpcAddr
+    left?.daemonRpcUrl === right?.daemonRpcUrl
   );
 }
 
@@ -4717,8 +4717,8 @@ function SettingsPanel({
             <dd>{daemonInfo?.health || "unknown"} / {daemonInfo?.daemonTransport || "transport unknown"}</dd>
           </div>
           <div>
-            <dt>gRPC</dt>
-            <dd>{daemonInfo?.grpcAddr || "not reported"}</dd>
+            <dt>RPC</dt>
+            <dd>{daemonInfo?.daemonRpcUrl || "not reported"}</dd>
           </div>
           <div>
             <dt>Cache</dt>
@@ -6619,8 +6619,8 @@ function DaemonPanel({
             <dd>{daemonInfo?.protocolVersion ?? "unknown"}</dd>
           </div>
           <div>
-            <dt>gRPC address</dt>
-            <dd>{daemonInfo?.grpcAddr || "unknown"}</dd>
+            <dt>RPC URL</dt>
+            <dd>{daemonInfo?.daemonRpcUrl || "unknown"}</dd>
           </div>
           <div>
             <dt>Daemon transport</dt>

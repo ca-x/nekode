@@ -953,7 +953,7 @@ function normalizeDaemonInfo(raw: unknown): DaemonInfo {
     protocolVersion: asNumber(row.protocolVersion ?? row.protocol_version),
     minProtocolVersion: asNumber(row.minProtocolVersion ?? row.min_protocol_version),
     maxProtocolVersion: asNumber(row.maxProtocolVersion ?? row.max_protocol_version),
-    grpcAddr: asString(row.grpcAddr ?? row.grpc_addr),
+    daemonRpcUrl: asString(row.daemonRpcUrl ?? row.daemon_rpc_url),
     daemonTransport: asString(row.daemonTransport ?? row.daemon_transport),
     cacheDriver: asString(row.cacheDriver ?? row.cache_driver),
     serverTimeUnix: asNumber(row.serverTimeUnix ?? row.server_time_unix) || undefined,

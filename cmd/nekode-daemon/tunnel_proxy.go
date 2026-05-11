@@ -44,7 +44,7 @@ const tunnelProxyBodyChunk = 32 * 1024
 // sending. The daemon reads it, strips it, and dials 127.0.0.1:<port>.
 const tunnelTargetPortHeader = "X-Nekode-Tunnel-Port"
 
-// proxySender is the Send-only view of a gRPC client stream. The
+// proxySender is the Send-only view of a connect-rpc client stream. The
 // per-request workers (handleUpstream / handleWebSocket / pumpReader /
 // sendEndErr) only ever write, never read; taking the narrower type
 // means we can hand them a mutex-guarded wrapper without exposing the
@@ -53,13 +53,13 @@ type proxySender interface {
 	Send(*daemonv1.ProxyFrame) error
 }
 
-// lockedSender serializes writes on a single client stream. grpc-go
-// allows exactly one concurrent sender, so every handleUpstream /
+// lockedSender serializes writes on a single client stream. connect-rpc
+// streams should have one sender at a time, so every handleUpstream /
 // handleWebSocket goroutine has to go through this before calling
 // stream.Send.
 type lockedSender struct {
 	mu     sync.Mutex
-	stream daemonv1.DaemonControlService_ProxyExchangeClient
+	stream proxyExchangeClientStream
 }
 
 func (ls *lockedSender) Send(frame *daemonv1.ProxyFrame) error {
@@ -70,7 +70,7 @@ func (ls *lockedSender) Send(frame *daemonv1.ProxyFrame) error {
 
 type tunnelProxyClient struct {
 	cfg        daemonConfig
-	client     daemonv1.DaemonControlServiceClient
+	client     daemonControlClient
 	withToken  func(context.Context) context.Context
 	httpClient *http.Client
 
@@ -78,7 +78,7 @@ type tunnelProxyClient struct {
 	cancels map[string]context.CancelFunc // requestID → upstream cancel
 }
 
-func newTunnelProxyClient(cfg daemonConfig, client daemonv1.DaemonControlServiceClient, withToken func(context.Context) context.Context) *tunnelProxyClient {
+func newTunnelProxyClient(cfg daemonConfig, client daemonControlClient, withToken func(context.Context) context.Context) *tunnelProxyClient {
 	return &tunnelProxyClient{
 		cfg:       cfg,
 		client:    client,
@@ -127,7 +127,7 @@ func (c *tunnelProxyClient) serveOne(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("open proxy exchange: %w", err)
 	}
-	// grpc-go permits exactly one concurrent sender per client stream.
+	// Keep one concurrent sender per client stream.
 	// serveOne spawns a handleUpstream goroutine per inbound REQUEST_START,
 	// each of which independently writes RESPONSE_* frames, so we wrap
 	// Send in a mutex-guarded helper and pass only that to the worker

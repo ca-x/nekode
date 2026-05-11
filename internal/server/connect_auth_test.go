@@ -2,24 +2,26 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
+	"io"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	daemonv1 "github.com/ca-x/nekode/gen/go/nekode/daemon/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
+	"github.com/ca-x/nekode/gen/go/nekode/daemon/v1/daemonv1connect"
+	"golang.org/x/net/http2"
 )
 
 func TestDaemonEnrollmentAPIRequiresAuth(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 
 	resp := doJSON(t, server, http.MethodPost, "/api/daemon/enrollments", "", map[string]any{
@@ -31,7 +33,7 @@ func TestDaemonEnrollmentAPIRequiresAuth(t *testing.T) {
 }
 
 func TestDaemonEnrollmentAPICreatesGeneratedToken(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 
 	token := bootstrapToken(t, server)
@@ -66,7 +68,7 @@ func TestDaemonEnrollmentAPICreatesGeneratedToken(t *testing.T) {
 }
 
 func TestDaemonEnrollmentInstallScriptConsumesCodeAndRotatesToken(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -103,9 +105,9 @@ func TestDaemonEnrollmentInstallScriptConsumesCodeAndRotatesToken(t *testing.T) 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_, err := cleanup.client.RegisterComputer(withDaemonToken(ctx, enrollment.Token), registerComputerRequest("old-token"))
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 	_, err = cleanup.client.RegisterComputer(withDaemonToken(ctx, rotatedToken), registerComputerRequest("rotated-token"))
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 	_, err = cleanup.client.RegisterComputer(withDaemonToken(ctx, replayToken), registerComputerRequest("replay-token"))
 	if err != nil {
 		t.Fatalf("RegisterComputer(with replay token) error = %v", err)
@@ -120,7 +122,7 @@ func TestDaemonEnrollmentInstallScriptConsumesCodeAndRotatesToken(t *testing.T) 
 }
 
 func TestDaemonEnrollmentInstallPowerShell(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -140,7 +142,7 @@ func TestDaemonEnrollmentInstallPowerShell(t *testing.T) {
 }
 
 func TestDaemonManagementScripts(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -204,7 +206,7 @@ func TestDaemonInstallScriptsPinReleaseArtifactDownload(t *testing.T) {
 	t.Setenv("NEKODE_DAEMON_DOWNLOAD_VERSION", "v9.8.7")
 	t.Setenv("NEKODE_DAEMON_DOWNLOAD_BASE_URL", "https://downloads.example.test/nekode///")
 
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -233,7 +235,7 @@ func TestDaemonManagementScriptsPinReleaseArtifactDownload(t *testing.T) {
 	t.Setenv("NEKODE_DAEMON_DOWNLOAD_VERSION", "v9.8.7")
 	t.Setenv("NEKODE_DAEMON_DOWNLOAD_BASE_URL", "https://downloads.example.test/nekode/")
 
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 
 	shellResp := doGET(t, server, "/api/daemon/scripts/upgrade.sh", "")
@@ -272,7 +274,7 @@ func TestDaemonManagementScriptsPinReleaseArtifactDownload(t *testing.T) {
 }
 
 func TestDaemonEnrollmentRevokeBlocksTokenAndInstallCode(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -297,11 +299,11 @@ func TestDaemonEnrollmentRevokeBlocksTokenAndInstallCode(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_, err := cleanup.client.RegisterComputer(withDaemonToken(ctx, enrollment.Token), registerComputerRequest("revoked"))
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 }
 
-func TestDaemonGRPCTokenAuth(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+func TestDaemonConnectTokenAuth(t *testing.T) {
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -311,10 +313,10 @@ func TestDaemonGRPCTokenAuth(t *testing.T) {
 
 	client := cleanup.client
 	_, err := client.RegisterComputer(ctx, registerComputerRequest("missing"))
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 
 	_, err = client.RegisterComputer(withDaemonToken(ctx, "wrong-secret"), registerComputerRequest("wrong"))
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 
 	resp, err := client.RegisterComputer(withDaemonToken(ctx, enrollment.Token), registerComputerRequest("ok"))
 	if err != nil {
@@ -342,8 +344,8 @@ func extractDaemonToken(t *testing.T, body string) string {
 	return matches[1]
 }
 
-func TestDaemonGRPCRejectsExpiredEnrollmentToken(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+func TestDaemonConnectRejectsExpiredEnrollmentToken(t *testing.T) {
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 
 	_, token, _, err := server.daemonEnrollments.create(daemonEnrollmentCreate{
@@ -358,11 +360,11 @@ func TestDaemonGRPCRejectsExpiredEnrollmentToken(t *testing.T) {
 	defer cancel()
 
 	_, err = cleanup.client.RegisterComputer(withDaemonToken(ctx, token), registerComputerRequest("expired"))
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 }
 
-func TestDaemonGRPCStreamTokenAuth(t *testing.T) {
-	server, cleanup := newDaemonGRPCTestClient(t)
+func TestDaemonConnectStreamTokenAuth(t *testing.T) {
+	server, cleanup := newDaemonConnectTestClient(t)
 	defer cleanup.close()
 	token := bootstrapToken(t, server)
 	enrollment := createDaemonEnrollment(t, server, token)
@@ -379,7 +381,7 @@ func TestDaemonGRPCStreamTokenAuth(t *testing.T) {
 	if err == nil {
 		_, err = stream.Recv()
 	}
-	assertGRPCCode(t, err, codes.Unauthenticated)
+	assertConnectCode(t, err, connect.CodeUnauthenticated)
 
 	stream, err = client.SubscribeServerEvents(withDaemonToken(ctx, enrollment.Token), &daemonv1.SubscribeServerEventsRequest{
 		DaemonId:   "daemon-stream",
@@ -396,40 +398,90 @@ func TestDaemonGRPCStreamTokenAuth(t *testing.T) {
 	if event.GetEvent().GetKind() != daemonv1.ServerEventKind_SERVER_EVENT_KIND_PING {
 		t.Fatalf("stream event kind = %v, want ping", event.GetEvent().GetKind())
 	}
+
+	status := getDaemonEnrollment(t, server, token, enrollment.ID)
+	if status.Status != "connected" || status.ConnectedUnix == 0 {
+		t.Fatalf("stream did not mark enrollment connected: %+v", status)
+	}
 }
 
-type daemonGRPCTestCleanup struct {
-	client daemonv1.DaemonControlServiceClient
+type daemonConnectTestCleanup struct {
+	client daemonConnectTestClient
 	fn     func()
 }
 
-func (c daemonGRPCTestCleanup) close() {
+func (c daemonConnectTestCleanup) close() {
 	c.fn()
 }
 
-func newDaemonGRPCTestClient(t *testing.T) (*Server, daemonGRPCTestCleanup) {
+func newDaemonConnectTestClient(t *testing.T) (*Server, daemonConnectTestCleanup) {
 	t.Helper()
 	cfg := testConfig()
 	cfg.DataDir = t.TempDir()
-	cfg.GRPCAddr = "127.0.0.1:0"
 	server := New(cfg, slog.New(slog.DiscardHandler), newTestStore(t))
-	grpcServer, listener, err := server.startGRPC()
-	if err != nil {
-		t.Fatalf("startGRPC() error = %v", err)
-	}
-	conn, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		grpcServer.Stop()
-		_ = listener.Close()
-		t.Fatalf("grpc.NewClient() error = %v", err)
-	}
-	client := daemonv1.NewDaemonControlServiceClient(conn)
+	httpServer := httptest.NewUnstartedServer(server.Handler())
+	httpServer.EnableHTTP2 = true
+	httpServer.Start()
+	client := daemonConnectTestClient{client: daemonv1connect.NewDaemonControlServiceClient(connectTestHTTP2Client(), httpServer.URL)}
 	cleanup := func() {
-		_ = conn.Close()
-		grpcServer.Stop()
-		_ = listener.Close()
+		httpServer.Close()
 	}
-	return server, daemonGRPCTestCleanup{client: client, fn: cleanup}
+	return server, daemonConnectTestCleanup{client: client, fn: cleanup}
+}
+
+type daemonConnectTestClient struct {
+	client daemonv1connect.DaemonControlServiceClient
+}
+
+type daemonConnectServerEventStream struct {
+	stream *connect.ServerStreamForClient[daemonv1.SubscribeServerEventsResponse]
+}
+
+func (s daemonConnectServerEventStream) Recv() (*daemonv1.SubscribeServerEventsResponse, error) {
+	if !s.stream.Receive() {
+		if err := s.stream.Err(); err != nil {
+			return nil, err
+		}
+		return nil, io.EOF
+	}
+	return s.stream.Msg(), nil
+}
+
+func connectTestHTTP2Client() *http.Client {
+	return &http.Client{Transport: &http2.Transport{
+		AllowHTTP: true,
+		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+			var dialer net.Dialer
+			return dialer.DialContext(ctx, network, addr)
+		},
+	}}
+}
+
+func connectAuthReq[T any](ctx context.Context, msg *T) *connect.Request[T] {
+	req := connect.NewRequest(msg)
+	if token, _ := ctx.Value(daemonAuthTestTokenKey{}).(string); strings.TrimSpace(token) != "" {
+		req.Header().Set("Authorization", "Bearer "+strings.TrimSpace(token))
+	}
+	return req
+}
+
+func connectAuthMsg[T any](resp *connect.Response[T], err error) (*T, error) {
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg, nil
+}
+
+func (c daemonConnectTestClient) RegisterComputer(ctx context.Context, req *daemonv1.RegisterComputerRequest) (*daemonv1.RegisterComputerResponse, error) {
+	return connectAuthMsg(c.client.RegisterComputer(ctx, connectAuthReq(ctx, req)))
+}
+
+func (c daemonConnectTestClient) SubscribeServerEvents(ctx context.Context, req *daemonv1.SubscribeServerEventsRequest) (daemonConnectServerEventStream, error) {
+	stream, err := c.client.SubscribeServerEvents(ctx, connectAuthReq(ctx, req))
+	if err != nil {
+		return daemonConnectServerEventStream{}, err
+	}
+	return daemonConnectServerEventStream{stream: stream}, nil
 }
 
 func registerComputerRequest(suffix string) *daemonv1.RegisterComputerRequest {
@@ -446,13 +498,15 @@ func registerComputerRequest(suffix string) *daemonv1.RegisterComputerRequest {
 }
 
 func withDaemonToken(ctx context.Context, token string) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
+	return context.WithValue(ctx, daemonAuthTestTokenKey{}, token)
 }
 
-func assertGRPCCode(t *testing.T, err error, want codes.Code) {
+type daemonAuthTestTokenKey struct{}
+
+func assertConnectCode(t *testing.T, err error, want connect.Code) {
 	t.Helper()
-	if status.Code(err) != want {
-		t.Fatalf("status.Code(%v) = %v, want %v", err, status.Code(err), want)
+	if connect.CodeOf(err) != want {
+		t.Fatalf("connect.CodeOf(%v) = %v, want %v", err, connect.CodeOf(err), want)
 	}
 }
 

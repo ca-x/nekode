@@ -74,7 +74,7 @@ implementation should follow that document for:
 4. Implement channel, thread, DM, message, and task board APIs.
 5. Implement daemon registration, heartbeat, and event replay.
 6. Implement runtime start queue, token file injection, and status reporting.
-7. Wire the frontend console against stable REST/gRPC gateway endpoints.
+7. Wire the frontend console against stable REST/connect-rpc gateway endpoints.
 
 ## Reference Projects
 

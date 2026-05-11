@@ -31,8 +31,8 @@ For a new implementation:
 2. Treat this document as the behavioral contract.
 3. Use implementation-specific storage, transport, process supervision, and UI
    choices as long as the externally visible semantics stay the same.
-4. Keep the server/daemon transport replaceable. The current implementation can
-   use gRPC over HTTP/2, but daemon RPC semantics, durable event envelopes,
+4. Keep the server/daemon transport replaceable. The current implementation
+   uses connect-rpc over HTTP/2 or h2c, but daemon RPC semantics, durable event envelopes,
    cursors, acknowledgements, idempotency keys, and leases must not depend on a
    specific transport. QUIC/WebTransport is a future transport lane for weak
    networks, connection migration, multiplexing, and larger payload flows.
@@ -56,8 +56,8 @@ launch, and text/plain attachment previews.
 
 - This is not a UI design.
 - This is not tied to a specific programming language or database.
-- This does not require a specific wire transport such as WebSocket, gRPC, or
-  long polling.
+- This does not require a specific wire transport such as WebSocket,
+  RPC streaming, or long polling.
 - This does not prescribe how the model provider itself is called.
 - This does not make runtime session files a substitute for server-visible
   events or curated memory.
@@ -340,7 +340,7 @@ Required diagnostics:
 
 ### Transport
 
-The server/daemon transport can be WebSocket, gRPC stream, server-sent events,
+The server/daemon transport can be WebSocket, connect-rpc stream, server-sent events,
 long polling, or another bidirectional protocol.
 
 The protobuf contract exposes this as `SubscribeServerEvents`. A production
@@ -350,11 +350,11 @@ ping/reconnect signals. Polling may exist as a degraded fallback, but it must
 preserve the same cursor and idempotency semantics.
 
 Authentication is part of the transport contract, not a caller-provided identity
-field. gRPC deployments should use bearer/mTLS metadata. Nekode's release
-baseline uses server-generated daemon enrollment tokens: when a user adds a
-Computer, the server creates a one-time install token, stores only its hash, and
-the installed daemon sends `authorization: Bearer <token>` metadata on every
-gRPC call. `RequestContext.actor` is attribution metadata only; the server must
+field. Connect-rpc deployments should use bearer headers or mTLS. Nekode's
+release baseline uses server-generated daemon enrollment tokens: when a user
+adds a Computer, the server creates a one-time install token, stores only its
+hash, and the installed daemon sends `authorization: Bearer <token>` on every
+RPC call. `RequestContext.actor` is attribution metadata only; the server must
 derive the canonical actor from the authenticated principal and reject
 mismatches.
 
