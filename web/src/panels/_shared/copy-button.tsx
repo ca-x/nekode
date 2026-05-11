@@ -29,10 +29,10 @@ export function CopyButton({
 
   const label =
     state === "copied"
-      ? t("computer.connect.copied")
+      ? t("common.copied")
       : state === "error"
-        ? t("computer.connect.copyFailed")
-        : t("computer.connect.copy");
+        ? t("common.copyFailed")
+        : t("common.copy");
 
   return (
     <button
