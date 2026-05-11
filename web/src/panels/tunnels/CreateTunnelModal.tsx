@@ -5,9 +5,6 @@ import { ModalShell } from "../_shared/modal-shell";
 import { CopyButton } from "../_shared/copy-button";
 import { AlertPill } from "../_shared/alert-pill";
 
-// Default TTL presets (in seconds). 2h is the server-side default; 30m
-// is a lower-friction option for "just want to show someone right now"
-// flows; 24h is the absolute server cap.
 const TTL_PRESETS: ReadonlyArray<{ label: string; value: number }> = [
   { label: "30m", value: 30 * 60 },
   { label: "2h", value: 2 * 60 * 60 },
@@ -119,12 +116,6 @@ export function CreateTunnelModal({
   );
 }
 
-/**
- * CreatedTunnelModal is the "save this token before it's gone" dialog.
- * The token is only returned on the create response; there is no
- * authenticated GET for it afterwards, so we force the user to
- * acknowledge a copy-to-clipboard before dismissing.
- */
 export function CreatedTunnelModal({
   tunnel,
   onClose

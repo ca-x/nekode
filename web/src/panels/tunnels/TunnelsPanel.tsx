@@ -144,7 +144,14 @@ export function TunnelsPanel({
         ariaLabel={t("tunnels.panelTitle")}
       />
 
-      {error ? <AlertPill tone="danger" label={error} /> : null}
+      {error ? (
+        <div className="inline-error-row">
+          <AlertPill tone="danger" label={error} />
+          <button className="ghost-button" type="button" onClick={() => void refresh()}>
+            {t("common.retry")}
+          </button>
+        </div>
+      ) : null}
       {loading ? <p className="detail-muted">{t("common.loading")}</p> : null}
 
       {!loading && tunnels.length === 0 ? (
