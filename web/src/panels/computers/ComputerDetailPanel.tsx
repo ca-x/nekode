@@ -218,18 +218,13 @@ export function ComputerDetailPanel({
       ) : null}
       {activeTab === "settings" ? (
         <DangerZone
-          title={t("computer.actions.heading")}
-          action={
-            <button
-              className="danger-button"
-              type="button"
-              onClick={onDeleteComputer}
-              disabled={agentCount > 0 || !onDeleteComputer}
-            >
-              {t("computer.actions.delete")}
-            </button>
+          title={t("computer.actions.delete")}
+          onConfirm={() => onDeleteComputer?.()}
+          disabledReason={
+            agentCount > 0 ? t("computer.actions.deleteBlocked")
+            : !onDeleteComputer ? t("common.noPermission")
+            : undefined
           }
-          disabledReason={agentCount > 0 ? t("computer.actions.deleteBlocked") : undefined}
         />
       ) : null}
     </DetailShell>

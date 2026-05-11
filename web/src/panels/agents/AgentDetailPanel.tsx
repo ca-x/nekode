@@ -118,11 +118,8 @@ export function AgentDetailPanel({
           </DetailSection>
           <DangerZone
             title={t("agent.actions.delete")}
-            action={
-              <button className="danger-button" type="button" onClick={onDelete} disabled={!onDelete}>
-                {t("agent.actions.delete")}
-              </button>
-            }
+            disabledReason={!onDelete ? t("common.noPermission") : undefined}
+            onConfirm={() => onDelete?.()}
           />
         </>
       ) : null}
