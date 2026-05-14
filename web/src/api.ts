@@ -34,6 +34,9 @@ import type {
   EventScope,
   EventScopeType,
   InteractionEndpoint,
+  IMChatAuthDecisionResult,
+  IMChatAuthRequest,
+  IMChatSubscription,
   IMProviderSchema,
   IMBindingSession,
   JsonObject,
@@ -268,6 +271,68 @@ type RawIMBindingSession = {
   updatedUnix?: unknown;
   updated_unix?: unknown;
   detail?: unknown;
+};
+
+type RawIMChatAuthRequest = {
+  id?: unknown;
+  endpointId?: unknown;
+  endpoint_id?: unknown;
+  provider?: unknown;
+  conversationId?: unknown;
+  conversation_id?: unknown;
+  externalThreadId?: unknown;
+  external_thread_id?: unknown;
+  chatTitle?: unknown;
+  chat_title?: unknown;
+  senderExternalId?: unknown;
+  sender_external_id?: unknown;
+  tokenPrefix?: unknown;
+  token_prefix?: unknown;
+  status?: unknown;
+  requestedTarget?: unknown;
+  requested_target?: unknown;
+  requestedThreadId?: unknown;
+  requested_thread_id?: unknown;
+  expiresUnix?: unknown;
+  expires_unix?: unknown;
+  resolvedByUserId?: unknown;
+  resolved_by_user_id?: unknown;
+  resolvedUnix?: unknown;
+  resolved_unix?: unknown;
+  createdUnix?: unknown;
+  created_unix?: unknown;
+  updatedUnix?: unknown;
+  updated_unix?: unknown;
+};
+
+type RawIMChatSubscription = {
+  id?: unknown;
+  endpointId?: unknown;
+  endpoint_id?: unknown;
+  provider?: unknown;
+  conversationId?: unknown;
+  conversation_id?: unknown;
+  externalThreadId?: unknown;
+  external_thread_id?: unknown;
+  chatTitle?: unknown;
+  chat_title?: unknown;
+  target?: unknown;
+  threadId?: unknown;
+  thread_id?: unknown;
+  senderExternalId?: unknown;
+  sender_external_id?: unknown;
+  authorizedByRequestId?: unknown;
+  authorized_by_request_id?: unknown;
+  subscribed?: unknown;
+  verbose?: unknown;
+  authorizedUnix?: unknown;
+  authorized_unix?: unknown;
+  subscribedUnix?: unknown;
+  subscribed_unix?: unknown;
+  createdUnix?: unknown;
+  created_unix?: unknown;
+  updatedUnix?: unknown;
+  updated_unix?: unknown;
 };
 
 type RawNotificationRoute = {
@@ -807,6 +872,58 @@ function normalizeIMBindingSession(raw: unknown): IMBindingSession {
     createdUnix: asNumber(row.createdUnix ?? row.created_unix),
     updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix),
     detail: asOptionalString(row.detail)
+  };
+}
+
+function normalizeIMChatAuthRequest(raw: unknown): IMChatAuthRequest {
+  const row = asRecord(raw) as RawIMChatAuthRequest;
+  return {
+    id: asString(row.id),
+    endpointId: asString(row.endpointId ?? row.endpoint_id),
+    provider: asString(row.provider),
+    conversationId: asString(row.conversationId ?? row.conversation_id),
+    externalThreadId: asOptionalString(row.externalThreadId ?? row.external_thread_id),
+    chatTitle: asOptionalString(row.chatTitle ?? row.chat_title),
+    senderExternalId: asOptionalString(row.senderExternalId ?? row.sender_external_id),
+    tokenPrefix: asOptionalString(row.tokenPrefix ?? row.token_prefix),
+    status: asString(row.status),
+    requestedTarget: asOptionalString(row.requestedTarget ?? row.requested_target),
+    requestedThreadId: asOptionalString(row.requestedThreadId ?? row.requested_thread_id),
+    expiresUnix: asNumber(row.expiresUnix ?? row.expires_unix) || undefined,
+    resolvedByUserId: asOptionalString(row.resolvedByUserId ?? row.resolved_by_user_id),
+    resolvedUnix: asNumber(row.resolvedUnix ?? row.resolved_unix) || undefined,
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+    updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix)
+  };
+}
+
+function normalizeIMChatSubscription(raw: unknown): IMChatSubscription {
+  const row = asRecord(raw) as RawIMChatSubscription;
+  return {
+    id: asString(row.id),
+    endpointId: asString(row.endpointId ?? row.endpoint_id),
+    provider: asString(row.provider),
+    conversationId: asString(row.conversationId ?? row.conversation_id),
+    externalThreadId: asOptionalString(row.externalThreadId ?? row.external_thread_id),
+    chatTitle: asOptionalString(row.chatTitle ?? row.chat_title),
+    target: asOptionalString(row.target),
+    threadId: asOptionalString(row.threadId ?? row.thread_id),
+    senderExternalId: asOptionalString(row.senderExternalId ?? row.sender_external_id),
+    authorizedByRequestId: asOptionalString(row.authorizedByRequestId ?? row.authorized_by_request_id),
+    subscribed: Boolean(row.subscribed),
+    verbose: Boolean(row.verbose),
+    authorizedUnix: asNumber(row.authorizedUnix ?? row.authorized_unix) || undefined,
+    subscribedUnix: asNumber(row.subscribedUnix ?? row.subscribed_unix) || undefined,
+    createdUnix: asNumber(row.createdUnix ?? row.created_unix),
+    updatedUnix: asNumber(row.updatedUnix ?? row.updated_unix)
+  };
+}
+
+function normalizeIMChatAuthDecisionResult(raw: unknown): IMChatAuthDecisionResult {
+  const row = asRecord(raw);
+  return {
+    request: normalizeIMChatAuthRequest(row.request),
+    subscription: row.subscription ? normalizeIMChatSubscription(row.subscription) : undefined
   };
 }
 
@@ -1534,6 +1651,72 @@ export class ApiClient {
       `/api/interaction-endpoints/${encodeURIComponent(endpointId)}/binding-sessions/${encodeURIComponent(sessionId)}/cancel`,
       { method: "POST", body: JSON.stringify({}) }
     ).then(normalizeIMBindingSession);
+  }
+
+  listIMChatAuthRequests(filters: {
+    endpointId?: string;
+    status?: string;
+    includeExpired?: boolean;
+    limit?: number;
+  } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "endpointId", filters.endpointId);
+    appendIfPresent(params, "status", filters.status);
+    if (filters.includeExpired) params.set("includeExpired", "true");
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return this.request<RawListResponse<unknown>>(`/api/im/chat-auth-requests?${params}`).then((response) =>
+      normalizeList(response, normalizeIMChatAuthRequest)
+    );
+  }
+
+  approveIMChatAuthRequest(id: string, input: { target?: string; threadId?: string } = {}) {
+    return this.request<unknown>(`/api/im/chat-auth-requests/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      body: JSON.stringify(input)
+    }).then(normalizeIMChatAuthDecisionResult);
+  }
+
+  rejectIMChatAuthRequest(id: string) {
+    return this.request<{ request?: unknown }>(`/api/im/chat-auth-requests/${encodeURIComponent(id)}/reject`, {
+      method: "POST",
+      body: JSON.stringify({})
+    }).then((response) => normalizeIMChatAuthRequest(response.request));
+  }
+
+  bindIMChatAuthRequest(input: { key: string; target?: string; threadId?: string }) {
+    return this.request<unknown>("/api/im/chat-auth-requests/bind", {
+      method: "POST",
+      body: JSON.stringify(input)
+    }).then(normalizeIMChatAuthDecisionResult);
+  }
+
+  listIMChatSubscriptions(filters: {
+    endpointId?: string;
+    provider?: string;
+    subscribed?: boolean;
+    limit?: number;
+  } = {}) {
+    const params = new URLSearchParams();
+    appendIfPresent(params, "endpointId", filters.endpointId);
+    appendIfPresent(params, "provider", filters.provider);
+    if (filters.subscribed !== undefined) params.set("subscribed", String(filters.subscribed));
+    appendIfPresent(params, "limit", filters.limit ?? 100);
+    return this.request<RawListResponse<unknown>>(`/api/im/chat-subscriptions?${params}`).then((response) =>
+      normalizeList(response, normalizeIMChatSubscription)
+    );
+  }
+
+  updateIMChatSubscription(id: string, patch: {
+    chatTitle?: string;
+    target?: string;
+    threadId?: string;
+    subscribed?: boolean;
+    verbose?: boolean;
+  }) {
+    return this.request<unknown>(`/api/im/chat-subscriptions/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch)
+    }).then(normalizeIMChatSubscription);
   }
 
   listNotificationRoutes(filters: {

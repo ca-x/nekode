@@ -26,6 +26,10 @@ type Tx struct {
 	ChannelMember *ChannelMemberClient
 	// CollaborationEvent is the client for interacting with the CollaborationEvent builders.
 	CollaborationEvent *CollaborationEventClient
+	// IMChatAuthRequest is the client for interacting with the IMChatAuthRequest builders.
+	IMChatAuthRequest *IMChatAuthRequestClient
+	// IMChatSubscription is the client for interacting with the IMChatSubscription builders.
+	IMChatSubscription *IMChatSubscriptionClient
 	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
 	IdempotencyRecord *IdempotencyRecordClient
 	// InteractionEndpoint is the client for interacting with the InteractionEndpoint builders.
@@ -190,6 +194,8 @@ func (tx *Tx) init() {
 	tx.ChannelDecisionVote = NewChannelDecisionVoteClient(tx.config)
 	tx.ChannelMember = NewChannelMemberClient(tx.config)
 	tx.CollaborationEvent = NewCollaborationEventClient(tx.config)
+	tx.IMChatAuthRequest = NewIMChatAuthRequestClient(tx.config)
+	tx.IMChatSubscription = NewIMChatSubscriptionClient(tx.config)
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
 	tx.InteractionEndpoint = NewInteractionEndpointClient(tx.config)
 	tx.Message = NewMessageClient(tx.config)

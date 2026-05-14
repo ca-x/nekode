@@ -2164,6 +2164,77 @@ textarea {
   align-content: start;
 }
 
+.endpoint-chat-access-panel {
+  display: grid;
+  grid-column: 2 / span 2;
+  gap: 14px;
+}
+
+.im-chat-bind-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) minmax(140px, 1fr) minmax(120px, 0.8fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.im-chat-access-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.im-chat-access-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.im-chat-access-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+}
+
+.im-chat-access-subhead span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-subtle);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.im-chat-access-row {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.im-chat-access-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.im-chat-access-main span {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
 .endpoint-mode-toggle {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -3258,9 +3329,12 @@ textarea {
   .channel-member-management-row,
   .binding-session-panel,
   .endpoint-binding-grid,
+  .endpoint-chat-access-panel,
   .endpoint-grid,
   .endpoint-route-grid,
   .endpoint-toggle-grid,
+  .im-chat-access-columns,
+  .im-chat-bind-grid,
   .enrollment-layout,
   .message-search,
   .provider-catalog-row,
@@ -3268,6 +3342,10 @@ textarea {
   .task-workspace,
   .two-column {
     grid-template-columns: 1fr;
+  }
+
+  .endpoint-chat-access-panel {
+    grid-column: auto;
   }
 
   .agent-options-grid .span-2 {

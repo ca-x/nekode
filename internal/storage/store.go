@@ -19,6 +19,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
+	"github.com/ca-x/nekode/internal/ent/imchatauthrequest"
+	"github.com/ca-x/nekode/internal/ent/imchatsubscription"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/notificationroute"
@@ -380,7 +382,15 @@ func (s *Store) DeleteInteractionEndpoint(ctx context.Context, id string) error 
 	if err != nil {
 		return err
 	}
-	if routeCount > 0 || deliveryCount > 0 {
+	authRequestCount, err := s.client.IMChatAuthRequest.Query().Where(imchatauthrequest.EndpointIDEQ(id)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	subscriptionCount, err := s.client.IMChatSubscription.Query().Where(imchatsubscription.EndpointIDEQ(id)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	if routeCount > 0 || deliveryCount > 0 || authRequestCount > 0 || subscriptionCount > 0 {
 		return ErrConflict
 	}
 	err = s.client.InteractionEndpoint.DeleteOneID(id).Exec(ctx)
@@ -388,6 +398,427 @@ func (s *Store) DeleteInteractionEndpoint(ctx context.Context, id string) error 
 		return ErrNotFound
 	}
 	return err
+}
+
+func (s *Store) CreateIMChatAuthRequest(ctx context.Context, request IMChatAuthRequest) (IMChatAuthRequest, error) {
+	request = normalizeIMChatAuthRequest(request)
+	if request.EndpointID == "" || request.ConversationID == "" || request.TokenHash == "" {
+		return IMChatAuthRequest{}, ErrInvalidState
+	}
+	if !validIMChatAuthRequestStatus(request.Status) {
+		return IMChatAuthRequest{}, ErrInvalidState
+	}
+	now := unixNow()
+	create := s.client.IMChatAuthRequest.Create().
+		SetEndpointID(request.EndpointID).
+		SetProvider(request.Provider).
+		SetConversationID(request.ConversationID).
+		SetExternalThreadID(request.ExternalThreadID).
+		SetChatTitle(request.ChatTitle).
+		SetSenderExternalID(request.SenderExternalID).
+		SetTokenHash(request.TokenHash).
+		SetTokenPrefix(request.TokenPrefix).
+		SetStatus(request.Status).
+		SetRequestedTarget(request.RequestedTarget).
+		SetRequestedThreadID(request.RequestedThreadID).
+		SetExpiresUnix(request.ExpiresUnix).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now)
+	if request.ID != "" {
+		create.SetID(request.ID)
+	}
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
+		return IMChatAuthRequest{}, ErrConflict
+	}
+	if err != nil {
+		return IMChatAuthRequest{}, err
+	}
+	return imChatAuthRequestFromEnt(row), nil
+}
+
+func (s *Store) ListIMChatAuthRequests(ctx context.Context, opts IMChatAuthRequestListOptions) ([]IMChatAuthRequest, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 100
+	}
+	query := s.client.IMChatAuthRequest.Query()
+	if endpointID := strings.TrimSpace(opts.EndpointID); endpointID != "" {
+		query.Where(imchatauthrequest.EndpointIDEQ(endpointID))
+	}
+	if status := normalizeIMChatAuthRequestStatus(opts.Status); status != "" {
+		query.Where(imchatauthrequest.StatusEQ(status))
+		if status == IMChatAuthRequestStatusPending && !opts.IncludeExpired {
+			now := unixNow()
+			query.Where(imchatauthrequest.Or(
+				imchatauthrequest.ExpiresUnixEQ(0),
+				imchatauthrequest.ExpiresUnixGT(now),
+			))
+		}
+	}
+	rows, err := query.
+		Order(imchatauthrequest.ByCreatedUnix(sql.OrderDesc()), imchatauthrequest.ByID(sql.OrderDesc())).
+		Limit(opts.Limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]IMChatAuthRequest, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, imChatAuthRequestFromEnt(row))
+	}
+	return out, nil
+}
+
+func (s *Store) GetIMChatAuthRequestByTokenHash(ctx context.Context, tokenHash string) (IMChatAuthRequest, error) {
+	tokenHash = strings.TrimSpace(tokenHash)
+	if tokenHash == "" {
+		return IMChatAuthRequest{}, ErrNotFound
+	}
+	row, err := s.client.IMChatAuthRequest.Query().
+		Where(imchatauthrequest.TokenHashEQ(tokenHash)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatAuthRequest{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatAuthRequest{}, err
+	}
+	return imChatAuthRequestFromEnt(row), nil
+}
+
+func (s *Store) GetIMChatAuthRequest(ctx context.Context, id string) (IMChatAuthRequest, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return IMChatAuthRequest{}, ErrNotFound
+	}
+	row, err := s.client.IMChatAuthRequest.Query().
+		Where(imchatauthrequest.IDEQ(id)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatAuthRequest{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatAuthRequest{}, err
+	}
+	return imChatAuthRequestFromEnt(row), nil
+}
+
+func (s *Store) UpdateIMChatAuthRequestStatus(ctx context.Context, id, statusValue, resolvedByUserID string) (IMChatAuthRequest, error) {
+	id = strings.TrimSpace(id)
+	statusValue = normalizeIMChatAuthRequestStatus(statusValue)
+	if id == "" {
+		return IMChatAuthRequest{}, ErrNotFound
+	}
+	if !validIMChatAuthRequestStatus(statusValue) {
+		return IMChatAuthRequest{}, ErrInvalidState
+	}
+	now := unixNow()
+	update := s.client.IMChatAuthRequest.UpdateOneID(id).
+		SetStatus(statusValue).
+		SetUpdatedUnix(now)
+	if statusValue == IMChatAuthRequestStatusPending {
+		update.SetResolvedByUserID("").SetResolvedUnix(0)
+	} else {
+		update.SetResolvedByUserID(strings.TrimSpace(resolvedByUserID)).SetResolvedUnix(now)
+	}
+	row, err := update.Save(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatAuthRequest{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatAuthRequest{}, err
+	}
+	return imChatAuthRequestFromEnt(row), nil
+}
+
+func (s *Store) ApproveIMChatAuthRequest(ctx context.Context, id, resolvedByUserID string, subscription IMChatSubscription) (IMChatAuthRequest, IMChatSubscription, error) {
+	id = strings.TrimSpace(id)
+	subscription = normalizeIMChatSubscription(subscription)
+	if id == "" {
+		return IMChatAuthRequest{}, IMChatSubscription{}, ErrNotFound
+	}
+	if subscription.EndpointID == "" || subscription.ConversationID == "" {
+		return IMChatAuthRequest{}, IMChatSubscription{}, ErrInvalidState
+	}
+	now := unixNow()
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return IMChatAuthRequest{}, IMChatSubscription{}, err
+	}
+	defer tx.Rollback()
+
+	requestRow, err := tx.IMChatAuthRequest.Query().
+		Where(imchatauthrequest.IDEQ(id)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatAuthRequest{}, IMChatSubscription{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatAuthRequest{}, IMChatSubscription{}, err
+	}
+	if requestRow.Status != IMChatAuthRequestStatusPending {
+		return IMChatAuthRequest{}, IMChatSubscription{}, ErrInvalidState
+	}
+	requestRow, err = tx.IMChatAuthRequest.UpdateOneID(id).
+		SetStatus(IMChatAuthRequestStatusApproved).
+		SetResolvedByUserID(strings.TrimSpace(resolvedByUserID)).
+		SetResolvedUnix(now).
+		SetUpdatedUnix(now).
+		Save(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatAuthRequest{}, IMChatSubscription{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatAuthRequest{}, IMChatSubscription{}, err
+	}
+
+	existing, err := tx.IMChatSubscription.Query().
+		Where(
+			imchatsubscription.EndpointIDEQ(subscription.EndpointID),
+			imchatsubscription.ConversationIDEQ(subscription.ConversationID),
+			imchatsubscription.ExternalThreadIDEQ(subscription.ExternalThreadID),
+		).
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return IMChatAuthRequest{}, IMChatSubscription{}, err
+	}
+	var subscriptionRow *ent.IMChatSubscription
+	if err == nil {
+		update := tx.IMChatSubscription.UpdateOneID(existing.ID).
+			SetProvider(subscription.Provider).
+			SetChatTitle(subscription.ChatTitle).
+			SetTarget(subscription.Target).
+			SetThreadID(subscription.ThreadID).
+			SetSenderExternalID(subscription.SenderExternalID).
+			SetAuthorizedByRequestID(subscription.AuthorizedByRequestID).
+			SetSubscribed(subscription.Subscribed).
+			SetVerbose(subscription.Verbose).
+			SetUpdatedUnix(now)
+		if subscription.AuthorizedUnix > 0 {
+			update.SetAuthorizedUnix(subscription.AuthorizedUnix)
+		} else if existing.AuthorizedUnix == 0 {
+			update.SetAuthorizedUnix(now)
+		}
+		if subscription.Subscribed {
+			if subscription.SubscribedUnix > 0 {
+				update.SetSubscribedUnix(subscription.SubscribedUnix)
+			} else if !existing.Subscribed || existing.SubscribedUnix == 0 {
+				update.SetSubscribedUnix(now)
+			}
+		}
+		subscriptionRow, err = update.Save(ctx)
+		if ent.IsNotFound(err) {
+			return IMChatAuthRequest{}, IMChatSubscription{}, ErrNotFound
+		}
+		if err != nil {
+			return IMChatAuthRequest{}, IMChatSubscription{}, err
+		}
+	} else {
+		authorizedUnix := subscription.AuthorizedUnix
+		if authorizedUnix == 0 {
+			authorizedUnix = now
+		}
+		subscribedUnix := subscription.SubscribedUnix
+		if subscription.Subscribed && subscribedUnix == 0 {
+			subscribedUnix = now
+		}
+		create := tx.IMChatSubscription.Create().
+			SetEndpointID(subscription.EndpointID).
+			SetProvider(subscription.Provider).
+			SetConversationID(subscription.ConversationID).
+			SetExternalThreadID(subscription.ExternalThreadID).
+			SetChatTitle(subscription.ChatTitle).
+			SetTarget(subscription.Target).
+			SetThreadID(subscription.ThreadID).
+			SetSenderExternalID(subscription.SenderExternalID).
+			SetAuthorizedByRequestID(subscription.AuthorizedByRequestID).
+			SetSubscribed(subscription.Subscribed).
+			SetVerbose(subscription.Verbose).
+			SetAuthorizedUnix(authorizedUnix).
+			SetSubscribedUnix(subscribedUnix).
+			SetCreatedUnix(now).
+			SetUpdatedUnix(now)
+		if subscription.ID != "" {
+			create.SetID(subscription.ID)
+		}
+		subscriptionRow, err = create.Save(ctx)
+		if ent.IsConstraintError(err) {
+			return IMChatAuthRequest{}, IMChatSubscription{}, ErrConflict
+		}
+		if err != nil {
+			return IMChatAuthRequest{}, IMChatSubscription{}, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return IMChatAuthRequest{}, IMChatSubscription{}, err
+	}
+	return imChatAuthRequestFromEnt(requestRow), imChatSubscriptionFromEnt(subscriptionRow), nil
+}
+
+func (s *Store) UpsertIMChatSubscription(ctx context.Context, subscription IMChatSubscription) (IMChatSubscription, error) {
+	subscription = normalizeIMChatSubscription(subscription)
+	if subscription.EndpointID == "" || subscription.ConversationID == "" {
+		return IMChatSubscription{}, ErrInvalidState
+	}
+	now := unixNow()
+	existing, err := s.GetIMChatSubscription(ctx, subscription.EndpointID, subscription.ConversationID, subscription.ExternalThreadID)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return IMChatSubscription{}, err
+	}
+	if err == nil {
+		update := s.client.IMChatSubscription.UpdateOneID(existing.ID).
+			SetProvider(subscription.Provider).
+			SetChatTitle(subscription.ChatTitle).
+			SetTarget(subscription.Target).
+			SetThreadID(subscription.ThreadID).
+			SetSenderExternalID(subscription.SenderExternalID).
+			SetAuthorizedByRequestID(subscription.AuthorizedByRequestID).
+			SetSubscribed(subscription.Subscribed).
+			SetVerbose(subscription.Verbose).
+			SetUpdatedUnix(now)
+		if subscription.AuthorizedUnix > 0 {
+			update.SetAuthorizedUnix(subscription.AuthorizedUnix)
+		} else if existing.AuthorizedUnix == 0 {
+			update.SetAuthorizedUnix(now)
+		}
+		if subscription.Subscribed {
+			if subscription.SubscribedUnix > 0 {
+				update.SetSubscribedUnix(subscription.SubscribedUnix)
+			} else if !existing.Subscribed || existing.SubscribedUnix == 0 {
+				update.SetSubscribedUnix(now)
+			}
+		}
+		row, err := update.Save(ctx)
+		if ent.IsNotFound(err) {
+			return IMChatSubscription{}, ErrNotFound
+		}
+		if err != nil {
+			return IMChatSubscription{}, err
+		}
+		return imChatSubscriptionFromEnt(row), nil
+	}
+
+	authorizedUnix := subscription.AuthorizedUnix
+	if authorizedUnix == 0 {
+		authorizedUnix = now
+	}
+	subscribedUnix := subscription.SubscribedUnix
+	if subscription.Subscribed && subscribedUnix == 0 {
+		subscribedUnix = now
+	}
+	create := s.client.IMChatSubscription.Create().
+		SetEndpointID(subscription.EndpointID).
+		SetProvider(subscription.Provider).
+		SetConversationID(subscription.ConversationID).
+		SetExternalThreadID(subscription.ExternalThreadID).
+		SetChatTitle(subscription.ChatTitle).
+		SetTarget(subscription.Target).
+		SetThreadID(subscription.ThreadID).
+		SetSenderExternalID(subscription.SenderExternalID).
+		SetAuthorizedByRequestID(subscription.AuthorizedByRequestID).
+		SetSubscribed(subscription.Subscribed).
+		SetVerbose(subscription.Verbose).
+		SetAuthorizedUnix(authorizedUnix).
+		SetSubscribedUnix(subscribedUnix).
+		SetCreatedUnix(now).
+		SetUpdatedUnix(now)
+	if subscription.ID != "" {
+		create.SetID(subscription.ID)
+	}
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
+		return IMChatSubscription{}, ErrConflict
+	}
+	if err != nil {
+		return IMChatSubscription{}, err
+	}
+	return imChatSubscriptionFromEnt(row), nil
+}
+
+func (s *Store) GetIMChatSubscription(ctx context.Context, endpointID, conversationID, externalThreadID string) (IMChatSubscription, error) {
+	endpointID = strings.TrimSpace(endpointID)
+	conversationID = strings.TrimSpace(conversationID)
+	externalThreadID = strings.TrimSpace(externalThreadID)
+	if endpointID == "" || conversationID == "" {
+		return IMChatSubscription{}, ErrNotFound
+	}
+	row, err := s.client.IMChatSubscription.Query().
+		Where(
+			imchatsubscription.EndpointIDEQ(endpointID),
+			imchatsubscription.ConversationIDEQ(conversationID),
+			imchatsubscription.ExternalThreadIDEQ(externalThreadID),
+		).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatSubscription{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatSubscription{}, err
+	}
+	return imChatSubscriptionFromEnt(row), nil
+}
+
+func (s *Store) ListIMChatSubscriptions(ctx context.Context, opts IMChatSubscriptionListOptions) ([]IMChatSubscription, error) {
+	if opts.Limit <= 0 || opts.Limit > 200 {
+		opts.Limit = 100
+	}
+	query := s.client.IMChatSubscription.Query()
+	if endpointID := strings.TrimSpace(opts.EndpointID); endpointID != "" {
+		query.Where(imchatsubscription.EndpointIDEQ(endpointID))
+	}
+	if provider := strings.TrimSpace(opts.Provider); provider != "" {
+		query.Where(imchatsubscription.ProviderEQ(provider))
+	}
+	if opts.Subscribed != nil {
+		query.Where(imchatsubscription.SubscribedEQ(*opts.Subscribed))
+	}
+	rows, err := query.
+		Order(imchatsubscription.ByUpdatedUnix(sql.OrderDesc()), imchatsubscription.ByID(sql.OrderDesc())).
+		Limit(opts.Limit).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]IMChatSubscription, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, imChatSubscriptionFromEnt(row))
+	}
+	return out, nil
+}
+
+func (s *Store) UpdateIMChatSubscription(ctx context.Context, id string, patch IMChatSubscriptionPatch) (IMChatSubscription, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return IMChatSubscription{}, ErrNotFound
+	}
+	now := unixNow()
+	update := s.client.IMChatSubscription.UpdateOneID(id).SetUpdatedUnix(now)
+	if patch.ChatTitle != nil {
+		update.SetChatTitle(strings.TrimSpace(*patch.ChatTitle))
+	}
+	if patch.Target != nil {
+		update.SetTarget(strings.TrimSpace(*patch.Target))
+	}
+	if patch.ThreadID != nil {
+		update.SetThreadID(strings.TrimSpace(*patch.ThreadID))
+	}
+	if patch.Subscribed != nil {
+		update.SetSubscribed(*patch.Subscribed)
+		if *patch.Subscribed {
+			update.SetSubscribedUnix(now)
+		}
+	}
+	if patch.Verbose != nil {
+		update.SetVerbose(*patch.Verbose)
+	}
+	row, err := update.Save(ctx)
+	if ent.IsNotFound(err) {
+		return IMChatSubscription{}, ErrNotFound
+	}
+	if err != nil {
+		return IMChatSubscription{}, err
+	}
+	return imChatSubscriptionFromEnt(row), nil
 }
 
 func (s *Store) CreateChannel(ctx context.Context, channelModel ChannelSummary) (ChannelSummary, error) {
@@ -2019,6 +2450,48 @@ func endpointFromEnt(row *ent.InteractionEndpoint) InteractionEndpoint {
 	}
 }
 
+func imChatAuthRequestFromEnt(row *ent.IMChatAuthRequest) IMChatAuthRequest {
+	return IMChatAuthRequest{
+		ID:                row.ID,
+		EndpointID:        row.EndpointID,
+		Provider:          row.Provider,
+		ConversationID:    row.ConversationID,
+		ExternalThreadID:  row.ExternalThreadID,
+		ChatTitle:         row.ChatTitle,
+		SenderExternalID:  row.SenderExternalID,
+		TokenPrefix:       row.TokenPrefix,
+		Status:            row.Status,
+		RequestedTarget:   row.RequestedTarget,
+		RequestedThreadID: row.RequestedThreadID,
+		ExpiresUnix:       row.ExpiresUnix,
+		ResolvedByUserID:  row.ResolvedByUserID,
+		ResolvedUnix:      row.ResolvedUnix,
+		CreatedUnix:       row.CreatedUnix,
+		UpdatedUnix:       row.UpdatedUnix,
+	}
+}
+
+func imChatSubscriptionFromEnt(row *ent.IMChatSubscription) IMChatSubscription {
+	return IMChatSubscription{
+		ID:                    row.ID,
+		EndpointID:            row.EndpointID,
+		Provider:              row.Provider,
+		ConversationID:        row.ConversationID,
+		ExternalThreadID:      row.ExternalThreadID,
+		ChatTitle:             row.ChatTitle,
+		Target:                row.Target,
+		ThreadID:              row.ThreadID,
+		SenderExternalID:      row.SenderExternalID,
+		AuthorizedByRequestID: row.AuthorizedByRequestID,
+		Subscribed:            row.Subscribed,
+		Verbose:               row.Verbose,
+		AuthorizedUnix:        row.AuthorizedUnix,
+		SubscribedUnix:        row.SubscribedUnix,
+		CreatedUnix:           row.CreatedUnix,
+		UpdatedUnix:           row.UpdatedUnix,
+	}
+}
+
 func channelFromEnt(row *ent.Channel) ChannelSummary {
 	return ChannelSummary{
 		Target:          row.Target,
@@ -2201,10 +2674,80 @@ func unixNow() int64 {
 func firstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if strings.TrimSpace(value) != "" {
-			return value
+			return strings.TrimSpace(value)
 		}
 	}
 	return ""
+}
+
+func normalizeIMChatAuthRequest(request IMChatAuthRequest) IMChatAuthRequest {
+	request.ID = strings.TrimSpace(request.ID)
+	request.EndpointID = strings.TrimSpace(request.EndpointID)
+	request.Provider = strings.TrimSpace(request.Provider)
+	request.ConversationID = strings.TrimSpace(request.ConversationID)
+	request.ExternalThreadID = strings.TrimSpace(request.ExternalThreadID)
+	request.ChatTitle = strings.TrimSpace(request.ChatTitle)
+	request.SenderExternalID = strings.TrimSpace(request.SenderExternalID)
+	request.TokenHash = strings.TrimSpace(request.TokenHash)
+	request.TokenPrefix = strings.TrimSpace(request.TokenPrefix)
+	request.Status = normalizeIMChatAuthRequestStatus(request.Status)
+	request.RequestedTarget = strings.TrimSpace(request.RequestedTarget)
+	request.RequestedThreadID = strings.TrimSpace(request.RequestedThreadID)
+	if request.ExpiresUnix < 0 {
+		request.ExpiresUnix = 0
+	}
+	request.ResolvedByUserID = strings.TrimSpace(request.ResolvedByUserID)
+	if request.ResolvedUnix < 0 {
+		request.ResolvedUnix = 0
+	}
+	return request
+}
+
+func normalizeIMChatSubscription(subscription IMChatSubscription) IMChatSubscription {
+	subscription.ID = strings.TrimSpace(subscription.ID)
+	subscription.EndpointID = strings.TrimSpace(subscription.EndpointID)
+	subscription.Provider = strings.TrimSpace(subscription.Provider)
+	subscription.ConversationID = strings.TrimSpace(subscription.ConversationID)
+	subscription.ExternalThreadID = strings.TrimSpace(subscription.ExternalThreadID)
+	subscription.ChatTitle = strings.TrimSpace(subscription.ChatTitle)
+	subscription.Target = strings.TrimSpace(subscription.Target)
+	subscription.ThreadID = strings.TrimSpace(subscription.ThreadID)
+	subscription.SenderExternalID = strings.TrimSpace(subscription.SenderExternalID)
+	subscription.AuthorizedByRequestID = strings.TrimSpace(subscription.AuthorizedByRequestID)
+	if subscription.AuthorizedUnix < 0 {
+		subscription.AuthorizedUnix = 0
+	}
+	if subscription.SubscribedUnix < 0 {
+		subscription.SubscribedUnix = 0
+	}
+	return subscription
+}
+
+func normalizeIMChatAuthRequestStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "", IMChatAuthRequestStatusPending:
+		return IMChatAuthRequestStatusPending
+	case IMChatAuthRequestStatusApproved:
+		return IMChatAuthRequestStatusApproved
+	case IMChatAuthRequestStatusRejected:
+		return IMChatAuthRequestStatusRejected
+	case IMChatAuthRequestStatusExpired:
+		return IMChatAuthRequestStatusExpired
+	default:
+		return strings.ToLower(strings.TrimSpace(status))
+	}
+}
+
+func validIMChatAuthRequestStatus(status string) bool {
+	switch status {
+	case IMChatAuthRequestStatusPending,
+		IMChatAuthRequestStatusApproved,
+		IMChatAuthRequestStatusRejected,
+		IMChatAuthRequestStatusExpired:
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeChannelSummary(channelModel ChannelSummary) (ChannelSummary, error) {

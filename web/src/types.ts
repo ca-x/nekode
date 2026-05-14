@@ -121,6 +121,51 @@ export type IMBindingSession = {
   detail?: string;
 };
 
+export type IMChatAuthRequestStatus = "pending" | "approved" | "rejected" | "expired" | string;
+
+export type IMChatAuthRequest = {
+  id: string;
+  endpointId: string;
+  provider: string;
+  conversationId: string;
+  externalThreadId?: string;
+  chatTitle?: string;
+  senderExternalId?: string;
+  tokenPrefix?: string;
+  status: IMChatAuthRequestStatus;
+  requestedTarget?: string;
+  requestedThreadId?: string;
+  expiresUnix?: number;
+  resolvedByUserId?: string;
+  resolvedUnix?: number;
+  createdUnix: number;
+  updatedUnix: number;
+};
+
+export type IMChatSubscription = {
+  id: string;
+  endpointId: string;
+  provider: string;
+  conversationId: string;
+  externalThreadId?: string;
+  chatTitle?: string;
+  target?: string;
+  threadId?: string;
+  senderExternalId?: string;
+  authorizedByRequestId?: string;
+  subscribed: boolean;
+  verbose: boolean;
+  authorizedUnix?: number;
+  subscribedUnix?: number;
+  createdUnix: number;
+  updatedUnix: number;
+};
+
+export type IMChatAuthDecisionResult = {
+  request: IMChatAuthRequest;
+  subscription?: IMChatSubscription;
+};
+
 export type ChannelVisibility = "public" | "private" | "unspecified";
 export type ChannelMemberRole = "admin" | "member" | "viewer" | "unspecified";
 

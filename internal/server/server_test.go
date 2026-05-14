@@ -1066,6 +1066,108 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 }
 
+func TestIMChatAuthHTTPLifecycle(t *testing.T) {
+	store := newTestStore(t)
+	s := New(testConfig(), slog.New(slog.DiscardHandler), store)
+	token := bootstrapToken(t, s)
+	ctx := context.Background()
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "wecom",
+		DisplayName:     "WeCom Ops",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "webhook_signature",
+		ConfigJSON:      `{"mode":"callback_app","corp_id":"corp","corp_secret":"secret","agent_id":"1001","callback_token":"token","callback_aes_key":"abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG","require_subscription":true}`,
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	request, err := store.CreateIMChatAuthRequest(ctx, storage.IMChatAuthRequest{
+		EndpointID:        endpoint.ID,
+		Provider:          endpoint.Provider,
+		ConversationID:    "chat-ops",
+		ExternalThreadID:  "topic-1",
+		ChatTitle:         "Ops Room",
+		SenderExternalID:  "user-1",
+		TokenHash:         "sha256:test-token",
+		TokenPrefix:       "nk_test",
+		Status:            storage.IMChatAuthRequestStatusPending,
+		ExpiresUnix:       time.Now().Add(time.Hour).Unix(),
+		RequestedTarget:   "#ops",
+		RequestedThreadID: "im-wecom-ops",
+	})
+	if err != nil {
+		t.Fatalf("CreateIMChatAuthRequest() error = %v", err)
+	}
+
+	listResp := doGET(t, s, "/api/im/chat-auth-requests?endpointId="+endpoint.ID+"&status=pending", token)
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list chat auth requests status = %d body=%s", listResp.Code, listResp.Body.String())
+	}
+	var listBody struct {
+		Items []storage.IMChatAuthRequest `json:"items"`
+	}
+	if err := json.Unmarshal(listResp.Body.Bytes(), &listBody); err != nil {
+		t.Fatalf("decode auth request list: %v", err)
+	}
+	if len(listBody.Items) != 1 || listBody.Items[0].ID != request.ID || listBody.Items[0].TokenHash != "" {
+		t.Fatalf("auth request list = %+v, want redacted pending request", listBody.Items)
+	}
+
+	approveResp := doJSON(t, s, http.MethodPost, "/api/im/chat-auth-requests/"+request.ID+"/approve", token, map[string]any{
+		"target":   "#ops",
+		"threadId": "im-wecom-ops",
+	})
+	if approveResp.Code != http.StatusOK {
+		t.Fatalf("approve chat auth status = %d body=%s", approveResp.Code, approveResp.Body.String())
+	}
+	var approveBody struct {
+		Request      storage.IMChatAuthRequest  `json:"request"`
+		Subscription storage.IMChatSubscription `json:"subscription"`
+	}
+	if err := json.Unmarshal(approveResp.Body.Bytes(), &approveBody); err != nil {
+		t.Fatalf("decode approve response: %v", err)
+	}
+	if approveBody.Request.Status != storage.IMChatAuthRequestStatusApproved ||
+		approveBody.Subscription.EndpointID != endpoint.ID ||
+		approveBody.Subscription.ConversationID != "chat-ops" ||
+		!approveBody.Subscription.Subscribed ||
+		approveBody.Subscription.Verbose {
+		t.Fatalf("approve response = %+v", approveBody)
+	}
+
+	subResp := doGET(t, s, "/api/im/chat-subscriptions?endpointId="+endpoint.ID+"&subscribed=true", token)
+	if subResp.Code != http.StatusOK {
+		t.Fatalf("list subscriptions status = %d body=%s", subResp.Code, subResp.Body.String())
+	}
+	var subBody struct {
+		Items []storage.IMChatSubscription `json:"items"`
+	}
+	if err := json.Unmarshal(subResp.Body.Bytes(), &subBody); err != nil {
+		t.Fatalf("decode subscription list: %v", err)
+	}
+	if len(subBody.Items) != 1 || subBody.Items[0].ID != approveBody.Subscription.ID {
+		t.Fatalf("subscription list = %+v, want approved subscription", subBody.Items)
+	}
+
+	patchResp := doJSON(t, s, http.MethodPatch, "/api/im/chat-subscriptions/"+approveBody.Subscription.ID, token, map[string]any{
+		"verbose": true,
+	})
+	if patchResp.Code != http.StatusOK {
+		t.Fatalf("patch subscription status = %d body=%s", patchResp.Code, patchResp.Body.String())
+	}
+	var patched storage.IMChatSubscription
+	if err := json.Unmarshal(patchResp.Body.Bytes(), &patched); err != nil {
+		t.Fatalf("decode patched subscription: %v", err)
+	}
+	if !patched.Verbose || !patched.Subscribed {
+		t.Fatalf("patched subscription = %+v, want verbose active subscription", patched)
+	}
+}
+
 func TestWeixinILinkBindingSessionUsesProviderQRAndPersistsBoundConfig(t *testing.T) {
 	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
 	token := bootstrapToken(t, s)

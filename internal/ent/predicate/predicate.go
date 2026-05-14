@@ -27,6 +27,12 @@ type ChannelMember func(*sql.Selector)
 // CollaborationEvent is the predicate function for collaborationevent builders.
 type CollaborationEvent func(*sql.Selector)
 
+// IMChatAuthRequest is the predicate function for imchatauthrequest builders.
+type IMChatAuthRequest func(*sql.Selector)
+
+// IMChatSubscription is the predicate function for imchatsubscription builders.
+type IMChatSubscription func(*sql.Selector)
+
 // IdempotencyRecord is the predicate function for idempotencyrecord builders.
 type IdempotencyRecord func(*sql.Selector)
 

@@ -388,6 +388,31 @@
       "payloadPending": "QR payload pending provider adapter",
       "sessionExpires": "Expires",
       "session": "Session"
+    },
+    "chatAccess": {
+      "title": "Chat access",
+      "refresh": "Refresh",
+      "bindKey": "Bind key",
+      "bindTarget": "Target",
+      "bindThread": "Thread ID",
+      "bind": "Bind",
+      "pending": "Pending approvals",
+      "subscriptions": "Subscriptions",
+      "conversation": "Conversation",
+      "tokenPrefix": "Key",
+      "expires": "Expires",
+      "approve": "Approve",
+      "reject": "Reject",
+      "emptyPending": "No pending approvals.",
+      "emptySubscriptions": "No subscribed chats yet.",
+      "subscribed": "subscribed",
+      "unsubscribed": "unsubscribed",
+      "verboseOn": "verbose on",
+      "verboseOff": "verbose off",
+      "verboseOnAction": "Verbose on",
+      "verboseOffAction": "Verbose off",
+      "unsubscribe": "Unsubscribe",
+      "resubscribe": "Resubscribe"
     }
   }
 }

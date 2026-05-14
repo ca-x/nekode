@@ -929,6 +929,148 @@ func TestOutboundDeliveryLifecycleForIMReply(t *testing.T) {
 	}
 }
 
+func TestOutboundDeliverySuppressesNonVerboseIMStatusReply(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_outbound_verbose_filter")
+	srv := New(store, "srv_test")
+
+	endpoint, err := store.CreateInteractionEndpoint(ctx, storage.InteractionEndpoint{
+		Kind:            "im",
+		Provider:        "wecom",
+		DisplayName:     "WeCom Ops",
+		TargetPrefix:    "#",
+		InboundEnabled:  true,
+		OutboundEnabled: true,
+		AuthMode:        "webhook_signature",
+		ConfigJSON:      `{"require_subscription":true}`,
+	})
+	if err != nil {
+		t.Fatalf("CreateInteractionEndpoint() error = %v", err)
+	}
+	inbound, err := store.CreateMessage(ctx, storage.Message{
+		Target:            "#ops",
+		Role:              "user",
+		Content:           "incident update",
+		SenderDisplayName: "WeCom User",
+		SenderKind:        "endpoint",
+		SourceEndpointID:  endpoint.ID,
+		ExternalMessageID: "wecom-msg-1",
+		MetadataJSON:      `{"im":{"provider":"wecom","conversation":{"external_id":"chat-ops","external_thread_id":"topic-1","display_name":"Ops"},"sender":{"external_id":"user-1","display_name":"WeCom User"}}}`,
+		RequestID:         "incoming-wecom-msg-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(inbound) error = %v", err)
+	}
+
+	noSubscriptionReply, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           "#ops",
+		Content:          "reply before authorization",
+		ReplyToMessageId: inbound.ID,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		RequestId:        "reply-before-subscription",
+		IdempotencyKey:   "reply-before-subscription",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage(no subscription reply) error = %v", err)
+	}
+	listed, err := srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: noSubscriptionReply.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries(no subscription) error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 0 {
+		t.Fatalf("no-subscription deliveries = %+v, want suppressed while chat is unauthorized", listed.GetDeliveries())
+	}
+
+	if _, err := store.UpsertIMChatSubscription(ctx, storage.IMChatSubscription{
+		EndpointID:       endpoint.ID,
+		Provider:         endpoint.Provider,
+		ConversationID:   "chat-ops",
+		ExternalThreadID: "topic-1",
+		ChatTitle:        "Ops",
+		Target:           "#ops",
+		ThreadID:         "im-chat-ops",
+		Subscribed:       true,
+		Verbose:          false,
+	}); err != nil {
+		t.Fatalf("UpsertIMChatSubscription() error = %v", err)
+	}
+
+	statusReply, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           "#ops",
+		Content:          "working...",
+		ReplyToMessageId: inbound.ID,
+		Kind:             daemonv1.MessageKind_MESSAGE_KIND_STATUS,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		RequestId:        "reply-status-1",
+		IdempotencyKey:   "reply-status-1",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage(status reply) error = %v", err)
+	}
+	listed, err = srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: statusReply.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries(status) error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 0 {
+		t.Fatalf("status deliveries = %+v, want suppressed while verbose is off", listed.GetDeliveries())
+	}
+
+	verbose := true
+	subscription, err := store.GetIMChatSubscription(ctx, endpoint.ID, "chat-ops", "topic-1")
+	if err != nil {
+		t.Fatalf("GetIMChatSubscription() error = %v", err)
+	}
+	if _, err := store.UpdateIMChatSubscription(ctx, subscription.ID, storage.IMChatSubscriptionPatch{Verbose: &verbose}); err != nil {
+		t.Fatalf("UpdateIMChatSubscription(verbose) error = %v", err)
+	}
+	verboseReply, err := srv.SendMessage(ctx, &daemonv1.SendMessageRequest{
+		Target:           "#ops",
+		Content:          "still working...",
+		ReplyToMessageId: inbound.ID,
+		Kind:             daemonv1.MessageKind_MESSAGE_KIND_STATUS,
+		OutboundPolicy:   daemonv1.OutboundPolicy_OUTBOUND_POLICY_SOURCE_ONLY,
+		RequestId:        "reply-status-2",
+		IdempotencyKey:   "reply-status-2",
+		Sender: &daemonv1.Actor{
+			ActorKind:   daemonv1.ActorKind_ACTOR_KIND_AGENT,
+			AgentId:     "agent-1",
+			DisplayName: "Agent One",
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMessage(verbose status reply) error = %v", err)
+	}
+	listed, err = srv.ListOutboundDeliveries(ctx, &daemonv1.ListOutboundDeliveriesRequest{
+		Target:    "#ops",
+		MessageId: verboseReply.GetMessage().GetMessageId(),
+		Statuses:  []daemonv1.OutboundDeliveryStatus{daemonv1.OutboundDeliveryStatus_OUTBOUND_DELIVERY_STATUS_PENDING},
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries(verbose status) error = %v", err)
+	}
+	if len(listed.GetDeliveries()) != 1 {
+		t.Fatalf("verbose status deliveries = %+v, want one delivery", listed.GetDeliveries())
+	}
+}
+
 func TestOutboundDeliveryUsesNotificationRoutes(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t, "daemonrpc_notification_routes")

@@ -2353,6 +2353,13 @@ func (s *Server) EnqueueSourceOutboundDelivery(ctx context.Context, msg storage.
 	if !endpoint.OutboundEnabled {
 		return storage.OutboundDelivery{}, nil
 	}
+	suppress, err := s.suppressIMChatSourceDelivery(ctx, endpoint, source, msg)
+	if err != nil {
+		return storage.OutboundDelivery{}, err
+	}
+	if suppress {
+		return storage.OutboundDelivery{}, nil
+	}
 	delivery, err := s.store.CreateOutboundDelivery(ctx, storage.OutboundDelivery{
 		Target:            msg.Target,
 		MessageID:         msg.ID,
@@ -2367,6 +2374,87 @@ func (s *Server) EnqueueSourceOutboundDelivery(ctx context.Context, msg storage.
 	}
 	s.EmitOutboundDeliveryEvent(delivery, daemonv1.EventOperation_EVENT_OPERATION_CREATED)
 	return delivery, nil
+}
+
+func (s *Server) suppressIMChatSourceDelivery(ctx context.Context, endpoint storage.InteractionEndpoint, source, msg storage.Message) (bool, error) {
+	if !strings.EqualFold(endpoint.Kind, "im") {
+		return false, nil
+	}
+	identity := imChatIdentityFromMetadata(source.MetadataJSON)
+	if identity.ConversationID == "" {
+		return false, nil
+	}
+	subscription, err := s.store.GetIMChatSubscription(ctx, endpoint.ID, identity.ConversationID, identity.ExternalThreadID)
+	if errors.Is(err, storage.ErrNotFound) {
+		return imEndpointRequiresChatSubscription(endpoint), nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if !subscription.Subscribed {
+		return true, nil
+	}
+	return !subscription.Verbose && verboseOnlyOutboundMessage(msg), nil
+}
+
+func imEndpointRequiresChatSubscription(endpoint storage.InteractionEndpoint) bool {
+	raw := map[string]any{}
+	if strings.TrimSpace(endpoint.ConfigJSON) != "" {
+		_ = json.Unmarshal([]byte(endpoint.ConfigJSON), &raw)
+	}
+	return boolConfigValue(raw, "require_subscription") ||
+		boolConfigValue(raw, "chat_auth_required") ||
+		boolConfigValue(raw, "require_chat_authorization")
+}
+
+func boolConfigValue(raw map[string]any, key string) bool {
+	value, ok := raw[key]
+	if !ok {
+		return false
+	}
+	switch typed := value.(type) {
+	case bool:
+		return typed
+	case string:
+		switch strings.ToLower(strings.TrimSpace(typed)) {
+		case "1", "true", "yes", "on":
+			return true
+		default:
+			return false
+		}
+	default:
+		return false
+	}
+}
+
+func verboseOnlyOutboundMessage(msg storage.Message) bool {
+	switch strings.ToLower(strings.TrimSpace(msg.Kind)) {
+	case "status":
+		return true
+	default:
+		return false
+	}
+}
+
+type imChatIdentity struct {
+	ConversationID   string
+	ExternalThreadID string
+}
+
+func imChatIdentityFromMetadata(metadataJSON string) imChatIdentity {
+	var raw struct {
+		IM struct {
+			Conversation struct {
+				ExternalID       string `json:"external_id"`
+				ExternalThreadID string `json:"external_thread_id"`
+			} `json:"conversation"`
+		} `json:"im"`
+	}
+	_ = json.Unmarshal([]byte(metadataJSON), &raw)
+	return imChatIdentity{
+		ConversationID:   strings.TrimSpace(raw.IM.Conversation.ExternalID),
+		ExternalThreadID: strings.TrimSpace(raw.IM.Conversation.ExternalThreadID),
+	}
 }
 
 func (s *Server) enqueueRoutedOutboundDeliveries(ctx context.Context, msg storage.Message, includeSource bool) ([]storage.OutboundDelivery, error) {

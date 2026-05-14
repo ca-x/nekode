@@ -11,9 +11,11 @@ import (
 )
 
 var (
-	ErrInvalidDraft = errors.New("invalid im draft")
-	ErrAborted      = errors.New("im session aborted")
-	ErrStaleDraft   = errors.New("stale im draft")
+	ErrInvalidDraft     = errors.New("invalid im draft")
+	ErrAborted          = errors.New("im session aborted")
+	ErrStaleDraft       = errors.New("stale im draft")
+	ErrUnauthorizedChat = errors.New("unauthorized im chat")
+	ErrAuthToken        = errors.New("im auth token generation failed")
 )
 
 type Draft = iminbound.Draft

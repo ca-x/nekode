@@ -24,6 +24,7 @@ import (
 	"github.com/ca-x/nekode/internal/config"
 	"github.com/ca-x/nekode/internal/daemonrpc"
 	"github.com/ca-x/nekode/internal/imadapter"
+	"github.com/ca-x/nekode/internal/imauth"
 	"github.com/ca-x/nekode/internal/imbinding"
 	imfeishu "github.com/ca-x/nekode/internal/imchannels/feishu"
 	imtelegram "github.com/ca-x/nekode/internal/imchannels/telegram"
@@ -42,6 +43,11 @@ import (
 )
 
 const ProtocolPath = "proto/nekode/daemon/v1/daemon.proto"
+
+var (
+	errIMChatAuthRequestExpired  = errors.New("im chat auth request expired")
+	errIMChatAuthRequestResolved = errors.New("im chat auth request already resolved")
+)
 
 type contextKey string
 
@@ -189,6 +195,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/auth/me", s.requireAuth(s.handleMe))
 	s.mux.HandleFunc("GET /api/im/providers", s.requireAuth(s.handleListIMProviders))
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
+	s.mux.HandleFunc("GET /api/im/chat-auth-requests", s.requireAuth(s.handleListIMChatAuthRequests))
+	s.mux.HandleFunc("POST /api/im/chat-auth-requests/{id}/approve", s.requireAuth(s.handleApproveIMChatAuthRequest))
+	s.mux.HandleFunc("POST /api/im/chat-auth-requests/{id}/reject", s.requireAuth(s.handleRejectIMChatAuthRequest))
+	s.mux.HandleFunc("POST /api/im/chat-auth-requests/bind", s.requireAuth(s.handleBindIMChatAuthRequest))
+	s.mux.HandleFunc("GET /api/im/chat-subscriptions", s.requireAuth(s.handleListIMChatSubscriptions))
+	s.mux.HandleFunc("PATCH /api/im/chat-subscriptions/{id}", s.requireAuth(s.handleUpdateIMChatSubscription))
 	s.mux.HandleFunc("POST /api/im/telegram/{endpointID}/webhook", s.handleTelegramWebhook)
 	s.mux.HandleFunc("POST /api/im/feishu/{endpointID}/callback", s.handleFeishuCallback)
 	s.mux.HandleFunc("GET /api/im/wecom/{endpointID}/callback", s.handleWeComCallback)
@@ -547,6 +559,219 @@ func (s *Server) handleGetIMEffectivePolicy(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, policy)
+}
+
+func (s *Server) handleListIMChatAuthRequests(w http.ResponseWriter, r *http.Request) {
+	requests, err := s.store.ListIMChatAuthRequests(r.Context(), storage.IMChatAuthRequestListOptions{
+		EndpointID:     strings.TrimSpace(r.URL.Query().Get("endpointId")),
+		Status:         strings.TrimSpace(r.URL.Query().Get("status")),
+		IncludeExpired: boolQuery(r, "includeExpired"),
+		Limit:          intQuery(r, "limit", 100),
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list IM chat auth requests failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": requests})
+}
+
+func (s *Server) handleApproveIMChatAuthRequest(w http.ResponseWriter, r *http.Request) {
+	var req imChatAuthDecisionRequest
+	if !decodeOptionalJSON(w, r, &req) {
+		return
+	}
+	authRequest, err := s.store.GetIMChatAuthRequest(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "IM chat auth request not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read IM chat auth request failed")
+		return
+	}
+	request, subscription, err := s.approveIMChatAuthRequest(r.Context(), authRequest, req.Target, req.ThreadID)
+	if errors.Is(err, errIMChatAuthRequestExpired) {
+		writeError(w, http.StatusConflict, "IM chat auth request expired")
+		return
+	}
+	if errors.Is(err, errIMChatAuthRequestResolved) {
+		writeError(w, http.StatusConflict, "IM chat auth request is already resolved")
+		return
+	}
+	if err != nil {
+		writeStorageError(w, err, "approve IM chat auth request failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"request":      request,
+		"subscription": subscription,
+	})
+}
+
+func (s *Server) handleRejectIMChatAuthRequest(w http.ResponseWriter, r *http.Request) {
+	authRequest, err := s.store.GetIMChatAuthRequest(r.Context(), r.PathValue("id"))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "IM chat auth request not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read IM chat auth request failed")
+		return
+	}
+	if authRequest.Status != storage.IMChatAuthRequestStatusPending {
+		writeError(w, http.StatusConflict, "IM chat auth request is already resolved")
+		return
+	}
+	if imChatAuthRequestExpired(authRequest) {
+		request, updateErr := s.store.UpdateIMChatAuthRequestStatus(
+			r.Context(),
+			authRequest.ID,
+			storage.IMChatAuthRequestStatusExpired,
+			principalFromContext(r.Context()).User.ID,
+		)
+		if updateErr != nil {
+			writeStorageError(w, updateErr, "expire IM chat auth request failed")
+			return
+		}
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error":   "IM chat auth request expired",
+			"request": request,
+		})
+		return
+	}
+	request, err := s.store.UpdateIMChatAuthRequestStatus(
+		r.Context(),
+		authRequest.ID,
+		storage.IMChatAuthRequestStatusRejected,
+		principalFromContext(r.Context()).User.ID,
+	)
+	if err != nil {
+		writeStorageError(w, err, "reject IM chat auth request failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"request": request})
+}
+
+func (s *Server) handleBindIMChatAuthRequest(w http.ResponseWriter, r *http.Request) {
+	var req imChatBindRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	key := strings.TrimSpace(req.Key)
+	if key == "" {
+		writeError(w, http.StatusBadRequest, "key is required")
+		return
+	}
+	authRequest, err := s.store.GetIMChatAuthRequestByTokenHash(r.Context(), imauth.HashToken(key))
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "IM chat auth request not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read IM chat auth request failed")
+		return
+	}
+	request, subscription, err := s.approveIMChatAuthRequest(r.Context(), authRequest, req.Target, req.ThreadID)
+	if errors.Is(err, errIMChatAuthRequestExpired) {
+		writeError(w, http.StatusConflict, "IM chat auth request expired")
+		return
+	}
+	if errors.Is(err, errIMChatAuthRequestResolved) {
+		writeError(w, http.StatusConflict, "IM chat auth request is already resolved")
+		return
+	}
+	if err != nil {
+		writeStorageError(w, err, "bind IM chat auth request failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"request":      request,
+		"subscription": subscription,
+	})
+}
+
+func (s *Server) handleListIMChatSubscriptions(w http.ResponseWriter, r *http.Request) {
+	provider := strings.TrimSpace(r.URL.Query().Get("provider"))
+	if provider != "" {
+		provider = imadapter.CanonicalProvider(provider)
+	}
+	subscriptions, err := s.store.ListIMChatSubscriptions(r.Context(), storage.IMChatSubscriptionListOptions{
+		EndpointID: strings.TrimSpace(r.URL.Query().Get("endpointId")),
+		Provider:   provider,
+		Subscribed: optionalBoolQuery(r, "subscribed"),
+		Limit:      intQuery(r, "limit", 100),
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list IM chat subscriptions failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": subscriptions})
+}
+
+func (s *Server) handleUpdateIMChatSubscription(w http.ResponseWriter, r *http.Request) {
+	var req imChatSubscriptionPatchRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	subscription, err := s.store.UpdateIMChatSubscription(r.Context(), r.PathValue("id"), storage.IMChatSubscriptionPatch{
+		ChatTitle:  optionalTrimmed(req.ChatTitle),
+		Target:     optionalTrimmed(req.Target),
+		ThreadID:   optionalTrimmed(req.ThreadID),
+		Subscribed: req.Subscribed,
+		Verbose:    req.Verbose,
+	})
+	if err != nil {
+		writeStorageError(w, err, "update IM chat subscription failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, subscription)
+}
+
+func (s *Server) approveIMChatAuthRequest(ctx context.Context, authRequest storage.IMChatAuthRequest, target, threadID string) (storage.IMChatAuthRequest, storage.IMChatSubscription, error) {
+	if authRequest.Status != storage.IMChatAuthRequestStatusPending {
+		return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, errIMChatAuthRequestResolved
+	}
+	principal := principalFromContext(ctx)
+	if imChatAuthRequestExpired(authRequest) {
+		_, err := s.store.UpdateIMChatAuthRequestStatus(ctx, authRequest.ID, storage.IMChatAuthRequestStatusExpired, principal.User.ID)
+		if err != nil {
+			return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, err
+		}
+		return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, errIMChatAuthRequestExpired
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(ctx, authRequest.EndpointID)
+	if err != nil {
+		return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, err
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") {
+		return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, storage.ErrInvalidState
+	}
+	target = firstTrimmed(target, authRequest.RequestedTarget, interactionEndpointConfigValue(endpoint, "default_target"))
+	threadID = firstTrimmed(threadID, authRequest.RequestedThreadID, interactionEndpointConfigValue(endpoint, "default_thread_id"))
+	request, subscription, err := s.store.ApproveIMChatAuthRequest(ctx, authRequest.ID, principal.User.ID, storage.IMChatSubscription{
+		EndpointID:            authRequest.EndpointID,
+		Provider:              firstTrimmed(endpoint.Provider, authRequest.Provider),
+		ConversationID:        authRequest.ConversationID,
+		ExternalThreadID:      authRequest.ExternalThreadID,
+		ChatTitle:             authRequest.ChatTitle,
+		Target:                target,
+		ThreadID:              threadID,
+		SenderExternalID:      authRequest.SenderExternalID,
+		AuthorizedByRequestID: authRequest.ID,
+		Subscribed:            true,
+		Verbose:               false,
+	})
+	if errors.Is(err, storage.ErrInvalidState) {
+		return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, errIMChatAuthRequestResolved
+	}
+	if err != nil {
+		return storage.IMChatAuthRequest{}, storage.IMChatSubscription{}, err
+	}
+	return request, subscription, nil
+}
+
+func imChatAuthRequestExpired(request storage.IMChatAuthRequest) bool {
+	return request.ExpiresUnix > 0 && request.ExpiresUnix <= time.Now().Unix()
 }
 
 func (s *Server) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
@@ -2391,6 +2616,20 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
 	return true
 }
 
+func decodeOptionalJSON(w http.ResponseWriter, r *http.Request, dest any) bool {
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(dest); err != nil {
+		if errors.Is(err, io.EOF) {
+			return true
+		}
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return false
+	}
+	return true
+}
+
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -2488,6 +2727,15 @@ func optionalStringValue(value *string) string {
 		return ""
 	}
 	return strings.TrimSpace(*value)
+}
+
+func firstTrimmed(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 type reminderSchedulePlan struct {
@@ -2623,6 +2871,25 @@ type endpointRequest struct {
 
 type bindingSessionRequest struct {
 	Method string `json:"method"`
+}
+
+type imChatAuthDecisionRequest struct {
+	Target   string `json:"target"`
+	ThreadID string `json:"threadId"`
+}
+
+type imChatBindRequest struct {
+	Key      string `json:"key"`
+	Target   string `json:"target"`
+	ThreadID string `json:"threadId"`
+}
+
+type imChatSubscriptionPatchRequest struct {
+	ChatTitle  *string `json:"chatTitle"`
+	Target     *string `json:"target"`
+	ThreadID   *string `json:"threadId"`
+	Subscribed *bool   `json:"subscribed"`
+	Verbose    *bool   `json:"verbose"`
 }
 
 type endpointPatchRequest struct {

@@ -388,6 +388,31 @@
       "payloadPending": "二维码数据等待提供方适配",
       "sessionExpires": "过期时间",
       "session": "会话"
+    },
+    "chatAccess": {
+      "title": "会话准入",
+      "refresh": "刷新",
+      "bindKey": "绑定口令",
+      "bindTarget": "目标",
+      "bindThread": "线程 ID",
+      "bind": "绑定",
+      "pending": "待审批",
+      "subscriptions": "已订阅会话",
+      "conversation": "会话",
+      "tokenPrefix": "口令",
+      "expires": "过期",
+      "approve": "通过",
+      "reject": "拒绝",
+      "emptyPending": "暂无待审批会话。",
+      "emptySubscriptions": "暂无已订阅会话。",
+      "subscribed": "已订阅",
+      "unsubscribed": "未订阅",
+      "verboseOn": "详细模式开",
+      "verboseOff": "详细模式关",
+      "verboseOnAction": "打开详细",
+      "verboseOffAction": "关闭详细",
+      "unsubscribe": "取消订阅",
+      "resubscribe": "重新订阅"
     }
   }
 }

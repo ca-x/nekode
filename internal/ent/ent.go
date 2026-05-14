@@ -20,6 +20,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
+	"github.com/ca-x/nekode/internal/ent/imchatauthrequest"
+	"github.com/ca-x/nekode/internal/ent/imchatsubscription"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/notificationroute"
@@ -99,6 +101,8 @@ func checkColumn(t, c string) error {
 			channeldecisionvote.Table: channeldecisionvote.ValidColumn,
 			channelmember.Table:       channelmember.ValidColumn,
 			collaborationevent.Table:  collaborationevent.ValidColumn,
+			imchatauthrequest.Table:   imchatauthrequest.ValidColumn,
+			imchatsubscription.Table:  imchatsubscription.ValidColumn,
 			idempotencyrecord.Table:   idempotencyrecord.ValidColumn,
 			interactionendpoint.Table: interactionendpoint.ValidColumn,
 			message.Table:             message.ValidColumn,

@@ -18,6 +18,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
+	"github.com/ca-x/nekode/internal/ent/imchatauthrequest"
+	"github.com/ca-x/nekode/internal/ent/imchatsubscription"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/notificationroute"
@@ -49,6 +51,8 @@ const (
 	TypeChannelDecisionVote = "ChannelDecisionVote"
 	TypeChannelMember       = "ChannelMember"
 	TypeCollaborationEvent  = "CollaborationEvent"
+	TypeIMChatAuthRequest   = "IMChatAuthRequest"
+	TypeIMChatSubscription  = "IMChatSubscription"
 	TypeIdempotencyRecord   = "IdempotencyRecord"
 	TypeInteractionEndpoint = "InteractionEndpoint"
 	TypeMessage             = "Message"
@@ -6199,6 +6203,2506 @@ func (m *CollaborationEventMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *CollaborationEventMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown CollaborationEvent edge %s", name)
+}
+
+// IMChatAuthRequestMutation represents an operation that mutates the IMChatAuthRequest nodes in the graph.
+type IMChatAuthRequestMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *string
+	endpoint_id         *string
+	provider            *string
+	conversation_id     *string
+	external_thread_id  *string
+	chat_title          *string
+	sender_external_id  *string
+	token_hash          *string
+	token_prefix        *string
+	status              *string
+	requested_target    *string
+	requested_thread_id *string
+	expires_unix        *int64
+	addexpires_unix     *int64
+	resolved_by_user_id *string
+	resolved_unix       *int64
+	addresolved_unix    *int64
+	created_unix        *int64
+	addcreated_unix     *int64
+	updated_unix        *int64
+	addupdated_unix     *int64
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*IMChatAuthRequest, error)
+	predicates          []predicate.IMChatAuthRequest
+}
+
+var _ ent.Mutation = (*IMChatAuthRequestMutation)(nil)
+
+// imchatauthrequestOption allows management of the mutation configuration using functional options.
+type imchatauthrequestOption func(*IMChatAuthRequestMutation)
+
+// newIMChatAuthRequestMutation creates new mutation for the IMChatAuthRequest entity.
+func newIMChatAuthRequestMutation(c config, op Op, opts ...imchatauthrequestOption) *IMChatAuthRequestMutation {
+	m := &IMChatAuthRequestMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeIMChatAuthRequest,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withIMChatAuthRequestID sets the ID field of the mutation.
+func withIMChatAuthRequestID(id string) imchatauthrequestOption {
+	return func(m *IMChatAuthRequestMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *IMChatAuthRequest
+		)
+		m.oldValue = func(ctx context.Context) (*IMChatAuthRequest, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().IMChatAuthRequest.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withIMChatAuthRequest sets the old IMChatAuthRequest of the mutation.
+func withIMChatAuthRequest(node *IMChatAuthRequest) imchatauthrequestOption {
+	return func(m *IMChatAuthRequestMutation) {
+		m.oldValue = func(context.Context) (*IMChatAuthRequest, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m IMChatAuthRequestMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m IMChatAuthRequestMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of IMChatAuthRequest entities.
+func (m *IMChatAuthRequestMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *IMChatAuthRequestMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IMChatAuthRequestMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().IMChatAuthRequest.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetEndpointID sets the "endpoint_id" field.
+func (m *IMChatAuthRequestMutation) SetEndpointID(s string) {
+	m.endpoint_id = &s
+}
+
+// EndpointID returns the value of the "endpoint_id" field in the mutation.
+func (m *IMChatAuthRequestMutation) EndpointID() (r string, exists bool) {
+	v := m.endpoint_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndpointID returns the old "endpoint_id" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldEndpointID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndpointID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndpointID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndpointID: %w", err)
+	}
+	return oldValue.EndpointID, nil
+}
+
+// ResetEndpointID resets all changes to the "endpoint_id" field.
+func (m *IMChatAuthRequestMutation) ResetEndpointID() {
+	m.endpoint_id = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *IMChatAuthRequestMutation) SetProvider(s string) {
+	m.provider = &s
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *IMChatAuthRequestMutation) Provider() (r string, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldProvider(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *IMChatAuthRequestMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetConversationID sets the "conversation_id" field.
+func (m *IMChatAuthRequestMutation) SetConversationID(s string) {
+	m.conversation_id = &s
+}
+
+// ConversationID returns the value of the "conversation_id" field in the mutation.
+func (m *IMChatAuthRequestMutation) ConversationID() (r string, exists bool) {
+	v := m.conversation_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConversationID returns the old "conversation_id" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldConversationID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConversationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConversationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConversationID: %w", err)
+	}
+	return oldValue.ConversationID, nil
+}
+
+// ResetConversationID resets all changes to the "conversation_id" field.
+func (m *IMChatAuthRequestMutation) ResetConversationID() {
+	m.conversation_id = nil
+}
+
+// SetExternalThreadID sets the "external_thread_id" field.
+func (m *IMChatAuthRequestMutation) SetExternalThreadID(s string) {
+	m.external_thread_id = &s
+}
+
+// ExternalThreadID returns the value of the "external_thread_id" field in the mutation.
+func (m *IMChatAuthRequestMutation) ExternalThreadID() (r string, exists bool) {
+	v := m.external_thread_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalThreadID returns the old "external_thread_id" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldExternalThreadID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalThreadID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalThreadID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalThreadID: %w", err)
+	}
+	return oldValue.ExternalThreadID, nil
+}
+
+// ResetExternalThreadID resets all changes to the "external_thread_id" field.
+func (m *IMChatAuthRequestMutation) ResetExternalThreadID() {
+	m.external_thread_id = nil
+}
+
+// SetChatTitle sets the "chat_title" field.
+func (m *IMChatAuthRequestMutation) SetChatTitle(s string) {
+	m.chat_title = &s
+}
+
+// ChatTitle returns the value of the "chat_title" field in the mutation.
+func (m *IMChatAuthRequestMutation) ChatTitle() (r string, exists bool) {
+	v := m.chat_title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldChatTitle returns the old "chat_title" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldChatTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldChatTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldChatTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldChatTitle: %w", err)
+	}
+	return oldValue.ChatTitle, nil
+}
+
+// ResetChatTitle resets all changes to the "chat_title" field.
+func (m *IMChatAuthRequestMutation) ResetChatTitle() {
+	m.chat_title = nil
+}
+
+// SetSenderExternalID sets the "sender_external_id" field.
+func (m *IMChatAuthRequestMutation) SetSenderExternalID(s string) {
+	m.sender_external_id = &s
+}
+
+// SenderExternalID returns the value of the "sender_external_id" field in the mutation.
+func (m *IMChatAuthRequestMutation) SenderExternalID() (r string, exists bool) {
+	v := m.sender_external_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSenderExternalID returns the old "sender_external_id" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldSenderExternalID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSenderExternalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSenderExternalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSenderExternalID: %w", err)
+	}
+	return oldValue.SenderExternalID, nil
+}
+
+// ResetSenderExternalID resets all changes to the "sender_external_id" field.
+func (m *IMChatAuthRequestMutation) ResetSenderExternalID() {
+	m.sender_external_id = nil
+}
+
+// SetTokenHash sets the "token_hash" field.
+func (m *IMChatAuthRequestMutation) SetTokenHash(s string) {
+	m.token_hash = &s
+}
+
+// TokenHash returns the value of the "token_hash" field in the mutation.
+func (m *IMChatAuthRequestMutation) TokenHash() (r string, exists bool) {
+	v := m.token_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokenHash returns the old "token_hash" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldTokenHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokenHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokenHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokenHash: %w", err)
+	}
+	return oldValue.TokenHash, nil
+}
+
+// ResetTokenHash resets all changes to the "token_hash" field.
+func (m *IMChatAuthRequestMutation) ResetTokenHash() {
+	m.token_hash = nil
+}
+
+// SetTokenPrefix sets the "token_prefix" field.
+func (m *IMChatAuthRequestMutation) SetTokenPrefix(s string) {
+	m.token_prefix = &s
+}
+
+// TokenPrefix returns the value of the "token_prefix" field in the mutation.
+func (m *IMChatAuthRequestMutation) TokenPrefix() (r string, exists bool) {
+	v := m.token_prefix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTokenPrefix returns the old "token_prefix" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldTokenPrefix(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTokenPrefix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTokenPrefix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTokenPrefix: %w", err)
+	}
+	return oldValue.TokenPrefix, nil
+}
+
+// ResetTokenPrefix resets all changes to the "token_prefix" field.
+func (m *IMChatAuthRequestMutation) ResetTokenPrefix() {
+	m.token_prefix = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *IMChatAuthRequestMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *IMChatAuthRequestMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *IMChatAuthRequestMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetRequestedTarget sets the "requested_target" field.
+func (m *IMChatAuthRequestMutation) SetRequestedTarget(s string) {
+	m.requested_target = &s
+}
+
+// RequestedTarget returns the value of the "requested_target" field in the mutation.
+func (m *IMChatAuthRequestMutation) RequestedTarget() (r string, exists bool) {
+	v := m.requested_target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequestedTarget returns the old "requested_target" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldRequestedTarget(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequestedTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequestedTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequestedTarget: %w", err)
+	}
+	return oldValue.RequestedTarget, nil
+}
+
+// ResetRequestedTarget resets all changes to the "requested_target" field.
+func (m *IMChatAuthRequestMutation) ResetRequestedTarget() {
+	m.requested_target = nil
+}
+
+// SetRequestedThreadID sets the "requested_thread_id" field.
+func (m *IMChatAuthRequestMutation) SetRequestedThreadID(s string) {
+	m.requested_thread_id = &s
+}
+
+// RequestedThreadID returns the value of the "requested_thread_id" field in the mutation.
+func (m *IMChatAuthRequestMutation) RequestedThreadID() (r string, exists bool) {
+	v := m.requested_thread_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequestedThreadID returns the old "requested_thread_id" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldRequestedThreadID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequestedThreadID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequestedThreadID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequestedThreadID: %w", err)
+	}
+	return oldValue.RequestedThreadID, nil
+}
+
+// ResetRequestedThreadID resets all changes to the "requested_thread_id" field.
+func (m *IMChatAuthRequestMutation) ResetRequestedThreadID() {
+	m.requested_thread_id = nil
+}
+
+// SetExpiresUnix sets the "expires_unix" field.
+func (m *IMChatAuthRequestMutation) SetExpiresUnix(i int64) {
+	m.expires_unix = &i
+	m.addexpires_unix = nil
+}
+
+// ExpiresUnix returns the value of the "expires_unix" field in the mutation.
+func (m *IMChatAuthRequestMutation) ExpiresUnix() (r int64, exists bool) {
+	v := m.expires_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresUnix returns the old "expires_unix" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldExpiresUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresUnix: %w", err)
+	}
+	return oldValue.ExpiresUnix, nil
+}
+
+// AddExpiresUnix adds i to the "expires_unix" field.
+func (m *IMChatAuthRequestMutation) AddExpiresUnix(i int64) {
+	if m.addexpires_unix != nil {
+		*m.addexpires_unix += i
+	} else {
+		m.addexpires_unix = &i
+	}
+}
+
+// AddedExpiresUnix returns the value that was added to the "expires_unix" field in this mutation.
+func (m *IMChatAuthRequestMutation) AddedExpiresUnix() (r int64, exists bool) {
+	v := m.addexpires_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetExpiresUnix resets all changes to the "expires_unix" field.
+func (m *IMChatAuthRequestMutation) ResetExpiresUnix() {
+	m.expires_unix = nil
+	m.addexpires_unix = nil
+}
+
+// SetResolvedByUserID sets the "resolved_by_user_id" field.
+func (m *IMChatAuthRequestMutation) SetResolvedByUserID(s string) {
+	m.resolved_by_user_id = &s
+}
+
+// ResolvedByUserID returns the value of the "resolved_by_user_id" field in the mutation.
+func (m *IMChatAuthRequestMutation) ResolvedByUserID() (r string, exists bool) {
+	v := m.resolved_by_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResolvedByUserID returns the old "resolved_by_user_id" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldResolvedByUserID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResolvedByUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResolvedByUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResolvedByUserID: %w", err)
+	}
+	return oldValue.ResolvedByUserID, nil
+}
+
+// ResetResolvedByUserID resets all changes to the "resolved_by_user_id" field.
+func (m *IMChatAuthRequestMutation) ResetResolvedByUserID() {
+	m.resolved_by_user_id = nil
+}
+
+// SetResolvedUnix sets the "resolved_unix" field.
+func (m *IMChatAuthRequestMutation) SetResolvedUnix(i int64) {
+	m.resolved_unix = &i
+	m.addresolved_unix = nil
+}
+
+// ResolvedUnix returns the value of the "resolved_unix" field in the mutation.
+func (m *IMChatAuthRequestMutation) ResolvedUnix() (r int64, exists bool) {
+	v := m.resolved_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResolvedUnix returns the old "resolved_unix" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldResolvedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResolvedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResolvedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResolvedUnix: %w", err)
+	}
+	return oldValue.ResolvedUnix, nil
+}
+
+// AddResolvedUnix adds i to the "resolved_unix" field.
+func (m *IMChatAuthRequestMutation) AddResolvedUnix(i int64) {
+	if m.addresolved_unix != nil {
+		*m.addresolved_unix += i
+	} else {
+		m.addresolved_unix = &i
+	}
+}
+
+// AddedResolvedUnix returns the value that was added to the "resolved_unix" field in this mutation.
+func (m *IMChatAuthRequestMutation) AddedResolvedUnix() (r int64, exists bool) {
+	v := m.addresolved_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetResolvedUnix resets all changes to the "resolved_unix" field.
+func (m *IMChatAuthRequestMutation) ResetResolvedUnix() {
+	m.resolved_unix = nil
+	m.addresolved_unix = nil
+}
+
+// SetCreatedUnix sets the "created_unix" field.
+func (m *IMChatAuthRequestMutation) SetCreatedUnix(i int64) {
+	m.created_unix = &i
+	m.addcreated_unix = nil
+}
+
+// CreatedUnix returns the value of the "created_unix" field in the mutation.
+func (m *IMChatAuthRequestMutation) CreatedUnix() (r int64, exists bool) {
+	v := m.created_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedUnix returns the old "created_unix" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldCreatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedUnix: %w", err)
+	}
+	return oldValue.CreatedUnix, nil
+}
+
+// AddCreatedUnix adds i to the "created_unix" field.
+func (m *IMChatAuthRequestMutation) AddCreatedUnix(i int64) {
+	if m.addcreated_unix != nil {
+		*m.addcreated_unix += i
+	} else {
+		m.addcreated_unix = &i
+	}
+}
+
+// AddedCreatedUnix returns the value that was added to the "created_unix" field in this mutation.
+func (m *IMChatAuthRequestMutation) AddedCreatedUnix() (r int64, exists bool) {
+	v := m.addcreated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedUnix resets all changes to the "created_unix" field.
+func (m *IMChatAuthRequestMutation) ResetCreatedUnix() {
+	m.created_unix = nil
+	m.addcreated_unix = nil
+}
+
+// SetUpdatedUnix sets the "updated_unix" field.
+func (m *IMChatAuthRequestMutation) SetUpdatedUnix(i int64) {
+	m.updated_unix = &i
+	m.addupdated_unix = nil
+}
+
+// UpdatedUnix returns the value of the "updated_unix" field in the mutation.
+func (m *IMChatAuthRequestMutation) UpdatedUnix() (r int64, exists bool) {
+	v := m.updated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedUnix returns the old "updated_unix" field's value of the IMChatAuthRequest entity.
+// If the IMChatAuthRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatAuthRequestMutation) OldUpdatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedUnix: %w", err)
+	}
+	return oldValue.UpdatedUnix, nil
+}
+
+// AddUpdatedUnix adds i to the "updated_unix" field.
+func (m *IMChatAuthRequestMutation) AddUpdatedUnix(i int64) {
+	if m.addupdated_unix != nil {
+		*m.addupdated_unix += i
+	} else {
+		m.addupdated_unix = &i
+	}
+}
+
+// AddedUpdatedUnix returns the value that was added to the "updated_unix" field in this mutation.
+func (m *IMChatAuthRequestMutation) AddedUpdatedUnix() (r int64, exists bool) {
+	v := m.addupdated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpdatedUnix resets all changes to the "updated_unix" field.
+func (m *IMChatAuthRequestMutation) ResetUpdatedUnix() {
+	m.updated_unix = nil
+	m.addupdated_unix = nil
+}
+
+// Where appends a list predicates to the IMChatAuthRequestMutation builder.
+func (m *IMChatAuthRequestMutation) Where(ps ...predicate.IMChatAuthRequest) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the IMChatAuthRequestMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IMChatAuthRequestMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IMChatAuthRequest, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *IMChatAuthRequestMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IMChatAuthRequestMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (IMChatAuthRequest).
+func (m *IMChatAuthRequestMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *IMChatAuthRequestMutation) Fields() []string {
+	fields := make([]string, 0, 16)
+	if m.endpoint_id != nil {
+		fields = append(fields, imchatauthrequest.FieldEndpointID)
+	}
+	if m.provider != nil {
+		fields = append(fields, imchatauthrequest.FieldProvider)
+	}
+	if m.conversation_id != nil {
+		fields = append(fields, imchatauthrequest.FieldConversationID)
+	}
+	if m.external_thread_id != nil {
+		fields = append(fields, imchatauthrequest.FieldExternalThreadID)
+	}
+	if m.chat_title != nil {
+		fields = append(fields, imchatauthrequest.FieldChatTitle)
+	}
+	if m.sender_external_id != nil {
+		fields = append(fields, imchatauthrequest.FieldSenderExternalID)
+	}
+	if m.token_hash != nil {
+		fields = append(fields, imchatauthrequest.FieldTokenHash)
+	}
+	if m.token_prefix != nil {
+		fields = append(fields, imchatauthrequest.FieldTokenPrefix)
+	}
+	if m.status != nil {
+		fields = append(fields, imchatauthrequest.FieldStatus)
+	}
+	if m.requested_target != nil {
+		fields = append(fields, imchatauthrequest.FieldRequestedTarget)
+	}
+	if m.requested_thread_id != nil {
+		fields = append(fields, imchatauthrequest.FieldRequestedThreadID)
+	}
+	if m.expires_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldExpiresUnix)
+	}
+	if m.resolved_by_user_id != nil {
+		fields = append(fields, imchatauthrequest.FieldResolvedByUserID)
+	}
+	if m.resolved_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldResolvedUnix)
+	}
+	if m.created_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldCreatedUnix)
+	}
+	if m.updated_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *IMChatAuthRequestMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case imchatauthrequest.FieldEndpointID:
+		return m.EndpointID()
+	case imchatauthrequest.FieldProvider:
+		return m.Provider()
+	case imchatauthrequest.FieldConversationID:
+		return m.ConversationID()
+	case imchatauthrequest.FieldExternalThreadID:
+		return m.ExternalThreadID()
+	case imchatauthrequest.FieldChatTitle:
+		return m.ChatTitle()
+	case imchatauthrequest.FieldSenderExternalID:
+		return m.SenderExternalID()
+	case imchatauthrequest.FieldTokenHash:
+		return m.TokenHash()
+	case imchatauthrequest.FieldTokenPrefix:
+		return m.TokenPrefix()
+	case imchatauthrequest.FieldStatus:
+		return m.Status()
+	case imchatauthrequest.FieldRequestedTarget:
+		return m.RequestedTarget()
+	case imchatauthrequest.FieldRequestedThreadID:
+		return m.RequestedThreadID()
+	case imchatauthrequest.FieldExpiresUnix:
+		return m.ExpiresUnix()
+	case imchatauthrequest.FieldResolvedByUserID:
+		return m.ResolvedByUserID()
+	case imchatauthrequest.FieldResolvedUnix:
+		return m.ResolvedUnix()
+	case imchatauthrequest.FieldCreatedUnix:
+		return m.CreatedUnix()
+	case imchatauthrequest.FieldUpdatedUnix:
+		return m.UpdatedUnix()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *IMChatAuthRequestMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case imchatauthrequest.FieldEndpointID:
+		return m.OldEndpointID(ctx)
+	case imchatauthrequest.FieldProvider:
+		return m.OldProvider(ctx)
+	case imchatauthrequest.FieldConversationID:
+		return m.OldConversationID(ctx)
+	case imchatauthrequest.FieldExternalThreadID:
+		return m.OldExternalThreadID(ctx)
+	case imchatauthrequest.FieldChatTitle:
+		return m.OldChatTitle(ctx)
+	case imchatauthrequest.FieldSenderExternalID:
+		return m.OldSenderExternalID(ctx)
+	case imchatauthrequest.FieldTokenHash:
+		return m.OldTokenHash(ctx)
+	case imchatauthrequest.FieldTokenPrefix:
+		return m.OldTokenPrefix(ctx)
+	case imchatauthrequest.FieldStatus:
+		return m.OldStatus(ctx)
+	case imchatauthrequest.FieldRequestedTarget:
+		return m.OldRequestedTarget(ctx)
+	case imchatauthrequest.FieldRequestedThreadID:
+		return m.OldRequestedThreadID(ctx)
+	case imchatauthrequest.FieldExpiresUnix:
+		return m.OldExpiresUnix(ctx)
+	case imchatauthrequest.FieldResolvedByUserID:
+		return m.OldResolvedByUserID(ctx)
+	case imchatauthrequest.FieldResolvedUnix:
+		return m.OldResolvedUnix(ctx)
+	case imchatauthrequest.FieldCreatedUnix:
+		return m.OldCreatedUnix(ctx)
+	case imchatauthrequest.FieldUpdatedUnix:
+		return m.OldUpdatedUnix(ctx)
+	}
+	return nil, fmt.Errorf("unknown IMChatAuthRequest field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IMChatAuthRequestMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case imchatauthrequest.FieldEndpointID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndpointID(v)
+		return nil
+	case imchatauthrequest.FieldProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case imchatauthrequest.FieldConversationID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConversationID(v)
+		return nil
+	case imchatauthrequest.FieldExternalThreadID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalThreadID(v)
+		return nil
+	case imchatauthrequest.FieldChatTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetChatTitle(v)
+		return nil
+	case imchatauthrequest.FieldSenderExternalID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSenderExternalID(v)
+		return nil
+	case imchatauthrequest.FieldTokenHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokenHash(v)
+		return nil
+	case imchatauthrequest.FieldTokenPrefix:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTokenPrefix(v)
+		return nil
+	case imchatauthrequest.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case imchatauthrequest.FieldRequestedTarget:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequestedTarget(v)
+		return nil
+	case imchatauthrequest.FieldRequestedThreadID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequestedThreadID(v)
+		return nil
+	case imchatauthrequest.FieldExpiresUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresUnix(v)
+		return nil
+	case imchatauthrequest.FieldResolvedByUserID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResolvedByUserID(v)
+		return nil
+	case imchatauthrequest.FieldResolvedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResolvedUnix(v)
+		return nil
+	case imchatauthrequest.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedUnix(v)
+		return nil
+	case imchatauthrequest.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IMChatAuthRequest field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *IMChatAuthRequestMutation) AddedFields() []string {
+	var fields []string
+	if m.addexpires_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldExpiresUnix)
+	}
+	if m.addresolved_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldResolvedUnix)
+	}
+	if m.addcreated_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldCreatedUnix)
+	}
+	if m.addupdated_unix != nil {
+		fields = append(fields, imchatauthrequest.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *IMChatAuthRequestMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case imchatauthrequest.FieldExpiresUnix:
+		return m.AddedExpiresUnix()
+	case imchatauthrequest.FieldResolvedUnix:
+		return m.AddedResolvedUnix()
+	case imchatauthrequest.FieldCreatedUnix:
+		return m.AddedCreatedUnix()
+	case imchatauthrequest.FieldUpdatedUnix:
+		return m.AddedUpdatedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IMChatAuthRequestMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case imchatauthrequest.FieldExpiresUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddExpiresUnix(v)
+		return nil
+	case imchatauthrequest.FieldResolvedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddResolvedUnix(v)
+		return nil
+	case imchatauthrequest.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedUnix(v)
+		return nil
+	case imchatauthrequest.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IMChatAuthRequest numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *IMChatAuthRequestMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *IMChatAuthRequestMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *IMChatAuthRequestMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown IMChatAuthRequest nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *IMChatAuthRequestMutation) ResetField(name string) error {
+	switch name {
+	case imchatauthrequest.FieldEndpointID:
+		m.ResetEndpointID()
+		return nil
+	case imchatauthrequest.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case imchatauthrequest.FieldConversationID:
+		m.ResetConversationID()
+		return nil
+	case imchatauthrequest.FieldExternalThreadID:
+		m.ResetExternalThreadID()
+		return nil
+	case imchatauthrequest.FieldChatTitle:
+		m.ResetChatTitle()
+		return nil
+	case imchatauthrequest.FieldSenderExternalID:
+		m.ResetSenderExternalID()
+		return nil
+	case imchatauthrequest.FieldTokenHash:
+		m.ResetTokenHash()
+		return nil
+	case imchatauthrequest.FieldTokenPrefix:
+		m.ResetTokenPrefix()
+		return nil
+	case imchatauthrequest.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case imchatauthrequest.FieldRequestedTarget:
+		m.ResetRequestedTarget()
+		return nil
+	case imchatauthrequest.FieldRequestedThreadID:
+		m.ResetRequestedThreadID()
+		return nil
+	case imchatauthrequest.FieldExpiresUnix:
+		m.ResetExpiresUnix()
+		return nil
+	case imchatauthrequest.FieldResolvedByUserID:
+		m.ResetResolvedByUserID()
+		return nil
+	case imchatauthrequest.FieldResolvedUnix:
+		m.ResetResolvedUnix()
+		return nil
+	case imchatauthrequest.FieldCreatedUnix:
+		m.ResetCreatedUnix()
+		return nil
+	case imchatauthrequest.FieldUpdatedUnix:
+		m.ResetUpdatedUnix()
+		return nil
+	}
+	return fmt.Errorf("unknown IMChatAuthRequest field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *IMChatAuthRequestMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *IMChatAuthRequestMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *IMChatAuthRequestMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *IMChatAuthRequestMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *IMChatAuthRequestMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *IMChatAuthRequestMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *IMChatAuthRequestMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown IMChatAuthRequest unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *IMChatAuthRequestMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown IMChatAuthRequest edge %s", name)
+}
+
+// IMChatSubscriptionMutation represents an operation that mutates the IMChatSubscription nodes in the graph.
+type IMChatSubscriptionMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *string
+	endpoint_id              *string
+	provider                 *string
+	conversation_id          *string
+	external_thread_id       *string
+	chat_title               *string
+	target                   *string
+	thread_id                *string
+	sender_external_id       *string
+	authorized_by_request_id *string
+	subscribed               *bool
+	verbose                  *bool
+	authorized_unix          *int64
+	addauthorized_unix       *int64
+	subscribed_unix          *int64
+	addsubscribed_unix       *int64
+	created_unix             *int64
+	addcreated_unix          *int64
+	updated_unix             *int64
+	addupdated_unix          *int64
+	clearedFields            map[string]struct{}
+	done                     bool
+	oldValue                 func(context.Context) (*IMChatSubscription, error)
+	predicates               []predicate.IMChatSubscription
+}
+
+var _ ent.Mutation = (*IMChatSubscriptionMutation)(nil)
+
+// imchatsubscriptionOption allows management of the mutation configuration using functional options.
+type imchatsubscriptionOption func(*IMChatSubscriptionMutation)
+
+// newIMChatSubscriptionMutation creates new mutation for the IMChatSubscription entity.
+func newIMChatSubscriptionMutation(c config, op Op, opts ...imchatsubscriptionOption) *IMChatSubscriptionMutation {
+	m := &IMChatSubscriptionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeIMChatSubscription,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withIMChatSubscriptionID sets the ID field of the mutation.
+func withIMChatSubscriptionID(id string) imchatsubscriptionOption {
+	return func(m *IMChatSubscriptionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *IMChatSubscription
+		)
+		m.oldValue = func(ctx context.Context) (*IMChatSubscription, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().IMChatSubscription.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withIMChatSubscription sets the old IMChatSubscription of the mutation.
+func withIMChatSubscription(node *IMChatSubscription) imchatsubscriptionOption {
+	return func(m *IMChatSubscriptionMutation) {
+		m.oldValue = func(context.Context) (*IMChatSubscription, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m IMChatSubscriptionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m IMChatSubscriptionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of IMChatSubscription entities.
+func (m *IMChatSubscriptionMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *IMChatSubscriptionMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *IMChatSubscriptionMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().IMChatSubscription.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetEndpointID sets the "endpoint_id" field.
+func (m *IMChatSubscriptionMutation) SetEndpointID(s string) {
+	m.endpoint_id = &s
+}
+
+// EndpointID returns the value of the "endpoint_id" field in the mutation.
+func (m *IMChatSubscriptionMutation) EndpointID() (r string, exists bool) {
+	v := m.endpoint_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndpointID returns the old "endpoint_id" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldEndpointID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndpointID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndpointID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndpointID: %w", err)
+	}
+	return oldValue.EndpointID, nil
+}
+
+// ResetEndpointID resets all changes to the "endpoint_id" field.
+func (m *IMChatSubscriptionMutation) ResetEndpointID() {
+	m.endpoint_id = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *IMChatSubscriptionMutation) SetProvider(s string) {
+	m.provider = &s
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *IMChatSubscriptionMutation) Provider() (r string, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldProvider(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *IMChatSubscriptionMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetConversationID sets the "conversation_id" field.
+func (m *IMChatSubscriptionMutation) SetConversationID(s string) {
+	m.conversation_id = &s
+}
+
+// ConversationID returns the value of the "conversation_id" field in the mutation.
+func (m *IMChatSubscriptionMutation) ConversationID() (r string, exists bool) {
+	v := m.conversation_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConversationID returns the old "conversation_id" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldConversationID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConversationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConversationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConversationID: %w", err)
+	}
+	return oldValue.ConversationID, nil
+}
+
+// ResetConversationID resets all changes to the "conversation_id" field.
+func (m *IMChatSubscriptionMutation) ResetConversationID() {
+	m.conversation_id = nil
+}
+
+// SetExternalThreadID sets the "external_thread_id" field.
+func (m *IMChatSubscriptionMutation) SetExternalThreadID(s string) {
+	m.external_thread_id = &s
+}
+
+// ExternalThreadID returns the value of the "external_thread_id" field in the mutation.
+func (m *IMChatSubscriptionMutation) ExternalThreadID() (r string, exists bool) {
+	v := m.external_thread_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalThreadID returns the old "external_thread_id" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldExternalThreadID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalThreadID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalThreadID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalThreadID: %w", err)
+	}
+	return oldValue.ExternalThreadID, nil
+}
+
+// ResetExternalThreadID resets all changes to the "external_thread_id" field.
+func (m *IMChatSubscriptionMutation) ResetExternalThreadID() {
+	m.external_thread_id = nil
+}
+
+// SetChatTitle sets the "chat_title" field.
+func (m *IMChatSubscriptionMutation) SetChatTitle(s string) {
+	m.chat_title = &s
+}
+
+// ChatTitle returns the value of the "chat_title" field in the mutation.
+func (m *IMChatSubscriptionMutation) ChatTitle() (r string, exists bool) {
+	v := m.chat_title
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldChatTitle returns the old "chat_title" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldChatTitle(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldChatTitle is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldChatTitle requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldChatTitle: %w", err)
+	}
+	return oldValue.ChatTitle, nil
+}
+
+// ResetChatTitle resets all changes to the "chat_title" field.
+func (m *IMChatSubscriptionMutation) ResetChatTitle() {
+	m.chat_title = nil
+}
+
+// SetTarget sets the "target" field.
+func (m *IMChatSubscriptionMutation) SetTarget(s string) {
+	m.target = &s
+}
+
+// Target returns the value of the "target" field in the mutation.
+func (m *IMChatSubscriptionMutation) Target() (r string, exists bool) {
+	v := m.target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTarget returns the old "target" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldTarget(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTarget: %w", err)
+	}
+	return oldValue.Target, nil
+}
+
+// ResetTarget resets all changes to the "target" field.
+func (m *IMChatSubscriptionMutation) ResetTarget() {
+	m.target = nil
+}
+
+// SetThreadID sets the "thread_id" field.
+func (m *IMChatSubscriptionMutation) SetThreadID(s string) {
+	m.thread_id = &s
+}
+
+// ThreadID returns the value of the "thread_id" field in the mutation.
+func (m *IMChatSubscriptionMutation) ThreadID() (r string, exists bool) {
+	v := m.thread_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldThreadID returns the old "thread_id" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldThreadID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldThreadID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldThreadID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldThreadID: %w", err)
+	}
+	return oldValue.ThreadID, nil
+}
+
+// ResetThreadID resets all changes to the "thread_id" field.
+func (m *IMChatSubscriptionMutation) ResetThreadID() {
+	m.thread_id = nil
+}
+
+// SetSenderExternalID sets the "sender_external_id" field.
+func (m *IMChatSubscriptionMutation) SetSenderExternalID(s string) {
+	m.sender_external_id = &s
+}
+
+// SenderExternalID returns the value of the "sender_external_id" field in the mutation.
+func (m *IMChatSubscriptionMutation) SenderExternalID() (r string, exists bool) {
+	v := m.sender_external_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSenderExternalID returns the old "sender_external_id" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldSenderExternalID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSenderExternalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSenderExternalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSenderExternalID: %w", err)
+	}
+	return oldValue.SenderExternalID, nil
+}
+
+// ResetSenderExternalID resets all changes to the "sender_external_id" field.
+func (m *IMChatSubscriptionMutation) ResetSenderExternalID() {
+	m.sender_external_id = nil
+}
+
+// SetAuthorizedByRequestID sets the "authorized_by_request_id" field.
+func (m *IMChatSubscriptionMutation) SetAuthorizedByRequestID(s string) {
+	m.authorized_by_request_id = &s
+}
+
+// AuthorizedByRequestID returns the value of the "authorized_by_request_id" field in the mutation.
+func (m *IMChatSubscriptionMutation) AuthorizedByRequestID() (r string, exists bool) {
+	v := m.authorized_by_request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthorizedByRequestID returns the old "authorized_by_request_id" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldAuthorizedByRequestID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthorizedByRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthorizedByRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthorizedByRequestID: %w", err)
+	}
+	return oldValue.AuthorizedByRequestID, nil
+}
+
+// ResetAuthorizedByRequestID resets all changes to the "authorized_by_request_id" field.
+func (m *IMChatSubscriptionMutation) ResetAuthorizedByRequestID() {
+	m.authorized_by_request_id = nil
+}
+
+// SetSubscribed sets the "subscribed" field.
+func (m *IMChatSubscriptionMutation) SetSubscribed(b bool) {
+	m.subscribed = &b
+}
+
+// Subscribed returns the value of the "subscribed" field in the mutation.
+func (m *IMChatSubscriptionMutation) Subscribed() (r bool, exists bool) {
+	v := m.subscribed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscribed returns the old "subscribed" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldSubscribed(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscribed is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscribed requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscribed: %w", err)
+	}
+	return oldValue.Subscribed, nil
+}
+
+// ResetSubscribed resets all changes to the "subscribed" field.
+func (m *IMChatSubscriptionMutation) ResetSubscribed() {
+	m.subscribed = nil
+}
+
+// SetVerbose sets the "verbose" field.
+func (m *IMChatSubscriptionMutation) SetVerbose(b bool) {
+	m.verbose = &b
+}
+
+// Verbose returns the value of the "verbose" field in the mutation.
+func (m *IMChatSubscriptionMutation) Verbose() (r bool, exists bool) {
+	v := m.verbose
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVerbose returns the old "verbose" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldVerbose(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVerbose is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVerbose requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVerbose: %w", err)
+	}
+	return oldValue.Verbose, nil
+}
+
+// ResetVerbose resets all changes to the "verbose" field.
+func (m *IMChatSubscriptionMutation) ResetVerbose() {
+	m.verbose = nil
+}
+
+// SetAuthorizedUnix sets the "authorized_unix" field.
+func (m *IMChatSubscriptionMutation) SetAuthorizedUnix(i int64) {
+	m.authorized_unix = &i
+	m.addauthorized_unix = nil
+}
+
+// AuthorizedUnix returns the value of the "authorized_unix" field in the mutation.
+func (m *IMChatSubscriptionMutation) AuthorizedUnix() (r int64, exists bool) {
+	v := m.authorized_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthorizedUnix returns the old "authorized_unix" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldAuthorizedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthorizedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthorizedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthorizedUnix: %w", err)
+	}
+	return oldValue.AuthorizedUnix, nil
+}
+
+// AddAuthorizedUnix adds i to the "authorized_unix" field.
+func (m *IMChatSubscriptionMutation) AddAuthorizedUnix(i int64) {
+	if m.addauthorized_unix != nil {
+		*m.addauthorized_unix += i
+	} else {
+		m.addauthorized_unix = &i
+	}
+}
+
+// AddedAuthorizedUnix returns the value that was added to the "authorized_unix" field in this mutation.
+func (m *IMChatSubscriptionMutation) AddedAuthorizedUnix() (r int64, exists bool) {
+	v := m.addauthorized_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAuthorizedUnix resets all changes to the "authorized_unix" field.
+func (m *IMChatSubscriptionMutation) ResetAuthorizedUnix() {
+	m.authorized_unix = nil
+	m.addauthorized_unix = nil
+}
+
+// SetSubscribedUnix sets the "subscribed_unix" field.
+func (m *IMChatSubscriptionMutation) SetSubscribedUnix(i int64) {
+	m.subscribed_unix = &i
+	m.addsubscribed_unix = nil
+}
+
+// SubscribedUnix returns the value of the "subscribed_unix" field in the mutation.
+func (m *IMChatSubscriptionMutation) SubscribedUnix() (r int64, exists bool) {
+	v := m.subscribed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscribedUnix returns the old "subscribed_unix" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldSubscribedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscribedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscribedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscribedUnix: %w", err)
+	}
+	return oldValue.SubscribedUnix, nil
+}
+
+// AddSubscribedUnix adds i to the "subscribed_unix" field.
+func (m *IMChatSubscriptionMutation) AddSubscribedUnix(i int64) {
+	if m.addsubscribed_unix != nil {
+		*m.addsubscribed_unix += i
+	} else {
+		m.addsubscribed_unix = &i
+	}
+}
+
+// AddedSubscribedUnix returns the value that was added to the "subscribed_unix" field in this mutation.
+func (m *IMChatSubscriptionMutation) AddedSubscribedUnix() (r int64, exists bool) {
+	v := m.addsubscribed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSubscribedUnix resets all changes to the "subscribed_unix" field.
+func (m *IMChatSubscriptionMutation) ResetSubscribedUnix() {
+	m.subscribed_unix = nil
+	m.addsubscribed_unix = nil
+}
+
+// SetCreatedUnix sets the "created_unix" field.
+func (m *IMChatSubscriptionMutation) SetCreatedUnix(i int64) {
+	m.created_unix = &i
+	m.addcreated_unix = nil
+}
+
+// CreatedUnix returns the value of the "created_unix" field in the mutation.
+func (m *IMChatSubscriptionMutation) CreatedUnix() (r int64, exists bool) {
+	v := m.created_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedUnix returns the old "created_unix" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldCreatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedUnix: %w", err)
+	}
+	return oldValue.CreatedUnix, nil
+}
+
+// AddCreatedUnix adds i to the "created_unix" field.
+func (m *IMChatSubscriptionMutation) AddCreatedUnix(i int64) {
+	if m.addcreated_unix != nil {
+		*m.addcreated_unix += i
+	} else {
+		m.addcreated_unix = &i
+	}
+}
+
+// AddedCreatedUnix returns the value that was added to the "created_unix" field in this mutation.
+func (m *IMChatSubscriptionMutation) AddedCreatedUnix() (r int64, exists bool) {
+	v := m.addcreated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedUnix resets all changes to the "created_unix" field.
+func (m *IMChatSubscriptionMutation) ResetCreatedUnix() {
+	m.created_unix = nil
+	m.addcreated_unix = nil
+}
+
+// SetUpdatedUnix sets the "updated_unix" field.
+func (m *IMChatSubscriptionMutation) SetUpdatedUnix(i int64) {
+	m.updated_unix = &i
+	m.addupdated_unix = nil
+}
+
+// UpdatedUnix returns the value of the "updated_unix" field in the mutation.
+func (m *IMChatSubscriptionMutation) UpdatedUnix() (r int64, exists bool) {
+	v := m.updated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedUnix returns the old "updated_unix" field's value of the IMChatSubscription entity.
+// If the IMChatSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IMChatSubscriptionMutation) OldUpdatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedUnix: %w", err)
+	}
+	return oldValue.UpdatedUnix, nil
+}
+
+// AddUpdatedUnix adds i to the "updated_unix" field.
+func (m *IMChatSubscriptionMutation) AddUpdatedUnix(i int64) {
+	if m.addupdated_unix != nil {
+		*m.addupdated_unix += i
+	} else {
+		m.addupdated_unix = &i
+	}
+}
+
+// AddedUpdatedUnix returns the value that was added to the "updated_unix" field in this mutation.
+func (m *IMChatSubscriptionMutation) AddedUpdatedUnix() (r int64, exists bool) {
+	v := m.addupdated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpdatedUnix resets all changes to the "updated_unix" field.
+func (m *IMChatSubscriptionMutation) ResetUpdatedUnix() {
+	m.updated_unix = nil
+	m.addupdated_unix = nil
+}
+
+// Where appends a list predicates to the IMChatSubscriptionMutation builder.
+func (m *IMChatSubscriptionMutation) Where(ps ...predicate.IMChatSubscription) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the IMChatSubscriptionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *IMChatSubscriptionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.IMChatSubscription, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *IMChatSubscriptionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *IMChatSubscriptionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (IMChatSubscription).
+func (m *IMChatSubscriptionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *IMChatSubscriptionMutation) Fields() []string {
+	fields := make([]string, 0, 15)
+	if m.endpoint_id != nil {
+		fields = append(fields, imchatsubscription.FieldEndpointID)
+	}
+	if m.provider != nil {
+		fields = append(fields, imchatsubscription.FieldProvider)
+	}
+	if m.conversation_id != nil {
+		fields = append(fields, imchatsubscription.FieldConversationID)
+	}
+	if m.external_thread_id != nil {
+		fields = append(fields, imchatsubscription.FieldExternalThreadID)
+	}
+	if m.chat_title != nil {
+		fields = append(fields, imchatsubscription.FieldChatTitle)
+	}
+	if m.target != nil {
+		fields = append(fields, imchatsubscription.FieldTarget)
+	}
+	if m.thread_id != nil {
+		fields = append(fields, imchatsubscription.FieldThreadID)
+	}
+	if m.sender_external_id != nil {
+		fields = append(fields, imchatsubscription.FieldSenderExternalID)
+	}
+	if m.authorized_by_request_id != nil {
+		fields = append(fields, imchatsubscription.FieldAuthorizedByRequestID)
+	}
+	if m.subscribed != nil {
+		fields = append(fields, imchatsubscription.FieldSubscribed)
+	}
+	if m.verbose != nil {
+		fields = append(fields, imchatsubscription.FieldVerbose)
+	}
+	if m.authorized_unix != nil {
+		fields = append(fields, imchatsubscription.FieldAuthorizedUnix)
+	}
+	if m.subscribed_unix != nil {
+		fields = append(fields, imchatsubscription.FieldSubscribedUnix)
+	}
+	if m.created_unix != nil {
+		fields = append(fields, imchatsubscription.FieldCreatedUnix)
+	}
+	if m.updated_unix != nil {
+		fields = append(fields, imchatsubscription.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *IMChatSubscriptionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case imchatsubscription.FieldEndpointID:
+		return m.EndpointID()
+	case imchatsubscription.FieldProvider:
+		return m.Provider()
+	case imchatsubscription.FieldConversationID:
+		return m.ConversationID()
+	case imchatsubscription.FieldExternalThreadID:
+		return m.ExternalThreadID()
+	case imchatsubscription.FieldChatTitle:
+		return m.ChatTitle()
+	case imchatsubscription.FieldTarget:
+		return m.Target()
+	case imchatsubscription.FieldThreadID:
+		return m.ThreadID()
+	case imchatsubscription.FieldSenderExternalID:
+		return m.SenderExternalID()
+	case imchatsubscription.FieldAuthorizedByRequestID:
+		return m.AuthorizedByRequestID()
+	case imchatsubscription.FieldSubscribed:
+		return m.Subscribed()
+	case imchatsubscription.FieldVerbose:
+		return m.Verbose()
+	case imchatsubscription.FieldAuthorizedUnix:
+		return m.AuthorizedUnix()
+	case imchatsubscription.FieldSubscribedUnix:
+		return m.SubscribedUnix()
+	case imchatsubscription.FieldCreatedUnix:
+		return m.CreatedUnix()
+	case imchatsubscription.FieldUpdatedUnix:
+		return m.UpdatedUnix()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *IMChatSubscriptionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case imchatsubscription.FieldEndpointID:
+		return m.OldEndpointID(ctx)
+	case imchatsubscription.FieldProvider:
+		return m.OldProvider(ctx)
+	case imchatsubscription.FieldConversationID:
+		return m.OldConversationID(ctx)
+	case imchatsubscription.FieldExternalThreadID:
+		return m.OldExternalThreadID(ctx)
+	case imchatsubscription.FieldChatTitle:
+		return m.OldChatTitle(ctx)
+	case imchatsubscription.FieldTarget:
+		return m.OldTarget(ctx)
+	case imchatsubscription.FieldThreadID:
+		return m.OldThreadID(ctx)
+	case imchatsubscription.FieldSenderExternalID:
+		return m.OldSenderExternalID(ctx)
+	case imchatsubscription.FieldAuthorizedByRequestID:
+		return m.OldAuthorizedByRequestID(ctx)
+	case imchatsubscription.FieldSubscribed:
+		return m.OldSubscribed(ctx)
+	case imchatsubscription.FieldVerbose:
+		return m.OldVerbose(ctx)
+	case imchatsubscription.FieldAuthorizedUnix:
+		return m.OldAuthorizedUnix(ctx)
+	case imchatsubscription.FieldSubscribedUnix:
+		return m.OldSubscribedUnix(ctx)
+	case imchatsubscription.FieldCreatedUnix:
+		return m.OldCreatedUnix(ctx)
+	case imchatsubscription.FieldUpdatedUnix:
+		return m.OldUpdatedUnix(ctx)
+	}
+	return nil, fmt.Errorf("unknown IMChatSubscription field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IMChatSubscriptionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case imchatsubscription.FieldEndpointID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndpointID(v)
+		return nil
+	case imchatsubscription.FieldProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case imchatsubscription.FieldConversationID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConversationID(v)
+		return nil
+	case imchatsubscription.FieldExternalThreadID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalThreadID(v)
+		return nil
+	case imchatsubscription.FieldChatTitle:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetChatTitle(v)
+		return nil
+	case imchatsubscription.FieldTarget:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTarget(v)
+		return nil
+	case imchatsubscription.FieldThreadID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetThreadID(v)
+		return nil
+	case imchatsubscription.FieldSenderExternalID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSenderExternalID(v)
+		return nil
+	case imchatsubscription.FieldAuthorizedByRequestID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthorizedByRequestID(v)
+		return nil
+	case imchatsubscription.FieldSubscribed:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscribed(v)
+		return nil
+	case imchatsubscription.FieldVerbose:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVerbose(v)
+		return nil
+	case imchatsubscription.FieldAuthorizedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthorizedUnix(v)
+		return nil
+	case imchatsubscription.FieldSubscribedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscribedUnix(v)
+		return nil
+	case imchatsubscription.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedUnix(v)
+		return nil
+	case imchatsubscription.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IMChatSubscription field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *IMChatSubscriptionMutation) AddedFields() []string {
+	var fields []string
+	if m.addauthorized_unix != nil {
+		fields = append(fields, imchatsubscription.FieldAuthorizedUnix)
+	}
+	if m.addsubscribed_unix != nil {
+		fields = append(fields, imchatsubscription.FieldSubscribedUnix)
+	}
+	if m.addcreated_unix != nil {
+		fields = append(fields, imchatsubscription.FieldCreatedUnix)
+	}
+	if m.addupdated_unix != nil {
+		fields = append(fields, imchatsubscription.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *IMChatSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case imchatsubscription.FieldAuthorizedUnix:
+		return m.AddedAuthorizedUnix()
+	case imchatsubscription.FieldSubscribedUnix:
+		return m.AddedSubscribedUnix()
+	case imchatsubscription.FieldCreatedUnix:
+		return m.AddedCreatedUnix()
+	case imchatsubscription.FieldUpdatedUnix:
+		return m.AddedUpdatedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *IMChatSubscriptionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case imchatsubscription.FieldAuthorizedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAuthorizedUnix(v)
+		return nil
+	case imchatsubscription.FieldSubscribedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSubscribedUnix(v)
+		return nil
+	case imchatsubscription.FieldCreatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedUnix(v)
+		return nil
+	case imchatsubscription.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown IMChatSubscription numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *IMChatSubscriptionMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *IMChatSubscriptionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *IMChatSubscriptionMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown IMChatSubscription nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *IMChatSubscriptionMutation) ResetField(name string) error {
+	switch name {
+	case imchatsubscription.FieldEndpointID:
+		m.ResetEndpointID()
+		return nil
+	case imchatsubscription.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case imchatsubscription.FieldConversationID:
+		m.ResetConversationID()
+		return nil
+	case imchatsubscription.FieldExternalThreadID:
+		m.ResetExternalThreadID()
+		return nil
+	case imchatsubscription.FieldChatTitle:
+		m.ResetChatTitle()
+		return nil
+	case imchatsubscription.FieldTarget:
+		m.ResetTarget()
+		return nil
+	case imchatsubscription.FieldThreadID:
+		m.ResetThreadID()
+		return nil
+	case imchatsubscription.FieldSenderExternalID:
+		m.ResetSenderExternalID()
+		return nil
+	case imchatsubscription.FieldAuthorizedByRequestID:
+		m.ResetAuthorizedByRequestID()
+		return nil
+	case imchatsubscription.FieldSubscribed:
+		m.ResetSubscribed()
+		return nil
+	case imchatsubscription.FieldVerbose:
+		m.ResetVerbose()
+		return nil
+	case imchatsubscription.FieldAuthorizedUnix:
+		m.ResetAuthorizedUnix()
+		return nil
+	case imchatsubscription.FieldSubscribedUnix:
+		m.ResetSubscribedUnix()
+		return nil
+	case imchatsubscription.FieldCreatedUnix:
+		m.ResetCreatedUnix()
+		return nil
+	case imchatsubscription.FieldUpdatedUnix:
+		m.ResetUpdatedUnix()
+		return nil
+	}
+	return fmt.Errorf("unknown IMChatSubscription field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *IMChatSubscriptionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *IMChatSubscriptionMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *IMChatSubscriptionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *IMChatSubscriptionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *IMChatSubscriptionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *IMChatSubscriptionMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *IMChatSubscriptionMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown IMChatSubscription unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *IMChatSubscriptionMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown IMChatSubscription edge %s", name)
 }
 
 // IdempotencyRecordMutation represents an operation that mutates the IdempotencyRecord nodes in the graph.

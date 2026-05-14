@@ -93,6 +93,30 @@ func (f CollaborationEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CollaborationEventMutation", m)
 }
 
+// The IMChatAuthRequestFunc type is an adapter to allow the use of ordinary
+// function as IMChatAuthRequest mutator.
+type IMChatAuthRequestFunc func(context.Context, *ent.IMChatAuthRequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f IMChatAuthRequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IMChatAuthRequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IMChatAuthRequestMutation", m)
+}
+
+// The IMChatSubscriptionFunc type is an adapter to allow the use of ordinary
+// function as IMChatSubscription mutator.
+type IMChatSubscriptionFunc func(context.Context, *ent.IMChatSubscriptionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f IMChatSubscriptionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IMChatSubscriptionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IMChatSubscriptionMutation", m)
+}
+
 // The IdempotencyRecordFunc type is an adapter to allow the use of ordinary
 // function as IdempotencyRecord mutator.
 type IdempotencyRecordFunc func(context.Context, *ent.IdempotencyRecordMutation) (ent.Value, error)

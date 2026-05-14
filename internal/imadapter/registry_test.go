@@ -122,12 +122,22 @@ func TestProviderSchemaShapeForConfigUI(t *testing.T) {
 				t.Fatalf("schema %q missing setup methods", schema.Provider)
 			}
 			bindingMethods[schema.Provider] = schema.BindingMethods
+			hasRequireSubscription := false
 			for _, field := range schema.Fields {
+				if field.Name == "require_subscription" {
+					hasRequireSubscription = true
+					if field.Type != FieldBoolean || field.Required || field.Sensitive {
+						t.Fatalf("schema %q require_subscription field = %+v", schema.Provider, field)
+					}
+				}
 				if field.Name == "group_mode" {
 					if field.Type != FieldSelect || strings.Join(field.Options, ",") != "mention,always,disabled" {
 						t.Fatalf("schema %q group_mode field = %+v", schema.Provider, field)
 					}
 				}
+			}
+			if !hasRequireSubscription {
+				t.Fatalf("schema %q missing require_subscription field", schema.Provider)
 			}
 		})
 	}

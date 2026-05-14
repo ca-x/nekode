@@ -247,6 +247,91 @@ var (
 			},
 		},
 	}
+	// ImChatAuthRequestsColumns holds the columns for the "im_chat_auth_requests" table.
+	ImChatAuthRequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "endpoint_id", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "conversation_id", Type: field.TypeString},
+		{Name: "external_thread_id", Type: field.TypeString, Default: ""},
+		{Name: "chat_title", Type: field.TypeString, Default: ""},
+		{Name: "sender_external_id", Type: field.TypeString, Default: ""},
+		{Name: "token_hash", Type: field.TypeString},
+		{Name: "token_prefix", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "requested_target", Type: field.TypeString, Default: ""},
+		{Name: "requested_thread_id", Type: field.TypeString, Default: ""},
+		{Name: "expires_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "resolved_by_user_id", Type: field.TypeString, Default: ""},
+		{Name: "resolved_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// ImChatAuthRequestsTable holds the schema information for the "im_chat_auth_requests" table.
+	ImChatAuthRequestsTable = &schema.Table{
+		Name:       "im_chat_auth_requests",
+		Columns:    ImChatAuthRequestsColumns,
+		PrimaryKey: []*schema.Column{ImChatAuthRequestsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "imchatauthrequest_token_hash",
+				Unique:  true,
+				Columns: []*schema.Column{ImChatAuthRequestsColumns[7]},
+			},
+			{
+				Name:    "imchatauthrequest_endpoint_id_status_created_unix",
+				Unique:  false,
+				Columns: []*schema.Column{ImChatAuthRequestsColumns[1], ImChatAuthRequestsColumns[9], ImChatAuthRequestsColumns[15]},
+			},
+			{
+				Name:    "imchatauthrequest_endpoint_id_conversation_id_external_thread_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{ImChatAuthRequestsColumns[1], ImChatAuthRequestsColumns[3], ImChatAuthRequestsColumns[4], ImChatAuthRequestsColumns[9]},
+			},
+		},
+	}
+	// ImChatSubscriptionsColumns holds the columns for the "im_chat_subscriptions" table.
+	ImChatSubscriptionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "endpoint_id", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "conversation_id", Type: field.TypeString},
+		{Name: "external_thread_id", Type: field.TypeString, Default: ""},
+		{Name: "chat_title", Type: field.TypeString, Default: ""},
+		{Name: "target", Type: field.TypeString, Default: ""},
+		{Name: "thread_id", Type: field.TypeString, Default: ""},
+		{Name: "sender_external_id", Type: field.TypeString, Default: ""},
+		{Name: "authorized_by_request_id", Type: field.TypeString, Default: ""},
+		{Name: "subscribed", Type: field.TypeBool, Default: true},
+		{Name: "verbose", Type: field.TypeBool, Default: false},
+		{Name: "authorized_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "subscribed_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "created_unix", Type: field.TypeInt64},
+		{Name: "updated_unix", Type: field.TypeInt64},
+	}
+	// ImChatSubscriptionsTable holds the schema information for the "im_chat_subscriptions" table.
+	ImChatSubscriptionsTable = &schema.Table{
+		Name:       "im_chat_subscriptions",
+		Columns:    ImChatSubscriptionsColumns,
+		PrimaryKey: []*schema.Column{ImChatSubscriptionsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "imchatsubscription_endpoint_id_conversation_id_external_thread_id",
+				Unique:  true,
+				Columns: []*schema.Column{ImChatSubscriptionsColumns[1], ImChatSubscriptionsColumns[3], ImChatSubscriptionsColumns[4]},
+			},
+			{
+				Name:    "imchatsubscription_endpoint_id_subscribed",
+				Unique:  false,
+				Columns: []*schema.Column{ImChatSubscriptionsColumns[1], ImChatSubscriptionsColumns[10]},
+			},
+			{
+				Name:    "imchatsubscription_provider_subscribed",
+				Unique:  false,
+				Columns: []*schema.Column{ImChatSubscriptionsColumns[2], ImChatSubscriptionsColumns[10]},
+			},
+		},
+	}
 	// IdempotencyRecordsColumns holds the columns for the "idempotency_records" table.
 	IdempotencyRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -744,6 +829,8 @@ var (
 		ChannelDecisionVotesTable,
 		ChannelMembersTable,
 		CollaborationEventsTable,
+		ImChatAuthRequestsTable,
+		ImChatSubscriptionsTable,
 		IdempotencyRecordsTable,
 		InteractionEndpointsTable,
 		MessagesTable,

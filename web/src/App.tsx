@@ -81,6 +81,8 @@ import type {
   DaemonRun,
   EventCursor,
   IMBindingSession,
+  IMChatAuthRequest,
+  IMChatSubscription,
   IMProviderField,
   IMProviderSchema,
   InteractionEndpoint,
@@ -5008,6 +5010,11 @@ function endpointConfig(endpoint: InteractionEndpoint | null): Record<string, un
   }
 }
 
+function stringConfigValue(config: Record<string, unknown>, key: string) {
+  const value = config[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function endpointSupportsBindingMethod(endpoint: InteractionEndpoint | null, schema: IMProviderSchema | null, method: string) {
   if (!endpoint || !schema?.bindingMethods?.some((bindingMethod) => bindingMethod.method === method)) return false;
   if ((endpoint.provider === "weixin" || endpoint.provider === "wechat") && method === "qr_code") {
@@ -5084,6 +5091,13 @@ function EndpointsPanel({
   const [bindingSession, setBindingSession] = useState<IMBindingSession | null>(null);
   const [bindingError, setBindingError] = useState("");
   const [bindingBusy, setBindingBusy] = useState("");
+  const [chatAuthRequests, setChatAuthRequests] = useState<IMChatAuthRequest[]>([]);
+  const [chatSubscriptions, setChatSubscriptions] = useState<IMChatSubscription[]>([]);
+  const [chatAccessError, setChatAccessError] = useState("");
+  const [chatAccessBusy, setChatAccessBusy] = useState("");
+  const [chatBindKey, setChatBindKey] = useState("");
+  const [chatBindTarget, setChatBindTarget] = useState("#general");
+  const [chatBindThreadId, setChatBindThreadId] = useState("");
   const [routeTarget, setRouteTarget] = useState("#general");
   const [routeThreadId, setRouteThreadId] = useState("");
   const [routeEndpointId, setRouteEndpointId] = useState("");
@@ -5133,6 +5147,15 @@ function EndpointsPanel({
     () => imProviders.find((schema) => schema.provider === selectedEndpoint?.provider) ?? null,
     [imProviders, selectedEndpoint?.provider]
   );
+  const selectedEndpointConfig = useMemo(() => endpointConfig(selectedEndpoint), [selectedEndpoint]);
+  const selectedEndpointDefaultTarget = useMemo(
+    () => stringConfigValue(selectedEndpointConfig, "default_target") || "#general",
+    [selectedEndpointConfig]
+  );
+  const selectedEndpointDefaultThreadId = useMemo(
+    () => stringConfigValue(selectedEndpointConfig, "default_thread_id"),
+    [selectedEndpointConfig]
+  );
   const qrBindingMethod = endpointSupportsBindingMethod(selectedEndpoint, selectedEndpointProvider, "qr_code")
     ? selectedEndpointProvider?.bindingMethods?.find((method) => method.method === "qr_code") ?? null
     : null;
@@ -5174,11 +5197,40 @@ function EndpointsPanel({
     setEndpointTestResult(null);
     setBindingSession((current) => current?.endpointId === selectedEndpoint.id ? current : null);
     setBindingError("");
+    setChatBindTarget(stringConfigValue(endpointConfig(selectedEndpoint), "default_target") || "#general");
+    setChatBindThreadId(stringConfigValue(endpointConfig(selectedEndpoint), "default_thread_id"));
   }, [selectedEndpoint]);
 
   useEffect(() => {
     if (!routeEndpointId && endpoints[0]) setRouteEndpointId(endpoints[0].id);
   }, [endpoints, routeEndpointId]);
+
+  const refreshChatAccess = useCallback(async () => {
+    if (!selectedEndpoint || selectedEndpoint.kind !== "im") {
+      setChatAuthRequests([]);
+      setChatSubscriptions([]);
+      setChatAccessError("");
+      return;
+    }
+    setChatAccessBusy("load-chat-access");
+    setChatAccessError("");
+    try {
+      const [authRequests, subscriptions] = await Promise.all([
+        api.listIMChatAuthRequests({ endpointId: selectedEndpoint.id, status: "pending", limit: 50 }),
+        api.listIMChatSubscriptions({ endpointId: selectedEndpoint.id, limit: 100 })
+      ]);
+      setChatAuthRequests(authRequests.items);
+      setChatSubscriptions(subscriptions.items);
+    } catch (err) {
+      setChatAccessError(err instanceof Error ? err.message : "IM chat access refresh failed.");
+    } finally {
+      setChatAccessBusy((current) => current === "load-chat-access" ? "" : current);
+    }
+  }, [selectedEndpoint?.id, selectedEndpoint?.kind]);
+
+  useEffect(() => {
+    void refreshChatAccess();
+  }, [refreshChatAccess]);
 
   const updateIMValue = (field: IMProviderField, value: EndpointConfigValue) => {
     setIMConfigValues((current) => ({ ...current, [field.name]: value }));
@@ -5372,6 +5424,79 @@ function EndpointsPanel({
       setBindingError(err instanceof Error ? err.message : "Binding session cancel failed.");
     } finally {
       setBindingBusy("");
+    }
+  };
+
+  const approveChatAuthRequest = async (request: IMChatAuthRequest) => {
+    setChatAccessBusy(`approve:${request.id}`);
+    setChatAccessError("");
+    try {
+      await api.approveIMChatAuthRequest(request.id, {
+        target: request.requestedTarget || selectedEndpointDefaultTarget,
+        threadId: request.requestedThreadId || selectedEndpointDefaultThreadId || undefined
+      });
+      await refreshChatAccess();
+    } catch (err) {
+      setChatAccessError(err instanceof Error ? err.message : "IM chat authorization failed.");
+    } finally {
+      setChatAccessBusy("");
+    }
+  };
+
+  const rejectChatAuthRequest = async (request: IMChatAuthRequest) => {
+    setChatAccessBusy(`reject:${request.id}`);
+    setChatAccessError("");
+    try {
+      await api.rejectIMChatAuthRequest(request.id);
+      await refreshChatAccess();
+    } catch (err) {
+      setChatAccessError(err instanceof Error ? err.message : "IM chat reject failed.");
+    } finally {
+      setChatAccessBusy("");
+    }
+  };
+
+  const bindChatAuthKey = async () => {
+    setChatAccessBusy("bind-key");
+    setChatAccessError("");
+    try {
+      await api.bindIMChatAuthRequest({
+        key: chatBindKey.trim(),
+        target: chatBindTarget.trim() || selectedEndpointDefaultTarget,
+        threadId: chatBindThreadId.trim() || selectedEndpointDefaultThreadId || undefined
+      });
+      setChatBindKey("");
+      await refreshChatAccess();
+    } catch (err) {
+      setChatAccessError(err instanceof Error ? err.message : "IM chat bind failed.");
+    } finally {
+      setChatAccessBusy("");
+    }
+  };
+
+  const toggleChatSubscription = async (subscription: IMChatSubscription) => {
+    setChatAccessBusy(`subscribe:${subscription.id}`);
+    setChatAccessError("");
+    try {
+      await api.updateIMChatSubscription(subscription.id, { subscribed: !subscription.subscribed });
+      await refreshChatAccess();
+    } catch (err) {
+      setChatAccessError(err instanceof Error ? err.message : "IM chat subscription update failed.");
+    } finally {
+      setChatAccessBusy("");
+    }
+  };
+
+  const toggleChatVerbose = async (subscription: IMChatSubscription) => {
+    setChatAccessBusy(`verbose:${subscription.id}`);
+    setChatAccessError("");
+    try {
+      await api.updateIMChatSubscription(subscription.id, { verbose: !subscription.verbose });
+      await refreshChatAccess();
+    } catch (err) {
+      setChatAccessError(err instanceof Error ? err.message : "IM chat verbose update failed.");
+    } finally {
+      setChatAccessBusy("");
     }
   };
 
@@ -6059,6 +6184,160 @@ function EndpointsPanel({
           <EmptyState icon={Settings} title={t("endpoints.selectOne")} />
         )}
       </form>
+
+      {selectedEndpoint?.kind === "im" ? (
+        <section className="panel compact endpoint-chat-access-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">IM</p>
+              <h2>{t("endpoints.chatAccess.title")}</h2>
+            </div>
+            <button
+              className="mini-action-button"
+              type="button"
+              disabled={chatAccessBusy === "load-chat-access"}
+              onClick={() => void refreshChatAccess()}
+            >
+              <RefreshCw size={14} aria-hidden="true" />
+              {t("endpoints.chatAccess.refresh")}
+            </button>
+          </div>
+
+          <div className="im-chat-bind-grid">
+            <label htmlFor="im-chat-bind-key">
+              {t("endpoints.chatAccess.bindKey")}
+              <input
+                id="im-chat-bind-key"
+                value={chatBindKey}
+                placeholder="nk_..."
+                onChange={(event) => setChatBindKey(event.target.value)}
+              />
+            </label>
+            <label htmlFor="im-chat-bind-target">
+              {t("endpoints.chatAccess.bindTarget")}
+              <input
+                id="im-chat-bind-target"
+                value={chatBindTarget}
+                placeholder={selectedEndpointDefaultTarget}
+                onChange={(event) => setChatBindTarget(event.target.value)}
+              />
+            </label>
+            <label htmlFor="im-chat-bind-thread">
+              {t("endpoints.chatAccess.bindThread")}
+              <input
+                id="im-chat-bind-thread"
+                value={chatBindThreadId}
+                placeholder={selectedEndpointDefaultThreadId || "optional"}
+                onChange={(event) => setChatBindThreadId(event.target.value)}
+              />
+            </label>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={!chatBindKey.trim() || chatAccessBusy === "bind-key"}
+              onClick={() => void bindChatAuthKey()}
+            >
+              <ShieldCheck size={16} aria-hidden="true" />
+              {t("endpoints.chatAccess.bind")}
+            </button>
+          </div>
+
+          <div className="im-chat-access-columns">
+            <div className="im-chat-access-list">
+              <div className="im-chat-access-subhead">
+                <strong>{t("endpoints.chatAccess.pending")}</strong>
+                <span>{chatAuthRequests.length}</span>
+              </div>
+              {chatAuthRequests.length ? (
+                chatAuthRequests.map((request) => (
+                  <article className="im-chat-access-row" key={request.id}>
+                    <div className="im-chat-access-main">
+                      <strong>{request.chatTitle || request.conversationId}</strong>
+                      <span>
+                        {t("endpoints.chatAccess.conversation")}: {request.conversationId}
+                        {request.externalThreadId ? ` / ${request.externalThreadId}` : ""}
+                      </span>
+                      <div className="endpoint-config-chips">
+                        {request.requestedTarget ? <span>{request.requestedTarget}</span> : null}
+                        {request.requestedThreadId ? <span>{request.requestedThreadId}</span> : null}
+                        {request.tokenPrefix ? <span>{t("endpoints.chatAccess.tokenPrefix")}: {request.tokenPrefix}</span> : null}
+                        <span>{t("endpoints.chatAccess.expires")}: {formatUnixTime(request.expiresUnix)}</span>
+                      </div>
+                    </div>
+                    <div className="endpoint-actions">
+                      <button
+                        className="mini-action-button"
+                        type="button"
+                        disabled={chatAccessBusy === `approve:${request.id}`}
+                        onClick={() => void approveChatAuthRequest(request)}
+                      >
+                        {t("endpoints.chatAccess.approve")}
+                      </button>
+                      <button
+                        className="mini-action-button"
+                        type="button"
+                        disabled={chatAccessBusy === `reject:${request.id}`}
+                        onClick={() => void rejectChatAuthRequest(request)}
+                      >
+                        {t("endpoints.chatAccess.reject")}
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="muted-copy">{t("endpoints.chatAccess.emptyPending")}</p>
+              )}
+            </div>
+
+            <div className="im-chat-access-list">
+              <div className="im-chat-access-subhead">
+                <strong>{t("endpoints.chatAccess.subscriptions")}</strong>
+                <span>{chatSubscriptions.length}</span>
+              </div>
+              {chatSubscriptions.length ? (
+                chatSubscriptions.map((subscription) => (
+                  <article className="im-chat-access-row" key={subscription.id}>
+                    <div className="im-chat-access-main">
+                      <strong>{subscription.chatTitle || subscription.conversationId}</strong>
+                      <span>
+                        {subscription.target || selectedEndpointDefaultTarget}
+                        {subscription.threadId ? ` / ${subscription.threadId}` : ""}
+                      </span>
+                      <div className="endpoint-config-chips">
+                        <span>{subscription.subscribed ? t("endpoints.chatAccess.subscribed") : t("endpoints.chatAccess.unsubscribed")}</span>
+                        <span>{subscription.verbose ? t("endpoints.chatAccess.verboseOn") : t("endpoints.chatAccess.verboseOff")}</span>
+                        <span>{formatProviderLabel(subscription.provider, imProviders)}</span>
+                      </div>
+                    </div>
+                    <div className="endpoint-actions">
+                      <button
+                        className="mini-action-button"
+                        type="button"
+                        disabled={chatAccessBusy === `verbose:${subscription.id}`}
+                        onClick={() => void toggleChatVerbose(subscription)}
+                      >
+                        {subscription.verbose ? t("endpoints.chatAccess.verboseOffAction") : t("endpoints.chatAccess.verboseOnAction")}
+                      </button>
+                      <button
+                        className="mini-action-button"
+                        type="button"
+                        disabled={chatAccessBusy === `subscribe:${subscription.id}`}
+                        onClick={() => void toggleChatSubscription(subscription)}
+                      >
+                        {subscription.subscribed ? t("endpoints.chatAccess.unsubscribe") : t("endpoints.chatAccess.resubscribe")}
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="muted-copy">{t("endpoints.chatAccess.emptySubscriptions")}</p>
+              )}
+            </div>
+          </div>
+
+          {chatAccessError ? <p className="inline-error" role="alert">{chatAccessError}</p> : null}
+        </section>
+      ) : null}
       </div>
 
       <div className="endpoint-route-grid">

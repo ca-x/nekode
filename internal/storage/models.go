@@ -50,6 +50,74 @@ type InteractionEndpointPatch struct {
 	ConfigJSON      *string
 }
 
+const (
+	IMChatAuthRequestStatusPending  = "pending"
+	IMChatAuthRequestStatusApproved = "approved"
+	IMChatAuthRequestStatusRejected = "rejected"
+	IMChatAuthRequestStatusExpired  = "expired"
+)
+
+type IMChatAuthRequest struct {
+	ID                string `json:"id"`
+	EndpointID        string `json:"endpointId"`
+	Provider          string `json:"provider"`
+	ConversationID    string `json:"conversationId"`
+	ExternalThreadID  string `json:"externalThreadId,omitempty"`
+	ChatTitle         string `json:"chatTitle,omitempty"`
+	SenderExternalID  string `json:"senderExternalId,omitempty"`
+	TokenHash         string `json:"-"`
+	TokenPrefix       string `json:"tokenPrefix,omitempty"`
+	Status            string `json:"status"`
+	RequestedTarget   string `json:"requestedTarget,omitempty"`
+	RequestedThreadID string `json:"requestedThreadId,omitempty"`
+	ExpiresUnix       int64  `json:"expiresUnix,omitempty"`
+	ResolvedByUserID  string `json:"resolvedByUserId,omitempty"`
+	ResolvedUnix      int64  `json:"resolvedUnix,omitempty"`
+	CreatedUnix       int64  `json:"createdUnix"`
+	UpdatedUnix       int64  `json:"updatedUnix"`
+}
+
+type IMChatAuthRequestListOptions struct {
+	EndpointID      string
+	Status          string
+	IncludeExpired  bool
+	Limit           int
+}
+
+type IMChatSubscription struct {
+	ID                    string `json:"id"`
+	EndpointID            string `json:"endpointId"`
+	Provider              string `json:"provider"`
+	ConversationID        string `json:"conversationId"`
+	ExternalThreadID      string `json:"externalThreadId,omitempty"`
+	ChatTitle             string `json:"chatTitle,omitempty"`
+	Target                string `json:"target,omitempty"`
+	ThreadID              string `json:"threadId,omitempty"`
+	SenderExternalID      string `json:"senderExternalId,omitempty"`
+	AuthorizedByRequestID string `json:"authorizedByRequestId,omitempty"`
+	Subscribed            bool   `json:"subscribed"`
+	Verbose               bool   `json:"verbose"`
+	AuthorizedUnix        int64  `json:"authorizedUnix,omitempty"`
+	SubscribedUnix        int64  `json:"subscribedUnix,omitempty"`
+	CreatedUnix           int64  `json:"createdUnix"`
+	UpdatedUnix           int64  `json:"updatedUnix"`
+}
+
+type IMChatSubscriptionPatch struct {
+	ChatTitle  *string
+	Target     *string
+	ThreadID   *string
+	Subscribed *bool
+	Verbose    *bool
+}
+
+type IMChatSubscriptionListOptions struct {
+	EndpointID  string
+	Provider    string
+	Subscribed  *bool
+	Limit       int
+}
+
 type ChannelSummary struct {
 	Target          string `json:"target"`
 	DisplayName     string `json:"displayName"`

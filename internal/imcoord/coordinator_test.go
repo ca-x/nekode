@@ -3,6 +3,7 @@ package imcoord
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -12,11 +13,14 @@ import (
 )
 
 type fakeStore struct {
-	mu       sync.Mutex
-	messages []storage.Message
-	block    chan struct{}
-	started  chan struct{}
-	err      error
+	mu            sync.Mutex
+	messages      []storage.Message
+	endpoints     map[string]storage.InteractionEndpoint
+	authRequests  []storage.IMChatAuthRequest
+	subscriptions map[string]storage.IMChatSubscription
+	block         chan struct{}
+	started       chan struct{}
+	err           error
 }
 
 func (s *fakeStore) CreateMessage(ctx context.Context, msg storage.Message) (storage.Message, error) {
@@ -42,6 +46,54 @@ func (s *fakeStore) CreateMessage(ctx context.Context, msg storage.Message) (sto
 	msg.ID = storage.NewID("msg")
 	s.messages = append(s.messages, msg)
 	return msg, nil
+}
+
+func (s *fakeStore) GetInteractionEndpoint(_ context.Context, id string) (storage.InteractionEndpoint, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	endpoint, ok := s.endpoints[id]
+	if !ok {
+		return storage.InteractionEndpoint{}, storage.ErrNotFound
+	}
+	return endpoint, nil
+}
+
+func (s *fakeStore) CreateIMChatAuthRequest(_ context.Context, req storage.IMChatAuthRequest) (storage.IMChatAuthRequest, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	req.ID = storage.NewID("imreq")
+	req.TokenHash = ""
+	s.authRequests = append(s.authRequests, req)
+	return req, nil
+}
+
+func (s *fakeStore) GetIMChatSubscription(_ context.Context, endpointID, conversationID, externalThreadID string) (storage.IMChatSubscription, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	sub, ok := s.subscriptions[endpointID+":"+conversationID+":"+externalThreadID]
+	if !ok {
+		return storage.IMChatSubscription{}, storage.ErrNotFound
+	}
+	return sub, nil
+}
+
+func (s *fakeStore) UpdateIMChatSubscription(_ context.Context, id string, patch storage.IMChatSubscriptionPatch) (storage.IMChatSubscription, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, sub := range s.subscriptions {
+		if sub.ID != id {
+			continue
+		}
+		if patch.Subscribed != nil {
+			sub.Subscribed = *patch.Subscribed
+		}
+		if patch.Verbose != nil {
+			sub.Verbose = *patch.Verbose
+		}
+		s.subscriptions[key] = sub
+		return sub, nil
+	}
+	return storage.IMChatSubscription{}, storage.ErrNotFound
 }
 
 func TestCoordinatorCreatesExistingStorageMessage(t *testing.T) {
@@ -236,6 +288,100 @@ func TestCoordinatorHandlesKnownCommandsWithoutCreatingMessages(t *testing.T) {
 	if len(store.messages) != 0 {
 		t.Fatalf("messages = %+v, want none for commands", store.messages)
 	}
+}
+
+func TestCoordinatorRequiresIMChatSubscriptionWhenEndpointRequiresIt(t *testing.T) {
+	store := &fakeStore{
+		endpoints: map[string]storage.InteractionEndpoint{
+			"iep-wecom": {
+				ID:         "iep-wecom",
+				Kind:       "im",
+				Provider:   "wecom",
+				ConfigJSON: `{"require_subscription":true,"default_target":"#ops","default_thread_id":"im-wecom-ops"}`,
+			},
+		},
+		subscriptions: map[string]storage.IMChatSubscription{},
+	}
+	coord := New(store, nil, WithAuthTokenGenerator(func() string { return "nk_test_token" }))
+
+	draft := Draft{
+		Target:            "#ops",
+		ThreadID:          "im-wecom-ops",
+		Content:           "hello without auth",
+		SourceEndpointID:  "iep-wecom",
+		ExternalMessageID: "m-unauthorized",
+		MetadataJSON:      `{"im":{"conversation":{"external_id":"chat-1","external_thread_id":"topic-1","display_name":"Ops Room"}}}`,
+		Sender:            iminbound.Sender{ExternalID: "user-1", DisplayName: "Alice"},
+	}
+	result, err := coord.Handle(context.Background(), draft)
+	if !errors.Is(err, ErrUnauthorizedChat) {
+		t.Fatalf("unauthorized Handle() error = %v, want ErrUnauthorizedChat", err)
+	}
+	if !result.HandledCommand || result.Response == "" {
+		t.Fatalf("unauthorized result = %+v, want command-style response", result)
+	}
+	store.mu.Lock()
+	if len(store.messages) != 0 {
+		t.Fatalf("messages = %+v, want unauthorized chat not persisted", store.messages)
+	}
+	store.mu.Unlock()
+
+	subscribe := draft
+	subscribe.Content = "/subscribe"
+	subscribe.ExternalMessageID = "m-subscribe"
+	result, err = coord.Handle(context.Background(), subscribe)
+	if err != nil {
+		t.Fatalf("subscribe Handle() error = %v", err)
+	}
+	if !result.HandledCommand || result.Command != "/subscribe" || !strings.Contains(result.Response, "nk_test_token") {
+		t.Fatalf("subscribe result = %+v, want bind token response", result)
+	}
+	store.mu.Lock()
+	if len(store.authRequests) != 1 ||
+		store.authRequests[0].Provider != "wecom" ||
+		store.authRequests[0].ConversationID != "chat-1" ||
+		store.authRequests[0].ExternalThreadID != "topic-1" {
+		t.Fatalf("authRequests = %+v, want one pending request for chat/topic", store.authRequests)
+	}
+	store.subscriptions["iep-wecom:chat-1:topic-1"] = storage.IMChatSubscription{
+		ID:               "imsub-1",
+		EndpointID:       "iep-wecom",
+		Provider:         "wecom",
+		ConversationID:   "chat-1",
+		ExternalThreadID: "topic-1",
+		Target:           "#ops",
+		ThreadID:         "im-wecom-ops",
+		Subscribed:       true,
+		Verbose:          false,
+	}
+	store.mu.Unlock()
+
+	authorized := draft
+	authorized.ExternalMessageID = "m-authorized"
+	authorized.Content = "hello after auth"
+	result, err = coord.Handle(context.Background(), authorized)
+	if err != nil {
+		t.Fatalf("authorized Handle() error = %v", err)
+	}
+	if result.Message.ID == "" || result.Message.Content != "hello after auth" {
+		t.Fatalf("authorized result = %+v, want stored inbound message", result)
+	}
+
+	verbose := draft
+	verbose.ExternalMessageID = "m-verbose"
+	verbose.Content = "/verbose"
+	result, err = coord.Handle(context.Background(), verbose)
+	if err != nil {
+		t.Fatalf("verbose Handle() error = %v", err)
+	}
+	if !result.HandledCommand || result.Command != "/verbose" || !strings.Contains(strings.ToLower(result.Response), "on") {
+		t.Fatalf("verbose result = %+v, want verbose toggle response", result)
+	}
+	store.mu.Lock()
+	if !store.subscriptions["iep-wecom:chat-1:topic-1"].Verbose {
+		t.Fatalf("subscription = %+v, want verbose enabled", store.subscriptions["iep-wecom:chat-1:topic-1"])
+	}
+	store.mu.Unlock()
 }
 
 func TestCoordinatorRejectsInvalidMetadataJSON(t *testing.T) {

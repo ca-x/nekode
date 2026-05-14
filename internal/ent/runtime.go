@@ -11,6 +11,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
+	"github.com/ca-x/nekode/internal/ent/imchatauthrequest"
+	"github.com/ca-x/nekode/internal/ent/imchatsubscription"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/notificationroute"
@@ -296,6 +298,126 @@ func init() {
 	collaborationeventDescID := collaborationeventFields[0].Descriptor()
 	// collaborationevent.DefaultID holds the default value on creation for the id field.
 	collaborationevent.DefaultID = collaborationeventDescID.Default.(func() string)
+	imchatauthrequestFields := schema.IMChatAuthRequest{}.Fields()
+	_ = imchatauthrequestFields
+	// imchatauthrequestDescEndpointID is the schema descriptor for endpoint_id field.
+	imchatauthrequestDescEndpointID := imchatauthrequestFields[1].Descriptor()
+	// imchatauthrequest.EndpointIDValidator is a validator for the "endpoint_id" field. It is called by the builders before save.
+	imchatauthrequest.EndpointIDValidator = imchatauthrequestDescEndpointID.Validators[0].(func(string) error)
+	// imchatauthrequestDescProvider is the schema descriptor for provider field.
+	imchatauthrequestDescProvider := imchatauthrequestFields[2].Descriptor()
+	// imchatauthrequest.DefaultProvider holds the default value on creation for the provider field.
+	imchatauthrequest.DefaultProvider = imchatauthrequestDescProvider.Default.(string)
+	// imchatauthrequestDescConversationID is the schema descriptor for conversation_id field.
+	imchatauthrequestDescConversationID := imchatauthrequestFields[3].Descriptor()
+	// imchatauthrequest.ConversationIDValidator is a validator for the "conversation_id" field. It is called by the builders before save.
+	imchatauthrequest.ConversationIDValidator = imchatauthrequestDescConversationID.Validators[0].(func(string) error)
+	// imchatauthrequestDescExternalThreadID is the schema descriptor for external_thread_id field.
+	imchatauthrequestDescExternalThreadID := imchatauthrequestFields[4].Descriptor()
+	// imchatauthrequest.DefaultExternalThreadID holds the default value on creation for the external_thread_id field.
+	imchatauthrequest.DefaultExternalThreadID = imchatauthrequestDescExternalThreadID.Default.(string)
+	// imchatauthrequestDescChatTitle is the schema descriptor for chat_title field.
+	imchatauthrequestDescChatTitle := imchatauthrequestFields[5].Descriptor()
+	// imchatauthrequest.DefaultChatTitle holds the default value on creation for the chat_title field.
+	imchatauthrequest.DefaultChatTitle = imchatauthrequestDescChatTitle.Default.(string)
+	// imchatauthrequestDescSenderExternalID is the schema descriptor for sender_external_id field.
+	imchatauthrequestDescSenderExternalID := imchatauthrequestFields[6].Descriptor()
+	// imchatauthrequest.DefaultSenderExternalID holds the default value on creation for the sender_external_id field.
+	imchatauthrequest.DefaultSenderExternalID = imchatauthrequestDescSenderExternalID.Default.(string)
+	// imchatauthrequestDescTokenHash is the schema descriptor for token_hash field.
+	imchatauthrequestDescTokenHash := imchatauthrequestFields[7].Descriptor()
+	// imchatauthrequest.TokenHashValidator is a validator for the "token_hash" field. It is called by the builders before save.
+	imchatauthrequest.TokenHashValidator = imchatauthrequestDescTokenHash.Validators[0].(func(string) error)
+	// imchatauthrequestDescTokenPrefix is the schema descriptor for token_prefix field.
+	imchatauthrequestDescTokenPrefix := imchatauthrequestFields[8].Descriptor()
+	// imchatauthrequest.DefaultTokenPrefix holds the default value on creation for the token_prefix field.
+	imchatauthrequest.DefaultTokenPrefix = imchatauthrequestDescTokenPrefix.Default.(string)
+	// imchatauthrequestDescStatus is the schema descriptor for status field.
+	imchatauthrequestDescStatus := imchatauthrequestFields[9].Descriptor()
+	// imchatauthrequest.DefaultStatus holds the default value on creation for the status field.
+	imchatauthrequest.DefaultStatus = imchatauthrequestDescStatus.Default.(string)
+	// imchatauthrequestDescRequestedTarget is the schema descriptor for requested_target field.
+	imchatauthrequestDescRequestedTarget := imchatauthrequestFields[10].Descriptor()
+	// imchatauthrequest.DefaultRequestedTarget holds the default value on creation for the requested_target field.
+	imchatauthrequest.DefaultRequestedTarget = imchatauthrequestDescRequestedTarget.Default.(string)
+	// imchatauthrequestDescRequestedThreadID is the schema descriptor for requested_thread_id field.
+	imchatauthrequestDescRequestedThreadID := imchatauthrequestFields[11].Descriptor()
+	// imchatauthrequest.DefaultRequestedThreadID holds the default value on creation for the requested_thread_id field.
+	imchatauthrequest.DefaultRequestedThreadID = imchatauthrequestDescRequestedThreadID.Default.(string)
+	// imchatauthrequestDescExpiresUnix is the schema descriptor for expires_unix field.
+	imchatauthrequestDescExpiresUnix := imchatauthrequestFields[12].Descriptor()
+	// imchatauthrequest.DefaultExpiresUnix holds the default value on creation for the expires_unix field.
+	imchatauthrequest.DefaultExpiresUnix = imchatauthrequestDescExpiresUnix.Default.(int64)
+	// imchatauthrequestDescResolvedByUserID is the schema descriptor for resolved_by_user_id field.
+	imchatauthrequestDescResolvedByUserID := imchatauthrequestFields[13].Descriptor()
+	// imchatauthrequest.DefaultResolvedByUserID holds the default value on creation for the resolved_by_user_id field.
+	imchatauthrequest.DefaultResolvedByUserID = imchatauthrequestDescResolvedByUserID.Default.(string)
+	// imchatauthrequestDescResolvedUnix is the schema descriptor for resolved_unix field.
+	imchatauthrequestDescResolvedUnix := imchatauthrequestFields[14].Descriptor()
+	// imchatauthrequest.DefaultResolvedUnix holds the default value on creation for the resolved_unix field.
+	imchatauthrequest.DefaultResolvedUnix = imchatauthrequestDescResolvedUnix.Default.(int64)
+	// imchatauthrequestDescID is the schema descriptor for id field.
+	imchatauthrequestDescID := imchatauthrequestFields[0].Descriptor()
+	// imchatauthrequest.DefaultID holds the default value on creation for the id field.
+	imchatauthrequest.DefaultID = imchatauthrequestDescID.Default.(func() string)
+	imchatsubscriptionFields := schema.IMChatSubscription{}.Fields()
+	_ = imchatsubscriptionFields
+	// imchatsubscriptionDescEndpointID is the schema descriptor for endpoint_id field.
+	imchatsubscriptionDescEndpointID := imchatsubscriptionFields[1].Descriptor()
+	// imchatsubscription.EndpointIDValidator is a validator for the "endpoint_id" field. It is called by the builders before save.
+	imchatsubscription.EndpointIDValidator = imchatsubscriptionDescEndpointID.Validators[0].(func(string) error)
+	// imchatsubscriptionDescProvider is the schema descriptor for provider field.
+	imchatsubscriptionDescProvider := imchatsubscriptionFields[2].Descriptor()
+	// imchatsubscription.DefaultProvider holds the default value on creation for the provider field.
+	imchatsubscription.DefaultProvider = imchatsubscriptionDescProvider.Default.(string)
+	// imchatsubscriptionDescConversationID is the schema descriptor for conversation_id field.
+	imchatsubscriptionDescConversationID := imchatsubscriptionFields[3].Descriptor()
+	// imchatsubscription.ConversationIDValidator is a validator for the "conversation_id" field. It is called by the builders before save.
+	imchatsubscription.ConversationIDValidator = imchatsubscriptionDescConversationID.Validators[0].(func(string) error)
+	// imchatsubscriptionDescExternalThreadID is the schema descriptor for external_thread_id field.
+	imchatsubscriptionDescExternalThreadID := imchatsubscriptionFields[4].Descriptor()
+	// imchatsubscription.DefaultExternalThreadID holds the default value on creation for the external_thread_id field.
+	imchatsubscription.DefaultExternalThreadID = imchatsubscriptionDescExternalThreadID.Default.(string)
+	// imchatsubscriptionDescChatTitle is the schema descriptor for chat_title field.
+	imchatsubscriptionDescChatTitle := imchatsubscriptionFields[5].Descriptor()
+	// imchatsubscription.DefaultChatTitle holds the default value on creation for the chat_title field.
+	imchatsubscription.DefaultChatTitle = imchatsubscriptionDescChatTitle.Default.(string)
+	// imchatsubscriptionDescTarget is the schema descriptor for target field.
+	imchatsubscriptionDescTarget := imchatsubscriptionFields[6].Descriptor()
+	// imchatsubscription.DefaultTarget holds the default value on creation for the target field.
+	imchatsubscription.DefaultTarget = imchatsubscriptionDescTarget.Default.(string)
+	// imchatsubscriptionDescThreadID is the schema descriptor for thread_id field.
+	imchatsubscriptionDescThreadID := imchatsubscriptionFields[7].Descriptor()
+	// imchatsubscription.DefaultThreadID holds the default value on creation for the thread_id field.
+	imchatsubscription.DefaultThreadID = imchatsubscriptionDescThreadID.Default.(string)
+	// imchatsubscriptionDescSenderExternalID is the schema descriptor for sender_external_id field.
+	imchatsubscriptionDescSenderExternalID := imchatsubscriptionFields[8].Descriptor()
+	// imchatsubscription.DefaultSenderExternalID holds the default value on creation for the sender_external_id field.
+	imchatsubscription.DefaultSenderExternalID = imchatsubscriptionDescSenderExternalID.Default.(string)
+	// imchatsubscriptionDescAuthorizedByRequestID is the schema descriptor for authorized_by_request_id field.
+	imchatsubscriptionDescAuthorizedByRequestID := imchatsubscriptionFields[9].Descriptor()
+	// imchatsubscription.DefaultAuthorizedByRequestID holds the default value on creation for the authorized_by_request_id field.
+	imchatsubscription.DefaultAuthorizedByRequestID = imchatsubscriptionDescAuthorizedByRequestID.Default.(string)
+	// imchatsubscriptionDescSubscribed is the schema descriptor for subscribed field.
+	imchatsubscriptionDescSubscribed := imchatsubscriptionFields[10].Descriptor()
+	// imchatsubscription.DefaultSubscribed holds the default value on creation for the subscribed field.
+	imchatsubscription.DefaultSubscribed = imchatsubscriptionDescSubscribed.Default.(bool)
+	// imchatsubscriptionDescVerbose is the schema descriptor for verbose field.
+	imchatsubscriptionDescVerbose := imchatsubscriptionFields[11].Descriptor()
+	// imchatsubscription.DefaultVerbose holds the default value on creation for the verbose field.
+	imchatsubscription.DefaultVerbose = imchatsubscriptionDescVerbose.Default.(bool)
+	// imchatsubscriptionDescAuthorizedUnix is the schema descriptor for authorized_unix field.
+	imchatsubscriptionDescAuthorizedUnix := imchatsubscriptionFields[12].Descriptor()
+	// imchatsubscription.DefaultAuthorizedUnix holds the default value on creation for the authorized_unix field.
+	imchatsubscription.DefaultAuthorizedUnix = imchatsubscriptionDescAuthorizedUnix.Default.(int64)
+	// imchatsubscriptionDescSubscribedUnix is the schema descriptor for subscribed_unix field.
+	imchatsubscriptionDescSubscribedUnix := imchatsubscriptionFields[13].Descriptor()
+	// imchatsubscription.DefaultSubscribedUnix holds the default value on creation for the subscribed_unix field.
+	imchatsubscription.DefaultSubscribedUnix = imchatsubscriptionDescSubscribedUnix.Default.(int64)
+	// imchatsubscriptionDescID is the schema descriptor for id field.
+	imchatsubscriptionDescID := imchatsubscriptionFields[0].Descriptor()
+	// imchatsubscription.DefaultID holds the default value on creation for the id field.
+	imchatsubscription.DefaultID = imchatsubscriptionDescID.Default.(func() string)
 	idempotencyrecordFields := schema.IdempotencyRecord{}.Fields()
 	_ = idempotencyrecordFields
 	// idempotencyrecordDescScope is the schema descriptor for scope field.

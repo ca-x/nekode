@@ -22,6 +22,8 @@ import (
 	"github.com/ca-x/nekode/internal/ent/channelmember"
 	"github.com/ca-x/nekode/internal/ent/collaborationevent"
 	"github.com/ca-x/nekode/internal/ent/idempotencyrecord"
+	"github.com/ca-x/nekode/internal/ent/imchatauthrequest"
+	"github.com/ca-x/nekode/internal/ent/imchatsubscription"
 	"github.com/ca-x/nekode/internal/ent/interactionendpoint"
 	"github.com/ca-x/nekode/internal/ent/message"
 	"github.com/ca-x/nekode/internal/ent/notificationroute"
@@ -55,6 +57,10 @@ type Client struct {
 	ChannelMember *ChannelMemberClient
 	// CollaborationEvent is the client for interacting with the CollaborationEvent builders.
 	CollaborationEvent *CollaborationEventClient
+	// IMChatAuthRequest is the client for interacting with the IMChatAuthRequest builders.
+	IMChatAuthRequest *IMChatAuthRequestClient
+	// IMChatSubscription is the client for interacting with the IMChatSubscription builders.
+	IMChatSubscription *IMChatSubscriptionClient
 	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
 	IdempotencyRecord *IdempotencyRecordClient
 	// InteractionEndpoint is the client for interacting with the InteractionEndpoint builders.
@@ -99,6 +105,8 @@ func (c *Client) init() {
 	c.ChannelDecisionVote = NewChannelDecisionVoteClient(c.config)
 	c.ChannelMember = NewChannelMemberClient(c.config)
 	c.CollaborationEvent = NewCollaborationEventClient(c.config)
+	c.IMChatAuthRequest = NewIMChatAuthRequestClient(c.config)
+	c.IMChatSubscription = NewIMChatSubscriptionClient(c.config)
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
 	c.InteractionEndpoint = NewInteractionEndpointClient(c.config)
 	c.Message = NewMessageClient(c.config)
@@ -211,6 +219,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ChannelDecisionVote: NewChannelDecisionVoteClient(cfg),
 		ChannelMember:       NewChannelMemberClient(cfg),
 		CollaborationEvent:  NewCollaborationEventClient(cfg),
+		IMChatAuthRequest:   NewIMChatAuthRequestClient(cfg),
+		IMChatSubscription:  NewIMChatSubscriptionClient(cfg),
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
@@ -250,6 +260,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ChannelDecisionVote: NewChannelDecisionVoteClient(cfg),
 		ChannelMember:       NewChannelMemberClient(cfg),
 		CollaborationEvent:  NewCollaborationEventClient(cfg),
+		IMChatAuthRequest:   NewIMChatAuthRequestClient(cfg),
+		IMChatSubscription:  NewIMChatSubscriptionClient(cfg),
 		IdempotencyRecord:   NewIdempotencyRecordClient(cfg),
 		InteractionEndpoint: NewInteractionEndpointClient(cfg),
 		Message:             NewMessageClient(cfg),
@@ -294,9 +306,10 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AgentRun, c.AgentRunEvent, c.Channel, c.ChannelDecision,
 		c.ChannelDecisionVote, c.ChannelMember, c.CollaborationEvent,
-		c.IdempotencyRecord, c.InteractionEndpoint, c.Message, c.NotificationRoute,
-		c.OutboundDelivery, c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session,
-		c.Task, c.ThreadReadState, c.Tunnel, c.User,
+		c.IMChatAuthRequest, c.IMChatSubscription, c.IdempotencyRecord,
+		c.InteractionEndpoint, c.Message, c.NotificationRoute, c.OutboundDelivery,
+		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
+		c.ThreadReadState, c.Tunnel, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -308,9 +321,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AgentRun, c.AgentRunEvent, c.Channel, c.ChannelDecision,
 		c.ChannelDecisionVote, c.ChannelMember, c.CollaborationEvent,
-		c.IdempotencyRecord, c.InteractionEndpoint, c.Message, c.NotificationRoute,
-		c.OutboundDelivery, c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session,
-		c.Task, c.ThreadReadState, c.Tunnel, c.User,
+		c.IMChatAuthRequest, c.IMChatSubscription, c.IdempotencyRecord,
+		c.InteractionEndpoint, c.Message, c.NotificationRoute, c.OutboundDelivery,
+		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
+		c.ThreadReadState, c.Tunnel, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -333,6 +347,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ChannelMember.mutate(ctx, m)
 	case *CollaborationEventMutation:
 		return c.CollaborationEvent.mutate(ctx, m)
+	case *IMChatAuthRequestMutation:
+		return c.IMChatAuthRequest.mutate(ctx, m)
+	case *IMChatSubscriptionMutation:
+		return c.IMChatSubscription.mutate(ctx, m)
 	case *IdempotencyRecordMutation:
 		return c.IdempotencyRecord.mutate(ctx, m)
 	case *InteractionEndpointMutation:
@@ -1292,6 +1310,272 @@ func (c *CollaborationEventClient) mutate(ctx context.Context, m *CollaborationE
 		return (&CollaborationEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown CollaborationEvent mutation op: %q", m.Op())
+	}
+}
+
+// IMChatAuthRequestClient is a client for the IMChatAuthRequest schema.
+type IMChatAuthRequestClient struct {
+	config
+}
+
+// NewIMChatAuthRequestClient returns a client for the IMChatAuthRequest from the given config.
+func NewIMChatAuthRequestClient(c config) *IMChatAuthRequestClient {
+	return &IMChatAuthRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `imchatauthrequest.Hooks(f(g(h())))`.
+func (c *IMChatAuthRequestClient) Use(hooks ...Hook) {
+	c.hooks.IMChatAuthRequest = append(c.hooks.IMChatAuthRequest, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `imchatauthrequest.Intercept(f(g(h())))`.
+func (c *IMChatAuthRequestClient) Intercept(interceptors ...Interceptor) {
+	c.inters.IMChatAuthRequest = append(c.inters.IMChatAuthRequest, interceptors...)
+}
+
+// Create returns a builder for creating a IMChatAuthRequest entity.
+func (c *IMChatAuthRequestClient) Create() *IMChatAuthRequestCreate {
+	mutation := newIMChatAuthRequestMutation(c.config, OpCreate)
+	return &IMChatAuthRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of IMChatAuthRequest entities.
+func (c *IMChatAuthRequestClient) CreateBulk(builders ...*IMChatAuthRequestCreate) *IMChatAuthRequestCreateBulk {
+	return &IMChatAuthRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *IMChatAuthRequestClient) MapCreateBulk(slice any, setFunc func(*IMChatAuthRequestCreate, int)) *IMChatAuthRequestCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &IMChatAuthRequestCreateBulk{err: fmt.Errorf("calling to IMChatAuthRequestClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*IMChatAuthRequestCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &IMChatAuthRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for IMChatAuthRequest.
+func (c *IMChatAuthRequestClient) Update() *IMChatAuthRequestUpdate {
+	mutation := newIMChatAuthRequestMutation(c.config, OpUpdate)
+	return &IMChatAuthRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *IMChatAuthRequestClient) UpdateOne(_m *IMChatAuthRequest) *IMChatAuthRequestUpdateOne {
+	mutation := newIMChatAuthRequestMutation(c.config, OpUpdateOne, withIMChatAuthRequest(_m))
+	return &IMChatAuthRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *IMChatAuthRequestClient) UpdateOneID(id string) *IMChatAuthRequestUpdateOne {
+	mutation := newIMChatAuthRequestMutation(c.config, OpUpdateOne, withIMChatAuthRequestID(id))
+	return &IMChatAuthRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for IMChatAuthRequest.
+func (c *IMChatAuthRequestClient) Delete() *IMChatAuthRequestDelete {
+	mutation := newIMChatAuthRequestMutation(c.config, OpDelete)
+	return &IMChatAuthRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *IMChatAuthRequestClient) DeleteOne(_m *IMChatAuthRequest) *IMChatAuthRequestDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *IMChatAuthRequestClient) DeleteOneID(id string) *IMChatAuthRequestDeleteOne {
+	builder := c.Delete().Where(imchatauthrequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &IMChatAuthRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for IMChatAuthRequest.
+func (c *IMChatAuthRequestClient) Query() *IMChatAuthRequestQuery {
+	return &IMChatAuthRequestQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeIMChatAuthRequest},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a IMChatAuthRequest entity by its id.
+func (c *IMChatAuthRequestClient) Get(ctx context.Context, id string) (*IMChatAuthRequest, error) {
+	return c.Query().Where(imchatauthrequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *IMChatAuthRequestClient) GetX(ctx context.Context, id string) *IMChatAuthRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *IMChatAuthRequestClient) Hooks() []Hook {
+	return c.hooks.IMChatAuthRequest
+}
+
+// Interceptors returns the client interceptors.
+func (c *IMChatAuthRequestClient) Interceptors() []Interceptor {
+	return c.inters.IMChatAuthRequest
+}
+
+func (c *IMChatAuthRequestClient) mutate(ctx context.Context, m *IMChatAuthRequestMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&IMChatAuthRequestCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&IMChatAuthRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&IMChatAuthRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&IMChatAuthRequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown IMChatAuthRequest mutation op: %q", m.Op())
+	}
+}
+
+// IMChatSubscriptionClient is a client for the IMChatSubscription schema.
+type IMChatSubscriptionClient struct {
+	config
+}
+
+// NewIMChatSubscriptionClient returns a client for the IMChatSubscription from the given config.
+func NewIMChatSubscriptionClient(c config) *IMChatSubscriptionClient {
+	return &IMChatSubscriptionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `imchatsubscription.Hooks(f(g(h())))`.
+func (c *IMChatSubscriptionClient) Use(hooks ...Hook) {
+	c.hooks.IMChatSubscription = append(c.hooks.IMChatSubscription, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `imchatsubscription.Intercept(f(g(h())))`.
+func (c *IMChatSubscriptionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.IMChatSubscription = append(c.inters.IMChatSubscription, interceptors...)
+}
+
+// Create returns a builder for creating a IMChatSubscription entity.
+func (c *IMChatSubscriptionClient) Create() *IMChatSubscriptionCreate {
+	mutation := newIMChatSubscriptionMutation(c.config, OpCreate)
+	return &IMChatSubscriptionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of IMChatSubscription entities.
+func (c *IMChatSubscriptionClient) CreateBulk(builders ...*IMChatSubscriptionCreate) *IMChatSubscriptionCreateBulk {
+	return &IMChatSubscriptionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *IMChatSubscriptionClient) MapCreateBulk(slice any, setFunc func(*IMChatSubscriptionCreate, int)) *IMChatSubscriptionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &IMChatSubscriptionCreateBulk{err: fmt.Errorf("calling to IMChatSubscriptionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*IMChatSubscriptionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &IMChatSubscriptionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for IMChatSubscription.
+func (c *IMChatSubscriptionClient) Update() *IMChatSubscriptionUpdate {
+	mutation := newIMChatSubscriptionMutation(c.config, OpUpdate)
+	return &IMChatSubscriptionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *IMChatSubscriptionClient) UpdateOne(_m *IMChatSubscription) *IMChatSubscriptionUpdateOne {
+	mutation := newIMChatSubscriptionMutation(c.config, OpUpdateOne, withIMChatSubscription(_m))
+	return &IMChatSubscriptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *IMChatSubscriptionClient) UpdateOneID(id string) *IMChatSubscriptionUpdateOne {
+	mutation := newIMChatSubscriptionMutation(c.config, OpUpdateOne, withIMChatSubscriptionID(id))
+	return &IMChatSubscriptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for IMChatSubscription.
+func (c *IMChatSubscriptionClient) Delete() *IMChatSubscriptionDelete {
+	mutation := newIMChatSubscriptionMutation(c.config, OpDelete)
+	return &IMChatSubscriptionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *IMChatSubscriptionClient) DeleteOne(_m *IMChatSubscription) *IMChatSubscriptionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *IMChatSubscriptionClient) DeleteOneID(id string) *IMChatSubscriptionDeleteOne {
+	builder := c.Delete().Where(imchatsubscription.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &IMChatSubscriptionDeleteOne{builder}
+}
+
+// Query returns a query builder for IMChatSubscription.
+func (c *IMChatSubscriptionClient) Query() *IMChatSubscriptionQuery {
+	return &IMChatSubscriptionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeIMChatSubscription},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a IMChatSubscription entity by its id.
+func (c *IMChatSubscriptionClient) Get(ctx context.Context, id string) (*IMChatSubscription, error) {
+	return c.Query().Where(imchatsubscription.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *IMChatSubscriptionClient) GetX(ctx context.Context, id string) *IMChatSubscription {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *IMChatSubscriptionClient) Hooks() []Hook {
+	return c.hooks.IMChatSubscription
+}
+
+// Interceptors returns the client interceptors.
+func (c *IMChatSubscriptionClient) Interceptors() []Interceptor {
+	return c.inters.IMChatSubscription
+}
+
+func (c *IMChatSubscriptionClient) mutate(ctx context.Context, m *IMChatSubscriptionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&IMChatSubscriptionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&IMChatSubscriptionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&IMChatSubscriptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&IMChatSubscriptionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown IMChatSubscription mutation op: %q", m.Op())
 	}
 }
 
@@ -3028,14 +3312,16 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 type (
 	hooks struct {
 		AgentRun, AgentRunEvent, Channel, ChannelDecision, ChannelDecisionVote,
-		ChannelMember, CollaborationEvent, IdempotencyRecord, InteractionEndpoint,
-		Message, NotificationRoute, OutboundDelivery, Reminder, ReminderEvent,
-		SavedMessage, Session, Task, ThreadReadState, Tunnel, User []ent.Hook
+		ChannelMember, CollaborationEvent, IMChatAuthRequest, IMChatSubscription,
+		IdempotencyRecord, InteractionEndpoint, Message, NotificationRoute,
+		OutboundDelivery, Reminder, ReminderEvent, SavedMessage, Session, Task,
+		ThreadReadState, Tunnel, User []ent.Hook
 	}
 	inters struct {
 		AgentRun, AgentRunEvent, Channel, ChannelDecision, ChannelDecisionVote,
-		ChannelMember, CollaborationEvent, IdempotencyRecord, InteractionEndpoint,
-		Message, NotificationRoute, OutboundDelivery, Reminder, ReminderEvent,
-		SavedMessage, Session, Task, ThreadReadState, Tunnel, User []ent.Interceptor
+		ChannelMember, CollaborationEvent, IMChatAuthRequest, IMChatSubscription,
+		IdempotencyRecord, InteractionEndpoint, Message, NotificationRoute,
+		OutboundDelivery, Reminder, ReminderEvent, SavedMessage, Session, Task,
+		ThreadReadState, Tunnel, User []ent.Interceptor
 	}
 )

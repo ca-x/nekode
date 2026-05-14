@@ -567,7 +567,19 @@ func withDefaultSetupMethods(schema ProviderSchema) ProviderSchema {
 			},
 		}
 	}
+	if !schemaHasField(schema, "require_subscription") {
+		schema.Fields = append(schema.Fields, requireSubscriptionField())
+	}
 	return schema
+}
+
+func schemaHasField(schema ProviderSchema, name string) bool {
+	for _, field := range schema.Fields {
+		if field.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func ValidateConfig(provider string, rawConfig string) error {
@@ -712,6 +724,15 @@ func groupModeField() Field {
 		Type:        FieldSelect,
 		Description: "How group chats trigger the agent.",
 		Options:     []string{"mention", "always", "disabled"},
+	}
+}
+
+func requireSubscriptionField() Field {
+	return Field{
+		Name:        "require_subscription",
+		Label:       "Require chat subscription",
+		Type:        FieldBoolean,
+		Description: "Require /subscribe and operator approval before inbound messages from a chat are accepted.",
 	}
 }
 
