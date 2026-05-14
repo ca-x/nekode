@@ -5077,6 +5077,8 @@ function EndpointsPanel({
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showCreateEndpointForm, setShowCreateEndpointForm] = useState(false);
+  const [createEndpointFormTouched, setCreateEndpointFormTouched] = useState(false);
   const { t } = useT();
   const [selectedEndpointId, setSelectedEndpointId] = useState("");
   const [endpointEditName, setEndpointEditName] = useState("");
@@ -5163,11 +5165,24 @@ function EndpointsPanel({
     () => providerRuntimeNotice(selectedProvider, imConfigValues),
     [selectedProvider, imConfigValues]
   );
+  const endpointGridClassName = selectedEndpoint?.kind === "im"
+    ? "endpoint-grid has-chat-access"
+    : "endpoint-grid";
 
   useEffect(() => {
     if (mode !== "im") return;
     if (!provider && imProviders[0]) setProvider(imProviders[0].provider);
   }, [imProviders, mode, provider]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!endpoints.length) {
+      setCreateEndpointFormTouched(false);
+      setShowCreateEndpointForm(true);
+      return;
+    }
+    if (!createEndpointFormTouched) setShowCreateEndpointForm(false);
+  }, [createEndpointFormTouched, endpoints.length, loading]);
 
   useEffect(() => {
     if (mode !== "im" || !selectedProvider) return;
@@ -5278,7 +5293,7 @@ function EndpointsPanel({
         if (selectedProvider.provider === "weixin") {
           config.mode = "ilink";
           if (selectedSetupMethod === SETUP_METHOD_QR_CODE && !providerSupportsBindingMethod(selectedProvider, config, SETUP_METHOD_QR_CODE)) {
-            setFormError("QR setup is not available for this provider configuration.");
+            setFormError(t("endpoints.createQRUnavailable"));
             return;
           }
         }
@@ -5304,6 +5319,8 @@ function EndpointsPanel({
         await onCreated();
         setSelectedEndpointId(created.id);
         if (createdBinding) setBindingSession(createdBinding);
+        setCreateEndpointFormTouched(false);
+        setShowCreateEndpointForm(false);
         return;
       } else {
         await api.createInteractionEndpoint({
@@ -5318,6 +5335,8 @@ function EndpointsPanel({
         });
       }
       await onCreated();
+      setCreateEndpointFormTouched(false);
+      setShowCreateEndpointForm(false);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Endpoint creation failed.");
     } finally {
@@ -5677,7 +5696,7 @@ function EndpointsPanel({
     <section className="endpoint-workspace">
       <SectionStatusNotice loading={loading} message={t("common.loading")} />
       <SectionIssuesNotice issues={issues} onRetry={onRetry} />
-      <div className="endpoint-grid">
+      <div className={endpointGridClassName}>
       <div className="panel endpoint-list-panel">
         <div className="panel-heading">
           <div>
@@ -5771,8 +5790,30 @@ function EndpointsPanel({
         </div>
         {endpointActionError ? <p className="inline-error" role="alert">{endpointActionError}</p> : null}
       </div>
-      <form className="panel compact form-stack endpoint-create-panel" onSubmit={createEndpoint}>
-        <p className="eyebrow">{t("endpoints.createEyebrow")}</p>
+      <form
+        className={showCreateEndpointForm ? "panel compact form-stack endpoint-create-panel" : "panel compact form-stack endpoint-create-panel is-collapsed"}
+        onSubmit={createEndpoint}
+      >
+        <div className="endpoint-create-header">
+          <div>
+            <p className="eyebrow">{t("endpoints.createEyebrow")}</p>
+            {!showCreateEndpointForm ? <h2>{t("endpoints.createCollapsedTitle")}</h2> : null}
+          </div>
+          {endpoints.length ? (
+            <button
+              className="mini-action-button"
+              type="button"
+              onClick={() => {
+                setCreateEndpointFormTouched(true);
+                setShowCreateEndpointForm((current) => !current);
+              }}
+            >
+              {showCreateEndpointForm ? t("endpoints.createCollapse") : t("endpoints.createExpand")}
+            </button>
+          ) : null}
+        </div>
+        {showCreateEndpointForm ? (
+          <>
         <div className="segmented endpoint-mode-toggle" role="group" aria-label="Endpoint type">
           <button
             className={mode === "im" ? "is-active" : ""}
@@ -5838,8 +5879,8 @@ function EndpointsPanel({
               <>
                 {setupMethodOptions.length > 1 ? (
                   <div className="endpoint-form-section">
-                    <strong>Setup method</strong>
-                    <div className="segmented endpoint-mode-toggle" role="group" aria-label="Setup method">
+                    <strong>{t("endpoints.setupMethod")}</strong>
+                    <div className="segmented endpoint-mode-toggle" role="group" aria-label={t("endpoints.setupMethod")}>
                       {setupMethodOptions.map((method) => (
                         <button
                           key={method.method}
@@ -5867,8 +5908,8 @@ function EndpointsPanel({
                   </div>
                 ) : selectedSetupMethod === SETUP_METHOD_QR_CODE ? (
                   <div className="endpoint-form-section">
-                    <strong>QR setup</strong>
-                    <p>Credentials are filled after the QR scan completes.</p>
+                    <strong>{t("endpoints.qrSetup")}</strong>
+                    <p>{t("endpoints.qrSetupHint")}</p>
                   </div>
                 ) : null}
 
@@ -5894,7 +5935,7 @@ function EndpointsPanel({
                   <>
                     {advancedProviderFields.length ? (
                       <div className="endpoint-form-section">
-                        <strong>Optional provider fields</strong>
+                        <strong>{t("endpoints.optionalProviderFields")}</strong>
                         <div className="form-stack">
                           {advancedProviderFields.map((field) => renderProviderField(
                             field,
@@ -5905,7 +5946,7 @@ function EndpointsPanel({
                     ) : null}
 
                     <div className="endpoint-form-section">
-                      <strong>Routing defaults</strong>
+                      <strong>{t("endpoints.routingDefaults")}</strong>
                       <div className="endpoint-binding-grid">
                         <label htmlFor="binding-target-type">
                           {t("endpoints.targetType")}
@@ -6038,8 +6079,18 @@ function EndpointsPanel({
         {formError ? <p className="inline-error">{formError}</p> : null}
         <button className="primary-button" type="submit" disabled={busy || (mode === "im" && !selectedProvider)}>
           <Plus size={16} aria-hidden="true" />
-          {mode === "im" && selectedSetupMethod === SETUP_METHOD_QR_CODE ? "Create and scan QR" : t("endpoints.create")}
+          {mode === "im" && selectedSetupMethod === SETUP_METHOD_QR_CODE ? t("endpoints.createAndScanQR") : t("endpoints.create")}
         </button>
+          </>
+        ) : (
+          <div className="endpoint-create-collapsed">
+            <div className="endpoint-config-chips" aria-label="Next endpoint defaults">
+              <span>{mode === "im" ? t("endpoints.modeIM") : t("endpoints.modeGeneric")}</span>
+              {mode === "im" && selectedProvider ? <span>{selectedProvider.displayName}</span> : null}
+              {mode === "im" ? <span>{selectedSetupMethod === SETUP_METHOD_QR_CODE ? t("endpoints.createSetupQR") : t("endpoints.createSetupManual")}</span> : null}
+            </div>
+          </div>
+        )}
       </form>
 
       <form className="panel compact form-stack endpoint-edit-panel" onSubmit={updateEndpoint}>

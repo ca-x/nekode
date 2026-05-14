@@ -1775,8 +1775,12 @@ textarea {
 }
 
 .mini-action-button {
-  min-height: 32px;
-  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text);
@@ -1981,6 +1985,26 @@ textarea {
   align-items: start;
 }
 
+.endpoint-grid.has-chat-access .endpoint-list-panel {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.endpoint-grid.has-chat-access .endpoint-chat-access-panel {
+  grid-column: 2 / span 2;
+  grid-row: 1;
+}
+
+.endpoint-grid.has-chat-access .endpoint-create-panel {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.endpoint-grid.has-chat-access .endpoint-edit-panel {
+  grid-column: 3;
+  grid-row: 2;
+}
+
 .endpoint-row {
   display: grid;
   justify-content: space-between;
@@ -2162,6 +2186,29 @@ textarea {
 
 .endpoint-create-panel {
   align-content: start;
+}
+
+.endpoint-create-panel.is-collapsed {
+  gap: 10px;
+}
+
+.endpoint-create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.endpoint-create-header h2 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+}
+
+.endpoint-create-collapsed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 44px;
 }
 
 .endpoint-chat-access-panel {
@@ -3344,8 +3391,33 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .endpoint-grid.has-chat-access .endpoint-list-panel,
+  .endpoint-grid.has-chat-access .endpoint-chat-access-panel,
+  .endpoint-grid.has-chat-access .endpoint-create-panel,
+  .endpoint-grid.has-chat-access .endpoint-edit-panel,
   .endpoint-chat-access-panel {
     grid-column: auto;
+  }
+
+  .endpoint-grid.has-chat-access .endpoint-list-panel {
+    grid-row: 1;
+  }
+
+  .endpoint-grid.has-chat-access .endpoint-chat-access-panel {
+    grid-row: 2;
+  }
+
+  .endpoint-grid.has-chat-access .endpoint-edit-panel {
+    grid-row: 3;
+  }
+
+  .endpoint-grid.has-chat-access .endpoint-create-panel {
+    grid-row: 4;
+  }
+
+  .mini-action-button {
+    min-height: 44px;
+    padding: 0 12px;
   }
 
   .agent-options-grid .span-2 {
@@ -3504,5 +3576,17 @@ textarea {
   .auth-copy,
   .auth-form {
     padding: 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell.with-primary-rail > .sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .app-shell.with-primary-rail > .main {
+    padding-bottom: calc(var(--mobile-tab-bar-height) + 18px + env(safe-area-inset-bottom, 0px));
   }
 }
