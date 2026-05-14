@@ -42,6 +42,7 @@ type Runtime struct {
 	HTTPClient  *http.Client
 	Coordinator *imcoord.Coordinator
 	Normalizer  imadapter.Normalizer
+	RateLimiter imadapter.OutgoingRateWaiter
 	Now         func() time.Time
 }
 
@@ -160,7 +161,7 @@ func (r Runtime) HandleUpdate(ctx context.Context, update Update) (storage.Messa
 	event := imadapter.ServerChanRawEvent(imadapter.ProviderRawEventInput{
 		EndpointID:        cfg.EndpointID,
 		ExternalMessageID: formatInt(update.Message.MessageID),
-		ReceivedUnix:      r.now().Unix(),
+		ReceivedUnix:      firstNonZero(update.Message.Date, r.now().Unix()),
 		Body:              body,
 		Metadata:          map[string]any{"transport": "polling"},
 	})
@@ -188,6 +189,9 @@ func (r Runtime) HandleUpdate(ctx context.Context, update Update) (storage.Messa
 	if errors.Is(err, storage.ErrConflict) {
 		return storage.Message{}, ErrIgnoredUpdate
 	}
+	if errors.Is(err, imcoord.ErrStaleDraft) {
+		return storage.Message{}, ErrIgnoredUpdate
+	}
 	if err != nil {
 		return storage.Message{}, err
 	}
@@ -203,6 +207,7 @@ func (r Runtime) SendPending(ctx context.Context, limit int) ([]SendResult, erro
 		EndpointID: cfg.EndpointID,
 		Statuses:   []string{"pending", "retrying"},
 		Limit:      limit,
+		ReadyUnix:  time.Now().Unix(),
 	})
 	if err != nil {
 		return nil, err
@@ -246,6 +251,9 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	})
 	sent := make([]SentMessage, 0, len(frames))
 	for _, frame := range frames {
+		if err := r.outgoingLimiter().Wait(ctx, imadapter.ProviderServerChan); err != nil {
+			return SendResult{Delivery: delivery, Messages: sent}, err
+		}
 		msg, err := r.sendFrame(ctx, cfg, frame)
 		if err != nil {
 			failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
@@ -363,6 +371,13 @@ func (r Runtime) httpClient() *http.Client {
 	return http.DefaultClient
 }
 
+func (r Runtime) outgoingLimiter() imadapter.OutgoingRateWaiter {
+	if r.RateLimiter != nil {
+		return r.RateLimiter
+	}
+	return imadapter.DefaultOutgoingRateLimiter()
+}
+
 func (r Runtime) now() time.Time {
 	if r.Now != nil {
 		return r.Now()
@@ -431,6 +446,15 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func firstNonZero(values ...int64) int64 {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
+	}
+	return 0
 }
 
 func cleanStrings(values ...string) []string {

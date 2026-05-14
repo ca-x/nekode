@@ -26,6 +26,8 @@ func (n Normalizer) NormalizeInbound(ctx context.Context, event iminbound.RawEve
 		return n.normalizeFeishu(event)
 	case ProviderWeixin:
 		return n.normalizeWeixin(event)
+	case ProviderWeCom:
+		return n.normalizeWeCom(event)
 	case ProviderTerminal:
 		return n.normalizeTerminal(event)
 	case ProviderServerChan:
@@ -63,6 +65,7 @@ func (n Normalizer) normalizeTelegram(event iminbound.RawEvent) (iminbound.Messa
 		UpdateID int64 `json:"update_id"`
 		Message  struct {
 			MessageID int64 `json:"message_id"`
+			Date      int64 `json:"date"`
 			Text      string
 			Caption   string
 			Chat      struct {
@@ -92,6 +95,9 @@ func (n Normalizer) normalizeTelegram(event iminbound.RawEvent) (iminbound.Messa
 	msg := n.baseMessage(event, ProviderTelegram)
 	if msg.ExternalMessageID == "" {
 		msg.ExternalMessageID = firstNonEmpty(formatInt(payload.Message.MessageID), formatInt(payload.UpdateID))
+	}
+	if payload.Message.Date > 0 {
+		msg.ReceivedUnix = payload.Message.Date
 	}
 	chatID := formatInt(payload.Message.Chat.ID)
 	senderID := formatInt(payload.Message.From.ID)
@@ -143,6 +149,7 @@ func (n Normalizer) normalizeQQ(event iminbound.RawEvent) (iminbound.Message, er
 		} `json:"author"`
 		GroupID     string `json:"group_id"`
 		ChannelID   string `json:"channel_id"`
+		Timestamp   string `json:"timestamp"`
 		Attachments []struct {
 			URL         string `json:"url"`
 			Filename    string `json:"filename"`
@@ -156,6 +163,9 @@ func (n Normalizer) normalizeQQ(event iminbound.RawEvent) (iminbound.Message, er
 	msg := n.baseMessage(event, ProviderQQ)
 	if msg.ExternalMessageID == "" {
 		msg.ExternalMessageID = payload.ID
+	}
+	if ts := unixFromRFC3339(payload.Timestamp); ts > 0 {
+		msg.ReceivedUnix = ts
 	}
 	chatID := firstNonEmpty(payload.GroupID, payload.ChannelID, payload.Author.ID)
 	msg.Conversation = iminbound.Conversation{ExternalID: chatID, IsGroup: payload.GroupID != ""}
@@ -199,6 +209,7 @@ func (n Normalizer) normalizeFeishu(event iminbound.RawEvent) (iminbound.Message
 			} `json:"sender"`
 			Message struct {
 				MessageID   string            `json:"message_id"`
+				CreateTime  string            `json:"create_time"`
 				RootID      string            `json:"root_id"`
 				ChatID      string            `json:"chat_id"`
 				ChatType    string            `json:"chat_type"`
@@ -215,6 +226,9 @@ func (n Normalizer) normalizeFeishu(event iminbound.RawEvent) (iminbound.Message
 	msg := n.baseMessage(event, ProviderFeishu)
 	if msg.ExternalMessageID == "" {
 		msg.ExternalMessageID = firstNonEmpty(payload.Event.Message.MessageID, payload.Header.EventID)
+	}
+	if ts := unixFromMillisString(payload.Event.Message.CreateTime); ts > 0 {
+		msg.ReceivedUnix = ts
 	}
 	text := feishuContentText(payload.Event.Message.MessageType, payload.Event.Message.Content)
 	if payload.Event.Message.ChatType == "group" {
@@ -241,6 +255,8 @@ func (n Normalizer) normalizeWeixin(event iminbound.RawEvent) (iminbound.Message
 	var payload struct {
 		Seq          int64  `json:"seq"`
 		MessageID    int64  `json:"message_id"`
+		CreateTime   int64  `json:"create_time"`
+		CreateTimeMs int64  `json:"create_time_ms"`
 		FromUserID   string `json:"from_user_id"`
 		SessionID    string `json:"session_id"`
 		GroupID      string `json:"group_id"`
@@ -251,17 +267,26 @@ func (n Normalizer) normalizeWeixin(event iminbound.RawEvent) (iminbound.Message
 				Text string `json:"text"`
 			} `json:"text_item"`
 			ImageItem *struct {
-				URL string `json:"url"`
+				URL     string `json:"url"`
+				MediaID string `json:"media_id"`
 			} `json:"image_item"`
 			VoiceItem *struct {
-				Text string `json:"text"`
+				Text    string `json:"text"`
+				MediaID string `json:"media_id"`
+				Format  string `json:"format"`
 			} `json:"voice_item"`
 			FileItem *struct {
 				FileName string `json:"file_name"`
 				Len      string `json:"len"`
+				MediaID  string `json:"media_id"`
 			} `json:"file_item"`
-			VideoItem *struct{} `json:"video_item"`
+			VideoItem *struct {
+				MediaID string `json:"media_id"`
+			} `json:"video_item"`
 		} `json:"item_list"`
+		OfficialAccount struct {
+			CreateTime int64 `json:"create_time"`
+		} `json:"official_account"`
 	}
 	if err := json.Unmarshal(event.Body, &payload); err != nil {
 		return iminbound.Message{}, err
@@ -269,6 +294,9 @@ func (n Normalizer) normalizeWeixin(event iminbound.RawEvent) (iminbound.Message
 	msg := n.baseMessage(event, ProviderWeixin)
 	if msg.ExternalMessageID == "" {
 		msg.ExternalMessageID = firstNonEmpty(formatInt(payload.MessageID), formatInt(payload.Seq))
+	}
+	if ts := unixFromMaybeMillis(firstNonEmpty(formatInt(payload.CreateTimeMs), formatInt(payload.CreateTime), formatInt(payload.OfficialAccount.CreateTime))); ts > 0 {
+		msg.ReceivedUnix = ts
 	}
 	chatID := firstNonEmpty(payload.GroupID, payload.SessionID, payload.FromUserID)
 	msg.Conversation = iminbound.Conversation{ExternalID: chatID, IsGroup: payload.GroupID != ""}
@@ -282,16 +310,127 @@ func (n Normalizer) normalizeWeixin(event iminbound.RawEvent) (iminbound.Message
 			if strings.TrimSpace(item.ImageItem.URL) == "" {
 				blockType = iminbound.ContentTypeUnknown
 			}
-			msg.Content = append(msg.Content, iminbound.ContentBlock{Type: blockType, ExternalURL: item.ImageItem.URL, Text: "[image]"})
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:        blockType,
+				ExternalURL: item.ImageItem.URL,
+				Text:        "[image]",
+				Metadata:    cleanMetadata(map[string]any{"media_id": item.ImageItem.MediaID}),
+			})
 		case item.VoiceItem != nil:
-			msg.Content = append(msg.Content, iminbound.ContentBlock{Type: iminbound.ContentTypeText, Text: firstNonEmpty(item.VoiceItem.Text, "[voice]")})
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:     iminbound.ContentTypeUnknown,
+				Text:     firstNonEmpty(item.VoiceItem.Text, "[voice]"),
+				Metadata: cleanMetadata(map[string]any{"media_id": item.VoiceItem.MediaID, "format": item.VoiceItem.Format}),
+			})
 		case item.FileItem != nil:
-			msg.Content = append(msg.Content, iminbound.ContentBlock{Type: iminbound.ContentTypeText, Text: "[file: " + item.FileItem.FileName + "]", Filename: item.FileItem.FileName})
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:     iminbound.ContentTypeUnknown,
+				Text:     "[file: " + item.FileItem.FileName + "]",
+				Filename: item.FileItem.FileName,
+				Metadata: cleanMetadata(map[string]any{
+					"media_id": item.FileItem.MediaID,
+					"len":      item.FileItem.Len,
+				}),
+			})
 		case item.VideoItem != nil:
-			msg.Content = append(msg.Content, iminbound.ContentBlock{Type: iminbound.ContentTypeText, Text: "[video]"})
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:     iminbound.ContentTypeUnknown,
+				Text:     "[video]",
+				Metadata: cleanMetadata(map[string]any{"media_id": item.VideoItem.MediaID}),
+			})
 		}
 	}
 	msg.Metadata["context_token"] = payload.ContextToken
+	return normalizeAndValidate(msg)
+}
+
+func (n Normalizer) normalizeWeCom(event iminbound.RawEvent) (iminbound.Message, error) {
+	var payload struct {
+		MessageID  int64  `json:"message_id"`
+		CreateTime int64  `json:"create_time"`
+		FromUserID string `json:"from_user_id"`
+		SessionID  string `json:"session_id"`
+		ChatID     string `json:"chat_id"`
+		ChatType   string `json:"chat_type"`
+		ItemList   []struct {
+			Type     int `json:"type"`
+			TextItem *struct {
+				Text string `json:"text"`
+			} `json:"text_item"`
+			ImageItem *struct {
+				URL     string `json:"url"`
+				MediaID string `json:"media_id"`
+			} `json:"image_item"`
+			VoiceItem *struct {
+				Text    string `json:"text"`
+				MediaID string `json:"media_id"`
+				Format  string `json:"format"`
+			} `json:"voice_item"`
+			FileItem *struct {
+				FileName string `json:"file_name"`
+				MediaID  string `json:"media_id"`
+			} `json:"file_item"`
+			VideoItem *struct {
+				MediaID string `json:"media_id"`
+			} `json:"video_item"`
+		} `json:"item_list"`
+		WeCom struct {
+			CreateTime int64  `json:"create_time"`
+			MsgType    string `json:"msg_type"`
+			AgentID    int64  `json:"agent_id"`
+		} `json:"wecom"`
+	}
+	if err := json.Unmarshal(event.Body, &payload); err != nil {
+		return iminbound.Message{}, err
+	}
+	msg := n.baseMessage(event, ProviderWeCom)
+	if msg.ExternalMessageID == "" {
+		msg.ExternalMessageID = formatInt(payload.MessageID)
+	}
+	if ts := unixFromMaybeMillis(firstNonEmpty(formatInt(payload.CreateTime), formatInt(payload.WeCom.CreateTime))); ts > 0 {
+		msg.ReceivedUnix = ts
+	}
+	chatID := firstNonEmpty(payload.ChatID, payload.SessionID, payload.FromUserID)
+	msg.Conversation = iminbound.Conversation{ExternalID: chatID, IsGroup: payload.ChatType == "group"}
+	msg.Sender = iminbound.Sender{ExternalID: payload.FromUserID, Kind: "human"}
+	for _, item := range payload.ItemList {
+		switch {
+		case item.TextItem != nil && strings.TrimSpace(item.TextItem.Text) != "":
+			msg.Content = append(msg.Content, iminbound.ContentBlock{Type: iminbound.ContentTypeText, Text: item.TextItem.Text})
+		case item.ImageItem != nil:
+			blockType := iminbound.ContentTypeImage
+			if strings.TrimSpace(item.ImageItem.URL) == "" {
+				blockType = iminbound.ContentTypeUnknown
+			}
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:        blockType,
+				ExternalURL: item.ImageItem.URL,
+				Text:        "[image]",
+				Metadata:    cleanMetadata(map[string]any{"media_id": item.ImageItem.MediaID}),
+			})
+		case item.VoiceItem != nil:
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:     iminbound.ContentTypeUnknown,
+				Text:     firstNonEmpty(item.VoiceItem.Text, "[voice]"),
+				Metadata: cleanMetadata(map[string]any{"media_id": item.VoiceItem.MediaID, "format": item.VoiceItem.Format}),
+			})
+		case item.FileItem != nil:
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:     iminbound.ContentTypeUnknown,
+				Text:     "[file: " + item.FileItem.FileName + "]",
+				Filename: item.FileItem.FileName,
+				Metadata: cleanMetadata(map[string]any{"media_id": item.FileItem.MediaID}),
+			})
+		case item.VideoItem != nil:
+			msg.Content = append(msg.Content, iminbound.ContentBlock{
+				Type:     iminbound.ContentTypeUnknown,
+				Text:     "[video]",
+				Metadata: cleanMetadata(map[string]any{"media_id": item.VideoItem.MediaID}),
+			})
+		}
+	}
+	msg.Metadata["message_type"] = payload.WeCom.MsgType
+	msg.Metadata["agent_id"] = payload.WeCom.AgentID
 	return normalizeAndValidate(msg)
 }
 
@@ -346,6 +485,9 @@ func (n Normalizer) normalizeServerChan(event iminbound.RawEvent) (iminbound.Mes
 	msg := n.baseMessage(event, ProviderServerChan)
 	if msg.ExternalMessageID == "" {
 		msg.ExternalMessageID = firstNonEmpty(formatInt(payload.Message.MessageID), formatInt(payload.UpdateID))
+	}
+	if payload.Message.Date > 0 {
+		msg.ReceivedUnix = payload.Message.Date
 	}
 	chatID := payload.Message.Chat.ID
 	if chatID == 0 {
@@ -473,6 +615,66 @@ func normalizeAndValidate(msg iminbound.Message) (iminbound.Message, error) {
 		return iminbound.Message{}, err
 	}
 	return msg, nil
+}
+
+func unixFromRFC3339(value string) int64 {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return 0
+	}
+	return parsed.Unix()
+}
+
+func unixFromMillisString(value string) int64 {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed <= 0 {
+		return 0
+	}
+	return parsed / 1000
+}
+
+func unixFromMaybeMillis(value string) int64 {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed <= 0 {
+		return 0
+	}
+	if parsed > 9999999999 {
+		return parsed / 1000
+	}
+	return parsed
+}
+
+func cleanMetadata(values map[string]any) map[string]any {
+	out := make(map[string]any, len(values))
+	for key, value := range values {
+		switch typed := value.(type) {
+		case string:
+			if strings.TrimSpace(typed) == "" {
+				continue
+			}
+			out[key] = strings.TrimSpace(typed)
+		default:
+			if value != nil {
+				out[key] = value
+			}
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func firstNonEmpty(values ...string) string {

@@ -1481,6 +1481,7 @@ function App() {
             channel={channels.find((item) => item.target === target) ?? null}
             channelMembers={channelMembers}
             endpoints={endpoints}
+            imProviders={imProviders}
             runtimePresets={runtimePresets}
             issues={sectionIssueGroups.settings}
             loading={status === "loading"}
@@ -4239,6 +4240,7 @@ function SettingsPanel({
   channel,
   channelMembers,
   endpoints,
+  imProviders,
   runtimePresets,
   issues,
   loading,
@@ -4257,6 +4259,7 @@ function SettingsPanel({
   channel: Channel | null;
   channelMembers: ChannelMember[];
   endpoints: InteractionEndpoint[];
+  imProviders: IMProviderSchema[];
   runtimePresets: RuntimePreset[];
   issues: SectionIssue[];
   loading: boolean;
@@ -4268,8 +4271,11 @@ function SettingsPanel({
   const visibility = channel?.visibility || "public";
   const [settingsTab, setSettingsTab] = useState<SettingsTabKey>("account");
   const recommendedRuntimes = runtimePresets.filter((preset) => preset.recommended).length;
+  const runtimeIMProviders = imProviders.filter((provider) => !isCatalogOnlyProvider(provider)).length;
+  const referenceIMProviders = imProviders.length - runtimeIMProviders;
   const writableEndpoints = endpoints.filter((endpoint) => endpoint.outboundEnabled).length;
   const readableEndpoints = endpoints.filter((endpoint) => endpoint.inboundEnabled).length;
+  const notificationEndpoints = endpoints.filter((endpoint) => endpoint.outboundEnabled || endpoint.inboundEnabled);
   const canManageChannel = channelRole === "admin";
   const canCreateChannels = userRole === "admin" || userRole === "owner";
   const [channelTargetDraft, setChannelTargetDraft] = useState("");
@@ -4700,6 +4706,75 @@ function SettingsPanel({
         </div>
       </section>
 
+      <section className="panel wide" data-settings-tab="imProviders">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">IM</p>
+            <h2>Provider catalog</h2>
+          </div>
+          <div className="endpoint-config-chips">
+            <span>{runtimeIMProviders} runtime</span>
+            <span>{referenceIMProviders} reference</span>
+          </div>
+        </div>
+        <div className="provider-catalog-grid">
+          {imProviders.map((provider) => {
+            const setupMethods = providerSetupMethods(provider).map((method) => method.displayName).join(" / ");
+            return (
+              <article className="provider-catalog-row" key={provider.provider}>
+                <div>
+                  <strong>{provider.displayName}</strong>
+                  <span>{provider.provider}</span>
+                </div>
+                <div className="endpoint-config-chips">
+                  <span>{providerStatusLabel(provider)}</span>
+                  <span>{provider.transport}</span>
+                  {provider.supportsWebhook ? <span>Webhook</span> : null}
+                  {provider.supportsPolling ? <span>Polling</span> : null}
+                  {provider.supportsStreaming ? <span>Streaming</span> : null}
+                  {provider.supportsMedia ? <span>Media</span> : null}
+                </div>
+                <small>{setupMethods}</small>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="panel wide" data-settings-tab="notifications">
+        <div className="panel-heading compact-heading">
+          <div>
+            <p className="eyebrow">Delivery</p>
+            <h2>Notification endpoints</h2>
+          </div>
+          <div className="endpoint-config-chips">
+            <span>{notificationEndpoints.length} configured</span>
+            <span>{readableEndpoints} inbound</span>
+            <span>{writableEndpoints} outbound</span>
+          </div>
+        </div>
+        <div className="provider-catalog-grid">
+          {notificationEndpoints.length ? (
+            notificationEndpoints.map((endpoint) => (
+              <article className="provider-catalog-row" key={endpoint.id}>
+                <div>
+                  <strong>{endpoint.displayName}</strong>
+                  <span>{formatProviderLabel(endpoint.provider, imProviders)}</span>
+                </div>
+                <div className="endpoint-config-chips">
+                  {endpoint.inboundEnabled ? <span>Inbound</span> : null}
+                  {endpoint.outboundEnabled ? <span>Outbound</span> : null}
+                  <span>{endpoint.authMode || "auth"}</span>
+                </div>
+                <small>{endpoint.id}</small>
+              </article>
+            ))
+          ) : (
+            <p className="muted-copy">No notification endpoints configured.</p>
+          )}
+        </div>
+      </section>
+
       <section className="panel wide" data-settings-tab="runtimes">
         <div className="panel-heading compact-heading">
           <div>
@@ -4754,6 +4829,8 @@ const DEFAULT_GROUP_MODES = ["mention", "always", "disabled"];
 const NOTIFICATION_EVENT_KINDS = ["message", "mention", "task", "reminder", "run", "activity", "delivery_status", "all"];
 const NOTIFICATION_PREFERENCES = ["all", "mentions", "muted"];
 const REDACTED_VALUE = "***";
+const SETUP_METHOD_MANUAL = "manual";
+const SETUP_METHOD_QR_CODE = "qr_code";
 
 const sectionIssueLabels: Record<SectionIssueKey, string> = {
   setup: "Setup",
@@ -4821,6 +4898,102 @@ function defaultIMValues(schema: IMProviderSchema | null): Record<string, Endpoi
   return values;
 }
 
+function providerSetupMethods(schema: IMProviderSchema | null) {
+  return schema?.setupMethods?.length
+    ? schema.setupMethods
+    : [{ method: SETUP_METHOD_MANUAL, displayName: "Manual input", description: "Enter provider credentials directly.", primary: true }];
+}
+
+function defaultSetupMethod(schema: IMProviderSchema | null) {
+  const methods = providerSetupMethods(schema);
+  return methods.find((method) => method.primary)?.method ?? methods[0]?.method ?? SETUP_METHOD_MANUAL;
+}
+
+function isCatalogOnlyProvider(schema: IMProviderSchema | null) {
+  return schema?.availability === "catalog" || schema?.runtimeStatus === "reference_only";
+}
+
+function providerStatusLabel(schema: IMProviderSchema | null) {
+  if (!schema) return "";
+  if (isCatalogOnlyProvider(schema)) return "Reference config";
+  if (schema.runtimeStatus === "local_smoked") return "Local runtime";
+  if (schema.runtimeStatus === "callback_app_implemented") return "Callback runtime";
+  if (schema.availability === "runtime") return "Runtime";
+  return schema.availability || "Provider";
+}
+
+function wecomModeValue(values: Record<string, EndpointConfigValue>) {
+  const mode = String(values.mode ?? "callback_app").trim().toLowerCase();
+  if (mode === "websocket") return "websocket_bot";
+  if (mode === "callback" || mode === "webhook") return "callback_app";
+  return mode || "callback_app";
+}
+
+function providerRuntimeNotice(schema: IMProviderSchema | null, values: Record<string, EndpointConfigValue>) {
+  if (!schema) return "";
+  if (schema.provider === "wecom" && wecomModeValue(values) !== "callback_app") {
+    return "WeChat Work WebSocket credentials are saved as reference config; callback_app is the wired receive/send runtime.";
+  }
+  if (isCatalogOnlyProvider(schema)) {
+    return "Reference configuration only; receive/send runtime is not wired yet.";
+  }
+  return "";
+}
+
+function fieldRequiredForSetup(
+  schema: IMProviderSchema | null,
+  field: IMProviderField,
+  setupMethod: string,
+  values: Record<string, EndpointConfigValue>
+) {
+  if (!schema) return Boolean(field.required);
+  if (schema.provider === "weixin") {
+    return setupMethod === SETUP_METHOD_MANUAL && field.name === "bot_token";
+  }
+  if (schema.provider === "wecom") {
+    const mode = wecomModeValue(values);
+    if (mode === "callback_app") {
+      return ["corp_id", "corp_secret", "agent_id", "callback_token", "callback_aes_key"].includes(field.name);
+    }
+    return ["bot_id", "bot_secret"].includes(field.name);
+  }
+  return Boolean(field.required);
+}
+
+function fieldAppliesToSetup(
+  schema: IMProviderSchema | null,
+  field: IMProviderField,
+  setupMethod: string,
+  values: Record<string, EndpointConfigValue>
+) {
+  if (!schema) return true;
+  if (field.name === "default_target") return false;
+  if (schema.provider === "weixin" && setupMethod === SETUP_METHOD_QR_CODE) {
+    return !["bot_token", "bot_id", "user_id"].includes(field.name);
+  }
+  if (schema.provider === "wecom") {
+    const mode = wecomModeValue(values);
+    if (mode === "callback_app") return !["bot_id", "bot_secret"].includes(field.name);
+    return !["corp_id", "corp_secret", "agent_id", "callback_token", "callback_aes_key"].includes(field.name);
+  }
+  return true;
+}
+
+function createFormFields(
+  schema: IMProviderSchema | null,
+  setupMethod: string,
+  values: Record<string, EndpointConfigValue>,
+  advanced: boolean
+) {
+  const fields = (schema?.fields ?? []).filter((field) => fieldAppliesToSetup(schema, field, setupMethod, values));
+  return fields.filter((field) => {
+    const required = fieldRequiredForSetup(schema, field, setupMethod, values);
+    const promoted = schema?.provider === "wecom" && field.name === "mode";
+    if (advanced) return !required && !promoted;
+    return required || promoted;
+  });
+}
+
 function editableConfigJSON(endpoint: InteractionEndpoint) {
   return endpoint.configJson.includes(`"${REDACTED_VALUE}"`) ? "" : endpoint.configJson || "{}";
 }
@@ -4838,7 +5011,7 @@ function endpointConfig(endpoint: InteractionEndpoint | null): Record<string, un
 function endpointSupportsBindingMethod(endpoint: InteractionEndpoint | null, schema: IMProviderSchema | null, method: string) {
   if (!endpoint || !schema?.bindingMethods?.some((bindingMethod) => bindingMethod.method === method)) return false;
   if ((endpoint.provider === "weixin" || endpoint.provider === "wechat") && method === "qr_code") {
-    const mode = String(endpointConfig(endpoint).mode ?? "official_account").trim().toLowerCase();
+    const mode = String(endpointConfig(endpoint).mode ?? "ilink").trim().toLowerCase();
     return mode === "ilink";
   }
   return true;
@@ -4851,7 +5024,7 @@ function endpointSupportsBindingMethod(endpoint: InteractionEndpoint | null, sch
 function providerSupportsBindingMethod(schema: IMProviderSchema | null, configValues: Record<string, unknown>, method: string) {
   if (!schema?.bindingMethods?.some((bindingMethod) => bindingMethod.method === method)) return false;
   if ((schema.provider === "weixin" || schema.provider === "wechat") && method === "qr_code") {
-    const mode = String(configValues.mode ?? "official_account").trim().toLowerCase();
+    const mode = String(configValues.mode ?? "ilink").trim().toLowerCase();
     return mode === "ilink";
   }
   return true;
@@ -4889,6 +5062,7 @@ function EndpointsPanel({
   const [inboundEnabled, setInboundEnabled] = useState(true);
   const [outboundEnabled, setOutboundEnabled] = useState(true);
   const [imConfigValues, setIMConfigValues] = useState<Record<string, EndpointConfigValue>>({});
+  const [selectedSetupMethod, setSelectedSetupMethod] = useState(SETUP_METHOD_MANUAL);
   const [bindingTargetType, setBindingTargetType] = useState("channel");
   const [defaultTarget, setDefaultTarget] = useState("#general");
   const [defaultAgent, setDefaultAgent] = useState("");
@@ -4945,7 +5119,16 @@ function EndpointsPanel({
   const bindingTargets = selectedProvider?.bindingTargets.length
     ? selectedProvider.bindingTargets
     : DEFAULT_BINDING_TARGETS;
+  const setupMethodOptions = useMemo(() => providerSetupMethods(selectedProvider), [selectedProvider]);
   const providerHasGroupMode = hasConfigField(selectedProvider, "group_mode");
+  const basicProviderFields = useMemo(
+    () => createFormFields(selectedProvider, selectedSetupMethod, imConfigValues, false),
+    [selectedProvider, selectedSetupMethod, imConfigValues]
+  );
+  const advancedProviderFields = useMemo(
+    () => createFormFields(selectedProvider, selectedSetupMethod, imConfigValues, true),
+    [selectedProvider, selectedSetupMethod, imConfigValues]
+  );
   const selectedEndpointProvider = useMemo(
     () => imProviders.find((schema) => schema.provider === selectedEndpoint?.provider) ?? null,
     [imProviders, selectedEndpoint?.provider]
@@ -4953,6 +5136,10 @@ function EndpointsPanel({
   const qrBindingMethod = endpointSupportsBindingMethod(selectedEndpoint, selectedEndpointProvider, "qr_code")
     ? selectedEndpointProvider?.bindingMethods?.find((method) => method.method === "qr_code") ?? null
     : null;
+  const selectedProviderRuntimeNotice = useMemo(
+    () => providerRuntimeNotice(selectedProvider, imConfigValues),
+    [selectedProvider, imConfigValues]
+  );
 
   useEffect(() => {
     if (mode !== "im") return;
@@ -4962,8 +5149,11 @@ function EndpointsPanel({
   useEffect(() => {
     if (mode !== "im" || !selectedProvider) return;
     setIMConfigValues(defaultIMValues(selectedProvider));
+    setSelectedSetupMethod(defaultSetupMethod(selectedProvider));
     setBindingTargetType(selectedProvider.bindingTargets[0] || "channel");
-    setAuthMode(selectedProvider.supportsWebhook ? "webhook_signature" : "bearer");
+    setAuthMode(selectedProvider.provider === "weixin" ? "ilink_bot_token" : selectedProvider.supportsWebhook ? "webhook_signature" : "bearer");
+    setShowAdvanced(false);
+    setFormError("");
     const nextName = `${selectedProvider.displayName} endpoint`;
     if (!displayName || displayName === autoNameRef.current) {
       setDisplayName(nextName);
@@ -4982,7 +5172,7 @@ function EndpointsPanel({
     setEndpointEditConfig(editableConfigJSON(selectedEndpoint));
     setEndpointActionError("");
     setEndpointTestResult(null);
-    setBindingSession(null);
+    setBindingSession((current) => current?.endpointId === selectedEndpoint.id ? current : null);
     setBindingError("");
   }, [selectedEndpoint]);
 
@@ -5010,11 +5200,12 @@ function EndpointsPanel({
           return;
         }
         const config: Record<string, unknown> = {};
-        for (const field of selectedProvider.fields) {
+        for (const field of selectedProvider.fields.filter((item) => fieldAppliesToSetup(selectedProvider, item, selectedSetupMethod, imConfigValues))) {
           const value = imConfigValues[field.name];
+          const required = fieldRequiredForSetup(selectedProvider, field, selectedSetupMethod, imConfigValues);
           if (field.type === "json") {
             const raw = String(value ?? "").trim();
-            if (!raw) continue;
+            if (!raw || raw === "{}") continue;
             try {
               config[field.name] = JSON.parse(raw) as unknown;
             } catch {
@@ -5022,14 +5213,21 @@ function EndpointsPanel({
               return;
             }
           } else if (field.type === "boolean") {
-            config[field.name] = Boolean(value);
+            if (Boolean(value)) config[field.name] = true;
           } else {
             const stringValue = String(value ?? "").trim();
-            if (field.required && !stringValue) {
+            if (required && !stringValue) {
               setFormError(`${field.label} is required.`);
               return;
             }
             if (stringValue) config[field.name] = stringValue;
+          }
+        }
+        if (selectedProvider.provider === "weixin") {
+          config.mode = "ilink";
+          if (selectedSetupMethod === SETUP_METHOD_QR_CODE && !providerSupportsBindingMethod(selectedProvider, config, SETUP_METHOD_QR_CODE)) {
+            setFormError("QR setup is not available for this provider configuration.");
+            return;
           }
         }
         config.binding_target_type = bindingTargetType;
@@ -5037,7 +5235,7 @@ function EndpointsPanel({
         if (defaultAgent.trim()) config.default_agent = defaultAgent.trim();
         if (!providerHasGroupMode) config.group_mode = groupMode;
 
-        await api.createInteractionEndpoint({
+        const created = await api.createInteractionEndpoint({
           kind: "im",
           provider: selectedProvider.provider,
           displayName: displayName.trim() || `${selectedProvider.displayName} endpoint`,
@@ -5047,6 +5245,14 @@ function EndpointsPanel({
           authMode,
           configJson: JSON.stringify(config)
         });
+        let createdBinding: IMBindingSession | null = null;
+        if (selectedSetupMethod === SETUP_METHOD_QR_CODE) {
+          createdBinding = await api.createIMBindingSession(created.id, SETUP_METHOD_QR_CODE);
+        }
+        await onCreated();
+        setSelectedEndpointId(created.id);
+        if (createdBinding) setBindingSession(createdBinding);
+        return;
       } else {
         await api.createInteractionEndpoint({
           kind: kind.trim() || "web",
@@ -5264,9 +5470,10 @@ function EndpointsPanel({
     }
   };
 
-  const renderProviderField = (field: IMProviderField) => {
+  const renderProviderField = (field: IMProviderField, requiredOverride?: boolean) => {
     const fieldID = `im-field-${field.name}`;
     const value = imConfigValues[field.name];
+    const required = requiredOverride ?? Boolean(field.required);
     const hint = field.sensitive
       ? `${field.description || ""} Stored endpoint responses are redacted.`
       : field.description;
@@ -5291,10 +5498,10 @@ function EndpointsPanel({
     if (field.type === "select") {
       return (
         <label key={field.name} htmlFor={fieldID}>
-          {field.label}
+          {field.label}{required ? " *" : ""}
           <select
             id={fieldID}
-            required={field.required}
+            required={required}
             value={String(value ?? "")}
             onChange={(event) => updateIMValue(field, event.target.value)}
           >
@@ -5312,10 +5519,10 @@ function EndpointsPanel({
     if (field.type === "json") {
       return (
         <label key={field.name} htmlFor={fieldID}>
-          {field.label}
+          {field.label}{required ? " *" : ""}
           <textarea
             id={fieldID}
-            required={field.required}
+            required={required}
             value={String(value ?? "")}
             placeholder={field.placeholder || "{}"}
             onChange={(event) => updateIMValue(field, event.target.value)}
@@ -5327,10 +5534,10 @@ function EndpointsPanel({
 
     return (
       <label key={field.name} htmlFor={fieldID}>
-        {field.label}
+        {field.label}{required ? " *" : ""}
         <input
           id={fieldID}
-          required={field.required}
+          required={required}
           type={field.sensitive ? "password" : "text"}
           value={String(value ?? "")}
           placeholder={field.placeholder || (field.sensitive ? "Stored redacted after create" : "")}
@@ -5482,6 +5689,7 @@ function EndpointsPanel({
                   <span>{selectedProvider.description}</span>
                 </div>
                 <div className="endpoint-config-chips">
+                  <span>{providerStatusLabel(selectedProvider)}</span>
                   <span>{selectedProvider.transport}</span>
                   {selectedProvider.supportsWebhook ? <span>Webhook</span> : null}
                   {selectedProvider.supportsPolling ? <span>Polling</span> : null}
@@ -5503,6 +5711,49 @@ function EndpointsPanel({
 
             {selectedProvider ? (
               <>
+                {setupMethodOptions.length > 1 ? (
+                  <div className="endpoint-form-section">
+                    <strong>Setup method</strong>
+                    <div className="segmented endpoint-mode-toggle" role="group" aria-label="Setup method">
+                      {setupMethodOptions.map((method) => (
+                        <button
+                          key={method.method}
+                          className={selectedSetupMethod === method.method ? "is-active" : ""}
+                          type="button"
+                          onClick={() => setSelectedSetupMethod(method.method)}
+                        >
+                          {method.displayName}
+                        </button>
+                      ))}
+                    </div>
+                    <p>{setupMethodOptions.find((method) => method.method === selectedSetupMethod)?.description}</p>
+                  </div>
+                ) : null}
+
+                {basicProviderFields.length ? (
+                  <div className="endpoint-form-section">
+                    <strong>{t("endpoints.providerConfig")}</strong>
+                    <div className="form-stack">
+                      {basicProviderFields.map((field) => renderProviderField(
+                        field,
+                        fieldRequiredForSetup(selectedProvider, field, selectedSetupMethod, imConfigValues)
+                      ))}
+                    </div>
+                  </div>
+                ) : selectedSetupMethod === SETUP_METHOD_QR_CODE ? (
+                  <div className="endpoint-form-section">
+                    <strong>QR setup</strong>
+                    <p>Credentials are filled after the QR scan completes.</p>
+                  </div>
+                ) : null}
+
+                {selectedProviderRuntimeNotice ? (
+                  <div className="endpoint-runtime-note" role="status">
+                    <AlertTriangle size={16} aria-hidden="true" />
+                    <span>{selectedProviderRuntimeNotice}</span>
+                  </div>
+                ) : null}
+
                 <button
                   type="button"
                   className="ghost-button"
@@ -5510,19 +5761,26 @@ function EndpointsPanel({
                   onClick={() => setShowAdvanced((v) => !v)}
                 >
                   {showAdvanced ? t("tunnels.create.hideAdvanced") : t("tunnels.create.showAdvanced")}
+                  {" "}
+                  ({advancedProviderFields.length + 4})
                 </button>
 
                 {showAdvanced && (
                   <>
-                    <div className="endpoint-form-section">
-                      <strong>{t("endpoints.providerConfig")}</strong>
-                      <div className="form-stack">
-                        {selectedProvider.fields.map((field) => renderProviderField(field))}
+                    {advancedProviderFields.length ? (
+                      <div className="endpoint-form-section">
+                        <strong>Optional provider fields</strong>
+                        <div className="form-stack">
+                          {advancedProviderFields.map((field) => renderProviderField(
+                            field,
+                            fieldRequiredForSetup(selectedProvider, field, selectedSetupMethod, imConfigValues)
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
 
                     <div className="endpoint-form-section">
-                      <strong>{t("endpoints.binding")}</strong>
+                      <strong>Routing defaults</strong>
                       <div className="endpoint-binding-grid">
                         <label htmlFor="binding-target-type">
                           {t("endpoints.targetType")}
@@ -5641,19 +5899,21 @@ function EndpointsPanel({
           </label>
         </div>
 
-        <label htmlFor="endpoint-auth-mode">
-          {t("endpoints.authMode")}
-          <input
-            id="endpoint-auth-mode"
-            value={authMode}
-            onChange={(event) => setAuthMode(event.target.value)}
-          />
-        </label>
+        {mode === "generic" || showAdvanced ? (
+          <label htmlFor="endpoint-auth-mode">
+            {t("endpoints.authMode")}
+            <input
+              id="endpoint-auth-mode"
+              value={authMode}
+              onChange={(event) => setAuthMode(event.target.value)}
+            />
+          </label>
+        ) : null}
 
         {formError ? <p className="inline-error">{formError}</p> : null}
         <button className="primary-button" type="submit" disabled={busy || (mode === "im" && !selectedProvider)}>
           <Plus size={16} aria-hidden="true" />
-          {t("endpoints.create")}
+          {mode === "im" && selectedSetupMethod === SETUP_METHOD_QR_CODE ? "Create and scan QR" : t("endpoints.create")}
         </button>
       </form>
 

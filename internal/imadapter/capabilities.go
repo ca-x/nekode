@@ -186,6 +186,91 @@ func ServerChanCapabilities() *InteractionCapabilities {
 	}
 }
 
+// SlackCapabilities returns the interaction capabilities for Slack.
+func SlackCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:       &TextCapability{Scope: ScopeAll},
+		Formatting: &FormattingCapability{Scope: ScopeAll, Mode: "markdown"},
+		Threads: &ThreadsCapability{
+			Scope:         ScopeAll,
+			ProviderModel: "thread_ts",
+		},
+		MediaUpload: &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 104857600},
+		Mentions:    &MentionsCapability{Scope: ScopeGroup},
+	}
+}
+
+// DiscordCapabilities returns the interaction capabilities for Discord.
+func DiscordCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:       &TextCapability{Scope: ScopeAll},
+		Formatting: &FormattingCapability{Scope: ScopeAll, Mode: "markdown"},
+		Threads: &ThreadsCapability{
+			Scope:         ScopeGroup,
+			ProviderModel: "thread",
+		},
+		MessageEdit: &MessageEditCapability{Scope: ScopeAll},
+		Reactions:   &ReactionsCapability{Scope: ScopeAll},
+		MediaUpload: &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 26214400},
+		Mentions:    &MentionsCapability{Scope: ScopeGroup},
+	}
+}
+
+// DingTalkCapabilities returns the interaction capabilities for DingTalk.
+func DingTalkCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:         &TextCapability{Scope: ScopeAll},
+		Formatting:   &FormattingCapability{Scope: ScopeAll, Mode: "markdown"},
+		QuickReplies: &QuickRepliesCapability{Scope: ScopeAll, MaxItems: 5},
+		MessageEdit:  &MessageEditCapability{Scope: ScopeAll},
+		MediaUpload:  &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 20971520},
+		Mentions:     &MentionsCapability{Scope: ScopeGroup},
+	}
+}
+
+// WeComCapabilities returns the interaction capabilities for WeChat Work.
+func WeComCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:        &TextCapability{Scope: ScopeAll},
+		Formatting:  &FormattingCapability{Scope: ScopeAll, Mode: "markdown"},
+		MediaUpload: &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 20971520},
+		Mentions:    &MentionsCapability{Scope: ScopeGroup},
+	}
+}
+
+// WeiboCapabilities returns the interaction capabilities for Weibo Open IM.
+func WeiboCapabilities() *InteractionCapabilities {
+	return basicTextCapabilities("plain", 0)
+}
+
+// QQBotCapabilities returns the interaction capabilities for the official QQ Bot API.
+func QQBotCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:        &TextCapability{Scope: ScopeAll},
+		Formatting:  &FormattingCapability{Scope: ScopeAll, Mode: "markdown"},
+		MediaUpload: &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 20971520},
+		Mentions:    &MentionsCapability{Scope: ScopeGroup},
+	}
+}
+
+// LineCapabilities returns the interaction capabilities for LINE.
+func LineCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:         &TextCapability{Scope: ScopeAll},
+		QuickReplies: &QuickRepliesCapability{Scope: ScopeAll, MaxItems: 13},
+		MediaUpload:  &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 10485760},
+	}
+}
+
+// MaxCapabilities returns the interaction capabilities for MAX.
+func MaxCapabilities() *InteractionCapabilities {
+	return &InteractionCapabilities{
+		Text:        &TextCapability{Scope: ScopeAll},
+		Formatting:  &FormattingCapability{Scope: ScopeAll, Mode: "markdown"},
+		MediaUpload: &MediaUploadCapability{Scope: ScopeAll, MaxBytes: 52428800},
+	}
+}
+
 // TerminalCapabilities returns the interaction capabilities for Terminal.
 func TerminalCapabilities() *InteractionCapabilities {
 	return &InteractionCapabilities{
@@ -199,4 +284,15 @@ func TerminalCapabilities() *InteractionCapabilities {
 			MaxItems: 10,
 		},
 	}
+}
+
+func basicTextCapabilities(formatMode string, maxMediaBytes int64) *InteractionCapabilities {
+	caps := &InteractionCapabilities{
+		Text:       &TextCapability{Scope: ScopeAll},
+		Formatting: &FormattingCapability{Scope: ScopeAll, Mode: formatMode},
+	}
+	if maxMediaBytes > 0 {
+		caps.MediaUpload = &MediaUploadCapability{Scope: ScopeAll, MaxBytes: maxMediaBytes}
+	}
+	return caps
 }

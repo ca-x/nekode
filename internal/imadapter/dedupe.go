@@ -7,6 +7,8 @@ import (
 	"github.com/ca-x/nekode/internal/iminbound"
 )
 
+const DefaultDedupeTTL = time.Minute
+
 type DedupeCache struct {
 	TTL time.Duration
 	Now func() time.Time
@@ -28,7 +30,7 @@ func (c *DedupeCache) MarkSeen(message iminbound.Message) bool {
 	now := c.now()
 	ttl := c.TTL
 	if ttl <= 0 {
-		ttl = 5 * time.Minute
+		ttl = DefaultDedupeTTL
 	}
 	for existing, firstSeen := range c.seen {
 		if now.Sub(firstSeen) > ttl {
@@ -40,6 +42,16 @@ func (c *DedupeCache) MarkSeen(message iminbound.Message) bool {
 	}
 	c.seen[key] = now
 	return false
+}
+
+func (c *DedupeCache) Forget(message iminbound.Message) {
+	key := message.DedupeKey()
+	if key == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.seen, key)
 }
 
 func (c *DedupeCache) now() time.Time {

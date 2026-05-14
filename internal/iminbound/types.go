@@ -96,6 +96,7 @@ type Draft struct {
 	ReplyToMessageID  string
 	SourceEndpointID  string
 	ExternalMessageID string
+	ReceivedUnix      int64
 	MetadataJSON      string
 	AttachmentIDs     []string
 	Sender            Sender
@@ -288,6 +289,7 @@ func (m Message) Draft() (Draft, error) {
 		ReplyToMessageID:  m.Conversation.RootMessageID,
 		SourceEndpointID:  m.EndpointID,
 		ExternalMessageID: m.ExternalMessageID,
+		ReceivedUnix:      m.ReceivedUnix,
 		MetadataJSON:      metadataJSON,
 		AttachmentIDs:     m.AllAttachmentIDs(),
 		Sender:            m.Sender,

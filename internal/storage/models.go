@@ -136,6 +136,7 @@ type OutboundDeliveryListOptions struct {
 	EndpointID string
 	Statuses   []string
 	Limit      int
+	ReadyUnix  int64
 }
 
 type NotificationRoute struct {
@@ -310,10 +311,10 @@ type ChannelDecision struct {
 
 // ChannelDecisionListOptions filters the list of decisions.
 type ChannelDecisionListOptions struct {
-	Target        string
-	StatusFilter  []string // empty means all
-	Limit         int
-	AfterCreated  int64
+	Target       string
+	StatusFilter []string // empty means all
+	Limit        int
+	AfterCreated int64
 }
 
 // ChannelDecisionVote is one voter's stance. Decision is one of:
@@ -331,15 +332,15 @@ type ChannelDecisionVote struct {
 // AgentRun is one agent session. EventCount is maintained by the server as
 // it ingests events.
 type AgentRun struct {
-	ID           string `json:"id"`
-	AgentID      string `json:"agentId"`
-	ComputerID   string `json:"computerId"`
-	StartedUnix  int64  `json:"startedUnix"`
-	EndedUnix    int64  `json:"endedUnix,omitempty"`
-	ExitCode     int32  `json:"exitCode"`
-	Summary      string `json:"summary,omitempty"`
-	Error        string `json:"error,omitempty"`
-	EventCount   uint32 `json:"eventCount"`
+	ID          string `json:"id"`
+	AgentID     string `json:"agentId"`
+	ComputerID  string `json:"computerId"`
+	StartedUnix int64  `json:"startedUnix"`
+	EndedUnix   int64  `json:"endedUnix,omitempty"`
+	ExitCode    int32  `json:"exitCode"`
+	Summary     string `json:"summary,omitempty"`
+	Error       string `json:"error,omitempty"`
+	EventCount  uint32 `json:"eventCount"`
 }
 
 // AgentRunListOptions filters agent run listings.

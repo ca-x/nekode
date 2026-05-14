@@ -27,6 +27,7 @@ import (
 	"github.com/ca-x/nekode/internal/imbinding"
 	imfeishu "github.com/ca-x/nekode/internal/imchannels/feishu"
 	imtelegram "github.com/ca-x/nekode/internal/imchannels/telegram"
+	imwecom "github.com/ca-x/nekode/internal/imchannels/wecom"
 	imwechat "github.com/ca-x/nekode/internal/imchannels/weixin"
 	"github.com/ca-x/nekode/internal/imcoord"
 	"github.com/ca-x/nekode/internal/immedia"
@@ -55,6 +56,7 @@ type Server struct {
 	auth              *auth.Service
 	daemon            *daemonrpc.Server
 	daemonEnrollments *daemonEnrollmentStore
+	imCoordinator     *imcoord.Coordinator
 	imBindings        *imbinding.Store
 	tunnels           *tunnelregistry.Registry
 	tunnelRate        *tunnelRateLimiter
@@ -91,6 +93,9 @@ func NewWithCache(cfg config.Config, logger *slog.Logger, store *storage.Store, 
 		}
 		s.daemonEnrollments = newDaemonEnrollmentStore(filepath.Join(cfg.DataDir, daemonEnrollmentDir))
 		s.daemon = daemonrpc.New(store, serverID, daemonrpc.WithTunnelRegistry(s.tunnels))
+		s.imCoordinator = imcoord.New(store, func(_ context.Context, target string, ids []string) ([]storage.Attachment, error) {
+			return s.loadMessageAttachments(target, ids)
+		}, imcoord.WithStartTime(time.Now()))
 	}
 	s.routes()
 	return s
@@ -186,6 +191,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/im/policies/effective", s.requireAuth(s.handleGetIMEffectivePolicy))
 	s.mux.HandleFunc("POST /api/im/telegram/{endpointID}/webhook", s.handleTelegramWebhook)
 	s.mux.HandleFunc("POST /api/im/feishu/{endpointID}/callback", s.handleFeishuCallback)
+	s.mux.HandleFunc("GET /api/im/wecom/{endpointID}/callback", s.handleWeComCallback)
+	s.mux.HandleFunc("POST /api/im/wecom/{endpointID}/callback", s.handleWeComCallback)
 	s.mux.HandleFunc("GET /api/im/weixin/{endpointID}/callback", s.handleWeChatCallback)
 	s.mux.HandleFunc("POST /api/im/weixin/{endpointID}/callback", s.handleWeChatCallback)
 	s.mux.HandleFunc("GET /api/interaction-endpoints", s.requireAuth(s.handleListInteractionEndpoints))
@@ -575,11 +582,10 @@ func (s *Server) handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "read telegram webhook failed")
 		return
 	}
-	coord := imcoord.New(s.store, nil)
 	result, err := (imtelegram.Webhook{
 		Config:      cfg,
 		Normalizer:  imadapter.Normalizer{},
-		Coordinator: coord,
+		Coordinator: s.imCoordinator,
 	}).Handle(r.Context(), r.Header, body)
 	if errors.Is(err, imtelegram.ErrUnauthorizedWebhook) {
 		writeError(w, http.StatusUnauthorized, "invalid telegram webhook secret")
@@ -633,7 +639,7 @@ func (s *Server) handleFeishuCallback(w http.ResponseWriter, r *http.Request) {
 	result, err := (imfeishu.Callback{
 		Config:      cfg,
 		Normalizer:  imadapter.Normalizer{},
-		Coordinator: imcoord.New(s.store, nil),
+		Coordinator: s.imCoordinator,
 	}).Handle(r.Context(), r.Header, body)
 	if errors.Is(err, imfeishu.ErrUnauthorizedCallback) {
 		writeError(w, http.StatusUnauthorized, "invalid feishu verification token")
@@ -649,6 +655,81 @@ func (s *Server) handleFeishuCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if result.Challenge != "" {
 		writeJSON(w, http.StatusOK, map[string]string{"challenge": result.Challenge})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":        true,
+		"ignored":   result.Ignored,
+		"reason":    result.Reason,
+		"messageId": result.Message.ID,
+	})
+}
+
+func (s *Server) handleWeComCallback(w http.ResponseWriter, r *http.Request) {
+	endpointID := strings.TrimSpace(r.PathValue("endpointID"))
+	if endpointID == "" {
+		writeError(w, http.StatusBadRequest, "endpointID is required")
+		return
+	}
+	endpoint, err := s.store.GetInteractionEndpoint(r.Context(), endpointID)
+	if errors.Is(err, storage.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "interaction endpoint not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "read interaction endpoint failed")
+		return
+	}
+	if !strings.EqualFold(endpoint.Kind, "im") || !strings.EqualFold(endpoint.Provider, imadapter.ProviderWeCom) {
+		writeError(w, http.StatusBadRequest, "interaction endpoint is not a WeChat Work IM endpoint")
+		return
+	}
+	if !endpoint.InboundEnabled {
+		writeError(w, http.StatusForbidden, "interaction endpoint inbound is disabled")
+		return
+	}
+	cfg, err := imwecom.ConfigFromEndpoint(endpoint)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !strings.EqualFold(cfg.Mode, "callback_app") {
+		writeError(w, http.StatusUnprocessableEntity, "wecom callback requires mode=callback_app")
+		return
+	}
+	query := imwecom.Query{
+		MsgSignature: r.URL.Query().Get("msg_signature"),
+		Timestamp:    r.URL.Query().Get("timestamp"),
+		Nonce:        r.URL.Query().Get("nonce"),
+		Echo:         r.URL.Query().Get("echostr"),
+	}
+	webhook := imwecom.Webhook{Config: cfg, Normalizer: imadapter.Normalizer{}, Coordinator: s.imCoordinator}
+	if r.Method == http.MethodGet {
+		echo, err := webhook.VerifyURL(query)
+		if errors.Is(err, imwecom.ErrUnauthorizedCallback) {
+			writeError(w, http.StatusUnauthorized, "invalid wecom callback signature")
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte(echo))
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read wecom callback failed")
+		return
+	}
+	result, err := webhook.Handle(r.Context(), query, body)
+	if errors.Is(err, imwecom.ErrUnauthorizedCallback) {
+		writeError(w, http.StatusUnauthorized, "invalid wecom callback signature")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -693,7 +774,7 @@ func (s *Server) handleWeChatCallback(w http.ResponseWriter, r *http.Request) {
 		Nonce:     r.URL.Query().Get("nonce"),
 		Echo:      r.URL.Query().Get("echostr"),
 	}
-	webhook := imwechat.Webhook{Config: cfg, Normalizer: imadapter.Normalizer{}, Coordinator: imcoord.New(s.store, nil)}
+	webhook := imwechat.Webhook{Config: cfg, Normalizer: imadapter.Normalizer{}, Coordinator: s.imCoordinator}
 	if r.Method == http.MethodGet {
 		echo, err := webhook.VerifyURL(query)
 		if errors.Is(err, imwechat.ErrUnauthorizedWebhook) {
@@ -880,6 +961,33 @@ func (s *Server) handleTestInteractionEndpoint(w http.ResponseWriter, r *http.Re
 			return
 		}
 		redacted := redactInteractionEndpoint(endpoint)
+		if imadapter.CanonicalProvider(endpoint.Provider) == imadapter.ProviderWeCom &&
+			canonicalWeComEndpointMode(interactionEndpointConfigValue(endpoint, "mode")) != "callback_app" {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"ready":       false,
+				"runtimeLive": false,
+				"summary":     "WeChat Work smart-bot WebSocket mode is reference-only until its long-connection runtime is wired. Use callback_app for the wired runtime.",
+				"checks": append(checks,
+					map[string]any{"name": "provider_config", "ok": true},
+					map[string]any{"name": "provider_runtime", "ok": false, "detail": "Only callback_app mode has receive/send runtime in Nekode."},
+				),
+				"endpoint": redacted,
+			})
+			return
+		}
+		if schema, ok := imadapter.GetProvider(endpoint.Provider); ok && (schema.Availability == "catalog" || schema.RuntimeStatus == "reference_only") {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"ready":       false,
+				"runtimeLive": false,
+				"summary":     "Endpoint configuration matches the provider schema, but this provider is catalog-only until its runtime is wired.",
+				"checks": append(checks,
+					map[string]any{"name": "provider_config", "ok": true},
+					map[string]any{"name": "provider_runtime", "ok": false, "detail": "Catalog-only provider; no receive/send runtime is registered."},
+				),
+				"endpoint": redacted,
+			})
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"ready":       true,
 			"runtimeLive": false,
@@ -2341,6 +2449,30 @@ func normalizedJSON(value string) string {
 		return "{}"
 	}
 	return value
+}
+
+func interactionEndpointConfigValue(endpoint storage.InteractionEndpoint, key string) string {
+	var config map[string]any
+	if err := json.Unmarshal([]byte(normalizedJSON(endpoint.ConfigJSON)), &config); err != nil {
+		return ""
+	}
+	value, ok := config[key]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
+}
+
+func canonicalWeComEndpointMode(mode string) string {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case "", "callback", "webhook", "callback_app":
+		return "callback_app"
+	case "websocket":
+		return "websocket_bot"
+	default:
+		return mode
+	}
 }
 
 func optionalTrimmed(value *string) *string {

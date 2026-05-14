@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestProviderRegistryCoversStellaProviders(t *testing.T) {
+func TestProviderRegistryCoversRuntimeAndCatalogProviders(t *testing.T) {
 	providers := map[string]bool{}
 	for _, schema := range ListProviders() {
 		providers[schema.Provider] = true
@@ -17,7 +17,22 @@ func TestProviderRegistryCoversStellaProviders(t *testing.T) {
 			t.Fatalf("schema %q missing binding targets", schema.Provider)
 		}
 	}
-	for _, provider := range []string{ProviderTelegram, ProviderQQ, ProviderFeishu, ProviderWeixin, ProviderTerminal, ProviderServerChan} {
+	for _, provider := range []string{
+		ProviderTelegram,
+		ProviderQQ,
+		ProviderQQBot,
+		ProviderFeishu,
+		ProviderWeixin,
+		ProviderWeCom,
+		ProviderSlack,
+		ProviderDiscord,
+		ProviderDingTalk,
+		ProviderWeibo,
+		ProviderLine,
+		ProviderMax,
+		ProviderTerminal,
+		ProviderServerChan,
+	} {
 		if !providers[provider] {
 			t.Fatalf("provider %q not registered; got %#v", provider, providers)
 		}
@@ -61,6 +76,27 @@ func TestValidateConfigAndRedact(t *testing.T) {
 	if err := ValidateConfig(ProviderServerChan, `{}`); err == nil || !strings.Contains(err.Error(), "bot_token") {
 		t.Fatalf("ValidateConfig(serverchan missing token) error = %v, want missing bot_token", err)
 	}
+	if err := ValidateConfig(ProviderSlack, `{"bot_token":"xoxb","app_token":"xapp"}`); err != nil {
+		t.Fatalf("ValidateConfig(slack) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderSlack, `{"bot_token":"xoxb"}`); err == nil || !strings.Contains(err.Error(), "app_token") {
+		t.Fatalf("ValidateConfig(slack missing app token) error = %v, want missing app_token", err)
+	}
+	if err := ValidateConfig(ProviderWeCom, `{"mode":"websocket_bot","bot_id":"aib","bot_secret":"secret"}`); err != nil {
+		t.Fatalf("ValidateConfig(wecom websocket) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderWeCom, `{"mode":"websocket","bot_id":"aib","bot_secret":"secret"}`); err != nil {
+		t.Fatalf("ValidateConfig(wecom websocket alias) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderWeCom, `{"mode":"callback_app","corp_id":"ww","corp_secret":"secret","agent_id":"1000002","callback_token":"tok","callback_aes_key":"aes"}`); err != nil {
+		t.Fatalf("ValidateConfig(wecom callback) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderWeCom, `{"corp_id":"ww","corp_secret":"secret","agent_id":"1000002","callback_token":"tok","callback_aes_key":"aes"}`); err != nil {
+		t.Fatalf("ValidateConfig(wecom default callback) error = %v", err)
+	}
+	if err := ValidateConfig(ProviderWeCom, `{"mode":"callback_app","corp_id":"ww"}`); err == nil || !strings.Contains(err.Error(), "corp_secret") {
+		t.Fatalf("ValidateConfig(wecom missing callback secret) error = %v, want missing corp_secret", err)
+	}
 }
 
 func TestProviderSchemaShapeForConfigUI(t *testing.T) {
@@ -82,6 +118,9 @@ func TestProviderSchemaShapeForConfigUI(t *testing.T) {
 			if len(schema.SetupHints) == 0 {
 				t.Fatalf("schema %q missing setup hints", schema.Provider)
 			}
+			if len(schema.SetupMethods) == 0 {
+				t.Fatalf("schema %q missing setup methods", schema.Provider)
+			}
 			bindingMethods[schema.Provider] = schema.BindingMethods
 			for _, field := range schema.Fields {
 				if field.Name == "group_mode" {
@@ -98,6 +137,21 @@ func TestProviderSchemaShapeForConfigUI(t *testing.T) {
 	}
 	if !SupportsBindingMethod(ProviderWeixin, BindingMethodQRCode) {
 		t.Fatalf("weixin should declare QR code binding support")
+	}
+	weixinSetupMethods := map[string]bool{}
+	if schema, ok := GetProvider(ProviderWeixin); ok {
+		if schema.DisplayName != "WeChat (iLink)" {
+			t.Fatalf("weixin display name = %q, want iLink-specific label", schema.DisplayName)
+		}
+		for _, method := range schema.SetupMethods {
+			weixinSetupMethods[method.Method] = true
+		}
+	}
+	if !weixinSetupMethods[BindingMethodQRCode] || !weixinSetupMethods[SetupMethodManual] {
+		t.Fatalf("weixin setup methods = %#v, want QR and manual", weixinSetupMethods)
+	}
+	if schema, ok := GetProvider(ProviderWeCom); !ok || schema.Provider != ProviderWeCom || !strings.Contains(schema.DisplayName, "WeChat Work") || len(schema.Fields) == 0 || strings.Join(schema.Fields[0].Options, ",") != "callback_app,websocket_bot" {
+		t.Fatalf("wecom schema = %+v, %v; want distinct WeChat Work provider", schema, ok)
 	}
 	for provider, methods := range bindingMethods {
 		if provider == ProviderWeixin {
@@ -120,6 +174,17 @@ func TestRedactConfigOnlyMasksKnownSensitiveFields(t *testing.T) {
 	}
 	if config["token"] != "***" || config["channel_id"] != "chat-1" || config["enable_notify"] != true {
 		t.Fatalf("telegram redacted config = %#v", config)
+	}
+
+	redacted, err = RedactConfig(ProviderDiscord, `{"token":"secret","proxy_password":"proxy-secret","guild_id":"guild"}`)
+	if err != nil {
+		t.Fatalf("RedactConfig(discord) error = %v", err)
+	}
+	if err := json.Unmarshal([]byte(redacted), &config); err != nil {
+		t.Fatalf("discord redacted JSON invalid: %v", err)
+	}
+	if config["token"] != "***" || config["proxy_password"] != "***" || config["guild_id"] != "guild" {
+		t.Fatalf("discord redacted config = %#v", config)
 	}
 
 	redacted, err = RedactConfig("unknown-provider", `{"token":"leave-alone","nested":{"ok":true}}`)

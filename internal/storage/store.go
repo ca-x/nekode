@@ -825,6 +825,12 @@ func (s *Store) ListOutboundDeliveries(ctx context.Context, opts OutboundDeliver
 		}
 		query.Where(outbounddelivery.StatusIn(statuses...))
 	}
+	if opts.ReadyUnix > 0 {
+		query.Where(outbounddelivery.Or(
+			outbounddelivery.StatusNEQ("retrying"),
+			outbounddelivery.NextRetryTimeUnixLTE(opts.ReadyUnix),
+		))
+	}
 	rows, err := query.
 		Order(outbounddelivery.ByUpdatedUnix(sql.OrderDesc()), outbounddelivery.ByID(sql.OrderDesc())).
 		Limit(opts.Limit).
@@ -872,6 +878,41 @@ func (s *Store) ScheduleOutboundDeliveryRetry(ctx context.Context, id string, ne
 		SetDeliveredTimeUnix(0).
 		SetLastError("").
 		SetUpdatedUnix(now).
+		Save(ctx)
+	if ent.IsNotFound(err) {
+		return OutboundDelivery{}, ErrNotFound
+	}
+	if err != nil {
+		return OutboundDelivery{}, err
+	}
+	return outboundDeliveryFromEnt(row), nil
+}
+
+func (s *Store) RecordOutboundDeliveryFailure(ctx context.Context, id, lastError string, maxAttempts uint32, nowUnix int64) (OutboundDelivery, error) {
+	if maxAttempts == 0 {
+		maxAttempts = 3
+	}
+	if nowUnix == 0 {
+		nowUnix = unixNow()
+	}
+	current, err := s.GetOutboundDelivery(ctx, id)
+	if err != nil {
+		return OutboundDelivery{}, err
+	}
+	attempt := current.AttemptCount + 1
+	status := "retrying"
+	nextRetryUnix := nowUnix + outboundRetryDelaySeconds(attempt)
+	if attempt >= maxAttempts {
+		status = "failed"
+		nextRetryUnix = 0
+	}
+	row, err := s.client.OutboundDelivery.UpdateOneID(id).
+		SetStatus(status).
+		SetAttemptCount(attempt).
+		SetNextRetryTimeUnix(nextRetryUnix).
+		SetDeliveredTimeUnix(0).
+		SetLastError(strings.TrimSpace(lastError)).
+		SetUpdatedUnix(nowUnix).
 		Save(ctx)
 	if ent.IsNotFound(err) {
 		return OutboundDelivery{}, ErrNotFound
@@ -2306,6 +2347,20 @@ func validOutboundDeliveryStatus(status string) bool {
 	default:
 		return false
 	}
+}
+
+func outboundRetryDelaySeconds(attempt uint32) int64 {
+	if attempt == 0 {
+		attempt = 1
+	}
+	delay := int64(30)
+	for i := uint32(1); i < attempt && delay < 900; i++ {
+		delay *= 2
+	}
+	if delay > 900 {
+		return 900
+	}
+	return delay
 }
 
 type scoredNotificationRoute struct {

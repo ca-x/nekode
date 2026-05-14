@@ -56,10 +56,11 @@ type WebhookResult struct {
 }
 
 type Runtime struct {
-	Config     Config
-	Store      *storage.Store
-	HTTPClient *http.Client
-	TokenCache *TokenCache
+	Config      Config
+	Store       *storage.Store
+	HTTPClient  *http.Client
+	TokenCache  *TokenCache
+	RateLimiter imadapter.OutgoingRateWaiter
 }
 
 type SendResult struct {
@@ -138,7 +139,7 @@ func ConfigFromEndpoint(endpoint storage.InteractionEndpoint) (Config, error) {
 	}
 	return Config{
 		EndpointID:      endpoint.ID,
-		Mode:            firstNonEmpty(stringValue(raw, "mode"), "official_account"),
+		Mode:            firstNonEmpty(stringValue(raw, "mode"), "ilink"),
 		BotToken:        stringValue(raw, "bot_token"),
 		BotID:           stringValue(raw, "bot_id"),
 		UserID:          stringValue(raw, "user_id"),
@@ -224,6 +225,9 @@ func (w Webhook) Handle(ctx context.Context, query Query, body []byte) (WebhookR
 	if errors.Is(err, storage.ErrConflict) {
 		return WebhookResult{Ignored: true, Reason: "duplicate"}, nil
 	}
+	if errors.Is(err, imcoord.ErrStaleDraft) {
+		return WebhookResult{Ignored: true, Reason: "stale"}, nil
+	}
 	if err != nil {
 		return WebhookResult{}, err
 	}
@@ -287,7 +291,12 @@ func (r Runtime) SendPending(ctx context.Context, limit int) ([]SendResult, erro
 		return nil, errors.New("wechat runtime store is required")
 	}
 	cfg := r.Config.normalize()
-	deliveries, err := r.Store.ListOutboundDeliveries(ctx, storage.OutboundDeliveryListOptions{EndpointID: cfg.EndpointID, Statuses: []string{"pending", "retrying"}, Limit: limit})
+	deliveries, err := r.Store.ListOutboundDeliveries(ctx, storage.OutboundDeliveryListOptions{
+		EndpointID: cfg.EndpointID,
+		Statuses:   []string{"pending", "retrying"},
+		Limit:      limit,
+		ReadyUnix:  time.Now().Unix(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -325,6 +334,9 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", "wechat official account openid is required", 0, 0)
 		return SendResult{Delivery: failed}, errors.New("wechat official account openid is required")
 	}
+	if err := r.outgoingLimiter().Wait(ctx, imadapter.ProviderWeixin); err != nil {
+		return SendResult{Delivery: delivery}, err
+	}
 	resp, err := r.sendCustomerServiceText(ctx, cfg, openID, message.Content)
 	if err != nil {
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
@@ -355,6 +367,9 @@ func (r Runtime) sendILinkDelivery(ctx context.Context, cfg Config, delivery sto
 		contextToken = wechatContextToken(source.MetadataJSON)
 	}
 	client := NewILinkClient(cfg.BaseURL, cfg.CDNBaseURL, cfg.BotToken)
+	if err := r.outgoingLimiter().Wait(ctx, imadapter.ProviderWeixin); err != nil {
+		return SendResult{Delivery: delivery}, err
+	}
 	err = client.SendText(ctx, toUserID, contextToken, message.Content, r.httpClient())
 	if err != nil {
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
@@ -495,7 +510,7 @@ func (c Config) normalize() Config {
 	c.EndpointID = strings.TrimSpace(c.EndpointID)
 	c.Mode = strings.ToLower(strings.TrimSpace(c.Mode))
 	if c.Mode == "" {
-		c.Mode = "official_account"
+		c.Mode = "ilink"
 	}
 	c.BotToken = strings.TrimSpace(c.BotToken)
 	c.BotID = strings.TrimSpace(c.BotID)
@@ -531,6 +546,13 @@ func (r Runtime) httpClient() *http.Client {
 		return r.HTTPClient
 	}
 	return http.DefaultClient
+}
+
+func (r Runtime) outgoingLimiter() imadapter.OutgoingRateWaiter {
+	if r.RateLimiter != nil {
+		return r.RateLimiter
+	}
+	return imadapter.DefaultOutgoingRateLimiter()
 }
 
 func stringValue(values map[string]any, key string) string {

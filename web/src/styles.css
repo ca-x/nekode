@@ -2034,6 +2034,36 @@ textarea {
   font-weight: 800;
 }
 
+.provider-catalog-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.provider-catalog-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(260px, 2fr) minmax(180px, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.provider-catalog-row > div:first-child,
+.provider-catalog-row small {
+  display: grid;
+  gap: 3px;
+}
+
+.provider-catalog-row span,
+.provider-catalog-row small,
+.muted-copy {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
 .endpoint-config-details {
   color: var(--muted);
   font-size: 0.8125rem;
@@ -2165,6 +2195,24 @@ textarea {
 
 .endpoint-form-section > strong {
   color: var(--text);
+}
+
+.endpoint-runtime-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--notice-warning-border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--notice-warning-bg);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.endpoint-runtime-note svg {
+  flex: 0 0 auto;
+  color: var(--warning);
 }
 
 .endpoint-binding-grid,
@@ -3215,6 +3263,7 @@ textarea {
   .endpoint-toggle-grid,
   .enrollment-layout,
   .message-search,
+  .provider-catalog-row,
   .saved-discovery,
   .task-workspace,
   .two-column {
@@ -3326,6 +3375,7 @@ textarea {
   .contract-grid,
   .enrollment-status-grid,
   .inline-form,
+  .provider-catalog-row,
   .quick-task-form,
   .reference-grid,
   .skill-tools,

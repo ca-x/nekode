@@ -41,6 +41,7 @@ type Runtime struct {
 	Normalizer    imadapter.Normalizer
 	Now           func() time.Time
 	API           OpenAPI
+	RateLimiter   imadapter.OutgoingRateWaiter
 	TokenSource   oauth2.TokenSource
 	Session       SessionManager
 	NewOpenAPI    func(context.Context, Config) (OpenAPI, oauth2.TokenSource, error)
@@ -165,6 +166,9 @@ func (r Runtime) handleMessage(ctx context.Context, msg *dto.Message, group bool
 	if errors.Is(err, storage.ErrConflict) {
 		return storage.Message{}, ErrIgnoredEvent
 	}
+	if errors.Is(err, imcoord.ErrStaleDraft) {
+		return storage.Message{}, ErrIgnoredEvent
+	}
 	if err != nil {
 		return storage.Message{}, err
 	}
@@ -193,6 +197,12 @@ func RawEventFromMessage(endpointID string, msg *dto.Message, group bool, receiv
 			"id":       authorID,
 			"username": authorName,
 		},
+	}
+	if strings.TrimSpace(string(msg.Timestamp)) != "" {
+		payload["timestamp"] = string(msg.Timestamp)
+		if parsed, err := msg.Timestamp.Time(); err == nil {
+			received = parsed
+		}
 	}
 	if len(msg.Attachments) > 0 {
 		attachments := make([]map[string]any, 0, len(msg.Attachments))
@@ -231,6 +241,7 @@ func (r Runtime) SendPending(ctx context.Context, limit int) ([]SendResult, erro
 		EndpointID: cfg.EndpointID,
 		Statuses:   []string{"pending", "retrying"},
 		Limit:      limit,
+		ReadyUnix:  time.Now().Unix(),
 	})
 	if err != nil {
 		return nil, err
@@ -280,6 +291,9 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	}
 	sent := make([]Message, 0, len(frames))
 	for _, frame := range frames {
+		if err := r.outgoingLimiter().Wait(ctx, imadapter.ProviderQQ); err != nil {
+			return SendResult{Delivery: delivery, Messages: sent}, err
+		}
 		msg, err := sendFrame(ctx, api, frame)
 		if err != nil {
 			failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
@@ -337,6 +351,13 @@ func (r Runtime) session() SessionManager {
 		return r.NewSession()
 	}
 	return botgo.NewSessionManager()
+}
+
+func (r Runtime) outgoingLimiter() imadapter.OutgoingRateWaiter {
+	if r.RateLimiter != nil {
+		return r.RateLimiter
+	}
+	return imadapter.DefaultOutgoingRateLimiter()
 }
 
 func applyConfig(msg iminbound.Message, cfg Config) iminbound.Message {

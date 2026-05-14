@@ -79,17 +79,30 @@ export type IMBindingMethod = {
   description: string;
 };
 
+export type IMSetupMethod = {
+  method: string;
+  displayName: string;
+  description: string;
+  primary?: boolean;
+};
+
 export type IMProviderSchema = {
   provider: string;
   displayName: string;
   transport: string;
   description: string;
+  canonical?: boolean;
+  availability?: string;
+  runtimeStatus?: string;
+  source?: string;
+  notes?: string[];
   supportsWebhook: boolean;
   supportsPolling: boolean;
   supportsStreaming: boolean;
   supportsMedia: boolean;
   bindingTargets: string[];
   bindingMethods?: IMBindingMethod[];
+  setupMethods?: IMSetupMethod[];
   setupHints: string[];
   fields: IMProviderField[];
 };

@@ -4,14 +4,20 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +27,7 @@ import (
 	"github.com/ca-x/nekode/internal/auth"
 	"github.com/ca-x/nekode/internal/config"
 	imtelegram "github.com/ca-x/nekode/internal/imchannels/telegram"
+	imwecom "github.com/ca-x/nekode/internal/imchannels/wecom"
 	imwechat "github.com/ca-x/nekode/internal/imchannels/weixin"
 	"github.com/ca-x/nekode/internal/runtimeadapter"
 	"github.com/ca-x/nekode/internal/storage"
@@ -277,9 +284,15 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	var providerBody struct {
 		Items []struct {
 			Provider       string `json:"provider"`
+			Availability   string `json:"availability"`
+			RuntimeStatus  string `json:"runtimeStatus"`
 			BindingMethods []struct {
 				Method string `json:"method"`
 			} `json:"bindingMethods"`
+			SetupMethods []struct {
+				Method  string `json:"method"`
+				Primary bool   `json:"primary"`
+			} `json:"setupMethods"`
 			Fields []struct {
 				Name      string `json:"name"`
 				Sensitive bool   `json:"sensitive"`
@@ -293,7 +306,7 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	for _, provider := range providerBody.Items {
 		seenProviders[provider.Provider] = true
 	}
-	for _, provider := range []string{"telegram", "qq", "feishu", "weixin", "terminal", "serverchan"} {
+	for _, provider := range []string{"telegram", "qq", "qqbot", "feishu", "weixin", "wecom", "slack", "discord", "dingtalk", "weibo", "line", "max", "terminal", "serverchan"} {
 		if !seenProviders[provider] {
 			t.Fatalf("IM providers missing %q: %+v", provider, providerBody.Items)
 		}
@@ -310,6 +323,25 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 		}
 		if provider.Provider != "weixin" && hasQRCode {
 			t.Fatalf("provider %q should not expose qr_code binding method yet", provider.Provider)
+		}
+		hasManualSetup := false
+		hasQRSetup := false
+		for _, method := range provider.SetupMethods {
+			if method.Method == "manual" {
+				hasManualSetup = true
+			}
+			if method.Method == "qr_code" {
+				hasQRSetup = true
+			}
+		}
+		if !hasManualSetup {
+			t.Fatalf("provider %q missing manual setup method: %+v", provider.Provider, provider.SetupMethods)
+		}
+		if provider.Provider == "weixin" && !hasQRSetup {
+			t.Fatalf("weixin provider missing QR setup method: %+v", provider.SetupMethods)
+		}
+		if provider.Provider == "slack" && (provider.Availability != "catalog" || provider.RuntimeStatus != "reference_only") {
+			t.Fatalf("slack provider availability = %q/%q, want catalog/reference_only", provider.Availability, provider.RuntimeStatus)
 		}
 	}
 
@@ -386,6 +418,36 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	}
 	if !testEndpointBody.Ready || testEndpointBody.RuntimeLive || !strings.Contains(testEndpointBody.Summary, "Provider receive/send runtime") {
 		t.Fatalf("endpoint test result = %+v, want config-ready non-live runtime", testEndpointBody)
+	}
+	slackEndpoint := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "slack",
+		"displayName":     "Slack Ops",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "socket_mode",
+		"configJson":      `{"bot_token":"xoxb-token","app_token":"xapp-token"}`,
+	})
+	if slackEndpoint.Code != http.StatusCreated {
+		t.Fatalf("create Slack endpoint status = %d body=%s", slackEndpoint.Code, slackEndpoint.Body.String())
+	}
+	var slackEndpointBody storage.InteractionEndpoint
+	if err := json.Unmarshal(slackEndpoint.Body.Bytes(), &slackEndpointBody); err != nil {
+		t.Fatalf("decode Slack endpoint: %v", err)
+	}
+	catalogTest := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+slackEndpointBody.ID+"/test", token, map[string]any{})
+	if catalogTest.Code != http.StatusOK {
+		t.Fatalf("test catalog endpoint status = %d body=%s", catalogTest.Code, catalogTest.Body.String())
+	}
+	var catalogTestBody struct {
+		Ready   bool   `json:"ready"`
+		Summary string `json:"summary"`
+	}
+	if err := json.Unmarshal(catalogTest.Body.Bytes(), &catalogTestBody); err != nil {
+		t.Fatalf("decode catalog endpoint test: %v", err)
+	}
+	if catalogTestBody.Ready || !strings.Contains(catalogTestBody.Summary, "catalog-only") {
+		t.Fatalf("catalog endpoint test result = %+v, want schema-valid but runtime-unready", catalogTestBody)
 	}
 	unsupportedBinding := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+imEndpointBody.ID+"/binding-sessions", token, map[string]any{
 		"method": "qr_code",
@@ -731,12 +793,13 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if err := json.Unmarshal(wechatEndpoint.Body.Bytes(), &wechatEndpointBody); err != nil {
 		t.Fatalf("decode WeChat endpoint: %v", err)
 	}
-	wechatSignature := imwechat.Signature("wechat-token", "1700000020", "nonce-1")
-	verifyWechat := doGET(t, s, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+wechatSignature+"&timestamp=1700000020&nonce=nonce-1&echostr=hello-wechat", "")
+	wechatTimestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	wechatSignature := imwechat.Signature("wechat-token", wechatTimestamp, "nonce-1")
+	verifyWechat := doGET(t, s, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+wechatSignature+"&timestamp="+wechatTimestamp+"&nonce=nonce-1&echostr=hello-wechat", "")
 	if verifyWechat.Code != http.StatusOK || strings.TrimSpace(verifyWechat.Body.String()) != "hello-wechat" {
 		t.Fatalf("verify WeChat callback status = %d body=%s", verifyWechat.Code, verifyWechat.Body.String())
 	}
-	badWechatWebhook := doJSON(t, s, http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature=bad&timestamp=1700000020&nonce=nonce-1", "", map[string]any{})
+	badWechatWebhook := doJSON(t, s, http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature=bad&timestamp="+wechatTimestamp+"&nonce=nonce-1", "", map[string]any{})
 	if badWechatWebhook.Code != http.StatusUnauthorized {
 		t.Fatalf("bad WeChat webhook status = %d body=%s", badWechatWebhook.Code, badWechatWebhook.Body.String())
 	}
@@ -746,9 +809,9 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 	if weixinBinding.Code != http.StatusUnprocessableEntity || !strings.Contains(weixinBinding.Body.String(), "mode=ilink") {
 		t.Fatalf("create official-account weixin binding status = %d body=%s, want unsupported mode", weixinBinding.Code, weixinBinding.Body.String())
 	}
-	wechatBody := strings.NewReader(`<xml><ToUserName><![CDATA[gh_app]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName><CreateTime>1700000020</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[hello official account]]></Content><MsgId>888</MsgId></xml>`)
+	wechatBody := strings.NewReader(`<xml><ToUserName><![CDATA[gh_app]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName><CreateTime>` + wechatTimestamp + `</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[hello official account]]></Content><MsgId>888</MsgId></xml>`)
 	wechatWebhook := httptest.NewRecorder()
-	wechatReq := httptest.NewRequest(http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+wechatSignature+"&timestamp=1700000020&nonce=nonce-1", wechatBody)
+	wechatReq := httptest.NewRequest(http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+wechatSignature+"&timestamp="+wechatTimestamp+"&nonce=nonce-1", wechatBody)
 	wechatReq.Header.Set("Content-Type", "application/xml")
 	s.Handler().ServeHTTP(wechatWebhook, wechatReq)
 	if wechatWebhook.Code != http.StatusOK {
@@ -770,6 +833,15 @@ func TestAuthAndCoreAPIs(t *testing.T) {
 		storedWeChat.ExternalMessageID != "888" ||
 		storedWeChat.ThreadID != "wechat-thread" {
 		t.Fatalf("stored WeChat message = %+v webhook=%+v", storedWeChat, wechatWebhookBody)
+	}
+	oldWechatTimestamp := strconv.FormatInt(time.Now().Add(-time.Hour).Unix(), 10)
+	oldWechatSignature := imwechat.Signature("wechat-token", oldWechatTimestamp, "nonce-old")
+	oldWechatBody := strings.NewReader(`<xml><ToUserName><![CDATA[gh_app]]></ToUserName><FromUserName><![CDATA[openid-1]]></FromUserName><CreateTime>` + oldWechatTimestamp + `</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[old replay]]></Content><MsgId>889</MsgId></xml>`)
+	oldWechatWebhook := httptest.NewRecorder()
+	oldWechatReq := httptest.NewRequest(http.MethodPost, "/api/im/weixin/"+wechatEndpointBody.ID+"/callback?signature="+oldWechatSignature+"&timestamp="+oldWechatTimestamp+"&nonce=nonce-old", oldWechatBody)
+	s.Handler().ServeHTTP(oldWechatWebhook, oldWechatReq)
+	if oldWechatWebhook.Code != http.StatusOK || !strings.Contains(oldWechatWebhook.Body.String(), `"ignored":true`) || !strings.Contains(oldWechatWebhook.Body.String(), `"reason":"stale"`) {
+		t.Fatalf("old wechat webhook status = %d body=%s, want stale ignored", oldWechatWebhook.Code, oldWechatWebhook.Body.String())
 	}
 
 	message := doJSON(t, s, http.MethodPost, "/api/messages", token, map[string]any{
@@ -1063,6 +1135,152 @@ func TestWeixinILinkBindingSessionUsesProviderQRAndPersistsBoundConfig(t *testin
 		!strings.Contains(stored.ConfigJSON, `"user_id":"user-1"`) {
 		t.Fatalf("stored bound config = %s", stored.ConfigJSON)
 	}
+}
+
+func TestWeComCallbackAndReadiness(t *testing.T) {
+	s := New(testConfig(), slog.New(slog.DiscardHandler), newTestStore(t))
+	token := bootstrapToken(t, s)
+	aesKey := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+	endpointResp := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "wecom",
+		"displayName":     "WeChat Work",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "webhook_signature",
+		"configJson":      `{"mode":"callback_app","corp_id":"ww-test","corp_secret":"corp-secret","agent_id":"1000002","callback_token":"cb-token","callback_aes_key":"` + aesKey + `","default_target":"#ops","default_thread_id":"wecom-thread"}`,
+	})
+	if endpointResp.Code != http.StatusCreated {
+		t.Fatalf("create WeCom endpoint status = %d body=%s", endpointResp.Code, endpointResp.Body.String())
+	}
+	var endpoint storage.InteractionEndpoint
+	if err := json.Unmarshal(endpointResp.Body.Bytes(), &endpoint); err != nil {
+		t.Fatalf("decode WeCom endpoint: %v", err)
+	}
+	readyResp := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+endpoint.ID+"/test", token, map[string]any{})
+	if readyResp.Code != http.StatusOK {
+		t.Fatalf("test WeCom callback endpoint status = %d body=%s", readyResp.Code, readyResp.Body.String())
+	}
+	var readyBody struct {
+		Ready       bool   `json:"ready"`
+		RuntimeLive bool   `json:"runtimeLive"`
+		Summary     string `json:"summary"`
+	}
+	if err := json.Unmarshal(readyResp.Body.Bytes(), &readyBody); err != nil {
+		t.Fatalf("decode WeCom readiness: %v", err)
+	}
+	if !readyBody.Ready || readyBody.RuntimeLive || !strings.Contains(readyBody.Summary, "Provider receive/send runtime") {
+		t.Fatalf("WeCom callback readiness = %+v, want config-ready non-live runtime", readyBody)
+	}
+
+	websocketResp := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints", token, map[string]any{
+		"kind":            "im",
+		"provider":        "wecom",
+		"displayName":     "WeChat Work WS",
+		"inboundEnabled":  true,
+		"outboundEnabled": true,
+		"authMode":        "websocket",
+		"configJson":      `{"mode":"websocket","bot_id":"aibot-id","bot_secret":"bot-secret"}`,
+	})
+	if websocketResp.Code != http.StatusCreated {
+		t.Fatalf("create WeCom websocket endpoint status = %d body=%s", websocketResp.Code, websocketResp.Body.String())
+	}
+	var websocketEndpoint storage.InteractionEndpoint
+	if err := json.Unmarshal(websocketResp.Body.Bytes(), &websocketEndpoint); err != nil {
+		t.Fatalf("decode WeCom websocket endpoint: %v", err)
+	}
+	websocketReady := doJSON(t, s, http.MethodPost, "/api/interaction-endpoints/"+websocketEndpoint.ID+"/test", token, map[string]any{})
+	if websocketReady.Code != http.StatusOK {
+		t.Fatalf("test WeCom websocket endpoint status = %d body=%s", websocketReady.Code, websocketReady.Body.String())
+	}
+	var websocketReadyBody struct {
+		Ready   bool   `json:"ready"`
+		Summary string `json:"summary"`
+	}
+	if err := json.Unmarshal(websocketReady.Body.Bytes(), &websocketReadyBody); err != nil {
+		t.Fatalf("decode WeCom websocket readiness: %v", err)
+	}
+	if websocketReadyBody.Ready || !strings.Contains(websocketReadyBody.Summary, "callback_app") {
+		t.Fatalf("WeCom websocket readiness = %+v, want reference-only guidance", websocketReadyBody)
+	}
+
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	encryptedEcho := encryptWeComForServerTest(t, aesKey, "ww-test", "verify-ok")
+	verifySignature := imwecom.Signature("cb-token", timestamp, "nonce-url", encryptedEcho)
+	verifyResp := doGET(t, s, "/api/im/wecom/"+endpoint.ID+"/callback?msg_signature="+url.QueryEscape(verifySignature)+"&timestamp="+timestamp+"&nonce=nonce-url&echostr="+url.QueryEscape(encryptedEcho), "")
+	if verifyResp.Code != http.StatusOK || strings.TrimSpace(verifyResp.Body.String()) != "verify-ok" {
+		t.Fatalf("verify WeCom callback status = %d body=%s", verifyResp.Code, verifyResp.Body.String())
+	}
+	badVerify := doGET(t, s, "/api/im/wecom/"+endpoint.ID+"/callback?msg_signature=bad&timestamp="+timestamp+"&nonce=nonce-url&echostr="+url.QueryEscape(encryptedEcho), "")
+	if badVerify.Code != http.StatusUnauthorized {
+		t.Fatalf("bad WeCom verify status = %d body=%s", badVerify.Code, badVerify.Body.String())
+	}
+
+	plain := `<xml><ToUserName><![CDATA[ww-test]]></ToUserName><FromUserName><![CDATA[user-1]]></FromUserName><CreateTime>` + timestamp + `</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[<@bot> hello wecom]]></Content><MsgId>987654321</MsgId><AgentID>1000002</AgentID></xml>`
+	encrypted := encryptWeComForServerTest(t, aesKey, "ww-test", plain)
+	postSignature := imwecom.Signature("cb-token", timestamp, "nonce-post", encrypted)
+	webhook := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/im/wecom/"+endpoint.ID+"/callback?msg_signature="+url.QueryEscape(postSignature)+"&timestamp="+timestamp+"&nonce=nonce-post", strings.NewReader(`<xml><ToUserName><![CDATA[ww-test]]></ToUserName><AgentID><![CDATA[1000002]]></AgentID><Encrypt><![CDATA[`+encrypted+`]]></Encrypt></xml>`))
+	req.Header.Set("Content-Type", "application/xml")
+	s.Handler().ServeHTTP(webhook, req)
+	if webhook.Code != http.StatusOK {
+		t.Fatalf("WeCom webhook status = %d body=%s", webhook.Code, webhook.Body.String())
+	}
+	var result struct {
+		OK        bool   `json:"ok"`
+		MessageID string `json:"messageId"`
+	}
+	if err := json.Unmarshal(webhook.Body.Bytes(), &result); err != nil {
+		t.Fatalf("decode WeCom webhook: %v", err)
+	}
+	stored, err := s.store.GetMessage(context.Background(), "#ops", result.MessageID)
+	if err != nil {
+		t.Fatalf("GetMessage(wecom) error = %v", err)
+	}
+	if !result.OK ||
+		stored.SourceEndpointID != endpoint.ID ||
+		stored.ExternalMessageID != "987654321" ||
+		stored.Target != "#ops" ||
+		stored.ThreadID != "wecom-thread" ||
+		stored.Content != "hello wecom" {
+		t.Fatalf("stored WeCom message = %+v webhook=%+v", stored, result)
+	}
+}
+
+func encryptWeComForServerTest(t *testing.T, encodingAESKey, receiveID, plain string) string {
+	t.Helper()
+	key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(encodingAESKey) + "=")
+	if err != nil {
+		t.Fatalf("decode WeCom AES key: %v", err)
+	}
+	if len(key) != 32 {
+		t.Fatalf("WeCom AES key decoded to %d bytes, want 32", len(key))
+	}
+	buf := bytes.NewBufferString("0123456789abcdef")
+	var lenBuf [4]byte
+	binary.BigEndian.PutUint32(lenBuf[:], uint32(len(plain)))
+	buf.Write(lenBuf[:])
+	buf.WriteString(plain)
+	buf.WriteString(receiveID)
+	padded := pkcs7PadForServerTest(buf.Bytes(), aes.BlockSize)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		t.Fatalf("create WeCom AES cipher: %v", err)
+	}
+	out := make([]byte, len(padded))
+	cipher.NewCBCEncrypter(block, key[:aes.BlockSize]).CryptBlocks(out, padded)
+	return base64.StdEncoding.EncodeToString(out)
+}
+
+func pkcs7PadForServerTest(data []byte, blockSize int) []byte {
+	pad := blockSize - len(data)%blockSize
+	out := make([]byte, len(data)+pad)
+	copy(out, data)
+	for i := len(data); i < len(out); i++ {
+		out[i] = byte(pad)
+	}
+	return out
 }
 
 func TestCoreAPIsRejectMissingAuthAndInvalidInputs(t *testing.T) {

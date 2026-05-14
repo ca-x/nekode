@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
+	"github.com/ca-x/nekode/internal/imadapter"
+	"github.com/ca-x/nekode/internal/iminbound"
 	"github.com/ca-x/nekode/internal/storage"
 )
 
@@ -18,14 +21,37 @@ type Coordinator struct {
 	store           Store
 	loadAttachments AttachmentLoader
 	queue           *sessionQueue
+	dedupe          *imadapter.DedupeCache
+	startedAt       time.Time
 }
 
-func New(store Store, loadAttachments AttachmentLoader) *Coordinator {
-	return &Coordinator{
+type Option func(*Coordinator)
+
+func WithStartTime(startedAt time.Time) Option {
+	return func(c *Coordinator) {
+		c.startedAt = startedAt
+	}
+}
+
+func WithDedupeTTL(ttl time.Duration) Option {
+	return func(c *Coordinator) {
+		if c.dedupe != nil {
+			c.dedupe.TTL = ttl
+		}
+	}
+}
+
+func New(store Store, loadAttachments AttachmentLoader, opts ...Option) *Coordinator {
+	c := &Coordinator{
 		store:           store,
 		loadAttachments: loadAttachments,
 		queue:           newSessionQueue(),
+		dedupe:          &imadapter.DedupeCache{},
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 func (c *Coordinator) Handle(ctx context.Context, draft Draft) (Result, error) {
@@ -33,12 +59,19 @@ func (c *Coordinator) Handle(ctx context.Context, draft Draft) (Result, error) {
 	if err := validateDraft(draft); err != nil {
 		return Result{}, err
 	}
+	if c.isStale(draft) {
+		return Result{}, ErrStaleDraft
+	}
+	dedupeMessage := draftDedupeMessage(draft)
+	if c.dedupe != nil && c.dedupe.MarkSeen(dedupeMessage) {
+		return Result{}, storage.ErrConflict
+	}
 	key := sessionKey(draft)
 	command, args := parseCommand(draft.Content)
 	if command != "" {
 		return c.handleCommand(ctx, key, command, args)
 	}
-	return c.queue.enqueue(ctx, key, func(qctx context.Context) (Result, error) {
+	result, err := c.queue.enqueue(ctx, key, func(qctx context.Context) (Result, error) {
 		select {
 		case <-qctx.Done():
 			return Result{}, ErrAborted
@@ -46,10 +79,17 @@ func (c *Coordinator) Handle(ctx context.Context, draft Draft) (Result, error) {
 		}
 		message, err := c.createMessage(qctx, draft)
 		if err != nil {
+			if c.dedupe != nil && !errors.Is(err, storage.ErrConflict) {
+				c.dedupe.Forget(dedupeMessage)
+			}
 			return Result{}, err
 		}
 		return Result{Message: message, SessionKey: key}, nil
 	})
+	if err != nil && c.dedupe != nil && !errors.Is(err, storage.ErrConflict) {
+		c.dedupe.Forget(dedupeMessage)
+	}
+	return result, err
 }
 
 func (c *Coordinator) handleCommand(_ context.Context, sessionKey, command, args string) (Result, error) {
@@ -103,6 +143,20 @@ func (c *Coordinator) attachments(ctx context.Context, draft Draft) ([]storage.A
 		return nil, nil
 	}
 	return c.loadAttachments(ctx, draft.Target, draft.AttachmentIDs)
+}
+
+func (c *Coordinator) isStale(draft Draft) bool {
+	if c.startedAt.IsZero() || draft.ReceivedUnix == 0 {
+		return false
+	}
+	return time.Unix(draft.ReceivedUnix, 0).Before(c.startedAt.Add(-2 * time.Second))
+}
+
+func draftDedupeMessage(draft Draft) iminbound.Message {
+	return iminbound.Message{
+		EndpointID:        draft.SourceEndpointID,
+		ExternalMessageID: draft.ExternalMessageID,
+	}
 }
 
 func parseCommand(content string) (string, string) {

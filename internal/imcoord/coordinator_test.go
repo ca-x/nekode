@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ca-x/nekode/internal/iminbound"
 	"github.com/ca-x/nekode/internal/storage"
@@ -15,9 +16,13 @@ type fakeStore struct {
 	messages []storage.Message
 	block    chan struct{}
 	started  chan struct{}
+	err      error
 }
 
 func (s *fakeStore) CreateMessage(ctx context.Context, msg storage.Message) (storage.Message, error) {
+	if s.err != nil {
+		return storage.Message{}, s.err
+	}
 	if s.started != nil {
 		select {
 		case <-s.started:
@@ -112,6 +117,31 @@ func TestCoordinatorCreatesMessageFromInboundDraft(t *testing.T) {
 				t.Fatalf("message = %+v", result.Message)
 			}
 		})
+	}
+}
+
+func TestCoordinatorDedupesBeforeStorage(t *testing.T) {
+	store := &fakeStore{}
+	coord := New(store, nil)
+	if _, err := coord.Handle(context.Background(), draftWithID("m-dedupe")); err != nil {
+		t.Fatalf("first Handle() error = %v", err)
+	}
+	if _, err := coord.Handle(context.Background(), draftWithID("m-dedupe")); !errors.Is(err, storage.ErrConflict) {
+		t.Fatalf("duplicate Handle() error = %v, want storage.ErrConflict", err)
+	}
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if len(store.messages) != 1 {
+		t.Fatalf("messages = %+v, want one stored message", store.messages)
+	}
+}
+
+func TestCoordinatorRejectsStaleDraftWhenStartTimeConfigured(t *testing.T) {
+	coord := New(&fakeStore{}, nil, WithStartTime(time.Unix(100, 0)))
+	draft := draftWithID("m-stale")
+	draft.ReceivedUnix = 90
+	if _, err := coord.Handle(context.Background(), draft); !errors.Is(err, ErrStaleDraft) {
+		t.Fatalf("stale Handle() error = %v, want ErrStaleDraft", err)
 	}
 }
 

@@ -39,6 +39,18 @@ func TestDedupeCacheIgnoresMessagesWithoutStableKey(t *testing.T) {
 	}
 }
 
+func TestDedupeCacheForget(t *testing.T) {
+	cache := DedupeCache{}
+	msg := iminbound.Message{EndpointID: "ep", ExternalMessageID: "m1"}
+	if cache.MarkSeen(msg) {
+		t.Fatal("first MarkSeen() = true, want false")
+	}
+	cache.Forget(msg)
+	if cache.MarkSeen(msg) {
+		t.Fatal("MarkSeen() after Forget = true, want false")
+	}
+}
+
 func TestRenderStream(t *testing.T) {
 	if got := RenderStream(StreamState{}, 0); got != "Thinking... ▍" {
 		t.Fatalf("empty RenderStream() = %q", got)

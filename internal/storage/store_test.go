@@ -111,12 +111,49 @@ func TestStoreMigrateAndCoreModels(t *testing.T) {
 	if retryingDelivery.Status != "retrying" || retryingDelivery.AttemptCount != 1 || retryingDelivery.LastError != "" {
 		t.Fatalf("retrying delivery = %+v, want retrying attempt_count=1 without last error", retryingDelivery)
 	}
+	notReady, err := store.ListOutboundDeliveries(ctx, OutboundDeliveryListOptions{
+		Target:    "#general",
+		Statuses:  []string{"retrying"},
+		ReadyUnix: retryingDelivery.NextRetryTimeUnix - 1,
+		Limit:     10,
+	})
+	if err != nil {
+		t.Fatalf("ListOutboundDeliveries(not ready) error = %v", err)
+	}
+	if len(notReady) != 0 {
+		t.Fatalf("notReady deliveries = %+v, want none before next retry time", notReady)
+	}
 	deliveredDelivery, err := store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "delivered", "", 0, time.Now().Unix())
 	if err != nil {
 		t.Fatalf("UpdateOutboundDeliveryStatus() error = %v", err)
 	}
 	if deliveredDelivery.Status != "delivered" || deliveredDelivery.DeliveredTimeUnix == 0 {
 		t.Fatalf("delivered delivery = %+v, want delivered timestamp", deliveredDelivery)
+	}
+	retryDelivery, err := store.CreateOutboundDelivery(ctx, OutboundDelivery{
+		Target:       message.Target,
+		MessageID:    message.ID,
+		EndpointID:   endpoint.ID,
+		EndpointKind: endpoint.Kind,
+		Status:       "pending",
+		RequestID:    "delivery-retry-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateOutboundDelivery(retry) error = %v", err)
+	}
+	recordedRetry, err := store.RecordOutboundDeliveryFailure(ctx, retryDelivery.ID, "temporary upstream failure", 2, 1000)
+	if err != nil {
+		t.Fatalf("RecordOutboundDeliveryFailure(retry) error = %v", err)
+	}
+	if recordedRetry.Status != "retrying" || recordedRetry.AttemptCount != 1 || recordedRetry.NextRetryTimeUnix != 1030 || recordedRetry.LastError == "" {
+		t.Fatalf("recordedRetry = %+v, want retrying with delay and error", recordedRetry)
+	}
+	recordedFailed, err := store.RecordOutboundDeliveryFailure(ctx, retryDelivery.ID, "still failing", 2, 2000)
+	if err != nil {
+		t.Fatalf("RecordOutboundDeliveryFailure(failed) error = %v", err)
+	}
+	if recordedFailed.Status != "failed" || recordedFailed.AttemptCount != 2 || recordedFailed.NextRetryTimeUnix != 0 || recordedFailed.LastError != "still failing" {
+		t.Fatalf("recordedFailed = %+v, want terminal failed after max attempts", recordedFailed)
 	}
 	notificationRoute, err := store.CreateNotificationRoute(ctx, NotificationRoute{
 		Target:     "#general",

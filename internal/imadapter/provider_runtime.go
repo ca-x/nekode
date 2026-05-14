@@ -70,6 +70,10 @@ func WeChatRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
 	return providerRawEvent(ProviderWeixin, input)
 }
 
+func WeComRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
+	return providerRawEvent(ProviderWeCom, input)
+}
+
 func ServerChanRawEvent(input ProviderRawEventInput) iminbound.RawEvent {
 	return providerRawEvent(ProviderServerChan, input)
 }

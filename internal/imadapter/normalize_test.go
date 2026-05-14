@@ -63,6 +63,16 @@ func TestNormalizeStellaProviderFixtures(t *testing.T) {
 			wantMsgID:  "12",
 		},
 		{
+			name:       "wecom callback file",
+			provider:   ProviderWeCom,
+			body:       `{"message_id":13,"from_user_id":"wecom-u","session_id":"wecom-u","item_list":[{"type":1,"text_item":{"text":"hello wecom"}},{"type":4,"file_item":{"file_name":"report.pdf","media_id":"mid-file"}}],"wecom":{"create_time":123,"msg_type":"file","agent_id":1000002}}`,
+			wantText:   "hello wecom\n[file: report.pdf]",
+			wantGroup:  false,
+			wantSender: "wecom-u",
+			wantChat:   "wecom-u",
+			wantMsgID:  "13",
+		},
+		{
 			name:       "terminal",
 			provider:   ProviderTerminal,
 			body:       `{"message_id":"term-1","session_id":"local-1","operator_id":"czyt","operator_name":"CZYT","text":"hello term","target":"#ops"}`,
@@ -128,6 +138,86 @@ func TestNormalizeFeishuFallsBackToEventID(t *testing.T) {
 	}
 	if metadata["im"] == nil {
 		t.Fatalf("metadata missing im envelope: %#v", metadata)
+	}
+}
+
+func TestNormalizeUsesProviderMessageTimestamps(t *testing.T) {
+	normalizer := Normalizer{Now: func() time.Time { return time.Unix(200, 0) }}
+	tests := []struct {
+		name     string
+		provider string
+		body     string
+		wantUnix int64
+	}{
+		{
+			name:     "telegram date",
+			provider: ProviderTelegram,
+			body:     `{"message":{"message_id":1,"date":123,"text":"hi","chat":{"id":2},"from":{"id":3}}}`,
+			wantUnix: 123,
+		},
+		{
+			name:     "qq rfc3339 timestamp",
+			provider: ProviderQQ,
+			body:     `{"id":"qq-1","timestamp":"1970-01-01T00:02:03Z","content":"hi","author":{"id":"u1"},"group_id":"g1"}`,
+			wantUnix: 123,
+		},
+		{
+			name:     "feishu millisecond create time",
+			provider: ProviderFeishu,
+			body:     `{"header":{"event_id":"evt-1"},"event":{"sender":{"sender_id":{"open_id":"ou_1"}},"message":{"message_id":"om_1","create_time":"123000","chat_id":"oc_1","chat_type":"p2p","message_type":"text","content":"{\"text\":\"hi\"}"}}}`,
+			wantUnix: 123,
+		},
+		{
+			name:     "weixin official create time",
+			provider: ProviderWeixin,
+			body:     `{"message_id":12,"from_user_id":"wx-u","session_id":"wx-s","official_account":{"create_time":123},"item_list":[{"type":1,"text_item":{"text":"hi"}}]}`,
+			wantUnix: 123,
+		},
+		{
+			name:     "wecom callback create time",
+			provider: ProviderWeCom,
+			body:     `{"message_id":13,"from_user_id":"wecom-u","session_id":"wecom-u","wecom":{"create_time":123},"item_list":[{"type":1,"text_item":{"text":"hi"}}]}`,
+			wantUnix: 123,
+		},
+		{
+			name:     "serverchan date",
+			provider: ProviderServerChan,
+			body:     `{"update_id":1,"message":{"message_id":2,"date":123,"text":"hi","chat":{"id":1001},"from":{"id":42}}}`,
+			wantUnix: 123,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg, err := normalizer.NormalizeInbound(context.Background(), iminbound.RawEvent{
+				EndpointID: "ep-" + tt.provider,
+				Provider:   tt.provider,
+				Body:       []byte(tt.body),
+			})
+			if err != nil {
+				t.Fatalf("NormalizeInbound() error = %v", err)
+			}
+			if msg.ReceivedUnix != tt.wantUnix {
+				t.Fatalf("ReceivedUnix = %d, want %d", msg.ReceivedUnix, tt.wantUnix)
+			}
+		})
+	}
+}
+
+func TestNormalizeWeixinPreservesMediaMetadata(t *testing.T) {
+	msg, err := (Normalizer{}).NormalizeInbound(context.Background(), iminbound.RawEvent{
+		EndpointID: "ep-weixin",
+		Provider:   ProviderWeixin,
+		Body:       []byte(`{"message_id":12,"from_user_id":"wx-u","session_id":"wx-s","item_list":[{"type":2,"image_item":{"url":"https://example.test/a.jpg","media_id":"mid-img"}},{"type":4,"file_item":{"file_name":"report.pdf","len":"10","media_id":"mid-file"}}]}`),
+	})
+	if err != nil {
+		t.Fatalf("NormalizeInbound() error = %v", err)
+	}
+	if len(msg.Content) != 2 ||
+		msg.Content[0].Type != iminbound.ContentTypeImage ||
+		msg.Content[0].ExternalURL != "https://example.test/a.jpg" ||
+		msg.Content[0].Metadata["media_id"] != "mid-img" ||
+		msg.Content[1].Metadata["media_id"] != "mid-file" {
+		t.Fatalf("weixin media content = %+v", msg.Content)
 	}
 }
 

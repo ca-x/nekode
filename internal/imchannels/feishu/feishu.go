@@ -54,10 +54,11 @@ type CallbackResult struct {
 }
 
 type Runtime struct {
-	Config     Config
-	Store      *storage.Store
-	HTTPClient *http.Client
-	Client     FeishuClient
+	Config      Config
+	Store       *storage.Store
+	HTTPClient  *http.Client
+	Client      FeishuClient
+	RateLimiter imadapter.OutgoingRateWaiter
 }
 
 type SendResult struct {
@@ -147,6 +148,9 @@ func (c Callback) Handle(ctx context.Context, headers http.Header, body []byte) 
 	if errors.Is(err, storage.ErrConflict) {
 		return CallbackResult{Ignored: true, Reason: "duplicate"}, nil
 	}
+	if errors.Is(err, imcoord.ErrStaleDraft) {
+		return CallbackResult{Ignored: true, Reason: "stale"}, nil
+	}
 	if err != nil {
 		return CallbackResult{}, err
 	}
@@ -162,6 +166,7 @@ func (r Runtime) SendPending(ctx context.Context, limit int) ([]SendResult, erro
 		EndpointID: cfg.EndpointID,
 		Statuses:   []string{"pending", "retrying"},
 		Limit:      limit,
+		ReadyUnix:  time.Now().Unix(),
 	})
 	if err != nil {
 		return nil, err
@@ -209,6 +214,9 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	if err != nil {
 		failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
 		return SendResult{Delivery: failed}, err
+	}
+	if err := r.outgoingLimiter().Wait(ctx, imadapter.ProviderFeishu); err != nil {
+		return SendResult{Delivery: delivery}, err
 	}
 	sent, err := client.CreateMessage(ctx, receiveType, receiveID, message.Content)
 	if err != nil {
@@ -423,6 +431,13 @@ func (r Runtime) httpClient() *http.Client {
 		return r.HTTPClient
 	}
 	return http.DefaultClient
+}
+
+func (r Runtime) outgoingLimiter() imadapter.OutgoingRateWaiter {
+	if r.RateLimiter != nil {
+		return r.RateLimiter
+	}
+	return imadapter.DefaultOutgoingRateLimiter()
 }
 
 func apiBaseURL(cfg Config) string {

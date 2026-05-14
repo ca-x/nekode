@@ -51,10 +51,11 @@ type WebhookResult struct {
 }
 
 type Runtime struct {
-	Config     Config
-	Store      *storage.Store
-	HTTPClient *http.Client
-	Bot        TelegramBot
+	Config      Config
+	Store       *storage.Store
+	HTTPClient  *http.Client
+	Bot         TelegramBot
+	RateLimiter imadapter.OutgoingRateWaiter
 }
 
 type SendResult struct {
@@ -121,6 +122,9 @@ func (w Webhook) Handle(ctx context.Context, headers http.Header, body []byte) (
 	if errors.Is(err, storage.ErrConflict) {
 		return WebhookResult{Ignored: true, Reason: "duplicate"}, nil
 	}
+	if errors.Is(err, imcoord.ErrStaleDraft) {
+		return WebhookResult{Ignored: true, Reason: "stale"}, nil
+	}
 	if err != nil {
 		return WebhookResult{}, err
 	}
@@ -136,6 +140,7 @@ func (r Runtime) SendPending(ctx context.Context, limit int) ([]SendResult, erro
 		EndpointID: cfg.EndpointID,
 		Statuses:   []string{"pending", "retrying"},
 		Limit:      limit,
+		ReadyUnix:  time.Now().Unix(),
 	})
 	if err != nil {
 		return nil, err
@@ -179,6 +184,9 @@ func (r Runtime) SendDelivery(ctx context.Context, delivery storage.OutboundDeli
 	})
 	sent := make([]TelegramMessage, 0, len(frames))
 	for _, frame := range frames {
+		if err := r.outgoingLimiter().Wait(ctx, imadapter.ProviderTelegram); err != nil {
+			return SendResult{Delivery: delivery, Messages: sent}, err
+		}
 		msg, err := r.sendFrame(ctx, cfg, frame)
 		if err != nil {
 			failed, _ := r.Store.UpdateOutboundDeliveryStatus(ctx, delivery.ID, "failed", err.Error(), 0, 0)
@@ -334,6 +342,13 @@ func (r Runtime) telegramBot(cfg Config) (TelegramBot, error) {
 		Client:  r.httpClient(),
 		Offline: true,
 	})
+}
+
+func (r Runtime) outgoingLimiter() imadapter.OutgoingRateWaiter {
+	if r.RateLimiter != nil {
+		return r.RateLimiter
+	}
+	return imadapter.DefaultOutgoingRateLimiter()
 }
 
 type telegramRecipient string

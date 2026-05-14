@@ -120,7 +120,8 @@ func TestRuntimeSendsPendingTelegramDeliveryAndMarksDelivered(t *testing.T) {
 		t.Fatalf("ConfigFromEndpoint() error = %v", err)
 	}
 	cfg.APIBaseURL = api.URL
-	results, err := (Runtime{Config: cfg, Store: store, HTTPClient: api.Client()}).SendPending(ctx, 10)
+	limiter := &recordingRateLimiter{}
+	results, err := (Runtime{Config: cfg, Store: store, HTTPClient: api.Client(), RateLimiter: limiter}).SendPending(ctx, 10)
 	if err != nil {
 		t.Fatalf("SendPending() error = %v", err)
 	}
@@ -135,6 +136,18 @@ func TestRuntimeSendsPendingTelegramDeliveryAndMarksDelivered(t *testing.T) {
 	if reply.GetMessage().GetSourceEndpointId() != "" {
 		t.Fatalf("reply source endpoint = %q, want web-visible reply", reply.GetMessage().GetSourceEndpointId())
 	}
+	if len(limiter.providers) != 1 || limiter.providers[0] != "telegram" {
+		t.Fatalf("rate limiter providers = %v, want telegram", limiter.providers)
+	}
+}
+
+type recordingRateLimiter struct {
+	providers []string
+}
+
+func (l *recordingRateLimiter) Wait(_ context.Context, provider string) error {
+	l.providers = append(l.providers, provider)
+	return nil
 }
 
 func createTelegramEndpoint(t *testing.T, store *storage.Store) storage.InteractionEndpoint {

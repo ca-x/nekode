@@ -13,6 +13,7 @@ import (
 var (
 	ErrInvalidDraft = errors.New("invalid im draft")
 	ErrAborted      = errors.New("im session aborted")
+	ErrStaleDraft   = errors.New("stale im draft")
 )
 
 type Draft = iminbound.Draft
@@ -38,6 +39,9 @@ func normalizeDraft(d Draft) Draft {
 	d.ReplyToMessageID = strings.TrimSpace(d.ReplyToMessageID)
 	d.SourceEndpointID = strings.TrimSpace(d.SourceEndpointID)
 	d.ExternalMessageID = strings.TrimSpace(d.ExternalMessageID)
+	if d.ReceivedUnix < 0 {
+		d.ReceivedUnix = 0
+	}
 	d.MetadataJSON = normalizedJSON(d.MetadataJSON)
 	d.AttachmentIDs = cleanStrings(d.AttachmentIDs...)
 	d.Sender = d.Sender.Normalize()
