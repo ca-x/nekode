@@ -2351,8 +2351,18 @@ type UpdateRunStatusRequest struct {
 	IdempotencyKey string                 `protobuf:"bytes,9,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	Context        *RequestContext        `protobuf:"bytes,10,opt,name=context,proto3" json:"context,omitempty"`
 	LeaseId        string                 `protobuf:"bytes,11,opt,name=lease_id,json=leaseId,proto3" json:"lease_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Optional structured final output produced by the agent. When present,
+	// servers persist it with the task attempt record for audit and review.
+	ResultJson string `protobuf:"bytes,12,opt,name=result_json,json=resultJson,proto3" json:"result_json,omitempty"`
+	// Digest over result_json or another caller-defined canonical output.
+	ResultDigest string `protobuf:"bytes,13,opt,name=result_digest,json=resultDigest,proto3" json:"result_digest,omitempty"`
+	// Agent-produced signature over result_digest or canonical output bytes.
+	ResultSignature string `protobuf:"bytes,14,opt,name=result_signature,json=resultSignature,proto3" json:"result_signature,omitempty"`
+	// Public key that verifies result_signature. Servers may verify this once
+	// agent identity records carry public keys.
+	SignaturePublicKey string `protobuf:"bytes,15,opt,name=signature_public_key,json=signaturePublicKey,proto3" json:"signature_public_key,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdateRunStatusRequest) Reset() {
@@ -2458,6 +2468,34 @@ func (x *UpdateRunStatusRequest) GetContext() *RequestContext {
 func (x *UpdateRunStatusRequest) GetLeaseId() string {
 	if x != nil {
 		return x.LeaseId
+	}
+	return ""
+}
+
+func (x *UpdateRunStatusRequest) GetResultJson() string {
+	if x != nil {
+		return x.ResultJson
+	}
+	return ""
+}
+
+func (x *UpdateRunStatusRequest) GetResultDigest() string {
+	if x != nil {
+		return x.ResultDigest
+	}
+	return ""
+}
+
+func (x *UpdateRunStatusRequest) GetResultSignature() string {
+	if x != nil {
+		return x.ResultSignature
+	}
+	return ""
+}
+
+func (x *UpdateRunStatusRequest) GetSignaturePublicKey() string {
+	if x != nil {
+		return x.SignaturePublicKey
 	}
 	return ""
 }
@@ -4601,7 +4639,7 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\x19FetchAssignedRunsResponse\x12)\n" +
 	"\x04runs\x18\x01 \x03(\v2\x15.nekode.daemon.v1.RunR\x04runs\x12>\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1d.nekode.daemon.v1.EventCursorR\n" +
-	"nextCursor\"\x99\x03\n" +
+	"nextCursor\"\xbc\x04\n" +
 	"\x16UpdateRunStatusRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x19\n" +
 	"\bagent_id\x18\x02 \x01(\tR\aagentId\x120\n" +
@@ -4615,7 +4653,12 @@ const file_nekode_daemon_v1_runtime_proto_rawDesc = "" +
 	"\x0fidempotency_key\x18\t \x01(\tR\x0eidempotencyKey\x12:\n" +
 	"\acontext\x18\n" +
 	" \x01(\v2 .nekode.daemon.v1.RequestContextR\acontext\x12\x19\n" +
-	"\blease_id\x18\v \x01(\tR\aleaseId\"\x89\x01\n" +
+	"\blease_id\x18\v \x01(\tR\aleaseId\x12\x1f\n" +
+	"\vresult_json\x18\f \x01(\tR\n" +
+	"resultJson\x12#\n" +
+	"\rresult_digest\x18\r \x01(\tR\fresultDigest\x12)\n" +
+	"\x10result_signature\x18\x0e \x01(\tR\x0fresultSignature\x120\n" +
+	"\x14signature_public_key\x18\x0f \x01(\tR\x12signaturePublicKey\"\x89\x01\n" +
 	"\x17UpdateRunStatusResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12)\n" +
 	"\x10rejection_reason\x18\x02 \x01(\tR\x0frejectionReason\x12'\n" +

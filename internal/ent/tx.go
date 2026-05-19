@@ -50,6 +50,8 @@ type Tx struct {
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
+	// TaskAttempt is the client for interacting with the TaskAttempt builders.
+	TaskAttempt *TaskAttemptClient
 	// ThreadReadState is the client for interacting with the ThreadReadState builders.
 	ThreadReadState *ThreadReadStateClient
 	// Tunnel is the client for interacting with the Tunnel builders.
@@ -206,6 +208,7 @@ func (tx *Tx) init() {
 	tx.SavedMessage = NewSavedMessageClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.Task = NewTaskClient(tx.config)
+	tx.TaskAttempt = NewTaskAttemptClient(tx.config)
 	tx.ThreadReadState = NewThreadReadStateClient(tx.config)
 	tx.Tunnel = NewTunnelClient(tx.config)
 	tx.User = NewUserClient(tx.config)

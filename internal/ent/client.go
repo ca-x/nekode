@@ -33,6 +33,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/taskattempt"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/tunnel"
 	"github.com/ca-x/nekode/internal/ent/user"
@@ -81,6 +82,8 @@ type Client struct {
 	Session *SessionClient
 	// Task is the client for interacting with the Task builders.
 	Task *TaskClient
+	// TaskAttempt is the client for interacting with the TaskAttempt builders.
+	TaskAttempt *TaskAttemptClient
 	// ThreadReadState is the client for interacting with the ThreadReadState builders.
 	ThreadReadState *ThreadReadStateClient
 	// Tunnel is the client for interacting with the Tunnel builders.
@@ -117,6 +120,7 @@ func (c *Client) init() {
 	c.SavedMessage = NewSavedMessageClient(c.config)
 	c.Session = NewSessionClient(c.config)
 	c.Task = NewTaskClient(c.config)
+	c.TaskAttempt = NewTaskAttemptClient(c.config)
 	c.ThreadReadState = NewThreadReadStateClient(c.config)
 	c.Tunnel = NewTunnelClient(c.config)
 	c.User = NewUserClient(c.config)
@@ -231,6 +235,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		SavedMessage:        NewSavedMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
+		TaskAttempt:         NewTaskAttemptClient(cfg),
 		ThreadReadState:     NewThreadReadStateClient(cfg),
 		Tunnel:              NewTunnelClient(cfg),
 		User:                NewUserClient(cfg),
@@ -272,6 +277,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		SavedMessage:        NewSavedMessageClient(cfg),
 		Session:             NewSessionClient(cfg),
 		Task:                NewTaskClient(cfg),
+		TaskAttempt:         NewTaskAttemptClient(cfg),
 		ThreadReadState:     NewThreadReadStateClient(cfg),
 		Tunnel:              NewTunnelClient(cfg),
 		User:                NewUserClient(cfg),
@@ -308,7 +314,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ChannelDecisionVote, c.ChannelMember, c.CollaborationEvent,
 		c.IMChatAuthRequest, c.IMChatSubscription, c.IdempotencyRecord,
 		c.InteractionEndpoint, c.Message, c.NotificationRoute, c.OutboundDelivery,
-		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
+		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task, c.TaskAttempt,
 		c.ThreadReadState, c.Tunnel, c.User,
 	} {
 		n.Use(hooks...)
@@ -323,7 +329,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ChannelDecisionVote, c.ChannelMember, c.CollaborationEvent,
 		c.IMChatAuthRequest, c.IMChatSubscription, c.IdempotencyRecord,
 		c.InteractionEndpoint, c.Message, c.NotificationRoute, c.OutboundDelivery,
-		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task,
+		c.Reminder, c.ReminderEvent, c.SavedMessage, c.Session, c.Task, c.TaskAttempt,
 		c.ThreadReadState, c.Tunnel, c.User,
 	} {
 		n.Intercept(interceptors...)
@@ -371,6 +377,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Session.mutate(ctx, m)
 	case *TaskMutation:
 		return c.Task.mutate(ctx, m)
+	case *TaskAttemptMutation:
+		return c.TaskAttempt.mutate(ctx, m)
 	case *ThreadReadStateMutation:
 		return c.ThreadReadState.mutate(ctx, m)
 	case *TunnelMutation:
@@ -2909,6 +2917,139 @@ func (c *TaskClient) mutate(ctx context.Context, m *TaskMutation) (Value, error)
 	}
 }
 
+// TaskAttemptClient is a client for the TaskAttempt schema.
+type TaskAttemptClient struct {
+	config
+}
+
+// NewTaskAttemptClient returns a client for the TaskAttempt from the given config.
+func NewTaskAttemptClient(c config) *TaskAttemptClient {
+	return &TaskAttemptClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `taskattempt.Hooks(f(g(h())))`.
+func (c *TaskAttemptClient) Use(hooks ...Hook) {
+	c.hooks.TaskAttempt = append(c.hooks.TaskAttempt, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `taskattempt.Intercept(f(g(h())))`.
+func (c *TaskAttemptClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TaskAttempt = append(c.inters.TaskAttempt, interceptors...)
+}
+
+// Create returns a builder for creating a TaskAttempt entity.
+func (c *TaskAttemptClient) Create() *TaskAttemptCreate {
+	mutation := newTaskAttemptMutation(c.config, OpCreate)
+	return &TaskAttemptCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TaskAttempt entities.
+func (c *TaskAttemptClient) CreateBulk(builders ...*TaskAttemptCreate) *TaskAttemptCreateBulk {
+	return &TaskAttemptCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TaskAttemptClient) MapCreateBulk(slice any, setFunc func(*TaskAttemptCreate, int)) *TaskAttemptCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TaskAttemptCreateBulk{err: fmt.Errorf("calling to TaskAttemptClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TaskAttemptCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TaskAttemptCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TaskAttempt.
+func (c *TaskAttemptClient) Update() *TaskAttemptUpdate {
+	mutation := newTaskAttemptMutation(c.config, OpUpdate)
+	return &TaskAttemptUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TaskAttemptClient) UpdateOne(_m *TaskAttempt) *TaskAttemptUpdateOne {
+	mutation := newTaskAttemptMutation(c.config, OpUpdateOne, withTaskAttempt(_m))
+	return &TaskAttemptUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TaskAttemptClient) UpdateOneID(id string) *TaskAttemptUpdateOne {
+	mutation := newTaskAttemptMutation(c.config, OpUpdateOne, withTaskAttemptID(id))
+	return &TaskAttemptUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TaskAttempt.
+func (c *TaskAttemptClient) Delete() *TaskAttemptDelete {
+	mutation := newTaskAttemptMutation(c.config, OpDelete)
+	return &TaskAttemptDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TaskAttemptClient) DeleteOne(_m *TaskAttempt) *TaskAttemptDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TaskAttemptClient) DeleteOneID(id string) *TaskAttemptDeleteOne {
+	builder := c.Delete().Where(taskattempt.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TaskAttemptDeleteOne{builder}
+}
+
+// Query returns a query builder for TaskAttempt.
+func (c *TaskAttemptClient) Query() *TaskAttemptQuery {
+	return &TaskAttemptQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTaskAttempt},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TaskAttempt entity by its id.
+func (c *TaskAttemptClient) Get(ctx context.Context, id string) (*TaskAttempt, error) {
+	return c.Query().Where(taskattempt.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TaskAttemptClient) GetX(ctx context.Context, id string) *TaskAttempt {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *TaskAttemptClient) Hooks() []Hook {
+	return c.hooks.TaskAttempt
+}
+
+// Interceptors returns the client interceptors.
+func (c *TaskAttemptClient) Interceptors() []Interceptor {
+	return c.inters.TaskAttempt
+}
+
+func (c *TaskAttemptClient) mutate(ctx context.Context, m *TaskAttemptMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TaskAttemptCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TaskAttemptUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TaskAttemptUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TaskAttemptDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TaskAttempt mutation op: %q", m.Op())
+	}
+}
+
 // ThreadReadStateClient is a client for the ThreadReadState schema.
 type ThreadReadStateClient struct {
 	config
@@ -3315,13 +3456,13 @@ type (
 		ChannelMember, CollaborationEvent, IMChatAuthRequest, IMChatSubscription,
 		IdempotencyRecord, InteractionEndpoint, Message, NotificationRoute,
 		OutboundDelivery, Reminder, ReminderEvent, SavedMessage, Session, Task,
-		ThreadReadState, Tunnel, User []ent.Hook
+		TaskAttempt, ThreadReadState, Tunnel, User []ent.Hook
 	}
 	inters struct {
 		AgentRun, AgentRunEvent, Channel, ChannelDecision, ChannelDecisionVote,
 		ChannelMember, CollaborationEvent, IMChatAuthRequest, IMChatSubscription,
 		IdempotencyRecord, InteractionEndpoint, Message, NotificationRoute,
 		OutboundDelivery, Reminder, ReminderEvent, SavedMessage, Session, Task,
-		ThreadReadState, Tunnel, User []ent.Interceptor
+		TaskAttempt, ThreadReadState, Tunnel, User []ent.Interceptor
 	}
 )

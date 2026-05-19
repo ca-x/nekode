@@ -237,6 +237,18 @@ func (f TaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskMutation", m)
 }
 
+// The TaskAttemptFunc type is an adapter to allow the use of ordinary
+// function as TaskAttempt mutator.
+type TaskAttemptFunc func(context.Context, *ent.TaskAttemptMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TaskAttemptFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TaskAttemptMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TaskAttemptMutation", m)
+}
+
 // The ThreadReadStateFunc type is an adapter to allow the use of ordinary
 // function as ThreadReadState mutator.
 type ThreadReadStateFunc func(context.Context, *ent.ThreadReadStateMutation) (ent.Value, error)

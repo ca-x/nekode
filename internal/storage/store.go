@@ -29,6 +29,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/taskattempt"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/user"
 	_ "github.com/go-sql-driver/mysql"
@@ -2200,6 +2201,246 @@ func (s *Store) ClaimTaskCAS(ctx context.Context, id, assigneeID, leaseID string
 	return current, true, nil
 }
 
+const (
+	TaskAttemptStatusClaimed   = "claimed"
+	TaskAttemptStatusRunning   = "running"
+	TaskAttemptStatusCompleted = "completed"
+	TaskAttemptStatusFailed    = "failed"
+	TaskAttemptStatusCanceled  = "canceled"
+)
+
+var validTaskAttemptStatuses = map[string]struct{}{
+	TaskAttemptStatusClaimed:   {},
+	TaskAttemptStatusRunning:   {},
+	TaskAttemptStatusCompleted: {},
+	TaskAttemptStatusFailed:    {},
+	TaskAttemptStatusCanceled:  {},
+}
+
+// RecordTaskAttemptClaim creates or refreshes the attempt row for a task run
+// claim. It is idempotent for the same (task_id, attempt) pair so duplicate
+// claims from retrying clients do not create multiple attempt records.
+func (s *Store) RecordTaskAttemptClaim(ctx context.Context, attempt TaskAttempt) (TaskAttempt, error) {
+	attempt.TaskID = strings.TrimSpace(attempt.TaskID)
+	attempt.RunID = strings.TrimSpace(attempt.RunID)
+	attempt.AgentID = strings.TrimSpace(attempt.AgentID)
+	attempt.ClaimLeaseID = strings.TrimSpace(attempt.ClaimLeaseID)
+	if attempt.TaskID == "" || attempt.Attempt == 0 {
+		return TaskAttempt{}, ErrInvalid
+	}
+	status := normalizeTaskAttemptStatus(attempt.Status)
+	if status == "" {
+		status = TaskAttemptStatusClaimed
+	}
+	if !validTaskAttemptStatus(status) {
+		return TaskAttempt{}, ErrInvalid
+	}
+	now := unixNow()
+	existing, err := s.client.TaskAttempt.Query().
+		Where(taskattempt.TaskIDEQ(attempt.TaskID), taskattempt.AttemptEQ(attempt.Attempt)).
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return TaskAttempt{}, err
+	}
+	if existing != nil {
+		update := s.client.TaskAttempt.UpdateOneID(existing.ID).
+			SetStatus(status).
+			SetUpdatedUnix(now)
+		if attempt.RunID != "" {
+			update.SetRunID(attempt.RunID)
+		}
+		if attempt.AgentID != "" {
+			update.SetAgentID(attempt.AgentID)
+		}
+		if attempt.ClaimLeaseID != "" {
+			update.SetClaimLeaseID(attempt.ClaimLeaseID)
+		}
+		if existing.ClaimedUnix == 0 {
+			update.SetClaimedUnix(now)
+		}
+		row, err := update.Save(ctx)
+		if err != nil {
+			return TaskAttempt{}, err
+		}
+		return taskAttemptFromEnt(row), nil
+	}
+	claimedUnix := attempt.ClaimedUnix
+	if claimedUnix == 0 {
+		claimedUnix = now
+	}
+	create := s.client.TaskAttempt.Create().
+		SetTaskID(attempt.TaskID).
+		SetAttempt(attempt.Attempt).
+		SetRunID(attempt.RunID).
+		SetAgentID(attempt.AgentID).
+		SetClaimLeaseID(attempt.ClaimLeaseID).
+		SetStatus(status).
+		SetClaimedUnix(claimedUnix).
+		SetUpdatedUnix(now)
+	if attempt.ID != "" {
+		create.SetID(attempt.ID)
+	}
+	row, err := create.Save(ctx)
+	if ent.IsConstraintError(err) {
+		row, err = s.client.TaskAttempt.Query().
+			Where(taskattempt.TaskIDEQ(attempt.TaskID), taskattempt.AttemptEQ(attempt.Attempt)).
+			Only(ctx)
+		if err != nil {
+			return TaskAttempt{}, err
+		}
+		return taskAttemptFromEnt(row), nil
+	}
+	if err != nil {
+		return TaskAttempt{}, err
+	}
+	return taskAttemptFromEnt(row), nil
+}
+
+// UpdateTaskAttemptFromRun records progress or a terminal outcome from a run.
+// If the attempt row is missing, it creates it from the run identifiers so the
+// run archive and task lifecycle still have a durable join point.
+func (s *Store) UpdateTaskAttemptFromRun(ctx context.Context, updateAttempt TaskAttempt) (TaskAttempt, error) {
+	updateAttempt.TaskID = strings.TrimSpace(updateAttempt.TaskID)
+	updateAttempt.RunID = strings.TrimSpace(updateAttempt.RunID)
+	updateAttempt.AgentID = strings.TrimSpace(updateAttempt.AgentID)
+	updateAttempt.ClaimLeaseID = strings.TrimSpace(updateAttempt.ClaimLeaseID)
+	if updateAttempt.TaskID == "" || updateAttempt.Attempt == 0 {
+		return TaskAttempt{}, ErrInvalid
+	}
+	status := normalizeTaskAttemptStatus(updateAttempt.Status)
+	if status == "" {
+		status = TaskAttemptStatusRunning
+	}
+	if !validTaskAttemptStatus(status) {
+		return TaskAttempt{}, ErrInvalid
+	}
+	outputJSON, err := normalizeOptionalJSON(updateAttempt.OutputJSON)
+	if err != nil {
+		return TaskAttempt{}, err
+	}
+	now := unixNow()
+	existing, err := s.lookupTaskAttempt(ctx, updateAttempt.TaskID, updateAttempt.Attempt, updateAttempt.RunID)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return TaskAttempt{}, err
+	}
+	if errors.Is(err, ErrNotFound) {
+		claimedUnix := updateAttempt.ClaimedUnix
+		if claimedUnix == 0 {
+			claimedUnix = now
+		}
+		startedUnix := updateAttempt.StartedUnix
+		if startedUnix == 0 && status != TaskAttemptStatusClaimed {
+			startedUnix = now
+		}
+		completedUnix := updateAttempt.CompletedUnix
+		if completedUnix == 0 && terminalTaskAttemptStatus(status) {
+			completedUnix = now
+		}
+		row, err := s.client.TaskAttempt.Create().
+			SetTaskID(updateAttempt.TaskID).
+			SetAttempt(updateAttempt.Attempt).
+			SetRunID(updateAttempt.RunID).
+			SetAgentID(updateAttempt.AgentID).
+			SetClaimLeaseID(updateAttempt.ClaimLeaseID).
+			SetStatus(status).
+			SetOutputJSON(outputJSON).
+			SetOutputDigest(updateAttempt.OutputDigest).
+			SetOutputSignature(updateAttempt.OutputSignature).
+			SetSignaturePublicKey(updateAttempt.SignaturePublicKey).
+			SetErrorMessage(updateAttempt.ErrorMessage).
+			SetClaimedUnix(claimedUnix).
+			SetStartedUnix(startedUnix).
+			SetCompletedUnix(completedUnix).
+			SetUpdatedUnix(now).
+			Save(ctx)
+		if err != nil {
+			return TaskAttempt{}, err
+		}
+		return taskAttemptFromEnt(row), nil
+	}
+	update := s.client.TaskAttempt.UpdateOneID(existing.ID).
+		SetStatus(status).
+		SetUpdatedUnix(now)
+	if updateAttempt.RunID != "" {
+		update.SetRunID(updateAttempt.RunID)
+	}
+	if updateAttempt.AgentID != "" {
+		update.SetAgentID(updateAttempt.AgentID)
+	}
+	if updateAttempt.ClaimLeaseID != "" {
+		update.SetClaimLeaseID(updateAttempt.ClaimLeaseID)
+	}
+	if outputJSON != "" {
+		update.SetOutputJSON(outputJSON)
+	}
+	if updateAttempt.OutputDigest != "" {
+		update.SetOutputDigest(updateAttempt.OutputDigest)
+	}
+	if updateAttempt.OutputSignature != "" {
+		update.SetOutputSignature(updateAttempt.OutputSignature)
+	}
+	if updateAttempt.SignaturePublicKey != "" {
+		update.SetSignaturePublicKey(updateAttempt.SignaturePublicKey)
+	}
+	if updateAttempt.ErrorMessage != "" {
+		update.SetErrorMessage(updateAttempt.ErrorMessage)
+	}
+	if existing.ClaimedUnix == 0 {
+		update.SetClaimedUnix(now)
+	}
+	if existing.StartedUnix == 0 && status != TaskAttemptStatusClaimed {
+		update.SetStartedUnix(now)
+	}
+	if terminalTaskAttemptStatus(status) && existing.CompletedUnix == 0 {
+		update.SetCompletedUnix(now)
+	}
+	row, err := update.Save(ctx)
+	if err != nil {
+		return TaskAttempt{}, err
+	}
+	return taskAttemptFromEnt(row), nil
+}
+
+func (s *Store) ListTaskAttempts(ctx context.Context, taskID string) ([]TaskAttempt, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return nil, ErrInvalid
+	}
+	rows, err := s.client.TaskAttempt.Query().
+		Where(taskattempt.TaskIDEQ(taskID)).
+		Order(taskattempt.ByAttempt()).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]TaskAttempt, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, taskAttemptFromEnt(row))
+	}
+	return out, nil
+}
+
+func (s *Store) lookupTaskAttempt(ctx context.Context, taskID string, attempt uint32, runID string) (*ent.TaskAttempt, error) {
+	if runID != "" {
+		row, err := s.client.TaskAttempt.Query().
+			Where(taskattempt.RunIDEQ(runID)).
+			Only(ctx)
+		if err == nil {
+			return row, nil
+		}
+		if err != nil && !ent.IsNotFound(err) {
+			return nil, err
+		}
+	}
+	row, err := s.client.TaskAttempt.Query().
+		Where(taskattempt.TaskIDEQ(taskID), taskattempt.AttemptEQ(attempt)).
+		Only(ctx)
+	if ent.IsNotFound(err) {
+		return nil, ErrNotFound
+	}
+	return row, err
+}
+
 func (s *Store) GetTask(ctx context.Context, id string) (Task, error) {
 	row, err := s.client.Task.Query().Where(task.IDEQ(id)).Only(ctx)
 	if ent.IsNotFound(err) {
@@ -2609,6 +2850,27 @@ func taskFromEnt(row *ent.Task) Task {
 		ClaimLeaseID:    row.ClaimLeaseID,
 		CreatedUnix:     row.CreatedUnix,
 		UpdatedUnix:     row.UpdatedUnix,
+	}
+}
+
+func taskAttemptFromEnt(row *ent.TaskAttempt) TaskAttempt {
+	return TaskAttempt{
+		ID:                 row.ID,
+		TaskID:             row.TaskID,
+		Attempt:            row.Attempt,
+		RunID:              row.RunID,
+		AgentID:            row.AgentID,
+		ClaimLeaseID:       row.ClaimLeaseID,
+		Status:             row.Status,
+		OutputJSON:         row.OutputJSON,
+		OutputDigest:       row.OutputDigest,
+		OutputSignature:    row.OutputSignature,
+		SignaturePublicKey: row.SignaturePublicKey,
+		ErrorMessage:       row.ErrorMessage,
+		ClaimedUnix:        row.ClaimedUnix,
+		StartedUnix:        row.StartedUnix,
+		CompletedUnix:      row.CompletedUnix,
+		UpdatedUnix:        row.UpdatedUnix,
 	}
 }
 
@@ -3030,6 +3292,48 @@ func normalizeTaskState(state string) string {
 		return "canceled"
 	}
 	return state
+}
+
+func normalizeTaskAttemptStatus(status string) string {
+	status = strings.ToLower(strings.TrimSpace(status))
+	if status == "cancelled" {
+		return TaskAttemptStatusCanceled
+	}
+	return status
+}
+
+func validTaskAttemptStatus(status string) bool {
+	_, ok := validTaskAttemptStatuses[normalizeTaskAttemptStatus(status)]
+	return ok
+}
+
+func terminalTaskAttemptStatus(status string) bool {
+	switch normalizeTaskAttemptStatus(status) {
+	case TaskAttemptStatusCompleted, TaskAttemptStatusFailed, TaskAttemptStatusCanceled:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeOptionalJSON(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	compact, err := compactJSON(value)
+	if err != nil {
+		return "", ErrInvalid
+	}
+	return compact, nil
+}
+
+func compactJSON(value string) (string, error) {
+	var out bytes.Buffer
+	if err := json.Compact(&out, []byte(value)); err != nil {
+		return "", err
+	}
+	return out.String(), nil
 }
 
 func normalizeDBType(value string) string {

@@ -23,6 +23,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/schema"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/taskattempt"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/tunnel"
 	"github.com/ca-x/nekode/internal/ent/user"
@@ -830,6 +831,72 @@ func init() {
 	taskDescID := taskFields[0].Descriptor()
 	// task.DefaultID holds the default value on creation for the id field.
 	task.DefaultID = taskDescID.Default.(func() string)
+	taskattemptFields := schema.TaskAttempt{}.Fields()
+	_ = taskattemptFields
+	// taskattemptDescTaskID is the schema descriptor for task_id field.
+	taskattemptDescTaskID := taskattemptFields[1].Descriptor()
+	// taskattempt.TaskIDValidator is a validator for the "task_id" field. It is called by the builders before save.
+	taskattempt.TaskIDValidator = taskattemptDescTaskID.Validators[0].(func(string) error)
+	// taskattemptDescAttempt is the schema descriptor for attempt field.
+	taskattemptDescAttempt := taskattemptFields[2].Descriptor()
+	// taskattempt.DefaultAttempt holds the default value on creation for the attempt field.
+	taskattempt.DefaultAttempt = taskattemptDescAttempt.Default.(uint32)
+	// taskattemptDescRunID is the schema descriptor for run_id field.
+	taskattemptDescRunID := taskattemptFields[3].Descriptor()
+	// taskattempt.DefaultRunID holds the default value on creation for the run_id field.
+	taskattempt.DefaultRunID = taskattemptDescRunID.Default.(string)
+	// taskattemptDescAgentID is the schema descriptor for agent_id field.
+	taskattemptDescAgentID := taskattemptFields[4].Descriptor()
+	// taskattempt.DefaultAgentID holds the default value on creation for the agent_id field.
+	taskattempt.DefaultAgentID = taskattemptDescAgentID.Default.(string)
+	// taskattemptDescClaimLeaseID is the schema descriptor for claim_lease_id field.
+	taskattemptDescClaimLeaseID := taskattemptFields[5].Descriptor()
+	// taskattempt.DefaultClaimLeaseID holds the default value on creation for the claim_lease_id field.
+	taskattempt.DefaultClaimLeaseID = taskattemptDescClaimLeaseID.Default.(string)
+	// taskattemptDescStatus is the schema descriptor for status field.
+	taskattemptDescStatus := taskattemptFields[6].Descriptor()
+	// taskattempt.DefaultStatus holds the default value on creation for the status field.
+	taskattempt.DefaultStatus = taskattemptDescStatus.Default.(string)
+	// taskattemptDescOutputJSON is the schema descriptor for output_json field.
+	taskattemptDescOutputJSON := taskattemptFields[7].Descriptor()
+	// taskattempt.DefaultOutputJSON holds the default value on creation for the output_json field.
+	taskattempt.DefaultOutputJSON = taskattemptDescOutputJSON.Default.(string)
+	// taskattemptDescOutputDigest is the schema descriptor for output_digest field.
+	taskattemptDescOutputDigest := taskattemptFields[8].Descriptor()
+	// taskattempt.DefaultOutputDigest holds the default value on creation for the output_digest field.
+	taskattempt.DefaultOutputDigest = taskattemptDescOutputDigest.Default.(string)
+	// taskattemptDescOutputSignature is the schema descriptor for output_signature field.
+	taskattemptDescOutputSignature := taskattemptFields[9].Descriptor()
+	// taskattempt.DefaultOutputSignature holds the default value on creation for the output_signature field.
+	taskattempt.DefaultOutputSignature = taskattemptDescOutputSignature.Default.(string)
+	// taskattemptDescSignaturePublicKey is the schema descriptor for signature_public_key field.
+	taskattemptDescSignaturePublicKey := taskattemptFields[10].Descriptor()
+	// taskattempt.DefaultSignaturePublicKey holds the default value on creation for the signature_public_key field.
+	taskattempt.DefaultSignaturePublicKey = taskattemptDescSignaturePublicKey.Default.(string)
+	// taskattemptDescErrorMessage is the schema descriptor for error_message field.
+	taskattemptDescErrorMessage := taskattemptFields[11].Descriptor()
+	// taskattempt.DefaultErrorMessage holds the default value on creation for the error_message field.
+	taskattempt.DefaultErrorMessage = taskattemptDescErrorMessage.Default.(string)
+	// taskattemptDescClaimedUnix is the schema descriptor for claimed_unix field.
+	taskattemptDescClaimedUnix := taskattemptFields[12].Descriptor()
+	// taskattempt.DefaultClaimedUnix holds the default value on creation for the claimed_unix field.
+	taskattempt.DefaultClaimedUnix = taskattemptDescClaimedUnix.Default.(int64)
+	// taskattemptDescStartedUnix is the schema descriptor for started_unix field.
+	taskattemptDescStartedUnix := taskattemptFields[13].Descriptor()
+	// taskattempt.DefaultStartedUnix holds the default value on creation for the started_unix field.
+	taskattempt.DefaultStartedUnix = taskattemptDescStartedUnix.Default.(int64)
+	// taskattemptDescCompletedUnix is the schema descriptor for completed_unix field.
+	taskattemptDescCompletedUnix := taskattemptFields[14].Descriptor()
+	// taskattempt.DefaultCompletedUnix holds the default value on creation for the completed_unix field.
+	taskattempt.DefaultCompletedUnix = taskattemptDescCompletedUnix.Default.(int64)
+	// taskattemptDescUpdatedUnix is the schema descriptor for updated_unix field.
+	taskattemptDescUpdatedUnix := taskattemptFields[15].Descriptor()
+	// taskattempt.DefaultUpdatedUnix holds the default value on creation for the updated_unix field.
+	taskattempt.DefaultUpdatedUnix = taskattemptDescUpdatedUnix.Default.(int64)
+	// taskattemptDescID is the schema descriptor for id field.
+	taskattemptDescID := taskattemptFields[0].Descriptor()
+	// taskattempt.DefaultID holds the default value on creation for the id field.
+	taskattempt.DefaultID = taskattemptDescID.Default.(func() string)
 	threadreadstateFields := schema.ThreadReadState{}.Fields()
 	_ = threadreadstateFields
 	// threadreadstateDescUserID is the schema descriptor for user_id field.

@@ -605,6 +605,97 @@ func TestTaskStateVersionAndClaimInvariants(t *testing.T) {
 	}
 }
 
+func TestTaskAttemptLifecycleAndSignedOutput(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t)
+
+	task, err := store.CreateTask(ctx, Task{
+		Summary: "attempted work",
+		Target:  "#general",
+	})
+	if err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
+	}
+	claimed, err := store.RecordTaskAttemptClaim(ctx, TaskAttempt{
+		TaskID:       task.ID,
+		Attempt:      1,
+		RunID:        "run-1",
+		AgentID:      "agent-1",
+		ClaimLeaseID: "lease-1",
+	})
+	if err != nil {
+		t.Fatalf("RecordTaskAttemptClaim() error = %v", err)
+	}
+	if claimed.Status != TaskAttemptStatusClaimed || claimed.ClaimedUnix == 0 || claimed.UpdatedUnix == 0 {
+		t.Fatalf("claimed attempt = %+v, want claimed timestamps", claimed)
+	}
+	replayed, err := store.RecordTaskAttemptClaim(ctx, TaskAttempt{
+		TaskID:       task.ID,
+		Attempt:      1,
+		RunID:        "run-1",
+		AgentID:      "agent-1",
+		ClaimLeaseID: "lease-1b",
+	})
+	if err != nil {
+		t.Fatalf("RecordTaskAttemptClaim(replay) error = %v", err)
+	}
+	if replayed.ID != claimed.ID || replayed.ClaimLeaseID != "lease-1b" {
+		t.Fatalf("replayed attempt = %+v, want same row with refreshed lease", replayed)
+	}
+	running, err := store.UpdateTaskAttemptFromRun(ctx, TaskAttempt{
+		TaskID:  task.ID,
+		Attempt: 1,
+		RunID:   "run-1",
+		AgentID: "agent-1",
+		Status:  TaskAttemptStatusRunning,
+	})
+	if err != nil {
+		t.Fatalf("UpdateTaskAttemptFromRun(running) error = %v", err)
+	}
+	if running.ID != claimed.ID || running.Status != TaskAttemptStatusRunning || running.StartedUnix == 0 {
+		t.Fatalf("running attempt = %+v, want same row running with started time", running)
+	}
+	completed, err := store.UpdateTaskAttemptFromRun(ctx, TaskAttempt{
+		TaskID:             task.ID,
+		Attempt:            1,
+		RunID:              "run-1",
+		AgentID:            "agent-1",
+		Status:             TaskAttemptStatusCompleted,
+		OutputJSON:         "{\n  \"ok\": true\n}",
+		OutputDigest:       "sha256:abc",
+		OutputSignature:    "ed25519:sig",
+		SignaturePublicKey: "ed25519:pub",
+	})
+	if err != nil {
+		t.Fatalf("UpdateTaskAttemptFromRun(completed) error = %v", err)
+	}
+	if completed.Status != TaskAttemptStatusCompleted ||
+		completed.OutputJSON != `{"ok":true}` ||
+		completed.OutputDigest != "sha256:abc" ||
+		completed.OutputSignature != "ed25519:sig" ||
+		completed.SignaturePublicKey != "ed25519:pub" ||
+		completed.CompletedUnix == 0 {
+		t.Fatalf("completed attempt = %+v, want signed completed output", completed)
+	}
+	attempts, err := store.ListTaskAttempts(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("ListTaskAttempts() error = %v", err)
+	}
+	if len(attempts) != 1 || attempts[0].ID != completed.ID {
+		t.Fatalf("attempts = %+v, want completed attempt", attempts)
+	}
+	if _, err := store.UpdateTaskAttemptFromRun(ctx, TaskAttempt{
+		TaskID:     task.ID,
+		Attempt:    2,
+		RunID:      "run-2",
+		AgentID:    "agent-1",
+		Status:     TaskAttemptStatusCompleted,
+		OutputJSON: "{bad json",
+	}); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("UpdateTaskAttemptFromRun(invalid json) error = %v, want %v", err, ErrInvalid)
+	}
+}
+
 func TestReminderLifecycleEventInvariants(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)

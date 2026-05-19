@@ -727,6 +727,53 @@ var (
 			},
 		},
 	}
+	// TaskAttemptsColumns holds the columns for the "task_attempts" table.
+	TaskAttemptsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString},
+		{Name: "task_id", Type: field.TypeString},
+		{Name: "attempt", Type: field.TypeUint32, Default: 1},
+		{Name: "run_id", Type: field.TypeString, Default: ""},
+		{Name: "agent_id", Type: field.TypeString, Default: ""},
+		{Name: "claim_lease_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "claimed"},
+		{Name: "output_json", Type: field.TypeString, Default: ""},
+		{Name: "output_digest", Type: field.TypeString, Default: ""},
+		{Name: "output_signature", Type: field.TypeString, Default: ""},
+		{Name: "signature_public_key", Type: field.TypeString, Default: ""},
+		{Name: "error_message", Type: field.TypeString, Default: ""},
+		{Name: "claimed_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "started_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "completed_unix", Type: field.TypeInt64, Default: 0},
+		{Name: "updated_unix", Type: field.TypeInt64, Default: 0},
+	}
+	// TaskAttemptsTable holds the schema information for the "task_attempts" table.
+	TaskAttemptsTable = &schema.Table{
+		Name:       "task_attempts",
+		Columns:    TaskAttemptsColumns,
+		PrimaryKey: []*schema.Column{TaskAttemptsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "taskattempt_task_id_attempt",
+				Unique:  true,
+				Columns: []*schema.Column{TaskAttemptsColumns[1], TaskAttemptsColumns[2]},
+			},
+			{
+				Name:    "taskattempt_run_id",
+				Unique:  false,
+				Columns: []*schema.Column{TaskAttemptsColumns[3]},
+			},
+			{
+				Name:    "taskattempt_agent_id_updated_unix",
+				Unique:  false,
+				Columns: []*schema.Column{TaskAttemptsColumns[4], TaskAttemptsColumns[15]},
+			},
+			{
+				Name:    "taskattempt_status_updated_unix",
+				Unique:  false,
+				Columns: []*schema.Column{TaskAttemptsColumns[6], TaskAttemptsColumns[15]},
+			},
+		},
+	}
 	// ThreadReadStatesColumns holds the columns for the "thread_read_states" table.
 	ThreadReadStatesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString},
@@ -841,6 +888,7 @@ var (
 		SavedMessagesTable,
 		SessionsTable,
 		TasksTable,
+		TaskAttemptsTable,
 		ThreadReadStatesTable,
 		TunnelsTable,
 		UsersTable,

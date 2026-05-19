@@ -782,6 +782,18 @@ func (s *Server) ClaimCollaborationTask(ctx context.Context, req *daemonv1.Claim
 		run = s.ensureClaimRunLocked(updated, req, lease)
 	}
 	s.mu.Unlock()
+	if run != nil {
+		if _, err := s.store.RecordTaskAttemptClaim(ctx, storage.TaskAttempt{
+			TaskID:       updated.ID,
+			Attempt:      firstNonZeroUint32(run.GetAttempt(), 1),
+			RunID:        run.GetRunId(),
+			AgentID:      req.GetAgentId(),
+			ClaimLeaseID: lease.GetLeaseId(),
+			Status:       storage.TaskAttemptStatusClaimed,
+		}); err != nil {
+			return nil, status.Errorf(codes.Internal, "record task attempt claim: %v", err)
+		}
+	}
 	if err := s.RecordTaskMutation(ctx, updated, daemonv1.EventOperation_EVENT_OPERATION_CLAIMED); err != nil {
 		return nil, status.Errorf(codes.Internal, "append task claim event: %v", err)
 	}
@@ -1961,12 +1973,74 @@ func (s *Server) UpdateRunStatus(ctx context.Context, req *daemonv1.UpdateRunSta
 	})
 	s.serverEvents[event.GetEventId()] = event
 	s.mu.Unlock()
+	if err := s.recordTaskAttemptRunStatus(ctx, cp, req); err != nil {
+		return nil, err
+	}
 	if err := s.updateTaskFromRunStatus(ctx, cp, req); err != nil {
 		return nil, err
 	}
 	resp := &daemonv1.UpdateRunStatusResponse{Accepted: true, Run: cp}
 	remember(ctx, s, "UpdateRunStatus", req.GetRequestId(), req.GetIdempotencyKey(), resp)
 	return resp, nil
+}
+
+func (s *Server) recordTaskAttemptRunStatus(ctx context.Context, run *daemonv1.Run, req *daemonv1.UpdateRunStatusRequest) error {
+	if run == nil || run.GetTaskId() == "" {
+		return nil
+	}
+	attemptStatus, ok := taskAttemptStatusFromRunState(run.GetState())
+	if !ok {
+		return nil
+	}
+	_, err := s.store.UpdateTaskAttemptFromRun(ctx, storage.TaskAttempt{
+		TaskID:             run.GetTaskId(),
+		Attempt:            firstNonZeroUint32(run.GetAttempt(), 1),
+		RunID:              run.GetRunId(),
+		AgentID:            firstNonEmpty(run.GetAgentId(), req.GetAgentId()),
+		ClaimLeaseID:       firstNonEmpty(run.GetLeaseId(), req.GetLeaseId()),
+		Status:             attemptStatus,
+		OutputJSON:         req.GetResultJson(),
+		OutputDigest:       req.GetResultDigest(),
+		OutputSignature:    req.GetResultSignature(),
+		SignaturePublicKey: req.GetSignaturePublicKey(),
+		ErrorMessage:       runFailureReasonForAttempt(run, req),
+	})
+	if errors.Is(err, storage.ErrInvalid) {
+		return status.Errorf(codes.InvalidArgument, "invalid task attempt output: %v", err)
+	}
+	if err != nil {
+		return status.Errorf(codes.Internal, "record task attempt status: %v", err)
+	}
+	return nil
+}
+
+func taskAttemptStatusFromRunState(state daemonv1.RunState) (string, bool) {
+	switch state {
+	case daemonv1.RunState_RUN_STATE_QUEUED, daemonv1.RunState_RUN_STATE_UNSPECIFIED:
+		return storage.TaskAttemptStatusClaimed, true
+	case daemonv1.RunState_RUN_STATE_RUNNING, daemonv1.RunState_RUN_STATE_BLOCKED:
+		return storage.TaskAttemptStatusRunning, true
+	case daemonv1.RunState_RUN_STATE_COMPLETED:
+		return storage.TaskAttemptStatusCompleted, true
+	case daemonv1.RunState_RUN_STATE_FAILED:
+		return storage.TaskAttemptStatusFailed, true
+	case daemonv1.RunState_RUN_STATE_CANCELED:
+		return storage.TaskAttemptStatusCanceled, true
+	default:
+		return "", false
+	}
+}
+
+func runFailureReasonForAttempt(run *daemonv1.Run, req *daemonv1.UpdateRunStatusRequest) string {
+	if run == nil {
+		return ""
+	}
+	switch run.GetState() {
+	case daemonv1.RunState_RUN_STATE_FAILED, daemonv1.RunState_RUN_STATE_CANCELED:
+		return runFailureReason(run, req)
+	default:
+		return ""
+	}
 }
 
 func (s *Server) updateTaskFromRunStatus(ctx context.Context, run *daemonv1.Run, req *daemonv1.UpdateRunStatusRequest) error {
@@ -3649,6 +3723,15 @@ func first(values []string) string {
 }
 
 func firstNonZeroInt64(values ...int64) int64 {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
+	}
+	return 0
+}
+
+func firstNonZeroUint32(values ...uint32) uint32 {
 	for _, value := range values {
 		if value != 0 {
 			return value

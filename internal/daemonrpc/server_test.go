@@ -703,6 +703,73 @@ func TestTaskClaimCreatesRunAndTerminalStatusUpdatesTask(t *testing.T) {
 	}
 }
 
+func TestTaskClaimAndRunStatusPersistAttemptOutput(t *testing.T) {
+	ctx := context.Background()
+	store := newTestStore(t, "daemonrpc_attempt")
+	srv := New(store, "srv_test")
+
+	task, err := srv.CreateCollaborationTask(ctx, &daemonv1.CreateCollaborationTaskRequest{
+		Target:         "#general",
+		Summary:        "persist attempt output",
+		RequestId:      "task-attempt-1",
+		IdempotencyKey: "task-attempt-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateCollaborationTask() error = %v", err)
+	}
+	claim, err := srv.ClaimCollaborationTask(ctx, &daemonv1.ClaimCollaborationTaskRequest{
+		TaskId:         task.GetTask().GetTaskId(),
+		AgentId:        "agent-1",
+		RequestId:      "claim-attempt-1",
+		IdempotencyKey: "claim-attempt-1",
+	})
+	if err != nil {
+		t.Fatalf("ClaimCollaborationTask() error = %v", err)
+	}
+	runID := claim.GetTask().GetCurrentRunId()
+	if runID == "" {
+		t.Fatalf("ClaimCollaborationTask() = %+v, want current run", claim)
+	}
+	attempts, err := store.ListTaskAttempts(ctx, task.GetTask().GetTaskId())
+	if err != nil {
+		t.Fatalf("ListTaskAttempts(claimed) error = %v", err)
+	}
+	if len(attempts) != 1 ||
+		attempts[0].RunID != runID ||
+		attempts[0].AgentID != "agent-1" ||
+		attempts[0].Status != storage.TaskAttemptStatusClaimed {
+		t.Fatalf("claimed attempts = %+v, want one claimed attempt for run", attempts)
+	}
+
+	if _, err := srv.UpdateRunStatus(ctx, &daemonv1.UpdateRunStatusRequest{
+		RunId:              runID,
+		AgentId:            "agent-1",
+		State:              daemonv1.RunState_RUN_STATE_COMPLETED,
+		Summary:            "done",
+		ResultJson:         `{"result":"ok"}`,
+		ResultDigest:       "sha256:result",
+		ResultSignature:    "ed25519:signature",
+		SignaturePublicKey: "ed25519:public",
+		RequestId:          "run-attempt-complete-1",
+		IdempotencyKey:     "run-attempt-complete-1",
+	}); err != nil {
+		t.Fatalf("UpdateRunStatus(completed) error = %v", err)
+	}
+	attempts, err = store.ListTaskAttempts(ctx, task.GetTask().GetTaskId())
+	if err != nil {
+		t.Fatalf("ListTaskAttempts(completed) error = %v", err)
+	}
+	if len(attempts) != 1 ||
+		attempts[0].Status != storage.TaskAttemptStatusCompleted ||
+		attempts[0].OutputJSON != `{"result":"ok"}` ||
+		attempts[0].OutputDigest != "sha256:result" ||
+		attempts[0].OutputSignature != "ed25519:signature" ||
+		attempts[0].SignaturePublicKey != "ed25519:public" ||
+		attempts[0].CompletedUnix == 0 {
+		t.Fatalf("completed attempts = %+v, want signed output persisted", attempts)
+	}
+}
+
 func TestFailedTaskRunBlocksTaskWithRedactedReason(t *testing.T) {
 	client, cleanup := newTestClient(t)
 	defer cleanup()

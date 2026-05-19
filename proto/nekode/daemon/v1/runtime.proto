@@ -348,6 +348,16 @@ message UpdateRunStatusRequest {
   string idempotency_key = 9;
   RequestContext context = 10;
   string lease_id = 11;
+  // Optional structured final output produced by the agent. When present,
+  // servers persist it with the task attempt record for audit and review.
+  string result_json = 12;
+  // Digest over result_json or another caller-defined canonical output.
+  string result_digest = 13;
+  // Agent-produced signature over result_digest or canonical output bytes.
+  string result_signature = 14;
+  // Public key that verifies result_signature. Servers may verify this once
+  // agent identity records carry public keys.
+  string signature_public_key = 15;
 }
 message UpdateRunStatusResponse {
   bool accepted = 1;

@@ -78,10 +78,10 @@ type IMChatAuthRequest struct {
 }
 
 type IMChatAuthRequestListOptions struct {
-	EndpointID      string
-	Status          string
-	IncludeExpired  bool
-	Limit           int
+	EndpointID     string
+	Status         string
+	IncludeExpired bool
+	Limit          int
 }
 
 type IMChatSubscription struct {
@@ -112,10 +112,10 @@ type IMChatSubscriptionPatch struct {
 }
 
 type IMChatSubscriptionListOptions struct {
-	EndpointID  string
-	Provider    string
-	Subscribed  *bool
-	Limit       int
+	EndpointID string
+	Provider   string
+	Subscribed *bool
+	Limit      int
 }
 
 type ChannelSummary struct {
@@ -314,6 +314,25 @@ type Task struct {
 	ClaimLeaseID    string `json:"claimLeaseId,omitempty"`
 	CreatedUnix     int64  `json:"createdUnix"`
 	UpdatedUnix     int64  `json:"updatedUnix"`
+}
+
+type TaskAttempt struct {
+	ID                 string `json:"id"`
+	TaskID             string `json:"taskId"`
+	Attempt            uint32 `json:"attempt"`
+	RunID              string `json:"runId,omitempty"`
+	AgentID            string `json:"agentId,omitempty"`
+	ClaimLeaseID       string `json:"claimLeaseId,omitempty"`
+	Status             string `json:"status"`
+	OutputJSON         string `json:"outputJson,omitempty"`
+	OutputDigest       string `json:"outputDigest,omitempty"`
+	OutputSignature    string `json:"outputSignature,omitempty"`
+	SignaturePublicKey string `json:"signaturePublicKey,omitempty"`
+	ErrorMessage       string `json:"errorMessage,omitempty"`
+	ClaimedUnix        int64  `json:"claimedUnix,omitempty"`
+	StartedUnix        int64  `json:"startedUnix,omitempty"`
+	CompletedUnix      int64  `json:"completedUnix,omitempty"`
+	UpdatedUnix        int64  `json:"updatedUnix"`
 }
 
 type TaskPatch struct {

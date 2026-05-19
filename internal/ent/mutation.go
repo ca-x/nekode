@@ -30,6 +30,7 @@ import (
 	"github.com/ca-x/nekode/internal/ent/savedmessage"
 	"github.com/ca-x/nekode/internal/ent/session"
 	"github.com/ca-x/nekode/internal/ent/task"
+	"github.com/ca-x/nekode/internal/ent/taskattempt"
 	"github.com/ca-x/nekode/internal/ent/threadreadstate"
 	"github.com/ca-x/nekode/internal/ent/tunnel"
 	"github.com/ca-x/nekode/internal/ent/user"
@@ -63,6 +64,7 @@ const (
 	TypeSavedMessage        = "SavedMessage"
 	TypeSession             = "Session"
 	TypeTask                = "Task"
+	TypeTaskAttempt         = "TaskAttempt"
 	TypeThreadReadState     = "ThreadReadState"
 	TypeTunnel              = "Tunnel"
 	TypeUser                = "User"
@@ -18008,6 +18010,1262 @@ func (m *TaskMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *TaskMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Task edge %s", name)
+}
+
+// TaskAttemptMutation represents an operation that mutates the TaskAttempt nodes in the graph.
+type TaskAttemptMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *string
+	task_id              *string
+	attempt              *uint32
+	addattempt           *int32
+	run_id               *string
+	agent_id             *string
+	claim_lease_id       *string
+	status               *string
+	output_json          *string
+	output_digest        *string
+	output_signature     *string
+	signature_public_key *string
+	error_message        *string
+	claimed_unix         *int64
+	addclaimed_unix      *int64
+	started_unix         *int64
+	addstarted_unix      *int64
+	completed_unix       *int64
+	addcompleted_unix    *int64
+	updated_unix         *int64
+	addupdated_unix      *int64
+	clearedFields        map[string]struct{}
+	done                 bool
+	oldValue             func(context.Context) (*TaskAttempt, error)
+	predicates           []predicate.TaskAttempt
+}
+
+var _ ent.Mutation = (*TaskAttemptMutation)(nil)
+
+// taskattemptOption allows management of the mutation configuration using functional options.
+type taskattemptOption func(*TaskAttemptMutation)
+
+// newTaskAttemptMutation creates new mutation for the TaskAttempt entity.
+func newTaskAttemptMutation(c config, op Op, opts ...taskattemptOption) *TaskAttemptMutation {
+	m := &TaskAttemptMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTaskAttempt,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withTaskAttemptID sets the ID field of the mutation.
+func withTaskAttemptID(id string) taskattemptOption {
+	return func(m *TaskAttemptMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TaskAttempt
+		)
+		m.oldValue = func(ctx context.Context) (*TaskAttempt, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().TaskAttempt.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withTaskAttempt sets the old TaskAttempt of the mutation.
+func withTaskAttempt(node *TaskAttempt) taskattemptOption {
+	return func(m *TaskAttemptMutation) {
+		m.oldValue = func(context.Context) (*TaskAttempt, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TaskAttemptMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TaskAttemptMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of TaskAttempt entities.
+func (m *TaskAttemptMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TaskAttemptMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TaskAttemptMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TaskAttempt.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTaskID sets the "task_id" field.
+func (m *TaskAttemptMutation) SetTaskID(s string) {
+	m.task_id = &s
+}
+
+// TaskID returns the value of the "task_id" field in the mutation.
+func (m *TaskAttemptMutation) TaskID() (r string, exists bool) {
+	v := m.task_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTaskID returns the old "task_id" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldTaskID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTaskID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTaskID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTaskID: %w", err)
+	}
+	return oldValue.TaskID, nil
+}
+
+// ResetTaskID resets all changes to the "task_id" field.
+func (m *TaskAttemptMutation) ResetTaskID() {
+	m.task_id = nil
+}
+
+// SetAttempt sets the "attempt" field.
+func (m *TaskAttemptMutation) SetAttempt(u uint32) {
+	m.attempt = &u
+	m.addattempt = nil
+}
+
+// Attempt returns the value of the "attempt" field in the mutation.
+func (m *TaskAttemptMutation) Attempt() (r uint32, exists bool) {
+	v := m.attempt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttempt returns the old "attempt" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldAttempt(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttempt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttempt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttempt: %w", err)
+	}
+	return oldValue.Attempt, nil
+}
+
+// AddAttempt adds u to the "attempt" field.
+func (m *TaskAttemptMutation) AddAttempt(u int32) {
+	if m.addattempt != nil {
+		*m.addattempt += u
+	} else {
+		m.addattempt = &u
+	}
+}
+
+// AddedAttempt returns the value that was added to the "attempt" field in this mutation.
+func (m *TaskAttemptMutation) AddedAttempt() (r int32, exists bool) {
+	v := m.addattempt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttempt resets all changes to the "attempt" field.
+func (m *TaskAttemptMutation) ResetAttempt() {
+	m.attempt = nil
+	m.addattempt = nil
+}
+
+// SetRunID sets the "run_id" field.
+func (m *TaskAttemptMutation) SetRunID(s string) {
+	m.run_id = &s
+}
+
+// RunID returns the value of the "run_id" field in the mutation.
+func (m *TaskAttemptMutation) RunID() (r string, exists bool) {
+	v := m.run_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRunID returns the old "run_id" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldRunID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRunID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRunID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRunID: %w", err)
+	}
+	return oldValue.RunID, nil
+}
+
+// ResetRunID resets all changes to the "run_id" field.
+func (m *TaskAttemptMutation) ResetRunID() {
+	m.run_id = nil
+}
+
+// SetAgentID sets the "agent_id" field.
+func (m *TaskAttemptMutation) SetAgentID(s string) {
+	m.agent_id = &s
+}
+
+// AgentID returns the value of the "agent_id" field in the mutation.
+func (m *TaskAttemptMutation) AgentID() (r string, exists bool) {
+	v := m.agent_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAgentID returns the old "agent_id" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldAgentID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAgentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAgentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAgentID: %w", err)
+	}
+	return oldValue.AgentID, nil
+}
+
+// ResetAgentID resets all changes to the "agent_id" field.
+func (m *TaskAttemptMutation) ResetAgentID() {
+	m.agent_id = nil
+}
+
+// SetClaimLeaseID sets the "claim_lease_id" field.
+func (m *TaskAttemptMutation) SetClaimLeaseID(s string) {
+	m.claim_lease_id = &s
+}
+
+// ClaimLeaseID returns the value of the "claim_lease_id" field in the mutation.
+func (m *TaskAttemptMutation) ClaimLeaseID() (r string, exists bool) {
+	v := m.claim_lease_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClaimLeaseID returns the old "claim_lease_id" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldClaimLeaseID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClaimLeaseID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClaimLeaseID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClaimLeaseID: %w", err)
+	}
+	return oldValue.ClaimLeaseID, nil
+}
+
+// ResetClaimLeaseID resets all changes to the "claim_lease_id" field.
+func (m *TaskAttemptMutation) ResetClaimLeaseID() {
+	m.claim_lease_id = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *TaskAttemptMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *TaskAttemptMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *TaskAttemptMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetOutputJSON sets the "output_json" field.
+func (m *TaskAttemptMutation) SetOutputJSON(s string) {
+	m.output_json = &s
+}
+
+// OutputJSON returns the value of the "output_json" field in the mutation.
+func (m *TaskAttemptMutation) OutputJSON() (r string, exists bool) {
+	v := m.output_json
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutputJSON returns the old "output_json" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldOutputJSON(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutputJSON is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutputJSON requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputJSON: %w", err)
+	}
+	return oldValue.OutputJSON, nil
+}
+
+// ResetOutputJSON resets all changes to the "output_json" field.
+func (m *TaskAttemptMutation) ResetOutputJSON() {
+	m.output_json = nil
+}
+
+// SetOutputDigest sets the "output_digest" field.
+func (m *TaskAttemptMutation) SetOutputDigest(s string) {
+	m.output_digest = &s
+}
+
+// OutputDigest returns the value of the "output_digest" field in the mutation.
+func (m *TaskAttemptMutation) OutputDigest() (r string, exists bool) {
+	v := m.output_digest
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutputDigest returns the old "output_digest" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldOutputDigest(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutputDigest is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutputDigest requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputDigest: %w", err)
+	}
+	return oldValue.OutputDigest, nil
+}
+
+// ResetOutputDigest resets all changes to the "output_digest" field.
+func (m *TaskAttemptMutation) ResetOutputDigest() {
+	m.output_digest = nil
+}
+
+// SetOutputSignature sets the "output_signature" field.
+func (m *TaskAttemptMutation) SetOutputSignature(s string) {
+	m.output_signature = &s
+}
+
+// OutputSignature returns the value of the "output_signature" field in the mutation.
+func (m *TaskAttemptMutation) OutputSignature() (r string, exists bool) {
+	v := m.output_signature
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOutputSignature returns the old "output_signature" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldOutputSignature(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutputSignature is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutputSignature requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputSignature: %w", err)
+	}
+	return oldValue.OutputSignature, nil
+}
+
+// ResetOutputSignature resets all changes to the "output_signature" field.
+func (m *TaskAttemptMutation) ResetOutputSignature() {
+	m.output_signature = nil
+}
+
+// SetSignaturePublicKey sets the "signature_public_key" field.
+func (m *TaskAttemptMutation) SetSignaturePublicKey(s string) {
+	m.signature_public_key = &s
+}
+
+// SignaturePublicKey returns the value of the "signature_public_key" field in the mutation.
+func (m *TaskAttemptMutation) SignaturePublicKey() (r string, exists bool) {
+	v := m.signature_public_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSignaturePublicKey returns the old "signature_public_key" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldSignaturePublicKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSignaturePublicKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSignaturePublicKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSignaturePublicKey: %w", err)
+	}
+	return oldValue.SignaturePublicKey, nil
+}
+
+// ResetSignaturePublicKey resets all changes to the "signature_public_key" field.
+func (m *TaskAttemptMutation) ResetSignaturePublicKey() {
+	m.signature_public_key = nil
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *TaskAttemptMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *TaskAttemptMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldErrorMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *TaskAttemptMutation) ResetErrorMessage() {
+	m.error_message = nil
+}
+
+// SetClaimedUnix sets the "claimed_unix" field.
+func (m *TaskAttemptMutation) SetClaimedUnix(i int64) {
+	m.claimed_unix = &i
+	m.addclaimed_unix = nil
+}
+
+// ClaimedUnix returns the value of the "claimed_unix" field in the mutation.
+func (m *TaskAttemptMutation) ClaimedUnix() (r int64, exists bool) {
+	v := m.claimed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClaimedUnix returns the old "claimed_unix" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldClaimedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClaimedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClaimedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClaimedUnix: %w", err)
+	}
+	return oldValue.ClaimedUnix, nil
+}
+
+// AddClaimedUnix adds i to the "claimed_unix" field.
+func (m *TaskAttemptMutation) AddClaimedUnix(i int64) {
+	if m.addclaimed_unix != nil {
+		*m.addclaimed_unix += i
+	} else {
+		m.addclaimed_unix = &i
+	}
+}
+
+// AddedClaimedUnix returns the value that was added to the "claimed_unix" field in this mutation.
+func (m *TaskAttemptMutation) AddedClaimedUnix() (r int64, exists bool) {
+	v := m.addclaimed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetClaimedUnix resets all changes to the "claimed_unix" field.
+func (m *TaskAttemptMutation) ResetClaimedUnix() {
+	m.claimed_unix = nil
+	m.addclaimed_unix = nil
+}
+
+// SetStartedUnix sets the "started_unix" field.
+func (m *TaskAttemptMutation) SetStartedUnix(i int64) {
+	m.started_unix = &i
+	m.addstarted_unix = nil
+}
+
+// StartedUnix returns the value of the "started_unix" field in the mutation.
+func (m *TaskAttemptMutation) StartedUnix() (r int64, exists bool) {
+	v := m.started_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedUnix returns the old "started_unix" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldStartedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedUnix: %w", err)
+	}
+	return oldValue.StartedUnix, nil
+}
+
+// AddStartedUnix adds i to the "started_unix" field.
+func (m *TaskAttemptMutation) AddStartedUnix(i int64) {
+	if m.addstarted_unix != nil {
+		*m.addstarted_unix += i
+	} else {
+		m.addstarted_unix = &i
+	}
+}
+
+// AddedStartedUnix returns the value that was added to the "started_unix" field in this mutation.
+func (m *TaskAttemptMutation) AddedStartedUnix() (r int64, exists bool) {
+	v := m.addstarted_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetStartedUnix resets all changes to the "started_unix" field.
+func (m *TaskAttemptMutation) ResetStartedUnix() {
+	m.started_unix = nil
+	m.addstarted_unix = nil
+}
+
+// SetCompletedUnix sets the "completed_unix" field.
+func (m *TaskAttemptMutation) SetCompletedUnix(i int64) {
+	m.completed_unix = &i
+	m.addcompleted_unix = nil
+}
+
+// CompletedUnix returns the value of the "completed_unix" field in the mutation.
+func (m *TaskAttemptMutation) CompletedUnix() (r int64, exists bool) {
+	v := m.completed_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedUnix returns the old "completed_unix" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldCompletedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedUnix: %w", err)
+	}
+	return oldValue.CompletedUnix, nil
+}
+
+// AddCompletedUnix adds i to the "completed_unix" field.
+func (m *TaskAttemptMutation) AddCompletedUnix(i int64) {
+	if m.addcompleted_unix != nil {
+		*m.addcompleted_unix += i
+	} else {
+		m.addcompleted_unix = &i
+	}
+}
+
+// AddedCompletedUnix returns the value that was added to the "completed_unix" field in this mutation.
+func (m *TaskAttemptMutation) AddedCompletedUnix() (r int64, exists bool) {
+	v := m.addcompleted_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompletedUnix resets all changes to the "completed_unix" field.
+func (m *TaskAttemptMutation) ResetCompletedUnix() {
+	m.completed_unix = nil
+	m.addcompleted_unix = nil
+}
+
+// SetUpdatedUnix sets the "updated_unix" field.
+func (m *TaskAttemptMutation) SetUpdatedUnix(i int64) {
+	m.updated_unix = &i
+	m.addupdated_unix = nil
+}
+
+// UpdatedUnix returns the value of the "updated_unix" field in the mutation.
+func (m *TaskAttemptMutation) UpdatedUnix() (r int64, exists bool) {
+	v := m.updated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedUnix returns the old "updated_unix" field's value of the TaskAttempt entity.
+// If the TaskAttempt object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TaskAttemptMutation) OldUpdatedUnix(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedUnix is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedUnix requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedUnix: %w", err)
+	}
+	return oldValue.UpdatedUnix, nil
+}
+
+// AddUpdatedUnix adds i to the "updated_unix" field.
+func (m *TaskAttemptMutation) AddUpdatedUnix(i int64) {
+	if m.addupdated_unix != nil {
+		*m.addupdated_unix += i
+	} else {
+		m.addupdated_unix = &i
+	}
+}
+
+// AddedUpdatedUnix returns the value that was added to the "updated_unix" field in this mutation.
+func (m *TaskAttemptMutation) AddedUpdatedUnix() (r int64, exists bool) {
+	v := m.addupdated_unix
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpdatedUnix resets all changes to the "updated_unix" field.
+func (m *TaskAttemptMutation) ResetUpdatedUnix() {
+	m.updated_unix = nil
+	m.addupdated_unix = nil
+}
+
+// Where appends a list predicates to the TaskAttemptMutation builder.
+func (m *TaskAttemptMutation) Where(ps ...predicate.TaskAttempt) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the TaskAttemptMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TaskAttemptMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TaskAttempt, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *TaskAttemptMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *TaskAttemptMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (TaskAttempt).
+func (m *TaskAttemptMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TaskAttemptMutation) Fields() []string {
+	fields := make([]string, 0, 15)
+	if m.task_id != nil {
+		fields = append(fields, taskattempt.FieldTaskID)
+	}
+	if m.attempt != nil {
+		fields = append(fields, taskattempt.FieldAttempt)
+	}
+	if m.run_id != nil {
+		fields = append(fields, taskattempt.FieldRunID)
+	}
+	if m.agent_id != nil {
+		fields = append(fields, taskattempt.FieldAgentID)
+	}
+	if m.claim_lease_id != nil {
+		fields = append(fields, taskattempt.FieldClaimLeaseID)
+	}
+	if m.status != nil {
+		fields = append(fields, taskattempt.FieldStatus)
+	}
+	if m.output_json != nil {
+		fields = append(fields, taskattempt.FieldOutputJSON)
+	}
+	if m.output_digest != nil {
+		fields = append(fields, taskattempt.FieldOutputDigest)
+	}
+	if m.output_signature != nil {
+		fields = append(fields, taskattempt.FieldOutputSignature)
+	}
+	if m.signature_public_key != nil {
+		fields = append(fields, taskattempt.FieldSignaturePublicKey)
+	}
+	if m.error_message != nil {
+		fields = append(fields, taskattempt.FieldErrorMessage)
+	}
+	if m.claimed_unix != nil {
+		fields = append(fields, taskattempt.FieldClaimedUnix)
+	}
+	if m.started_unix != nil {
+		fields = append(fields, taskattempt.FieldStartedUnix)
+	}
+	if m.completed_unix != nil {
+		fields = append(fields, taskattempt.FieldCompletedUnix)
+	}
+	if m.updated_unix != nil {
+		fields = append(fields, taskattempt.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TaskAttemptMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case taskattempt.FieldTaskID:
+		return m.TaskID()
+	case taskattempt.FieldAttempt:
+		return m.Attempt()
+	case taskattempt.FieldRunID:
+		return m.RunID()
+	case taskattempt.FieldAgentID:
+		return m.AgentID()
+	case taskattempt.FieldClaimLeaseID:
+		return m.ClaimLeaseID()
+	case taskattempt.FieldStatus:
+		return m.Status()
+	case taskattempt.FieldOutputJSON:
+		return m.OutputJSON()
+	case taskattempt.FieldOutputDigest:
+		return m.OutputDigest()
+	case taskattempt.FieldOutputSignature:
+		return m.OutputSignature()
+	case taskattempt.FieldSignaturePublicKey:
+		return m.SignaturePublicKey()
+	case taskattempt.FieldErrorMessage:
+		return m.ErrorMessage()
+	case taskattempt.FieldClaimedUnix:
+		return m.ClaimedUnix()
+	case taskattempt.FieldStartedUnix:
+		return m.StartedUnix()
+	case taskattempt.FieldCompletedUnix:
+		return m.CompletedUnix()
+	case taskattempt.FieldUpdatedUnix:
+		return m.UpdatedUnix()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TaskAttemptMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case taskattempt.FieldTaskID:
+		return m.OldTaskID(ctx)
+	case taskattempt.FieldAttempt:
+		return m.OldAttempt(ctx)
+	case taskattempt.FieldRunID:
+		return m.OldRunID(ctx)
+	case taskattempt.FieldAgentID:
+		return m.OldAgentID(ctx)
+	case taskattempt.FieldClaimLeaseID:
+		return m.OldClaimLeaseID(ctx)
+	case taskattempt.FieldStatus:
+		return m.OldStatus(ctx)
+	case taskattempt.FieldOutputJSON:
+		return m.OldOutputJSON(ctx)
+	case taskattempt.FieldOutputDigest:
+		return m.OldOutputDigest(ctx)
+	case taskattempt.FieldOutputSignature:
+		return m.OldOutputSignature(ctx)
+	case taskattempt.FieldSignaturePublicKey:
+		return m.OldSignaturePublicKey(ctx)
+	case taskattempt.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	case taskattempt.FieldClaimedUnix:
+		return m.OldClaimedUnix(ctx)
+	case taskattempt.FieldStartedUnix:
+		return m.OldStartedUnix(ctx)
+	case taskattempt.FieldCompletedUnix:
+		return m.OldCompletedUnix(ctx)
+	case taskattempt.FieldUpdatedUnix:
+		return m.OldUpdatedUnix(ctx)
+	}
+	return nil, fmt.Errorf("unknown TaskAttempt field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TaskAttemptMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case taskattempt.FieldTaskID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTaskID(v)
+		return nil
+	case taskattempt.FieldAttempt:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttempt(v)
+		return nil
+	case taskattempt.FieldRunID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRunID(v)
+		return nil
+	case taskattempt.FieldAgentID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAgentID(v)
+		return nil
+	case taskattempt.FieldClaimLeaseID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClaimLeaseID(v)
+		return nil
+	case taskattempt.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case taskattempt.FieldOutputJSON:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutputJSON(v)
+		return nil
+	case taskattempt.FieldOutputDigest:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutputDigest(v)
+		return nil
+	case taskattempt.FieldOutputSignature:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOutputSignature(v)
+		return nil
+	case taskattempt.FieldSignaturePublicKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSignaturePublicKey(v)
+		return nil
+	case taskattempt.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	case taskattempt.FieldClaimedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClaimedUnix(v)
+		return nil
+	case taskattempt.FieldStartedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedUnix(v)
+		return nil
+	case taskattempt.FieldCompletedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedUnix(v)
+		return nil
+	case taskattempt.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TaskAttempt field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TaskAttemptMutation) AddedFields() []string {
+	var fields []string
+	if m.addattempt != nil {
+		fields = append(fields, taskattempt.FieldAttempt)
+	}
+	if m.addclaimed_unix != nil {
+		fields = append(fields, taskattempt.FieldClaimedUnix)
+	}
+	if m.addstarted_unix != nil {
+		fields = append(fields, taskattempt.FieldStartedUnix)
+	}
+	if m.addcompleted_unix != nil {
+		fields = append(fields, taskattempt.FieldCompletedUnix)
+	}
+	if m.addupdated_unix != nil {
+		fields = append(fields, taskattempt.FieldUpdatedUnix)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TaskAttemptMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case taskattempt.FieldAttempt:
+		return m.AddedAttempt()
+	case taskattempt.FieldClaimedUnix:
+		return m.AddedClaimedUnix()
+	case taskattempt.FieldStartedUnix:
+		return m.AddedStartedUnix()
+	case taskattempt.FieldCompletedUnix:
+		return m.AddedCompletedUnix()
+	case taskattempt.FieldUpdatedUnix:
+		return m.AddedUpdatedUnix()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TaskAttemptMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case taskattempt.FieldAttempt:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttempt(v)
+		return nil
+	case taskattempt.FieldClaimedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddClaimedUnix(v)
+		return nil
+	case taskattempt.FieldStartedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStartedUnix(v)
+		return nil
+	case taskattempt.FieldCompletedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompletedUnix(v)
+		return nil
+	case taskattempt.FieldUpdatedUnix:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpdatedUnix(v)
+		return nil
+	}
+	return fmt.Errorf("unknown TaskAttempt numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TaskAttemptMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TaskAttemptMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TaskAttemptMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown TaskAttempt nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TaskAttemptMutation) ResetField(name string) error {
+	switch name {
+	case taskattempt.FieldTaskID:
+		m.ResetTaskID()
+		return nil
+	case taskattempt.FieldAttempt:
+		m.ResetAttempt()
+		return nil
+	case taskattempt.FieldRunID:
+		m.ResetRunID()
+		return nil
+	case taskattempt.FieldAgentID:
+		m.ResetAgentID()
+		return nil
+	case taskattempt.FieldClaimLeaseID:
+		m.ResetClaimLeaseID()
+		return nil
+	case taskattempt.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case taskattempt.FieldOutputJSON:
+		m.ResetOutputJSON()
+		return nil
+	case taskattempt.FieldOutputDigest:
+		m.ResetOutputDigest()
+		return nil
+	case taskattempt.FieldOutputSignature:
+		m.ResetOutputSignature()
+		return nil
+	case taskattempt.FieldSignaturePublicKey:
+		m.ResetSignaturePublicKey()
+		return nil
+	case taskattempt.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	case taskattempt.FieldClaimedUnix:
+		m.ResetClaimedUnix()
+		return nil
+	case taskattempt.FieldStartedUnix:
+		m.ResetStartedUnix()
+		return nil
+	case taskattempt.FieldCompletedUnix:
+		m.ResetCompletedUnix()
+		return nil
+	case taskattempt.FieldUpdatedUnix:
+		m.ResetUpdatedUnix()
+		return nil
+	}
+	return fmt.Errorf("unknown TaskAttempt field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TaskAttemptMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TaskAttemptMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TaskAttemptMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TaskAttemptMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TaskAttemptMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TaskAttemptMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TaskAttemptMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown TaskAttempt unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TaskAttemptMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown TaskAttempt edge %s", name)
 }
 
 // ThreadReadStateMutation represents an operation that mutates the ThreadReadState nodes in the graph.
